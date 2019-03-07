@@ -13,7 +13,7 @@
 `nCompiler` will provide a C++ code-generation and integration system to support:
 - Automatic C++ code-generation for many of R's math functions and possibly more R features.
 - Classes and functions that support mixing of R and C++.
-- Support for uncompiled exeuction (for debugging) or compiled execution of the same source code when possible.
+- Support for uncompiled execution (for debugging) or compiled execution of the same source code when possible.
 - Automatic differentiation.
 - Parallelization.
 - Saving and loading compiled objects.
