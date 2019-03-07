@@ -1,0 +1,12 @@
+name: "nimbleCompiler-User-Manual"
+navbar:
+  title: "nimbleCompiler"
+  left:
+    - text: "Home"
+      href: index.html
+output:
+  html_document:
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: false

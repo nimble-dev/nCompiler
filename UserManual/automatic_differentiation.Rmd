@@ -1,0 +1,65 @@
+---
+title: "Automatic Differentiation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Automatic differentiation works by code-generating C++ that uses the CppAD library.
+
+Here is an scalar example:
+
+```{r eval=TRUE}
+library(nCompiler)
+nc1 <- nClass(
+  Cpublic = list(
+    Cv = 'numericScalar',
+    Cfoo = nFunction(
+      fun = function(x) {
+        return(1.5*x+1)
+      },
+      argTypes = list(x = 'numericScalar'),
+      returnType = 'numericScalar')
+  ),
+  enableDerivs = 'Cfoo'
+)
+set_nOption('automaticDerivatives', TRUE)
+nc1_generator <- nCompile_nClass(nc1, interface = "generic")
+nc1_obj <- nc1_generator()
+method(nc1_obj, "Cfoo")(1.32)## 1.5*1.32 + 1 = 2.98
+derivs <- method(nc1_obj, "Cfoo_derivs_")(1.32, c(0, 1)) # 0-th order and 1st-order derivatives
+value(derivs, "gradient") # gradient is 1.5
+```
+
+Here is a vector example:
+
+```{r}
+nc2 <- nClass(
+  Cpublic = list(
+    Cv = 'numericScalar',
+    Cfoo = nFunction(
+      fun = function(x) {
+        ans <- 1.5 *x
+        return(ans)
+      },
+      argTypes = list(x = 'numericVector(length = 2)'),
+      returnType = 'numericVector(length = 2)')
+  ),
+  enableDerivs = 'Cfoo'
+)
+set_nOption('automaticDerivatives', TRUE)
+nc2_generator <- nCompile_nClass(nc2, interface = "generic")
+nc2_obj <- nc2_generator()
+method(nc2_obj, "Cfoo")(c(1.48, 1.52)) ## 1.5*c(1.48, 1.52)
+derivs <- method(nc2_obj, "Cfoo_derivs_")(c(1.48, 1.52), c(0, 1))
+value(derivs, "gradient") ## The gradient is 1.5, 1.5
+```
+
+# Future plans
+
+- Use CppAD features to obtain 2nd-order (similar to `nimble`) and higher-order derivatives.
+- Test derivatives as we port more math functions from `nimble` to `nCompiler`.  Currently what it can do is limited.
+- Ensure that derivatives work across multiple functions.
+- Support derivatives for `nFunction` as well as for `nClass` methods.

@@ -1,0 +1,178 @@
+1c1
+< ## This file contains a lot of original nimble content that has not been updated
+---
+> 
+135c135
+<                     stop('R/nCompiler parameter names and order not consistent across alternative parameterizations')
+---
+>                     stop('R/NIMBLE parameter names and order not consistent across alternative parameterizations')
+137c137
+<                     stop('R/nCompiler density names not consistent across alternative parameterizations')
+---
+>                     stop('R/NIMBLE density names not consistent across alternative parameterizations')
+257c257
+<                     " is not available as a nFunction without setup code."))
+---
+>                     " is not available as a nimbleFunction without setup code."))
+260c260
+<                     " is not available as a nFunction without setup code. nCompiler is generating a placeholder function that will invoke an error if an algorithm needs to simulate from this distribution. Some algorithms (such as random-walk Metropolis MCMC sampling) will work without the ability to simulate from the distribution.\n"))
+---
+>                     " is not available as a nimbleFunction without setup code. NIMBLE is generating a placeholder function that will invoke an error if an algorithm needs to simulate from this distribution. Some algorithms (such as random-walk Metropolis MCMC sampling) will work without the ability to simulate from the distribution.\n"))
+268c268
+<         nfCode <- paste0("nFunction(run = function(", args, ") { stop('user-defined distribution ", densityName, " provided without random generation function.')\nreturnType(", returnType, ")})")
+---
+>         nfCode <- paste0("nimbleFunction(run = function(", args, ") { stop('user-defined distribution ", densityName, " provided without random generation function.')\nreturnType(", returnType, ")})")
+292c292
+<                         " are not available as nFunctions without setup code."))
+---
+>                         " are not available as nimbleFunctions without setup code."))
+377c377
+< #' Add user-supplied distributions for use in nCompiler BUGS models
+---
+> #' Add user-supplied distributions for use in NIMBLE BUGS models
+379c379
+< #' Register distributional information so that nCompiler can process
+---
+> #' Register distributional information so that NIMBLE can process
+382,383c382,383
+< #' @param distributionsInput either a list or character vector specifying the user-supplied distributions. If a list, it should be a named list of lists in the form of that shown in \code{nCompiler:::distributionsInputList} with each list having required field \code{BUGSdist} and optional fields \code{Rdist}, \code{altParams}, \code{discrete}, \code{pqAvail}, \code{types}, and with the name of the list the same as that of the density function. Alternatively, simply a character vector providing the names of the density functions for the user-supplied distributions.
+< #' @param userEnv environment in which to look for the nFunctions that provide the distribution; this will generally not need to be set by the user as it will default to the environment from which this function was called.
+---
+> #' @param distributionsInput either a list or character vector specifying the user-supplied distributions. If a list, it should be a named list of lists in the form of that shown in \code{nimble:::distributionsInputList} with each list having required field \code{BUGSdist} and optional fields \code{Rdist}, \code{altParams}, \code{discrete}, \code{pqAvail}, \code{types}, and with the name of the list the same as that of the density function. Alternatively, simply a character vector providing the names of the density functions for the user-supplied distributions.
+> #' @param userEnv environment in which to look for the nimbleFunctions that provide the distribution; this will generally not need to be set by the user as it will default to the environment from which this function was called.
+387c387
+< #' When \code{distributionsInput} is a list of lists, see below for more information on the structure of the list. When \code{distributionsInput} is a character vector, the distribution is assumed to be of standard form, with parameters assumed to be the arguments provided in the density nFunction, no alternative parameterizations, and the distribution assumed to be continuous with range from minus infinity to infinity. The availability of distribution and quantile functions is inferred from whether appropriately-named functions exist in the global environment.
+---
+> #' When \code{distributionsInput} is a list of lists, see below for more information on the structure of the list. When \code{distributionsInput} is a character vector, the distribution is assumed to be of standard form, with parameters assumed to be the arguments provided in the density nimbleFunction, no alternative parameterizations, and the distribution assumed to be continuous with range from minus infinity to infinity. The availability of distribution and quantile functions is inferred from whether appropriately-named functions exist in the global environment.
+397c397
+< #' an optional character vector with one or more alternative specifications of the density; each alternative specification can be an alternative name for the density, a different ordering of the parameters, different parameter name(s), or an alternative parameterization. In the latter case, the character string in parentheses should provide a given reparameterization as comma-separated name = value pairs, one for each default parameter, where name is the name of the default parameter and value is a mathematical expression relating the default parameter to the alternative parameters or other default parameters. The default parameters should correspond to the input arguments of the nFunctions provided as the density and random generation functions. The mathematical expression can use any of the math functions allowed in nCompiler (see the User Manual) as well as user-supplied nFunctions without setup code. The names of your nFunctions for the distribution functions must match the function name in the \code{Rdist} entry (or if missing, the function name in the \code{BUGSdist} entry
+---
+> #' an optional character vector with one or more alternative specifications of the density; each alternative specification can be an alternative name for the density, a different ordering of the parameters, different parameter name(s), or an alternative parameterization. In the latter case, the character string in parentheses should provide a given reparameterization as comma-separated name = value pairs, one for each default parameter, where name is the name of the default parameter and value is a mathematical expression relating the default parameter to the alternative parameters or other default parameters. The default parameters should correspond to the input arguments of the nimbleFunctions provided as the density and random generation functions. The mathematical expression can use any of the math functions allowed in NIMBLE (see the User Manual) as well as user-supplied nimbleFunctions without setup code. The names of your nimbleFunctions for the distribution functions must match the function name in the \code{Rdist} entry (or if missing, the function name in the \code{BUGSdist} entry
+403c403
+< #' an optional logical indicating if distribution (CDF) and quantile (inverse CDF) functions are provided as nFunctions. These are required for one to be able to use truncated versions of the distribution. Only applicable for univariate distributions. If not supplied, assumed to be FALSE.
+---
+> #' an optional logical indicating if distribution (CDF) and quantile (inverse CDF) functions are provided as nimbleFunctions. These are required for one to be able to use truncated versions of the distribution. Only applicable for univariate distributions. If not supplied, assumed to be FALSE.
+409c409
+< #' a character vector of comma-separated 'name = input' pairs indicating the type and dimension of the random variable and parameters (including default and alternative parameters). 'input' should take the form 'double(d)' or 'integer(d)', where 'd' is 0 for scalars, 1 for vectors, 2 for matrices. Note that since nCompiler uses doubles for numerical calculations and the default type  is \code{double(0)}, one should generally use 'double' and one need only specify the type for non-scalars. 'name' should be either 'value' to indicate the random variable itself or the parameter name to indicate a given parameter.  
+---
+> #' a character vector of comma-separated 'name = input' pairs indicating the type and dimension of the random variable and parameters (including default and alternative parameters). 'input' should take the form 'double(d)' or 'integer(d)', where 'd' is 0 for scalars, 1 for vectors, 2 for matrices. Note that since NIMBLE uses doubles for numerical calculations and the default type  is \code{double(0)}, one should generally use 'double' and one need only specify the type for non-scalars. 'name' should be either 'value' to indicate the random variable itself or the parameter name to indicate a given parameter.  
+416c416
+< #' dmyexp <- nFunction(
+---
+> #' dmyexp <- nimbleFunction(
+426c426
+< #' rmyexp <- nFunction(
+---
+> #' rmyexp <- nimbleFunction(
+440c440
+< #' code <- nParse({
+---
+> #' code <- nimbleParse({
+464c464
+< #' ddirchmulti <- nFunction(
+---
+> #' ddirchmulti <- nimbleFunction(
+475c475
+< #' rdirchmulti <- nFunction(
+---
+> #' rdirchmulti <- nimbleFunction(
+502c502
+<         dupl <- nms[nms %in% getAllDistributionsInfo('namesVector', nCompilerOnly = TRUE)]
+---
+>         dupl <- nms[nms %in% getAllDistributionsInfo('namesVector', nimbleOnly = TRUE)]
+505c505
+<             cat("Ignoring the following user-supplied distributions as they have the same names as default nCompiler distributions:", dupl, ". Please rename to avoid the conflict.\n")
+---
+>             cat("Ignoring the following user-supplied distributions as they have the same names as default NIMBLE distributions:", dupl, ". Please rename to avoid the conflict.\n")
+516,517c516,517
+<         if(exists('distributions', nCompilerUserNamespace)) {
+<            nCompilerUserNamespace$distributions$add(distributionsInput)
+---
+>         if(exists('distributions', nimbleUserNamespace)) {
+>             nimbleUserNamespace$distributions$add(distributionsInput)
+519c519
+<            nCompilerUserNamespace$distributions <- distributionsClass(distributionsInput)
+---
+>             nimbleUserNamespace$distributions <- distributionsClass(distributionsInput)
+523c523
+<     # note don't use rFunHandler as rUserDist nFunction needs n as first arg so it works on R side, therefore we have n in the C version of the nFunction and don't want to strip it out in Cpp generation
+---
+>     # note don't use rFunHandler as rUserDist nimbleFunction needs n as first arg so it works on R side, therefore we have n in the C version of the nimbleFunction and don't want to strip it out in Cpp generation
+530c530
+< #' Remove user-supplied distributions from use in nCompiler BUGS models
+---
+> #' Remove user-supplied distributions from use in NIMBLE BUGS models
+539c539
+<     if(!exists('distributions', nCompilerUserNamespace)) 
+---
+>     if(!exists('distributions', nimbleUserNamespace)) 
+550,551c550,551
+<         if(sum(!nCompilerUserNamespace$distributions$namesVector %in% distributionsNames)) {
+<             sapply(distributionsNames, function(x) nCompilerUserNamespace$distributions$remove(x))
+---
+>         if(sum(!nimbleUserNamespace$distributions$namesVector %in% distributionsNames)) {
+>             sapply(distributionsNames, function(x) nimbleUserNamespace$distributions$remove(x))
+553c553
+<               rm(distributions, envir = nCompilerUserNamespace)
+---
+>               rm(distributions, envir = nimbleUserNamespace)
+571,572c571,572
+<     if(exists('distributions', nCompilerUserNamespace)) {
+<         if(all(missingDists %in% nCompilerUserNamespace$distributions$namesVector))
+---
+>     if(exists('distributions', nimbleUserNamespace)) {
+>         if(all(missingDists %in% nimbleUserNamespace$distributions$namesVector))
+578c578
+<         ans[!boolNative] <- nCompilerUserNamespace$distributions[missingDists]
+---
+>         ans[!boolNative] <- nimbleUserNamespace$distributions[missingDists]
+581c581
+<     notFound <- missingDists[ !(missingDists %in% nCompilerUserNamespace$distributions$namesVector) ]
+---
+>     notFound <- missingDists[ !(missingDists %in% nimbleUserNamespace$distributions$namesVector) ]
+606c606
+< #' nCompiler provides various functions to give information about a BUGS distribution. In some cases, functions of the same name and similar functionality operate on the node(s) of a model as well (see \code{help(modelBaseClass)}).
+---
+> #' NIMBLE provides various functions to give information about a BUGS distribution. In some cases, functions of the same name and similar functionality operate on the node(s) of a model as well (see \code{help(modelBaseClass)}).
+608c608
+< #' \code{getDistributionInfo} returns an internal data structure (a reference class object) providing various information about the distribution. The output is not very user-friendly, but does contain all of the information that nCompiler has about the distribution.
+---
+> #' \code{getDistributionInfo} returns an internal data structure (a reference class object) providing various information about the distribution. The output is not very user-friendly, but does contain all of the information that NIMBLE has about the distribution.
+656,658c656,658
+<     if(exists('distributions', nCompilerUserNamespace) && dist %in% nCompilerUserNamespace$distributions$namesVector)
+<         return(nCompilerUserNamespace$distributions[[dist]])
+<     stop(paste0("getDistributionInfo: ", dist, " is not a distribution provided by nCompiler or supplied by the user."))
+---
+>     if(exists('distributions', nimbleUserNamespace) && dist %in% nimbleUserNamespace$distributions$namesVector)
+>         return(nimbleUserNamespace$distributions[[dist]])
+>     stop(paste0("getDistributionInfo: ", dist, " is not a distribution provided by NIMBLE or supplied by the user."))
+661c661
+< getAllDistributionsInfo <- function(kind, nCompilerOnly = FALSE, userOnly = FALSE) {
+---
+> getAllDistributionsInfo <- function(kind, nimbleOnly = FALSE, userOnly = FALSE) {
+664,665c664,665
+<         if(!nCompilerOnly && exists('distributions', nCompilerUserNamespace))
+<             out <- c(out, get(kind, nCompilerUserNamespace$distributions))
+---
+>         if(!nimbleOnly && exists('distributions', nimbleUserNamespace))
+>             out <- c(out, get(kind, nimbleUserNamespace$distributions))
+671,672c671,672
+<         if(!nCompilerOnly && exists('distributions', nCompilerUserNamespace))
+<             out <- c(out, sapply(nCompilerUserNamespace$distributions$distObjects, '[[', kind))
+---
+>         if(!nimbleOnly && exists('distributions', nimbleUserNamespace))
+>             out <- c(out, sapply(nimbleUserNamespace$distributions$distObjects, '[[', kind))
+682,685c682,685
+<     if(exists('distributions', nCompilerUserNamespace) &&
+<        dist %in% nCompilerUserNamespace$distributions$namesVector)
+<         return(eval(expr, nCompilerUserNamespace$distributions$matchCallEnv))
+<     stop(paste0("evalInDistsMatchCallEnv: ", dist, " is not a distribution provided by nCompiler or supplied by the user."))
+---
+>     if(exists('distributions', nimbleUserNamespace) &&
+>        dist %in% nimbleUserNamespace$distributions$namesVector)
+>         return(eval(expr, nimbleUserNamespace$distributions$matchCallEnv))
+>     stop(paste0("evalInDistsMatchCallEnv: ", dist, " is not a distribution provided by NIMBLE or supplied by the user."))
+713c713
+<     if(exists('distributions', nCompilerUserNamespace) && dist %in% getAllDistributionsInfo('namesVector', userOnly = TRUE))
+---
+>     if(exists('distributions', nimbleUserNamespace) && dist %in% getAllDistributionsInfo('namesVector', userOnly = TRUE))

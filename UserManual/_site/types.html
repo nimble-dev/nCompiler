@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+
+<title>Types and argument passing</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">nimbleCompiler</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Types and argument passing</h1>
+
+</div>
+
+
+<div id="types" class="section level1">
+<h1>Types</h1>
+<p>Types in <code>nCompiler</code> must be static. These include <code>nClass</code> fields and <code>nFunction</code> variables that will be compiled. (A compileable <code>nClass</code> method is an <code>nFunction</code>.) To accomplish static typing, the programmer must declare types of arguments, return objects, and compiled fields (in an <code>nClass</code>). The same variable cannot be used for more than one type.</p>
+<div id="numeric-integer-and-logical-types" class="section level2">
+<h2>Numeric, integer and logical types</h2>
+<p>These represent three core types of scalar and hence elements of non-scalars (vectors, matrices, arrays).</p>
+<p>Note that in R, “numeric” sometimes means “double <em>or</em> integer” [e.g., <code>is.numeric</code>] and sometimes means “double” [e.g. <code>as.numeric</code>]. In <code>nCompiler</code>, “numeric” means “double”.</p>
+<p>There are several ways to declare these three core types. We use numeric as an example:</p>
+<pre class="r"><code>numericScalar()
+numericVector()
+numericMatrix()
+numericArray(nDim = 3)
+## nCompiler will also provides some alternatives and ways to
+## control sizes and values in type declarations.</code></pre>
+<p>In these formats, the “<code>numeric</code>” prefix can be replaced with “<code>integer</code>” or “<code>logical</code>”.</p>
+</div>
+<div id="how-to-use-numeric-integer-and-logical-type-declarations" class="section level2">
+<h2>How to use numeric, integer, and logical type declarations</h2>
+<p>Say we want to do compiled vector addition:</p>
+<pre class="r"><code>addVectors &lt;- nFunction(
+  fun &lt;- function(x, y) {
+    ans &lt;- x + y
+    return(ans)
+  },
+  argTypes = list(x = &#39;numericVector()&#39;, 
+                  y = &#39;numericVector()&#39;),
+  returnType = &#39;numericVector()&#39;
+)
+# We could compile like this:
+# test &lt;- nCompile_nFunction(addVectors)</code></pre>
+<p>As an alternative, types can be declared directly in code. The following is an equivalent way to write <code>addVectors</code>:</p>
+<pre class="r"><code>addVectors &lt;- nFunction(
+  fun &lt;- function(x = numericVector(),
+                  y = numericVector()) {
+    ans &lt;- x + y
+    return(ans)
+    returnType(numericVector())
+  })
+# We could compile like this:
+# test &lt;- nCompile_nFunction(addVectors)</code></pre>
+</div>
+<div id="future-plans" class="section level2">
+<h2>Future plans</h2>
+<ul>
+<li>Allow type declarations to establish default argument values.</li>
+<li>Allow type declarations to evaluate to new variables in a function body (similar to <code>nimble</code>).</li>
+<li>Additional fine-grained control over initialization of values (similar to <code>nimble</code>).</li>
+<li>Support access to R objects using Rcpp.</li>
+<li>Support pass-by-copy and pass-by-reference semantics.</li>
+<li>Support sparse matrices.</li>
+</ul>
+</div>
+</div>
+<div id="argument-passing-pass-by-copy-and-pass-by-reference" class="section level1">
+<h1>Argument passing: pass-by-copy and pass-by-reference</h1>
+<p>In <code>nimble</code>, arguments are passed by value in uncompiled execution and by reference in compiled execution. This is internally inconsistent, and the compiled behavior is efficient but not R-like.</p>
+<p>In <code>nCompiler</code>, we aim to support consistent type behavior and let the user declare what they need. Three options are:</p>
+<ol style="list-style-type: decimal">
+<li>Pass by value.</li>
+<li>Pass by reference, with the entire object mutable, including size. This would work for passing an entire object such as a matrix <code>X</code>. <code>X</code> could be resized in the called function.</li>
+<li>Pass by reference, with values but not sizes mutable. This would work for passing an indexed subset of an object, like <code>X[2:5, 3:6]</code>.</li>
+</ol>
+<p>Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency. However, it is very un-R-like. To achieve consistent uncompiled and compiled behavior for debugging purposes, we can impose non-standard evaluation in R via modification of the function body.</p>
+<p>Currently, a system for passing entire objects by reference in R has been implemented. There are two ways to declare pass-by-reference: the <code>refArgs</code> argument, and wrapping the type declaration in <code>ref()</code>.</p>
+<pre class="r"><code>library(nCompiler)
+foo &lt;- nFunction(
+  fun = function(a = numericScalar()) {
+    a &lt;- a + 1
+    a
+  },
+  refArgs = &#39;a&#39;, # Make a pass-by-reference
+  returnType = quote(numericScalar())
+)
+a &lt;- 10
+foo(a)</code></pre>
+<pre><code>## [1] 11</code></pre>
+<pre class="r"><code>a # a was modified by foo, becuase it was passed by reference</code></pre>
+<pre><code>## [1] 11</code></pre>
+<p>Achieving pass-by-reference semantics across the R-C++ boundary will be an issue. For example, when calling a compiled function from R rather than from another compiled function.</p>
+<div id="future-plans-1" class="section level2">
+<h2>Future plans</h2>
+<ul>
+<li>Implement these approachs in R and code-generated C++.</li>
+</ul>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

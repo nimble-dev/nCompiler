@@ -1,0 +1,22 @@
+---
+title: "Managing C++ compilation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The predecessor package `nimble` has a system for generating C++ files, constructing and using calls to `R CMD SHLIB` for C++ compilation, loading the results into R, and generating R functions and classes to interface with corresponding C++ functions and classes.
+
+In `nCompiler`, we still generate C++ function and class definitions, but from there we largely adopt Rcpp's system for managing C++ compilation.
+
+Particularly nice features of Rcpp's sytem include:
+
+- a system for automatically generating an R function to call each C++ function.
+- a cache system, so a request to compile code that has already been compiled will automatically use the previous result.
+- C++ attributes (code like `//[[depends...]]`) and plugins that are processed to help with things like finding include and link dependencies.
+- a plugin system that supports managing options via environment variables rather than Makevars files.
+- on the C++ side, a templated system for copying arguments in and out of compiled code (`as<>` on input and `wrap<>` on output), which can and has been extended for `nCompiler` needs (e.g. for Eigen tensors).
+
+Note that `nCompiler` does not use Rcpp's modules to interface to C++ class objects.  There are some different needs in this regard, so a new system, with some aspects inspired by Rcpp, was written.

@@ -1,0 +1,16 @@
+---
+title: "Parallelization"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The current plan is to adopt Threading Building Blocks (TBB), a library from Intel.  This is the same library adopted by `RcppParallel`.  As with the Eigen, CppAD, and cereal packages, `nCompiler` will code-generate C++ that uses TBB.
+
+TBB manages thread creation, saving the programmer a lot of hassle.
+
+Everything in TBB is class (functor) based.  The goal is to generate `nClass` classes in this role.
+
+This will require some additional control from R of fine-scale C++, such as class constructors with member data initializers.

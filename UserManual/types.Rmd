@@ -1,0 +1,104 @@
+---
+title: "Types and argument passing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+# Types
+
+Types in `nCompiler` must be static.  These include `nClass` fields and  `nFunction` variables that will be compiled.  (A compileable `nClass` method is an `nFunction`.)  To accomplish static typing, the programmer must declare types of arguments, return objects, and compiled fields (in an `nClass`).  The same variable cannot be used for more than one type.
+
+## Numeric, integer and logical types
+
+These represent three core types of scalar and hence elements of non-scalars (vectors, matrices, arrays).  
+
+Note that in R, "numeric" sometimes means "double *or* integer" [e.g., `is.numeric`] and sometimes means "double" [e.g. `as.numeric`].  In `nCompiler`, "numeric" means "double".
+
+There are several ways to declare these three core types.  We use numeric as an example:
+```{r eval = FALSE}
+numericScalar()
+numericVector()
+numericMatrix()
+numericArray(nDim = 3)
+## nCompiler will also provides some alternatives and ways to
+## control sizes and values in type declarations.
+```
+
+In these formats, the "`numeric`" prefix can be replaced with "`integer`" or "`logical`".
+
+## How to use numeric, integer, and logical type declarations
+
+Say we want to do compiled vector addition:
+```{r}
+addVectors <- nFunction(
+  fun <- function(x, y) {
+    ans <- x + y
+    return(ans)
+  },
+  argTypes = list(x = 'numericVector()', 
+                  y = 'numericVector()'),
+  returnType = 'numericVector()'
+)
+# We could compile like this:
+# test <- nCompile_nFunction(addVectors)
+```
+
+As an alternative, types can be declared directly in code.  The following is an equivalent way to write `addVectors`:
+```{r}
+addVectors <- nFunction(
+  fun <- function(x = numericVector(),
+                  y = numericVector()) {
+    ans <- x + y
+    return(ans)
+    returnType(numericVector())
+  })
+# We could compile like this:
+# test <- nCompile_nFunction(addVectors)
+```
+
+## Future plans
+
+- Allow type declarations to establish default argument values.
+- Allow type declarations to evaluate to new variables in a function body (similar to `nimble`).
+- Additional fine-grained control over initialization of values (similar to `nimble`).
+- Support access to R objects using Rcpp.
+- Support pass-by-copy and pass-by-reference semantics.
+- Support sparse matrices.
+
+# Argument passing: pass-by-copy and pass-by-reference
+
+In `nimble`, arguments are passed by value in uncompiled execution and by reference in compiled execution.  This is internally inconsistent, and the compiled behavior is efficient but not R-like.
+
+In `nCompiler`, we aim to support consistent type behavior and let the user declare what they need.  Three options are:
+
+1. Pass by value.
+2. Pass by reference, with the entire object mutable, including size.  This would work for passing an entire object such as a matrix `X`.  `X` could be resized in the called function.
+3. Pass by reference, with values but not sizes mutable.  This would work for passing an indexed subset of an object, like `X[2:5, 3:6]`.
+
+Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency.  However, it is very un-R-like.  To achieve consistent uncompiled and compiled behavior for debugging purposes, we can impose non-standard evaluation in R via modification of the function body.
+
+Currently, a system for passing entire objects by reference in R has been implemented.  There are two ways to declare pass-by-reference: the `refArgs` argument, and wrapping the type declaration in `ref()`.
+
+```{r eval=TRUE}
+library(nCompiler)
+foo <- nFunction(
+  fun = function(a = numericScalar()) {
+    a <- a + 1
+    a
+  },
+  refArgs = 'a', # Make a pass-by-reference
+  returnType = quote(numericScalar())
+)
+a <- 10
+foo(a)
+a # a was modified by foo, becuase it was passed by reference
+```
+
+Achieving pass-by-reference semantics across the R-C++ boundary will be an issue.  For example, when calling a compiled function from R rather than from another compiled function.
+
+## Future plans
+
+- Implement these approachs in R and code-generated C++.

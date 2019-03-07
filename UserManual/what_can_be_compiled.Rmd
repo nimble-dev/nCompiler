@@ -1,0 +1,28 @@
+---
+title: "What can be compiled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+What can be compiled in the body of an `nFunction` (including `nClass` methods)?
+
+Eventually, `nCompiler` should support all the functionality of the `nimble` compiler and more.  To see what `nimble` supports, see the [User Manual](https://r-nimble.org/documentation-2).
+
+A fundamental shift from `nimble` to `nCompiler` is to make use of the Eigen C++ library not just for vectors and matrices but also for tensors (i.e. arrays).  This will enable implementation of math with arrays.
+
+What currently works includes a variety of basic math functions, including component-wise operations on matrices and arrays.  The current state of functionality should be reflected in `test-math.R`.
+
+Although the features supported for compilation are at the core of `nCompiler`'s usefulness, they are not the highest early development priority because they are similar to what works already in `nimble`.  For this reason, higher early priority is placed on writing skeletons for different `nCompiler` features.
+
+Future plans include:
+
+- Support for R's distribution functions (similar to `nimble`).
+- Control flow (`if-then-else`, `for`, `while`, etc., similar to `nimble`).
+- Calling back to R functions from compiled code (similar to `nimble`).
+- Calling externally compiled C (or other) code (similar to `nimble`).
+- Use of native R objects if expected types are declared in code.  A good programming style for this needs consideration.
+- Use of hand-coded C++ (including with Rcpp) that can interact easily with `nCompiler` objects. A good programming style for this needs consideration.
+

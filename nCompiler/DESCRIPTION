@@ -1,0 +1,73 @@
+Package: nCompiler
+Title: Generate C++ From R, With Automatic Differentiation
+Version: 0.1
+Authors@R: c(person("Perry", "de Valpine", email = "pdevalpine@berkeley.edu", role = c("aut", "cre", "cph")),
+             person("Daniel", "Turek", role = "ctb"),
+             person("Christopher", "Paciorek", role = "ctb"),
+             person("James", "Duncan", role = "ctr"))
+Description: Provides nFunction and nClass for function and class definitions for which C++ can be automatically generated, or used in combination with other C++.  Supports linear algebra by code-generating C++ that uses the Eigen library. Supports automatic differentiation by code-generating C++ that uses the CppAD library.  Support for parallelization is planned by code-generating C++ that uses Intel Threading Building Blocks (TBB).
+Depends: R (>= 3.3.0)
+Imports:
+    methods,R6,Rcpp,pkgKitten
+LinkingTo: Rcpp,Rcereal,RcppEigen,RcppEigenAD
+License: BSD_3_clause + file LICENSE | GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Collate:
+    all_utils.R
+    options.R
+    changeKeywords.R
+    distributions_implementations.R
+    distributions_inputList.R
+    distributions_processInputList.R
+    compile_aaa_operatorLists.R
+    compile_nParse.R
+    compile_eigenization.R
+    compile_exprClass.R
+    compile_generateCpp.R
+    compile_insertAssertions.R
+    compile_labelAbstractTypes.R
+    compile_liftMaps.R
+    compile_simpleIntermediates.R
+    compile_simpleTransformations.R
+    compile_setToEigen.R
+    cppDefs_ADutils.R
+    cppDefs_core.R
+    cppDefs_nFunction.R
+    cppDefs_nClass.R
+    cppDefs_utils.R
+    cppDefs_variables.R
+    developerTools.R
+    local_DLL.R
+    NC.R
+    NC_Compile.R
+    NC_CompilerClass.R
+    NC_FullCompiledInterface.R
+    NC_InternalsClass.R
+    NC_LoadedObjectEnv.R
+    NC_Serialize.R
+    NC_SimpleInterface.R
+    NC_TBBclass.R
+    NC_Utils.R
+    NF.R
+    NF_Compile.R
+    NF_CompilerClass.R
+    NF_CompilerStages.R
+    NF_CompilerUtils.R
+    NF_InternalsClass.R
+    NF_PassByReference.R
+    NF_ProcessCompilerStages.R
+    NF_Utils.R
+    nTry.R
+    packaging.R
+    RcppExports.R
+    Rcpp_nCompiler.R
+    Rcpp_nCompiler_plugin.R
+    Rhooks.R
+    symbolTable.R
+    symbolTableClass.R
+    symbolTable_utils.R
+    testingTools.R
+    typeDeclarations.R
+    zzz_NC_Predefined.R
+RoxygenNote: 6.1.0
