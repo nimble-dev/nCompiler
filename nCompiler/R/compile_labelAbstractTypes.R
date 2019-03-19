@@ -8,6 +8,9 @@ compile_labelAbstractTypes <- function(code,
     nErrorEnv$stateInfo <- paste0("handling labelAbstractTypes for ",
                                        code$name,
                                        ".")
+
+    logging <- loggingIsOn()
+    if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
     
     if(code$isLiteral) {
       if(is.numeric(code$name)) {
@@ -152,6 +155,9 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     Assign <- 
         function(code, symTab, auxEnv, handlingInfo) {
+            logging <- loggingIsOn()
+            if (logging)
+              appendToLog(paste('Calling handler Assign for', code$name))
             auxEnv$.AllowUnknowns <- FALSE
             inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                                   handlingInfo,
@@ -169,6 +175,10 @@ inLabelAbstractTypesEnv(
                 inserts <- c(inserts,
                              AssignAfterRecursing(code, symTab, auxEnv,
                                                   handlingInfo))
+            }
+            if (logging) {
+              appendToLog(paste('Finished handling Assign for', code$name))
+              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
             }
             if(length(inserts) == 0) NULL else inserts
         }
