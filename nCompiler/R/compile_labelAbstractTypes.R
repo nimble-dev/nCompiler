@@ -94,9 +94,15 @@ compile_labelAbstractTypes <- function(code,
             if(!is.null(handlingInfo)) {
                 handler <- handlingInfo[['handler']]
                 if(!is.null(handler)) {
+                    if (logging)
+                      appendToLog(paste('Calling handler', handler, 'for', code$name))
                     ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
                                 envir = labelAbstractTypesEnv)
                     nErrorEnv$stateInfo <- character()
+                    if (logging) {
+                      appendToLog(paste('Finished handling', handler, 'for', code$name))
+                      logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
+                    }
                     return(ans)
                 }
             }
@@ -155,9 +161,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     Assign <- 
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler Assign for', code$name))
             auxEnv$.AllowUnknowns <- FALSE
             inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                                   handlingInfo,
@@ -176,10 +179,6 @@ inLabelAbstractTypesEnv(
                              AssignAfterRecursing(code, symTab, auxEnv,
                                                   handlingInfo))
             }
-            if (logging) {
-              appendToLog(paste('Finished handling Assign for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             if(length(inserts) == 0) NULL else inserts
         }
 )
@@ -187,9 +186,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     AssignAfterRecursing <- 
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler AssignAfterRecursing for', code$name))
             LHS <- code$args[[1]]
             RHS <- code$args[[2]]
             RHStype <- RHS$type
@@ -201,10 +197,6 @@ inLabelAbstractTypesEnv(
                     LHS$type <- newSym
                     code$type <- newSym
                 }
-            }
-            if (logging) {
-              appendToLog(paste('Finished handling AssignAfterRecursing for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
             }
             NULL
         }
@@ -248,9 +240,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     UnaryCwise <-
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler UnaryCwise for', code$name))
             if(length(code$args) != 1)
                 stop(exprClassProcessingErrorMsg(
                     code,
@@ -271,10 +260,6 @@ inLabelAbstractTypesEnv(
             resultType <- symbolBasic$new(nDim = nDim,
                                           type = resultScalarType)
             code$type <- resultType
-            if (logging) {
-              appendToLog(paste('Finished handling UnaryCwise for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             invisible(NULL)
 
         }
@@ -284,9 +269,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     BinaryCwise <- 
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler BinaryCwise for', code$name))
             if(length(code$args) != 2)
                 stop(exprClassProcessingErrorMsg(
                     code,
@@ -310,10 +292,6 @@ inLabelAbstractTypesEnv(
                                           type = resultScalarType)
             code$type <- resultType
             ##code$typeName <- class(resultType)[1]
-            if (logging) {
-              appendToLog(paste('Finished handling BinaryCwise for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             invisible(NULL)
             ## 
         }
@@ -322,15 +300,8 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     BinaryCwiseLogical <- 
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler BinaryCwiseLogical for', code$name))
             ans <- BinaryCwise(code, symTab, auxEnv, handlingInfo)
             code$type$type <- 'logical'
-            if (logging) {
-              appendToLog(paste('Finished handling BinaryCwiseLogical for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             ans
         }
 )
@@ -338,9 +309,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     UnaryReduction <-
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler UnaryReduction for', code$name))
             if(length(code$args) != 1)
                 stop(exprClassProcessingErrorMsg(
                     code,
@@ -365,10 +333,6 @@ inLabelAbstractTypesEnv(
             argType <- code$args[[1]]$type
             code$type <- symbolBasic$new(nDim = 0,
                                          type = setReturnType(handlingInfo, argType$type))
-            if (logging) {
-              appendToLog(paste('Finished handling UnaryReduction for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             inserts
         }
 )
@@ -377,9 +341,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
     Return <- 
         function(code, symTab, auxEnv, handlingInfo) {
-            logging <- loggingIsOn()
-            if (logging)
-              appendToLog(paste('Calling handler Return for', code$name))
             if(length(code$args) > 1)
                 stop(exprClassProcessingErrorMsg(
                     code,
@@ -394,10 +355,6 @@ inLabelAbstractTypesEnv(
                 call. = FALSE)
             insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
             code$type <- code$args[[1]]$type
-            if (logging) {
-              appendToLog(paste('Finished handling Return for', code$name))
-              logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-            }
             invisible(insertions)
         }
 )
