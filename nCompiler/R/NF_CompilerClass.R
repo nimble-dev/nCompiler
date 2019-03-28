@@ -142,6 +142,8 @@ processNFstages <- function(NFcompiler,
     )
     debug <- controlFull$debug
     debugCpp <- FALSE##controlFull$debugCpp
+    logging <- controlFull$logging
+
     startStage <- controlFull$startStage
     endStage <- controlFull$endStage
     use_nCompiler_error_handling <- controlFull$use_nCompiler_error_handling
@@ -149,9 +151,23 @@ processNFstages <- function(NFcompiler,
     if(debug) browser()
 
     nameMsg <- paste0("(for method or nFunction ", NFcompiler$origName, ")")
-    
+
+    if (logging)
+      nDebugEnv$compilerLog <- c(
+        nDebugEnv$compilerLog,
+        paste("---- Begin compilation log", nameMsg, '----\n'),
+        "Original R code", "--------",
+        capture.output(NFcompiler$origRcode), "--------\n",
+        "Argument Symbol Table", "--------",
+        capture.output(NFcompiler$NFinternals$argSymTab), "--------\n",
+        "Return Type", "--------",
+        capture.output(NFcompiler$NFinternals$returnSym),
+        "--------\n"
+      )
+
     ### SET INPUT AND OUTPUT TYPES
     stageName <- 'setInputOutputTypes'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
         eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -178,9 +194,11 @@ processNFstages <- function(NFcompiler,
         stageName,
         use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
+        if (logging) logAfterStage(stageName)
     }
     ### SET MANGLED ARGUMENT NAMES (e.g. x -> ARG1_X_)
     stageName <- 'substituteMangledArgumentNames'
+    if (logging) logBeforeStage(stageName)
     ## simple substitution of the mangled argument names
     ## whereever they are used. 
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
@@ -197,6 +215,7 @@ processNFstages <- function(NFcompiler,
     }
     ## INITIALIZE CODE
     stageName <- 'initializeCode'
+    if (logging) logBeforeStage(stageName)
     ## set up abstract syntax tree (exprClass objects)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
@@ -208,9 +227,16 @@ processNFstages <- function(NFcompiler,
             stageName,
             use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
-        
+
+        if (logging) {
+          logAST(NFcompiler$code, 'AST initialized:',
+                 showType = FALSE, showImpl = FALSE)
+          logAfterStage(stageName)
+        }
+
         ## SIMPLE TRANSFORMATIONS (e.g. name changes)
         stageName <- 'simpleTransformations'
+        if (logging) logBeforeStage(stageName)
         if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
         eval(NFcompilerMaybeDebug(stageName, controlFull))
         ## Make modifications that do not need size processing
@@ -221,10 +247,16 @@ processNFstages <- function(NFcompiler,
             stageName,
             use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
+        if (logging) {
+          logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
+          logAfterStage(stageName)
+        }
     }
+
         ## build intermediate variables:
         ## Currently this only affects eigen, chol, and run.time
     stageName <- 'simpleIntermediates'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
         eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -235,9 +267,15 @@ processNFstages <- function(NFcompiler,
         stageName,
         use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
+        if (logging) {
+          logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
+          logAfterStage(stageName)
+        }
+
     }
-     
+
     stageName <- 'initializeAuxiliaryEnvironment'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
         eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -248,10 +286,12 @@ processNFstages <- function(NFcompiler,
         stageName,
         use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
+        if (logging) logAfterStage(stageName)
     }
     
     ## annotate sizes and types
     stageName <- 'labelAbstractTypes'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
         eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -266,10 +306,16 @@ processNFstages <- function(NFcompiler,
         paste(stageName, nameMsg),
         use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
+        if (logging) {
+          logAST(NFcompiler$code, showImpl = FALSE)
+          logAfterStage(stageName)
+        }
     }
+
     ## experimental
     ##    if(isTRUE(nOptions('experimentalNewSizeProcessing'))) {
     stageName <- 'setToEigen'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
       eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -280,10 +326,15 @@ processNFstages <- function(NFcompiler,
       stageName,
       use_nCompiler_error_handling)
       NFcompiler$stageCompleted <- stageName
+      if (logging) {
+        logAST(NFcompiler$code)
+        logAfterStage(stageName)
+      }
     }
 
     ## insert new lines created by size processing
     stageName <- 'addInsertions'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
       eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -294,10 +345,15 @@ processNFstages <- function(NFcompiler,
       stageName,
       use_nCompiler_error_handling)
       NFcompiler$stageCompleted <- stageName
+      if (logging) {
+        logAST(NFcompiler$code)
+        logAfterStage(stageName)
+      }
     }    
-    
+
     ## create symbol table of Eigen implementation types from symbol table of abstract types
     stageName <- 'setImplementation'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
       eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -308,10 +364,12 @@ processNFstages <- function(NFcompiler,
       stageName,
       use_nCompiler_error_handling)
       NFcompiler$stageCompleted <- stageName
+      if (logging) logAfterStage(stageName)
     }
     
     ## label lines suitable for implementation by Eigen back-end
     stageName <- 'labelForEigen'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
       eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -322,10 +380,15 @@ processNFstages <- function(NFcompiler,
       stageName,
       use_nCompiler_error_handling)
       NFcompiler$stageCompleted <- stageName
+      if (logging) {
+        logAST(NFcompiler$code)
+        logAfterStage(stageName)
+      }
     }
-    
+
     ## modify code either for Eigen or Tensorflow back-end
     stageName <- 'doImplementation'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
       eval(NFcompilerMaybeDebug(stageName, controlFull))
@@ -343,7 +406,13 @@ processNFstages <- function(NFcompiler,
                          NFcompiler$auxEnv)
     NFcompiler$stageCompleted <- stageName
 
+    if (logging) {
+      logAST(NFcompiler$code)
+      logAfterStage(stageName)
+    }
+
     stageName <- 'addDebugging'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(debugCpp) {
         if(debug) writeLines('*** Inserting debugging')
@@ -357,4 +426,7 @@ processNFstages <- function(NFcompiler,
         )
     }
     NFcompiler$stageCompleted <- stageName
+
+    if (logging)
+      logAfterStage(stageName)
 }

@@ -8,6 +8,9 @@ compile_labelAbstractTypes <- function(code,
     nErrorEnv$stateInfo <- paste0("handling labelAbstractTypes for ",
                                        code$name,
                                        ".")
+
+    logging <- get_nOption('compilerOptions')[['logging']]
+    if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
     
     if(code$isLiteral) {
       if(is.numeric(code$name)) {
@@ -91,9 +94,15 @@ compile_labelAbstractTypes <- function(code,
             if(!is.null(handlingInfo)) {
                 handler <- handlingInfo[['handler']]
                 if(!is.null(handler)) {
+                    if (logging)
+                      appendToLog(paste('Calling handler', handler, 'for', code$name))
                     ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
                                 envir = labelAbstractTypesEnv)
                     nErrorEnv$stateInfo <- character()
+                    if (logging) {
+                      appendToLog(paste('Finished handling', handler, 'for', code$name))
+                      logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
+                    }
                     return(ans)
                 }
             }
