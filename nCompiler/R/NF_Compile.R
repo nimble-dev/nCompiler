@@ -26,6 +26,8 @@ nCompile_nFunction <- function(NF,
         control
     )
 
+    logging <- controlFull$logging
+
     ## will be used for C++
     funName <- substitute(NF)
     funName <- Rname2CppName(substr(deparse(funName), 1, 10))
@@ -41,6 +43,7 @@ nCompile_nFunction <- function(NF,
       return(NF_Compiler)
     }
     stageName <- 'makeRcppPacket'
+    if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) 
       return(NF_Compiler)
     
@@ -50,6 +53,21 @@ nCompile_nFunction <- function(NF,
                                        filebase = filebase)
     NFinternals(NF)$RcppPacket <- RcppPacket
     NF_Compiler$stageCompleted <- stageName
+
+    if (logging) {
+        nDebugEnv$compilerLog <- c(
+          nDebugEnv$compilerLog,
+          'RcppPacket C++ content', '--------',
+          paste(RcppPacket$cppContent, collapse = '\n'),
+          '--------\n',
+          'RcppPacket header content', '--------',
+          paste(RcppPacket$hContent, collapse = '\n'),
+          '--------\n'
+        )
+        logAfterStage(stageName)
+        nameMsg <- paste0("(for method or nFunction ", NF_Compiler$origName, ")")
+        appendToLog(paste("---- End compilation log", nameMsg, " ----\n"))
+    }
     
     ## Next two steps should be replaced with single call to cpp_nCompiler.  See nCompile_nClass
     stageName <- 'writeCpp'

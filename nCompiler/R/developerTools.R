@@ -41,6 +41,7 @@ appendToLog <- function(msg, ...) {
   nDebugEnv$compilerLog <- c(
     nDebugEnv$compilerLog, msg, ...
   )
+  invisible(NULL)
 }
 
 loggingIsOn <- function() {

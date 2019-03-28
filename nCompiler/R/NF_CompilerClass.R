@@ -427,15 +427,9 @@ processNFstages <- function(NFcompiler,
         )
     }
     NFcompiler$stageCompleted <- stageName
+
     if (logging) {
       logAfterStage(stageName)
-      nDebugEnv$compilerLog <- c(
-        nDebugEnv$compilerLog,
-        'C++ output', '--------',
-        capture.output(NFcompiler$showCpp()),
-        '--------\n',
-        paste("---- End compilation log", nameMsg, '----\n')
-      )
       ## reset compilerOptions$logging to default
       .nOptions$compilerOptions[['logging']]  <- FALSE
     }
