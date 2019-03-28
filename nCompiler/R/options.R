@@ -21,6 +21,7 @@ updateDefaults <- function(defaults, controls) {
             filebase = NULL,
             debug = FALSE,
             debugCpp = FALSE,
+            logging = FALSE,
             startStage = 'start',
             endStage = 'end',
             startDebugStage = 'end',
@@ -44,11 +45,19 @@ updateDefaults <- function(defaults, controls) {
 #' 
 #' @param x a character string holding an option name 
 #' @param value the new value of the option
+#' @param listName an optional character string with the name of a list in which to find \code{x}
 #' @export
 #' @return \code{value}
-set_nOption <- function(name, value) {
-    assign(name, value, envir = .nOptions)
-    invisible(value)
+set_nOption <- function(x, value, listName = NULL) {
+  if (is.null(listName))
+    .nOptions[[x]] <- value
+  else {
+    thisList <- .nOptions[[listName]]
+    if (!is.list(thisList))
+      .nOptions[[listName]] <- list() # overwrite any existing object
+    .nOptions[[listName]][[x]] <- value
+  }
+  value
 }
 
 #' Get nCompiler Option

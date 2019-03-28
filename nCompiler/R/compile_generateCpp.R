@@ -12,7 +12,7 @@ nimCppKeywordsThatFillSemicolon <- c(
 
 genCppEnv <- new.env()
 genCppEnv$.debug <- FALSE
-genCppEnv$.outputLog <- character()
+
 inGenCppEnv <- function(expr) {
     expr <- substitute(expr)
     eval(expr, envir = genCppEnv)
@@ -23,11 +23,12 @@ compile_generateCpp <- function(code,
                                 indent = '',
                                 showBracket = TRUE,
                                 asArg = FALSE) {
-##  genCppEnv$.log <- TRUE
-  .log <- FALSE
-    nErrorEnv$stateInfo <- paste0("handling generateCpp for",
-                                       code$name,
-                                       ".")
+    nErrorEnv$stateInfo <- paste0("handling generateCpp for ",
+                                  code$name,
+                                  ".")
+    logging <- get_nOption('compilerOptions')[['logging']]
+    if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
+
     if(isTRUE(code$isLiteral)) {
         value <- code$name
         if(is.numeric(value))
@@ -86,14 +87,16 @@ compile_generateCpp <- function(code,
         if(!is.null(handlingInfo)) {
             handler <- handlingInfo$handler
             if(!is.null(handler)) {
+                if (logging)
+                  appendToLog(paste('Calling handler', handler, 'for', code$name))
                 res <- eval(call(handler,
                                  code,
                                  symTab),
                             envir = genCppEnv)
-                if(.log) {
-                  genCppEnv$.outputLog <- append(genCppEnv$.outputLog,
-                                                 paste(handler, '->', res)
-                  )
+                if (logging) {
+                  appendToLog(paste('Finished handling', handler, 'for',
+                                    code$name, 'with result:'))
+                  appendToLog(res)
                 }
                 return(res)
             }
