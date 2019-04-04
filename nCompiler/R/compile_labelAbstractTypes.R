@@ -287,7 +287,9 @@ inLabelAbstractTypesEnv(
             a2Type <- a2$type
 
             nDim <- max(a1Type$nDim, a2Type$nDim)
-            resultScalarType <- arithmeticOutputType(a1Type$type, a2Type$type)
+            resultScalarType <- arithmeticOutputType(
+              a1Type$type, a2Type$type, handlingInfo$returnTypeCode
+            )
             resultType <- symbolBasic$new(nDim = nDim,
                                           type = resultScalarType)
             code$type <- resultType
@@ -372,12 +374,15 @@ sizeProxyForDebugging <- function(code, symTab, auxEnv) {
 
 ## promote numeric output to most information-rich type, double > integer > logical
 ## Note this will not be correct for logical operators, where output type should be logical
-arithmeticOutputType <- function(t1, t2) {
-    if(t1 == 'double') return('double')
-    if(t2 == 'double') return('double')
-    if(t1 == 'integer') return('integer')
-    if(t2 == 'integer') return('integer')
-    return('logical')
+arithmeticOutputType <- function(t1, t2, returnTypeCode = NULL) {
+  if (!is.null(returnTypeCode) && returnTypeCode %in% c(1L, 2L, 3L))
+    return(names(returnTypeCodes)[[returnTypeCode]])
+  if (t1 == 'double') return('double')
+  if (t2 == 'double') return('double')
+  if (t1 == 'integer') return('integer')
+  if (t2 == 'integer') return('integer')
+  if (returnTypeCode == 5L) return('integer') ## no logical
+  return('logical')
 }
 
 

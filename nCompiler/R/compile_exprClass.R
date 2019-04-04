@@ -40,7 +40,7 @@ exprClass <- R6::R6Class(
         },
         ## This displays the parse tree using indentation on multiple rows of output
         ## It also checks that the caller and callerArgID fields are all correct
-        ## For deparsing, call nimDeparse
+        ## For deparsing, call nDeparse
         print = function(...) {
             exprClass_print(self, ...)
         })
@@ -148,8 +148,10 @@ addIndentToList <- function(x, indent) {
 
 ## error trapping utilities to be used from the various processing steps
 exprClassProcessingErrorMsg <- function(code, msg) {
-    contextCode <- if(!is.null(code$caller)) paste(unlist(nimDeparse(code$caller)), collapse = '\n') else character()
-    ans <- paste0(msg, '\n This occurred for: ', nimDeparse(code),'\n', collapse = '')
+    contextCode <- if (!is.null(code$caller))
+                     paste(unlist(nDeparse(code$caller)), collapse = '\n')
+                   else character()
+    ans <- paste0(msg, '\n This occurred for: ', nDeparse(code),'\n', collapse = '')
     if(!is.null(contextCode)) ans <- paste(ans, 'This was part of the call: ', contextCode, collapse = '')
     ans
 }
@@ -218,7 +220,7 @@ checkArgDims <- function(expr, ID, nDimRange) {
       expr$args[[ID]]$type$nDim > nDimRange[2])
     stop(
       exprClassProcessingErrorMsg(
-        code, 'the second argument to pow must be a scalar.'
+        expr, 'An argument does not have the appropriate dimensions.'
       ),
       call. = FALSE
     )

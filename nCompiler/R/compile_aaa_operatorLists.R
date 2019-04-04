@@ -86,13 +86,13 @@ assignOperatorDef(
     c('+','-'),
     list(
         labelAbstractTypes = list(
-            handler = 'BinaryUnaryCwise'),
+          handler = 'BinaryUnaryCwise',
+          returnTypeCode = returnTypeCodes$promoteNoLogical),
         eigenImpl = list(
           toEigen = 'Yes',
             handler = 'cWiseAddSub'),
         cppOutput = list(
-            handler = 'BinaryOrUnary',
-            returnTypeCode = returnTypeCodes$promoteNoLogical)
+            handler = 'BinaryOrUnary')
     )
 )
 
@@ -119,7 +119,7 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      handler = 'cWiseBinaryMatch',
+      handler = 'cWiseBinary',
       method = TRUE)
   )
 )
@@ -269,6 +269,10 @@ assignOperatorDef(
       handler = 'MidOperator')
   )
 )
+updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
+updateOperatorDef('>=', 'eigenImpl', 'swapOp', '<=')
+updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
+updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
 

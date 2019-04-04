@@ -164,19 +164,8 @@ inGenCppEnv(
             }
         }
 
-        useDoubleCast <- FALSE
-        if(code$name == '/') ## cast the denominator to double if it is any numeric or if it is an scalar integer expression
-            if(code$args[[2]]$isLiteral)
-                useDoubleCast <- TRUE
-            else ## We have cases where a integer ends up with type type 'double' during compilation but should be cast to double for C++, so we shouldn't filter on 'integer' types here
-                if(identical(code$args[[2]]$nDim, 0))
-                    useDoubleCast <- TRUE
-
-        secondPart <- compile_generateCpp(code$args[[2]], symTab)
-        if(useDoubleCast)
-            secondPart <- paste0('static_cast<double>(', secondPart, ')')
-
         firstPart <- compile_generateCpp(code$args[[1]], symTab)
+        secondPart <- compile_generateCpp(code$args[[2]], symTab)
 
         if(!isTRUE(get_nOption("automaticDerivatives"))) {
           ## The code generated for automatic derivatives creates problems here.
@@ -300,11 +289,14 @@ inGenCppEnv(
 
 inGenCppEnv(
   ## This differs from old system
-  ## EigenCast(A, type) -> A.cast<type>()
+  ## EigenCast(A, type) -> A.cast<type>() if A$type$nDim > 0
+  ## EigenCast(A, type) -> static_cast<type>(A) if A is scalar
   EigenCast <- function(code, symTab) {
-    paste0('(', compile_generateCpp(code$args[[1]], symTab),
-           ').cast<', compile_generateCpp(code$args[[2]]), '>()')
+    if (code$type$nDim > 0)
+      paste0('(', compile_generateCpp(code$args[[1]], symTab),
+             ').cast<', compile_generateCpp(code$args[[2]]), '>()')
+    else
+      paste0('static_cast<', compile_generateCpp(code$args[[2]]), '>(',
+             compile_generateCpp(code$args[[1]], symTab), ')')
   }
 )
-
-
