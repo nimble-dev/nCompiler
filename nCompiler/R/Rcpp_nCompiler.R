@@ -41,6 +41,8 @@ cppDefs_2_RcppPacket <- function(cppDef,
 
     allCppDefs <- cppDef$getDefs()
 
+    debugCpp <- get_nOption('compilerOptions')[['debugCpp']]
+
     cppCode <-
         unlist(
             lapply(allCppDefs,
@@ -48,7 +50,7 @@ cppDefs_2_RcppPacket <- function(cppDef,
                        capture.output( {
                            writeLines("")
                            writeCode(x$generate())
-                       })
+                       }, split = debugCpp) ## for debugging to send handler output to console
                    )
         )
 

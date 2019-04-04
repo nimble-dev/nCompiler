@@ -15,7 +15,7 @@ compilerStage_initializeCode <-
              debug = FALSE) {
         if(debug) browser()
         NFcompiler$code <- nParse(NFcompiler$newRcode)
-        ## Useful for debugging: writeCode(nimDeparse(NFcompiler$code))
+        ## Useful for debugging: writeCode(nDeparse(NFcompiler$code))
         invisible(NULL)
     }
 

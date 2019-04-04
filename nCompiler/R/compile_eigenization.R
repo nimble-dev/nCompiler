@@ -143,10 +143,10 @@ compile_eigenize <- function(code,
             return(setupExprs)
         }
         if(code$name == '[') { ## If there is still A[i] in the code, it is because it is equivalent to a scalar and does not need eigenization
-            if(code$nDim == 0) {
+            if(code$type$nDim == 0) {
                 return(NULL)
             } else {
-                writeLines(paste0('Warning, in eigenizing ',nimDeparse(code), ' the [ is still there but nDim is not 0 (not a scalar).') )
+                writeLines(paste0('Warning, in eigenizing ',nDeparse(code), ' the [ is still there but nDim is not 0 (not a scalar).') )
             }
         }
         opInfo <- operatorDefEnv[[code$name]]
@@ -207,19 +207,16 @@ compile_eigenize <- function(code,
 }
 
 inEigenizeEnv(
-    promoteTypes <- function(code) {
-        resultType <- code$type$type
-        for(i in seq_along(code$args)) {
-            if(inherits(code$args[[i]], 'exprClass')) {
-                if(code$args[[i]]$type$nDim > 0) {
-                    if(code$args[[i]]$type$type != resultType) {
-                        eigenCast(code, i, resultType)
-                    }
-                }
-            }
-        }
-        NULL
+  promoteTypes <- function(code) {
+    resultType <- code$type$type
+    for(i in seq_along(code$args)) {
+      if(inherits(code$args[[i]], 'exprClass')) {
+        if(code$args[[i]]$type$type != resultType)
+            eigenCast(code, i, resultType)
+      }
     }
+    NULL
+  }
 )
 
 inEigenizeEnv(
@@ -235,8 +232,8 @@ inEigenizeEnv(
     if(code$name == '<-') {argID <- 2; newType <- a1type}
     ## because we know arg types don't match, pairs of conditions are mutually exclusive
     if(argID == 0) {
-      if(a2type == 'double') { argID <- 1; newType <- 'double'}
-      if(a1type == 'double') {argID <-  2; newType <- 'double'}
+      if(a2type == 'double') {argID <- 1; newType <- 'double'}
+      if(a1type == 'double') {argID <- 2; newType <- 'double'}
     }
     if(argID == 0) {
       if(a2type == 'integer') {argID <- 1; newType <- 'integer'}
@@ -247,8 +244,7 @@ inEigenizeEnv(
       if(a2type == 'logical') {argID <- 1; newType <- 'logical'}
       if(a1type == 'logical') {argID <- 2; newType <- 'logical'}
     }
-    if(argID != 0 && code$args[[argID]]$type$nDim > 0)
-        eigenCast(code, argID, newType)
+    if(argID != 0) eigenCast(code, argID, newType)
 
     NULL
   }
@@ -307,10 +303,10 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  ## could be combined with cWiseBinaryMatch and Reduction?
+  ## could be combined with cWiseBinary and Reduction?
   cWiseUnary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(invisible(NULL))
     promoteTypes(code)
+    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
@@ -318,7 +314,6 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(NULL)
     ## no casting is necessary and could yield wrong answer. (still true?)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
@@ -327,7 +322,6 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(NULL)
     if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))
     promoteTypes(code)
     convertToCppName(code, handlingInfo)
@@ -363,7 +357,7 @@ inEigenizeEnv(
     eigenizeArrayize <- function(code) {
         newExpr <- exprClass$new(name = 'eigArray', args = list(code), eigMatrix = FALSE,
                                  isName = FALSE, isCall = TRUE, isAssign = FALSE,
-                                 nDim = code$nDim, sizeExprs = code$sizeExprs, type = code$type,
+                                 nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
                                  caller = code$caller, callerArgID = code$callerArgID)
         setArg(code$caller, code$callerArgID, newExpr)
         setCaller(code, newExpr, 1)
@@ -376,7 +370,7 @@ inEigenizeEnv(
     eigenizeMatricize <- function(code) {
         newExpr <- exprClass$new(name = 'eigMatrix', args = list(code), eigMatrix = TRUE,
                                  isName = FALSE, isCall = TRUE, isAssign = FALSE,
-                                 nDim = code$nDim, sizeExprs = code$sizeExprs, type = code$type,
+                                 nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
                                  caller = code$caller, callerArgID = code$callerArgID)
         setArg(code$caller, code$callerArgID, newExpr)
         setCaller(code, newExpr, 1)
@@ -386,11 +380,18 @@ inEigenizeEnv(
 
 
 inEigenizeEnv(
-  cWiseBinaryMatch <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(invisible(NULL))
-    promoteTypes(code)
-    convertToCppName(code, handlingInfo)
-    convertToMethod(code, handlingInfo)
+  ## If the first arg is a scalar and the second has nDim in the
+  ## specified range, then swap the positions of the two arguments.
+  maybeSwapBinaryArgs <- function(code, handlingInfo, nDimRange = c(1, Inf)) {
+    nDim <- code$args[[2]]$type$nDim
+    nDimOK <- nDim >= nDimRange[1] && nDim <= nDimRange[2]
+    if(code$args[[1]]$type$nDim == 0 && nDimOK) {
+      tmpArg <- code$args[[1]]
+      setArg(code, 1, code$args[[2]])
+      setArg(code, 2, tmpArg)
+      if (!is.null(handlingInfo$swapOp))
+        code$name <- handlingInfo$swapOp ## op is noncommutative
+    }
     invisible(NULL)
   }
 )
@@ -415,13 +416,23 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  cWiseBinaryLogical <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(invisible(NULL))
+  cWiseBinary <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    promoteTypes(code)
+    maybeSwapBinaryArgs(code, handlingInfo)
     convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  cWiseBinaryLogical <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     ## key difference for logical case:
     ## promote args to match each other, not logical return type
     promoteArgTypes(code)
+    maybeSwapBinaryArgs(code, handlingInfo)
+    convertToCppName(code, handlingInfo)
+    convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )

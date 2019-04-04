@@ -45,9 +45,9 @@ typeDeclarationList <- list(
         nimType("integer", 2, ...)
     },
     integerArray = function(value,
-                            dim = 1,
+                            nDim = 1,
                             ...) {
-        nimType("integer", dim)
+        nimType("integer", nDim)
     },
     ## logical types
     logicalScalar = function(value) {
@@ -62,9 +62,9 @@ typeDeclarationList <- list(
         nimType("logical", 2)
     },
     logicalArray = function(value,
-                            dim = 1,
+                            nDim = 1,
                             ...) {
-        nimType("logical", dim)
+        nimType("logical", nDim)
     },
     ## numeric types
     numericScalar = function(value) {
