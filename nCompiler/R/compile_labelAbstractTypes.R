@@ -192,6 +192,7 @@ inLabelAbstractTypesEnv(
             if(LHS$isName) {
                 if(!symTab$symbolExists(LHS$name, TRUE)) {
                     newSym <- RHStype$clone()
+                    newSym$isArg <- FALSE
                     newSym$name <- LHS$name
                     symTab$addSymbol(newSym)
                     LHS$type <- newSym
@@ -200,6 +201,90 @@ inLabelAbstractTypesEnv(
             }
             NULL
         }
+)
+
+inLabelAbstractTypesEnv(
+  For <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 3)
+      stop(paste('Error in labelAbstractTypes handler For:',
+                 'expected 3 arguments to a for-loop'), call. = FALSE)
+    ## first handle type of the indexing variable
+    if(!inherits(code$args[[2]], 'exprClass'))
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste('In sizeFor: expected the index',
+                      'range to be an expression (exprClass).')
+        ), call. = FALSE
+      )
+
+    inserts <- compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv)
+
+    code$args[[1]]$type <-
+      symbolBasic$new(name = code$args[[1]]$name,
+                      nDim = 0, type = code$args[[2]]$type$type)
+
+    ## code$args[[1]]$sizeExprs <- list()
+    ## code$args[[1]]$toEigenize <- 'no'
+
+    ## If index is unknown, create it in typeEnv and in the symTab (old nimble comment)
+    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
+      if (TRUE) ##!auxEnv$.AllowUnknowns)
+        symTab$addSymbol(code$args[[1]]$type)
+    ## auxEnv[[code$args[[1]]$name]]$sizeExprs <- list()
+
+    ## Now the 3rd arg, the body of the loop, can be processed
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+    return(if (length(inserts) == 0) invisible(NULL) else inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Colon <- function(code, symTab, auxEnv, handlingInfo, recurse = TRUE) {
+    inserts <-
+      if (recurse)
+        recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      else list()
+
+    if (length(code$args) != 2)
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste(
+                  'In sizeColonOperator: Problem determining',
+                  'size for : without two arguments.'
+                )
+        ), call. = FALSE
+      )
+
+    for (i in 1:2) {
+        if (inherits(code$args[[i]], 'exprClass')) {
+            if (!code$args[[i]]$isName) {
+              if (!(code$args[[i]]$name == '[' &&
+                    (code$args[[i]]$args[[1]]$name == 'dim' &&
+                     code$args[[i]]$args[[1]]$args[[1]]$name == 'nfVar'))) {
+                inserts <- c(
+                  inserts ##, sizeInsertIntermediate(code, i, symTab, typeEnv)
+                )
+              }
+            }
+        }
+    }
+
+    code$type <- symbolBasic$new(nDim = 1, type = 'double')
+
+    ## could generate an assertion that second arg is >= first arg
+    if(is.numeric(code$args[[1]]) & is.numeric(code$args[[2]])) {
+      ## do we need to annotate code$type$size here?
+      ## code$sizeExprs <- list(code$args[[2]] - code$args[[1]] + 1)
+    } else { ## at least one part is an expression
+        ## This is an awkward case:
+        ## sizeExprs are R parse trees, not exprClasses
+        ## But in this case, we want the expression from an exprClass.
+        ## so we need to nimDeparse and then parse them
+        ## code$sizeExprs <- list(substitute( A - B + 1, list(A = parse(text = nimDeparse(code$args[[2]]), keep.source = FALSE)[[1]], B = parse(text = nimDeparse(code$args[[1]]), keep.source = FALSE)[[1]] ) ) )
+    }
+    invisible(inserts)
+  }
 )
 
 inLabelAbstractTypesEnv(
@@ -384,5 +469,3 @@ arithmeticOutputType <- function(t1, t2, returnTypeCode = NULL) {
   if (returnTypeCode == 5L) return('integer') ## no logical
   return('logical')
 }
-
-

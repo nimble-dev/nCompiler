@@ -29,10 +29,33 @@ getOperatorDef <- function(op, field = NULL, key = NULL) {
 }
 
 assignOperatorDef(
+  c('if', 'while'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'recurse_labelAbstractTypes'),
+    cppOutput = list(
+      handler = 'IfOrWhile')
+  )
+)
+
+assignOperatorDef(
   c('for'),
   list(
+    labelAbstractTypes = list(
+      handler = 'For'),
     cppOutput = list(
       handler = 'For')
+  )
+)
+
+assignOperatorDef(
+  c(':'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Colon'),
+    eigenImpl = list(
+      toEigen = 'Maybe'
+    )
   )
 )
 
@@ -333,7 +356,7 @@ assignOperatorDef(
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
-      cppString = '%')
+      cppString = ' % ')
   )
 )
 
