@@ -197,6 +197,30 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  IfOrWhile <- function(code, symTab) {
+    part1 <- paste0(code$name,'(', compile_generateCpp(code$args[[1]], symTab), ')')
+    part2 <- compile_generateCpp(code$args[[2]], symTab)
+    if (is.list(part2)) {
+        part2[[1]] <- paste(part1, part2[[1]])
+    } else {
+        part2 <- list(paste(part1, part2))
+    }
+    if (length(code$args)==2) return(part2)
+
+    part3 <- compile_generateCpp(code$args[[3]], symTab)
+    if (is.list(part3)) {
+        part2[[length(part2)]] <- paste(part2[[length(part2)]], 'else', part3[[1]])
+        part3 <- c(part2, part3[-1])
+        return(part3)
+    } else {
+        part2[[length(part2)]] <- paste(part2[[length(part2)]], 'else', part3)
+        return(part2)
+    }
+    stop('Error in IfOrWhile')
+  }
+)
+
+inGenCppEnv(
   For <- function(code, symTab) {
     if(code$args[[2]]$name != ':') stop('Error: for now for loop ranges must be defined with :')
     begin <- compile_generateCpp(code$args[[2]]$args[[1]], symTab)
