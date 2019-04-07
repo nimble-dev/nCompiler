@@ -147,7 +147,9 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseBinary',
       method = TRUE),
-    cppOutput = list()
+    cppOutput = list(),
+    testthat = list(
+      isBinary = TRUE)
   )
 )
 updateOperatorDef('pmax', 'cppOutput', 'cppString', 'cwiseMax')
@@ -242,9 +244,12 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      testAD = TRUE)
   )
 )
+updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
 
 assignOperatorDef(
   c('abs', 'cube', 'square'),
@@ -278,7 +283,9 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      testAD = TRUE)
   )
 )
 
@@ -293,7 +300,9 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE)
   )
 )
 updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
@@ -313,7 +322,10 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -329,7 +341,10 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -345,7 +360,10 @@ assignOperatorDef(
       method = TRUE),
     cppOutput = list(
       cppString = 'pow',
-      handler = '')
+      handler = ''),
+    testthat = list(
+      isBinary = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -360,7 +378,9 @@ assignOperatorDef(
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
-      cppString = ' % ')
+      cppString = ' % '),
+    testthat = list(
+      isBinary = TRUE)
   )
 )
 

@@ -1,115 +1,10 @@
-## not working
-context("Testing of math functions in nCompiler code")
+context("Testing of math functions in nCompiler code\n")
 
-## As in NIMBLE's BUGS_mathCompatability.R. Where to put this?
-square <- function(x) x*x
-cube <- function(x) x*x*x
-logit <- function(x) log(x/(1-x))
-rsqrt <- function(x) 1/sqrt(x)
+source('./testing_utils.R')
 
-make_input <- function(argType, argCheck = NULL, size = 3) {
-  arg <- switch(
-    argType,
-    "numericScalar" = rnorm(1),
-    "integerScalar" = rgeom(1, 0.5),
-    "logicalScalar" = sample(c(TRUE, FALSE), size = 1),
-    "numericVector" = rnorm(size),
-    "integerVector" = rgeom(size, 0.5),
-    "logicalVector" = sample(c(TRUE, FALSE), size = size, replace = TRUE),
-    ## Make different sized dimensions to avoid bugs that might be hidden by
-    ## symmetry.
-    "numericMatrix" = matrix(rnorm(size*(size+1)), nrow = size, ncol = size+1),
-    "integerMatrix" = matrix(
-      rgeom(size*(size+1), 0.5), nrow = size, ncol = size+1
-    ),
-    "logicalMatrix" = matrix(
-      sample(c(TRUE, FALSE), size*(size+1), replace = TRUE),
-      nrow = size, ncol = size+1
-    ),
-    "numericArray(nDim=3)" = array(rnorm(size*(size+1)*(size+2)), dim = size + 0:2),
-    "integerArray(nDim=3)" = array(
-      rgeom(size*(size+1)*(size+2), 0.5), dim = size + 0:2
-    ),
-    "logicalArray(nDim=3)" = array(
-      sample(c(TRUE, FALSE), size*(size+1)*(size+2), replace = TRUE),
-      dim = size + 0:2
-    )
-  )
-  ## try again if argCheck returns FALSE
-  if (!is.null(argCheck) && !argCheck(arg))
-    return(make_input(argType, argCheck, size))
-  else
-    return(arg)
-}
-
-gen_nFunction <- function(param) {
-  fun <- function() {}
-  formals(fun) <- lapply(param$argTypes, function(x) quote(expr=))
-  tmp <- quote({})
-  tmp[[2]] <- param$expr
-  tmp[[3]] <- quote(return(ans))
-  body(fun) <- tmp
-  return(
-    nFunction(
-      fun, argTypes = param$argTypes, returnType = param$returnType
-    )
-  )
-}
-
-## Runs test_math on a list of params.
-test_math_batch <- function(batch, caseName = deparse(substitute(batch)), size = 3,
-                            dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                            control = list(),
-                            verbose = nOptions('verbose'),
-                            skip = c()) {
-  indices <- seq_along(batch)
-  if (is.numeric(skip) && all(skip > 0 & skip %% 1 == 0))
-    indices <- indices[-skip] ## skip is indices in batch to skip
-  if (is.character(skip))
-    skip <- names(batch) %in% skip ## convert to logical
-  if (is.logical(skip) && length(skip) == length(indices))
-    indices <- indices[!skip] ## skip[i] is TRUE if we should skip the corresponding test
-
-  for (i in indices) {
-    test_math(batch[[i]], paste0(caseName, ' #', i), size, dir, control, verbose)
-  }
-}
-
-## This is a parametrized test, where `param` is a list with names:
-##   param$name - A descriptive test name.
-##   param$expr - A quoted expression `quote(out <- some_function_of(arg1, arg2, ...))`.
-##   param$argTypes - A list of the input types.
-##   param$returnType - The output type character string.
-test_math <- function(param, caseName = 'test case', size = 3,
+test_math <- function(param, info, size = 3,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose')) {
-  if (!is.list(param)) return(invisible(NULL))
-  info <- paste0(caseName, ': ', param$name)
-
-  ## in some cases, expect_error does not suppress error messages (I believe
-  ## this has to do with how we trap errors in compilation), so make sure user
-  ## realizes expectation
-  if('knownFailureReport' %in% names(param) && param$knownFailureReport)
-    cat("\nBegin expected error message:\n")
-
-  test_that(info, {
-    test_math_internal(param, info, size, dir, control, verbose)
-  })
-
-  invisible(NULL)
-}
-
-wrap_if_matches <- function(pattern, string, wrapper, expr) {
-  if (!is.null(pattern) && any(grepl(paste0('^', pattern, '$'), string))) {
-    wrapper(expr)
-  } else {
-    expr
-  }
-}
-
-test_math_internal <- function(param, info, size = 3,
-                               dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                               control = list(), verbose = nOptions('verbose')) {
   if (verbose) {
     cat("### -------------------------------------------- ###\n")
     cat("### Testing", param$name, "###\n")
@@ -173,43 +68,11 @@ test_math_internal <- function(param, info, size = 3,
   invisible(NULL)
 }
 
-inverseCallReplacements <- as.list(
-  names(nCompiler:::specificCallReplacements)
-)
-names(inverseCallReplacements) <- unlist(
-  nCompiler:::specificCallReplacements
-)
-inverseReplace <- function(x) {
-    replacement <- inverseCallReplacements[[x]]
-    if(is.null(replacement)) x else replacement
-}
-
-modifyOnMatch <- function(x, pattern, key, value, negMatch = FALSE, env = parent.frame(), ...) {
-  ## Modify any elements of a named list that match pattern.
-  ##
-  ## @param x A named list.
-  ## @param pattern A regex pattern to compare with `names(x)`.
-  ## @param key The key to modify in any lists whose names match `pattern`.
-  ## @param value The new value for `key`.
-  ## @param env The environment in which to modify `x`.
-  ## @param ... Additional arguments for `grepl`.
-  for (name in names(x)) {
-    if (negMatch) isMatch <- !grepl(pattern, name, ...)
-    else          isMatch <-  grepl(pattern, name, ...)
-    if (isMatch)
-      eval(substitute(x[[name]][[key]] <- value), env)
-  }
-}
-
-getMatchingOps <- function(field, key, value) {
-  ## Returns vector of operator names where a given field has
-  ## a key with a given value, or an empty vector if no matches.
-  ops <- ls(nCompiler:::operatorDefEnv)
-  values <- unlist(
-    sapply(ops, nCompiler:::getOperatorDef, field, key)
-  )
-  names(values)[values == value]
-}
+## As in NIMBLE's BUGS_mathCompatability.R. Where to put this?
+square <- function(x) x*x
+cube <- function(x) x*x*x
+logit <- function(x) log(x/(1-x))
+rsqrt <- function(x) 1/sqrt(x)
 
 argTypes <- c(
   'numericScalar', 'integerScalar', 'logicalScalar',
@@ -223,46 +86,10 @@ argTypes <- c(
 ###################
 
 makeUnaryCwiseTest <- function(name, op, argType) {
-  outputHandling <- nCompiler:::getOperatorDef(
-                                  op, 'labelAbstractTypes', 'returnTypeCode'
-                                )
-  if (is.null(outputHandling)) outputType <- argType
-  else {
-    argSym <- nCompiler:::argType2symbol(argType)
-    type <- switch(
-      outputHandling,
-      'numeric', ## 1
-      'integer', ## 2
-      'logical', ## 3
-      argSym$type,   ## 4
-      if (grepl('logical', argType)) 'integer' else argSym$type ## 5
-    )
-    if (type == 'double') type <- 'numeric'
-    handler <- nCompiler:::getOperatorDef(
-                             op, 'labelAbstractTypes', 'handler'
-                           )
-    nDim <- if (!is.null(handler) && handler == 'UnaryReduction') 0
-            else argSym$nDim
-    dimString <- switch(
-      nDim + 1,
-      'Scalar', ## nDim is 0
-      'Vector', ## nDim is 1
-      'Matrix', ## nDim is 2
-      'Array(nDim=3)' ## nDim is 3
-    )
-    outputType <- paste0(type, dimString)
-  }
-
-  list(
-    name = paste(name, argType),
-    expr = substitute(
-      ans <- FOO(arg1), list(FOO = as.name(inverseReplace(op)))
-    ),
-    argTypes = list(arg1 = argType),
-    returnType = outputType
-  )
+  makeOperatorParam(name, op, argType)
 }
 
+## TODO: move this info to compile_aaa_operatorLists.R
 cWiseUnaryOps <- c(
   '-', 'min', 'max', 'mean', 'prod', 'squaredNorm', 'exp', 'inverse',
   'log', 'rsqrt', 'sqrt', 'square', 'tanh', 'abs', 'cube', 'atan'
@@ -290,70 +117,19 @@ dot_method_regex <- paste0(
 modifyOnMatch(cWiseUnaryTests, dot_method_regex, 'knownFailure', '.*compiles')
 
 set.seed(0)
-test_math_batch(cWiseUnaryTests, 'cWiseUnaryOps', verbose = TRUE)
+test_batch(test_math, cWiseUnaryTests, 'cWiseUnaryOps', verbose = TRUE)
 
 ###################
 ## cWiseBinaryTests
 ###################
 
-getBinaryArgChecks <- function(op) {
-  switch(
-    op,
-    #'/' = list(NULL, function(x) {
-    #  if (length(x) == 1) x != 0
-    #  else TRUE
-    #},
-    list(NULL, NULL)
-  )
-}
-
 makeBinaryCwiseTest <- function(name, op, argTypes) {
-  arg1 <- nCompiler:::argType2symbol(argTypes[1])
-  arg2 <- nCompiler:::argType2symbol(argTypes[2])
-
-  ## if args have non-matching nDim > 1 then they are non-conformable
-  ## if (arg1$nDim > 1 && arg2$nDim > 1 && arg1$nDim != arg2$nDim)
-  ##   return(NULL)
-
-  outputHandling <-
-    nCompiler:::getOperatorDef(op, 'labelAbstractTypes', 'returnTypeCode')
-  if (is.null(outputHandling)) outputType <- argTypes[1]
-  else {
-    type <- switch(
-      outputHandling,
-      'numeric', ## 1
-      'integer', ## 2
-      'logical', ## 3
-      nCompiler:::arithmeticOutputType(arg1$type, arg2$type), ## 4
-      if (all(grepl('logical', argTypes))) 'integer' ## 5a
-      else nCompiler:::arithmeticOutputType(arg1$type, arg2$type) ## 5b
-    )
-
-    ## arithmeticOutputType might return 'double'
-    if (type == 'double') type <- 'numeric'
-
-    nDim <- max(arg1$nDim, arg2$nDim)
-    dimString <- switch(
-      nDim + 1,
-      'Scalar', ## nDim is 0
-      'Vector', ## nDim is 1
-      'Matrix', ## nDim is 2
-      'Array(nDim=3)' ## nDim is 3
-    )
-    outputType <- paste0(type, dimString)
-  }
-
-  list(
-    name = paste(name, argTypes[1], argTypes[2]),
-    expr = substitute(
-      ans <- FOO(arg1, arg2), list(FOO = as.name(inverseReplace(op)))
-    ),
-    argTypes = list(arg1 = argTypes[1], arg2 = argTypes[2]),
-    argChecks = getBinaryArgChecks(op),
-    returnType = outputType
-  )
+  param <- makeOperatorParam(name, op, argTypes)
+  param$argChecks = getBinaryArgChecks(op)
+  param
 }
 
+## TODO: move this info to compile_aaa_operatorLists.R
 cWiseBinaryOps <- c(
   '+', '-', 'pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '/', '*',
   '^', '%%'
@@ -485,4 +261,4 @@ modifyOnMatch(cWiseBinaryTests, '(pmin|pmax) .+Array.+ (integer|logical)Matrix',
 modifyOnMatch(cWiseBinaryTests, '/ .+Scalar (integer|logical)Scalar', 'skip', TRUE)
 modifyOnMatch(cWiseBinaryTests, '% .+ (integer|logical)Scalar', 'skip', TRUE)
 
-test_math_batch(cWiseBinaryTests, verbose = TRUE)
+test_batch(test_math, cWiseBinaryTests, verbose = TRUE)
