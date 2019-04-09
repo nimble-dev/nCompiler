@@ -180,10 +180,14 @@ returnTypeString <- function(op, argTypes) {
 
   if (is.null(scalarTypeString)) ## returnTypeCode is 4 or 5
     scalarTypeString <-
-      if (length(argTypes) == 1) arg1$type
-      else nCompiler:::arithmeticOutputType(
-                         arg1$type, arg2$type, returnTypeCode
-                       )
+      if (length(argTypes) == 1)
+        nCompiler:::arithmeticOutputType(
+                      arg1$type, returnTypeCode = returnTypeCode
+                    )
+      else
+        nCompiler:::arithmeticOutputType(
+                      arg1$type, arg2$type, returnTypeCode
+                    )
 
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
