@@ -58,11 +58,11 @@ gen_nClass <- function(param) {
 }
 
 ## Runs test_fun on a list of params.
-test_batch <- function(test_fun, batch, caseName = deparse(substitute(batch)), size = 3,
-                            dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                            control = list(),
-                            verbose = nOptions('verbose'),
-                            skip = c()) {
+test_batch <- function(test_fun, batch,
+                       case_name = deparse(substitute(batch)), size = 3,
+                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                       control = list(), verbose = nOptions('verbose'),
+                       skip = c()) {
   indices <- seq_along(batch)
   if (is.numeric(skip) && all(skip > 0 & skip %% 1 == 0))
     indices <- indices[-skip] ## skip is indices in batch to skip
@@ -73,10 +73,20 @@ test_batch <- function(test_fun, batch, caseName = deparse(substitute(batch)), s
 
   for (i in indices) {
     param <- batch[[i]]
-    if (is.null(param$skip) || !param$skip)
-      test_param(test_fun, batch[[i]], paste0(caseName, ' #', i),
-                 size, dir, control, verbose)
-    else if (verbose) cat("### Skipping this test ###\n")
+    name <- names(batch)[i]
+    msg <- paste0(case_name, ' #', i, ' (', name, ')')
+    if (is.null(param$skip) || !param$skip) {
+      if (verbose) {
+        cat("### -------------------------------------------- ###\n")
+        cat(paste0("### Testing ", msg, " ###\n"))
+      }
+      test_param(test_fun, batch[[i]], msg, size, dir, control, verbose)
+      if (verbose) cat("### -------------------------------------------- ###\n")
+    } else if (verbose) {
+      cat("### -------------------------------------------- ###\n")
+      cat(paste0('### Skipping ', msg, ' ###\n'))
+      cat("### -------------------------------------------- ###\n")
+    }
   }
 }
 
@@ -85,16 +95,10 @@ test_batch <- function(test_fun, batch, caseName = deparse(substitute(batch)), s
 ##   param$expr - A quoted expression `quote(out <- some_function_of(arg1, arg2, ...))`.
 ##   param$argTypes - A list of the input types.
 ##   param$returnType - The output type character string.
-test_param <- function(test_fun, param, caseName = 'test case', size = 3,
+test_param <- function(test_fun, param, case_name = 'test case', size = 3,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose')) {
-  if (!is.list(param)) return(invisible(NULL))
-  info <- paste0(caseName, ': ', param$name)
-
-  if (verbose) {
-    cat("### -------------------------------------------- ###\n")
-    cat("### Testing", info, "###\n")
-  }
+  if (!is.list(param)) stop('param must be a list', call.=FALSE)
 
   ## in some cases, expect_error does not suppress error messages (I believe
   ## this has to do with how we trap errors in compilation), so make sure user
@@ -102,8 +106,8 @@ test_param <- function(test_fun, param, caseName = 'test case', size = 3,
   if('knownFailureReport' %in% names(param) && param$knownFailureReport)
     cat("\nBegin expected error message:\n")
 
-  test_that(info, {
-    test_fun(param, info, size, dir, control, verbose)
+  test_that(case_name, {
+    test_fun(param, case_name, size, dir, control, verbose)
   })
 
   invisible(NULL)
@@ -128,22 +132,40 @@ inverseReplace <- function(x) {
     if(is.null(replacement)) x else replacement
 }
 
-modifyOnMatch <- function(x, pattern, key, value, negMatch = FALSE, env = parent.frame(), ...) {
+modifyOnMatch <- function(x, pattern, key, value, env = parent.frame(), ...) {
   ## Modify any elements of a named list that match pattern.
   ##
-  ## @param x A named list.
+  ## @param x A named list of lists.
   ## @param pattern A regex pattern to compare with `names(x)`.
   ## @param key The key to modify in any lists whose names match `pattern`.
   ## @param value The new value for `key`.
   ## @param env The environment in which to modify `x`.
   ## @param ... Additional arguments for `grepl`.
   for (name in names(x)) {
-    if (negMatch) isMatch <- !grepl(pattern, name, ...)
-    else          isMatch <-  grepl(pattern, name, ...)
-    if (isMatch)
+    if (grepl(pattern, name, ...)) {
       eval(substitute(x[[name]][[key]] <- value), env)
+    }
   }
 }
+
+modifyBatchOnMatch <-
+  function(x, op_pattern, arg_pattern, key, value, env = parent.frame(), ...) {
+    ## Modify the entries of a data structure like unaryOpTests from test-math.R.
+    ##
+    ## @param x A named list of lists.
+    ## @param op_regex A regex pattern to compare with `names(x)`.
+    ## @param arg_regex A regex pattern to combine with op_regex and pass
+    ##                  to `modifyOnMatch`.
+    ## @param key The key to modify in any lists whose names match `pattern`.
+    ## @param value The new value for `key`.
+    ## @param env The environment in which to modify `x`.
+    ## @param ... Additional arguments for `grepl`.
+    for (op in names(x)) {
+      if (grepl(op_pattern, op, ...))
+        eval(substitute(modifyOnMatch(x[[op]], arg_pattern, key, value)), env)
+    }
+  }
+
 
 getMatchingOps <- function(field, key, value) {
   ## Returns vector of operator names where a given field has
@@ -192,7 +214,7 @@ returnTypeString <- function(op, argTypes) {
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
-  nDim <- if (length(argTypes == 1)) arg1$nDim
+  nDim <- if (length(argTypes) == 1) arg1$nDim
           else max(arg1$nDim, arg2$nDim)
     
   dimString <- switch(
@@ -207,14 +229,14 @@ returnTypeString <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
-makeOperatorParam <- function(name, op, argTypes) {
+makeOperatorParam <- function(op, argTypes) {
   if (length(argTypes) == 1) {
-    name <- paste(name, argTypes)
+    name <- paste(op, argTypes)
     expr <- substitute(
       ans <- FOO(arg1), list(FOO = as.name(inverseReplace(op)))
     )
   } else if (length(argTypes) == 2) {
-    name <- paste(name, argTypes[1], argTypes[2])
+    name <- paste(op, argTypes[1], argTypes[2])
     expr <- substitute(
       ans <- FOO(arg1, arg2), list(FOO = as.name(inverseReplace(op)))
     )

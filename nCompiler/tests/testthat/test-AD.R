@@ -101,8 +101,8 @@ test_AD <- function(param, info, size = 3,
 ## derivatives only available for scalar and vector inputs
 argTypes <- c('numericScalar', 'numericVector')
 
-makeADtest <- function(name, op, argType) {
-  opParam <- makeOperatorParam(name, op, argType)
+makeADtest <- function(op, argType) {
+  opParam <- makeOperatorParam(op, argType)
   name <- opParam$name
   isBinary <- nCompiler:::getOperatorDef(op, 'testthat', 'isBinary')
   if (!is.null(isBinary) && isBinary) {
@@ -139,7 +139,7 @@ ADopTests <- unlist(
       mapply(
         makeADtest,
         argType = argTypes,
-        MoreArgs = list(name = x, op = x),
+        MoreArgs = list(op = x),
         SIMPLIFY = FALSE
       )
     })
