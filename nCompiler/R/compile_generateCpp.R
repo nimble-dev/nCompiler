@@ -120,6 +120,14 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  getCppString <- function(code) {
+    opString <- getOperatorDef(code$name, 'cppOutput', 'cppString')
+    if (is.null(opString)) return(code$name)
+    opString
+  }
+)
+
+inGenCppEnv(
     AsIs <- function(code, symTab) {
         paste0(exprName2Cpp(code, symTab),
                '(', paste0(unlist(lapply(code$args,
@@ -175,9 +183,7 @@ inGenCppEnv(
             firstPart <- paste0('flex_(', firstPart, ')')
         }
 
-        opString <- getOperatorDef(code$name, 'cppOutput', 'cppString')
-        if (is.null(opString)) opString <- paste0(" ", code$name, " ")
-
+        opString <- getCppString(code)
         output <- paste0(firstPart, opString, secondPart)
 
         if(useParens)
@@ -272,16 +278,16 @@ inGenCppEnv(
   ## This differs from old system
   ## Method(A, foo, x) -> A.foo(x)
   Method <- function(code, symTab) {
-    paste0( '(', 
-            compile_generateCpp(code$args[[1]], symTab),
-            ').', paste0(code$args[[2]]$name,
-                         '(', 
-                         paste0(unlist(lapply(code$args[-c(1, 2)],
-                                              compile_generateCpp, 
-                                              symTab) ), 
-                                collapse = ', '),
-                         ')' )
+    obj <- paste0('(', compile_generateCpp(code$args[[1]], symTab), ').')
+    opString <- getCppString(code$args[[2]])
+    methodCall <- paste0(
+      opString, '(',
+      paste0(
+        unlist(lapply(code$args[-c(1, 2)], compile_generateCpp, symTab)),
+        collapse = ', '
+      ), ')'
     )
+    paste0(obj, methodCall)
   }
 )
 

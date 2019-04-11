@@ -31,6 +31,7 @@ cpp_nFunctionClass <- R6::R6Class(
                                  nCompilerIncludeFile("nCompiler_Eigen.h"),
                                   '<Rmath.h>',
                                   '<math.h>',
+                                  nCompilerIncludeFile("cWiseUnary_external.cpp"),
                                   #nCompilerIncludeFile("EigenTypedefs.h"),
                                   #nCompilerIncludeFile("Utils.h"),
                                   #nCompilerIncludeFile("accessorClasses.h"),
