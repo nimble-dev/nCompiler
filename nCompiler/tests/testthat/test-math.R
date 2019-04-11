@@ -129,8 +129,15 @@ names(unaryOpTests) <- unaryOps
 ## cannot yet handle scalar input with .method or unaryExpr operators
 modifyBatchOnMatch(
   unaryOpTests, paste0(
-  '^(abs|cube|exp|log|prod|rsqrt|sqrt|square|tanh',
+  '^(abs|all|any|cube|exp|log|prod|rsqrt|sqrt|square|tanh',
   '|atan|inverse|logit|min|max|mean|squaredNorm)'), '.+Scalar',
+  'knownFailure', '.*compiles'
+)
+
+## not implemented yet
+modifyBatchOnMatch(
+  unaryOpTests,
+  'squaredNorm', ' .+',
   'knownFailure', '.*compiles'
 )
 
