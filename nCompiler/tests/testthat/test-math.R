@@ -106,14 +106,13 @@ argTypes <- c(
   'numericArray(nDim=3)',  'integerArray(nDim=3)',  'logicalArray(nDim=3)'
 )
 
-###################
-## cWiseUnaryTests
-###################
+###############
+## unaryOpTests
+###############
 
-## TODO: move this info to compile_aaa_operatorLists.R
-cWiseUnaryOps <- c(
-  '-', 'min', 'max', 'mean', 'prod', 'squaredNorm', 'exp', 'inverse',
-  'log', 'rsqrt', 'sqrt', 'square', 'tanh', 'abs', 'cube', 'atan'
+unaryOps <- intersect(
+  getMatchingOps('testthat', 'testMath', TRUE),
+  getMatchingOps('testthat', 'isUnary', TRUE)
 )
 
 makeUnaryOpTestBatch <- function(op, argTypes) {
@@ -138,9 +137,9 @@ modifyBatchOnMatch(
 set.seed(0)
 test_batch(test_math, unaryOpTests, 'unaryOps')
 
-###################
+################
 ## binaryOpTests
-###################
+################
 
 makeBinaryOpTestBatch <- function(op, argTypes) {
   o <- mapply(function(argTuple) makeOperatorParam(op, argTuple),
@@ -149,10 +148,9 @@ makeBinaryOpTestBatch <- function(op, argTypes) {
   return(o)
 }
 
-## TODO: move this info to compile_aaa_operatorLists.R
-binaryOps <- c(
-  '+', '-', 'pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '/', '*',
-  '^', '%%'
+binaryOps <- intersect(
+  getMatchingOps('testthat', 'testMath', TRUE),
+  getMatchingOps('testthat', 'isBinary', TRUE)
 )
 
 binaryArgTypes <- as.list(

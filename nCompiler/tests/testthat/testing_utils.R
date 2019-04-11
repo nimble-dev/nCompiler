@@ -174,6 +174,7 @@ getMatchingOps <- function(field, key, value) {
   values <- unlist(
     sapply(ops, nCompiler:::getOperatorDef, field, key)
   )
+  if (is.null(values)) return(character(0))
   names(values)[values == value]
 }
 

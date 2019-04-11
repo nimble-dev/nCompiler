@@ -115,7 +115,11 @@ assignOperatorDef(
           toEigen = 'Yes',
             handler = 'cWiseAddSub'),
         cppOutput = list(
-            handler = 'BinaryOrUnary')
+          handler = 'BinaryOrUnary'),
+        testthat = list(
+          isBinary = TRUE,
+          isUnary = TRUE,
+          testMath = TRUE)
     )
 )
 
@@ -131,7 +135,10 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'Reduction',
       method = TRUE),
-    cppOutput = list()
+    cppOutput = list(),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
@@ -149,7 +156,8 @@ assignOperatorDef(
       method = TRUE),
     cppOutput = list(),
     testthat = list(
-      isBinary = TRUE)
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('pmax', 'cppOutput', 'cppString', 'cwiseMax')
@@ -208,7 +216,10 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = 'TensorReduction'
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 
@@ -226,7 +237,10 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 
@@ -246,6 +260,8 @@ assignOperatorDef(
       handler = ''
     ),
     testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE,
       testAD = TRUE)
   )
 )
@@ -265,7 +281,10 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 
@@ -285,6 +304,8 @@ assignOperatorDef(
       handler = ''
     ),
     testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE,
       testAD = TRUE)
   )
 )
@@ -302,7 +323,8 @@ assignOperatorDef(
     cppOutput = list(
       handler = 'MidOperator'),
     testthat = list(
-      isBinary = TRUE)
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
@@ -325,6 +347,7 @@ assignOperatorDef(
       handler = 'MidOperator'),
     testthat = list(
       isBinary = TRUE,
+      testMath = TRUE,
       testAD = TRUE)
   )
 )
@@ -344,6 +367,7 @@ assignOperatorDef(
       handler = 'MidOperator'),
     testthat = list(
       isBinary = TRUE,
+      testMath = TRUE,
       testAD = TRUE)
   )
 )
@@ -363,6 +387,7 @@ assignOperatorDef(
       handler = ''),
     testthat = list(
       isBinary = TRUE,
+      testMath = TRUE,
       testAD = TRUE)
   )
 )
@@ -380,7 +405,8 @@ assignOperatorDef(
       handler = 'MidOperator',
       cppString = ' % '),
     testthat = list(
-      isBinary = TRUE)
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 
