@@ -326,9 +326,9 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    promoteTypes(code)
     inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
     returnType <- scalarTypeToCppType(code$type$type)
-    promoteTypes(code)
     convertToMethod(code, handlingInfo)
     ## the operator name becomes the argument to std::ptr_fun
     newName <- paste0('std::ptr_fun<', inputType, ', ',
