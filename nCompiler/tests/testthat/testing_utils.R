@@ -215,9 +215,14 @@ returnTypeString <- function(op, argTypes) {
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
-  nDim <- if (length(argTypes) == 1) arg1$nDim
-          else max(arg1$nDim, arg2$nDim)
-    
+  nDim <- nDim <- if (length(argTypes == 1)) {
+            handler <- nCompiler:::getOperatorDef(
+                                     op, 'labelAbstractTypes', 'handler'
+                                   )
+            if (!is.null(handler) && handler == 'UnaryReduction') 0
+            else arg1$nDim
+          } else max(arg1$nDim, arg2$nDim)
+
   dimString <- switch(
     nDim + 1,
     'Scalar', ## nDim is 0
