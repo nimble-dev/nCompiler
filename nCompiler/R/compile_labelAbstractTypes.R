@@ -338,11 +338,10 @@ inLabelAbstractTypesEnv(
             arg <- code$args[[1]]
 
             argType <- arg$type
-            nDim <- argType$nDim
-            ## If we need different unary operators to have different scalar return types,
-            ## we can add a field to the handlerInfo for that.  It could default to double.
-            resultScalarType <- 'double'
-            resultType <- symbolBasic$new(nDim = nDim,
+            resultScalarType <- arithmeticOutputType(
+              argType$type, returnTypeCode = handlingInfo$returnTypeCode
+            )
+            resultType <- symbolBasic$new(nDim = argType$nDim,
                                           type = resultScalarType)
             code$type <- resultType
             invisible(NULL)
@@ -459,13 +458,13 @@ sizeProxyForDebugging <- function(code, symTab, auxEnv) {
 
 ## promote numeric output to most information-rich type, double > integer > logical
 ## Note this will not be correct for logical operators, where output type should be logical
-arithmeticOutputType <- function(t1, t2, returnTypeCode = NULL) {
+arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
   if (!is.null(returnTypeCode) && returnTypeCode %in% c(1L, 2L, 3L))
     return(names(returnTypeCodes)[[returnTypeCode]])
   if (t1 == 'double') return('double')
-  if (t2 == 'double') return('double')
+  if (!is.null(t2) && t2 == 'double') return('double')
   if (t1 == 'integer') return('integer')
-  if (t2 == 'integer') return('integer')
+  if (!is.null(t2) && t2 == 'integer') return('integer')
   if (returnTypeCode == 5L) return('integer') ## no logical
   return('logical')
 }
