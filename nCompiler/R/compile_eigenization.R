@@ -254,10 +254,7 @@ inEigenizeEnv(
   eigenCast <- function(code, argIndex, newType) {
     castExpr <- insertExprClassLayer(code, argIndex, 'eigencast')
     cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
-                             name = switch(newType,
-                                           double = 'double',
-                                           integer = 'int',
-                                           logical = 'bool'))
+                             name = scalarTypeToCppType(newType))
     setArg(castExpr, 2, cppType)
     castExpr$type <- symbolBasic$new(name = castExpr$name,
                                      type = newType,
@@ -306,16 +303,40 @@ inEigenizeEnv(
   ## could be combined with cWiseBinary and Reduction?
   cWiseUnary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     promoteTypes(code)
-    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )
 
 inEigenizeEnv(
+  scalarTypeToCppType <- function(typeString) {
+    if (!typeString %in% c('double', 'integer', 'logical'))
+      stop(
+        paste0("Don't know the correct C++ fundamental type keyword for ",
+              typeString, "."), call. = FALSE
+      )
+    switch(
+      typeString,
+      double = 'double',
+      integer = 'int',
+      logical = 'bool'
+    )
+  }
+)
+
+inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## no casting is necessary and could yield wrong answer. (still true?)
+    inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
+    returnType <- scalarTypeToCppType(code$type$type)
+    promoteTypes(code)
     convertToMethod(code, handlingInfo)
+    ## the operator name becomes the argument to std::ptr_fun
+    newName <- paste0('std::ptr_fun<', inputType, ', ',
+                      returnType, '>(', code$args[[2]]$name, ')')
+    newExpr <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
+                             name = newName)
+    code$args[[2]]$name <- 'unaryExpr'
+    setArg(code, 3, newExpr)
     invisible(NULL)
   }
 )
@@ -324,7 +345,6 @@ inEigenizeEnv(
   cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))
     promoteTypes(code)
-    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
@@ -400,7 +420,6 @@ inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     ## if(code$type$nDim == 0) return(invisible(NULL))
     promoteTypes(code)
-    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
@@ -419,7 +438,6 @@ inEigenizeEnv(
   cWiseBinary <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     promoteTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
-    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
@@ -431,7 +449,6 @@ inEigenizeEnv(
     ## promote args to match each other, not logical return type
     promoteArgTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
-    convertToCppName(code, handlingInfo)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }

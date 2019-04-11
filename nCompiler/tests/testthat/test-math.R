@@ -228,27 +228,29 @@ makeUnaryCwiseTest <- function(name, op, argType) {
                                 )
   if (is.null(outputHandling)) outputType <- argType
   else {
+    argSym <- nCompiler:::argType2symbol(argType)
     type <- switch(
       outputHandling,
       'numeric', ## 1
       'integer', ## 2
       'logical', ## 3
-      argType,   ## 4
-      if (grepl('logical', argType)) 'integer' else argType ## 5
+      argSym$type,   ## 4
+      if (grepl('logical', argType)) 'integer' else argSym$type ## 5
     )
-    if (!type %in% c('numeric', 'integer', 'logical'))
-      outputType <- type
-    else {
-      nDim <- nCompiler:::argType2symbol(argType)$nDim
-      dimString <- switch(
-        nDim + 1,
-        'Scalar', ## nDim is 0
-        'Vector', ## nDim is 1
-        'Matrix', ## nDim is 2
-        'Array(nDim=3)' ## nDim is 3
-      )
-      outputType <- paste0(type, dimString)
-    }
+    if (type == 'double') type <- 'numeric'
+    handler <- nCompiler:::getOperatorDef(
+                             op, 'labelAbstractTypes', 'handler'
+                           )
+    nDim <- if (!is.null(handler) && handler == 'UnaryReduction') 0
+            else argSym$nDim
+    dimString <- switch(
+      nDim + 1,
+      'Scalar', ## nDim is 0
+      'Vector', ## nDim is 1
+      'Matrix', ## nDim is 2
+      'Array(nDim=3)' ## nDim is 3
+    )
+    outputType <- paste0(type, dimString)
   }
 
   list(
@@ -262,7 +264,7 @@ makeUnaryCwiseTest <- function(name, op, argType) {
 }
 
 cWiseUnaryOps <- c(
-  '-', 'min', 'max', 'mean', 'prod', 'squaredNorm', 'exp', 'inverse', 'lgamma',
+  '-', 'min', 'max', 'mean', 'prod', 'squaredNorm', 'exp', 'inverse',
   'log', 'rsqrt', 'sqrt', 'square', 'tanh', 'abs', 'cube', 'atan'
 )
 cWiseUnaryTests <- unlist(
@@ -280,28 +282,12 @@ cWiseUnaryTests <- unlist(
 )
 names(cWiseUnaryTests) <- sapply(cWiseUnaryTests, `[[`, 'name')
 
-## cannot yet handle scalar input with .method operators
-dot_method_regex <- '^(abs|cube|exp|log|rsqrt|sqrt|square|tanh) .+Scalar$'
-modifyOnMatch(cWiseUnaryTests, dot_method_regex, 'knownFailure', '.*compiles')
-
-## cannot handle any input with unaryExpr operators
-unaryExpr_regex <- '^(atan|inverse|lgamma|logit|min|max|mean|squaredNorm) .+$'
-modifyOnMatch(cWiseUnaryTests, unaryExpr_regex, 'knownFailure', '.*compiles')
-
-## prod cannot handle any input
-modifyOnMatch(cWiseUnaryTests, '^prod .+', 'knownFailure', '.*compiles')
-
-## cannot handle non-numeric data types
-non_numeric_regex <- '^(abs|cube|square) (integer|logical).+$'
-modifyOnMatch(cWiseUnaryTests, non_numeric_regex, 'knownFailure', '.*compiles')
-
-modifyOnMatch(
-  cWiseUnaryTests, '^- (integer|logical)(Vector|Matrix|Array)',
-  'knownFailure', '.*compiles'
+## cannot yet handle scalar input with .method or unaryExpr operators
+dot_method_regex <- paste0(
+  '^(abs|cube|exp|log|prod|rsqrt|sqrt|square|tanh',
+  '|atan|inverse|logit|min|max|mean|squaredNorm) .+Scalar$'
 )
-
-## cannot handle non-numeric array types
-## modifyOnMatch(cWiseUnaryTests, '(exp|log|sqrt|tanh) (integer|logical)Array', 'knownFailure', '.*runs')
+modifyOnMatch(cWiseUnaryTests, dot_method_regex, 'knownFailure', '.*compiles')
 
 set.seed(0)
 test_math_batch(cWiseUnaryTests, 'cWiseUnaryOps', verbose = TRUE)

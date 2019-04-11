@@ -130,9 +130,12 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       handler = 'Reduction',
-      method = TRUE)
+      method = TRUE),
+    cppOutput = list()
   )
 )
+updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
+updateOperatorDef('min', 'cppOutput', 'cppString', 'minimum')
 
 assignOperatorDef(
   c('pmin', 'pmax'),
@@ -143,11 +146,12 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       handler = 'cWiseBinary',
-      method = TRUE)
+      method = TRUE),
+    cppOutput = list()
   )
 )
-updateOperatorDef('pmax', 'eigenImpl', 'cppName', 'cwiseMax')
-updateOperatorDef('pmin', 'eigenImpl', 'cppName', 'cwiseMin')
+updateOperatorDef('pmax', 'cppOutput', 'cppString', 'cwiseMax')
+updateOperatorDef('pmin', 'cppOutput', 'cppString', 'cwiseMin')
 
 assignOperatorDef(
   'eigencast',
@@ -261,12 +265,12 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('atan'),
+  c('atan', 'logit'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
       handler = 'UnaryCwise',
-      returnTypeCode = returnTypeCodes$promoteNoLogical),
+      returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
       toEigen = 'Yes',
       handler = 'cWiseUnary_external',
@@ -338,9 +342,9 @@ assignOperatorDef(
     eigenImpl = list(
       toEigen = 'Yes',
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
-      cppName = 'pow',
       method = TRUE),
     cppOutput = list(
+      cppString = 'pow',
       handler = '')
   )
 )
