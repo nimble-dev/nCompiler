@@ -118,10 +118,10 @@ assignOperatorDef(
           handler = 'BinaryOrUnary'),
         testthat = list(
           isBinary = TRUE,
-          isUnary = TRUE,
           testMath = TRUE)
     )
 )
+updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
 
 assignOperatorDef(
   c('min', 'max'),
