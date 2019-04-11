@@ -215,7 +215,7 @@ returnTypeString <- function(op, argTypes) {
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
-  nDim <- nDim <- if (length(argTypes == 1)) {
+  nDim <- if (length(argTypes) == 1) {
             handler <- nCompiler:::getOperatorDef(
                                      op, 'labelAbstractTypes', 'handler'
                                    )
