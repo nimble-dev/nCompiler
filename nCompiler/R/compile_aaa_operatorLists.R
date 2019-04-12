@@ -118,7 +118,8 @@ assignOperatorDef(
           handler = 'BinaryOrUnary'),
         testthat = list(
           isBinary = TRUE,
-          testMath = TRUE)
+          testMath = TRUE,
+          testAD = TRUE)
     )
 )
 updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
@@ -245,7 +246,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('exp', 'inverse', 'lgamma', 'log', 'rsqrt', 'sqrt', 'square', 'tanh'),
+  c('exp', 'inverse', 'lgamma', 'log', 'rsqrt', 'sqrt', 'tanh'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
@@ -265,7 +266,6 @@ assignOperatorDef(
       testAD = TRUE)
   )
 )
-updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
 
 assignOperatorDef(
   c('abs', 'cube', 'square'),
@@ -284,7 +284,8 @@ assignOperatorDef(
     ),
     testthat = list(
       isUnary = TRUE,
-      testMath = TRUE)
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
