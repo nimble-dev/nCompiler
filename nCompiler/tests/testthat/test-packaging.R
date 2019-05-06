@@ -43,7 +43,7 @@ test_that("writePackage and buildPackage work for nClass",
             )
             writePackage(
               nc1, package.name = "nc1Package", clean = TRUE,
-              nClass_interface = 'generic'
+              nClass_full_interface = FALSE
             )
             buildPackage("nc1Package", dir = ".", lib = "test_package_nc1Package_lib")
             expect_true(require("nc1Package", lib.loc = "test_package_nc1Package_lib"))
@@ -74,11 +74,11 @@ test_that("writePackage and buildPackage work for nClass with full interface",
     )
   )
   writePackage(
-    nc2, package.name = "nc2Package", clean = TRUE, nClass_interface = "full"
+    nc2, package.name = "nc2Package", clean = TRUE
   )
   expect_true(buildPackage("nc2Package", dir = ".", lib = "test_package_nc2Package_lib"))
-  expect_true(isCompiledNCgenerator(nc2Package::nc2_compiled))
-  obj <- nc2Package::nc2_compiled$new()
+  expect_true(isCompiledNCgenerator(nc2Package::nc2))
+  obj <- nc2Package::nc2$new()
   expect_true(inherits(obj, "nClass"))
   expect_equal(obj$cp1(2), 3)
 })

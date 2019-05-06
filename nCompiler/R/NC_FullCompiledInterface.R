@@ -72,9 +72,6 @@ build_compiled_nClass <- function(NCgenerator,
   names(activeBindings) = CfieldNames
   classname <- paste0(NCgenerator$classname, '_compiled')
 
-  ## get the RcppPacket to pass to compileCpp_nCompiler
-  RcppPacket <- NCinternals(NCgenerator)$RcppPacket
-
   ans <- substitute(
     expr = R6::R6Class(
                  classname = CLASSNAME,
@@ -84,12 +81,7 @@ build_compiled_nClass <- function(NCgenerator,
                  public = c(
                    list(initialize = function(CppObj) {
                      if(missing(CppObj)) {
-                       ## codeDir is added as a private field of generators
-                       ## embedded in packages created by writePackage()
-                       newCobjFun <- nCompiler:::compileCpp_nCompiler(
-                                                   RCPPPACKET,
-                                                   dir = self$private$codeDir
-                                                 )
+                       newCobjFun <- NEWCOBJFUN
                        if(is.null(newCobjFun))
                          stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
                        CppObj <- newCobjFun()
@@ -106,14 +98,17 @@ build_compiled_nClass <- function(NCgenerator,
                ),
     env = list(
       CLASSNAME = classname,
-      RCPPPACKET = RcppPacket,
+      NEWCOBJFUN = parse(text = paste0('new_', NCgenerator$classname),
+                         keep.source = FALSE)[[1]],
       RPUBLIC = parse(text = deparse(
                         NCgenerator$public_methods[RmethodNames]
-                      ))[[1]],
+                      ), keep.source = FALSE)[[1]],
       RFIELDS = parse(text = deparse(
-                        NCgenerator$public_fields[RfieldNames])
-                      )[[1]],
-      CINTERFACE = parse(text = deparse(CinterfaceMethods))[[1]],
+                        NCgenerator$public_fields[RfieldNames]
+                      ), keep.source = FALSE)[[1]],
+      CINTERFACE = parse(text = deparse(
+                           CinterfaceMethods
+                         ), keep.source = FALSE)[[1]],
       ACTIVEBINDINGS = parse(text = deparse(activeBindings))[[1]]
     )
   )
