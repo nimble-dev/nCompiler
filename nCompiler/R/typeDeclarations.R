@@ -137,7 +137,7 @@ typeDeclarationList <- list(
 
     ## lists
     list = function(...) {
-        symbolList$new()
+        symbolList$new(...)
     },
 
     ## determine type from an evaluated object
