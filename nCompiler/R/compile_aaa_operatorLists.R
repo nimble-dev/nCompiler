@@ -364,6 +364,24 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
+    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ReturnTypeNoPromote',
+      returnTypeCode = returnTypeCodes$double
+    ),
+    eigenImpl = list(
+      toEigen = 'Yes',
+      handler = 'PromoteAllButLastArg'
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
 specificCallReplacements <- list(
 #    '^' = 'pow',
 #    '%%' = 'nimMod',
