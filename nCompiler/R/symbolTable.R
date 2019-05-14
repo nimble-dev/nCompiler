@@ -143,6 +143,38 @@ symbolNC <- R6::R6Class(
   )
 )
 
+symbolList <- R6::R6Class(
+  classname = "symbolList",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    size = NULL,
+    initialize = function(..., size = NA) {
+      super$initialize(...)
+      self$type = 'list'
+      self$size <- size
+      self
+    },
+    shortPrint = function() {
+      'List'
+    },
+    print = function() {
+      if(is.null(self$size)) {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
+        )
+      } else {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = ', self$size)
+        )
+      }
+    },
+    genCppVar = function() {
+      return(cppRcppList(name = self$name))
+    }
+  )
+)
+
 ## This was an exercise in conversion from the old system.
 ## I'm not sure this is or will be needed.
 symbolEigenMap <- R6::R6Class(

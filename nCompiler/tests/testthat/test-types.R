@@ -185,13 +185,13 @@ test_that("trap error from duplicate setting of isRef",
     )
 })
 
-test_that("nimMatrix(type = \"integer\")",
+test_that("nMatrix(type = \"integer\")",
 {
     ## Type constructed from object
-    cat('\nTo do: test of using nimType object to define type\n')
+    cat('\nTo do: test of using nType object to define type\n')
     
     ## some other basic types
-    b <- quote(nimMatrix(type = "integer",
+    b <- quote(nMatrix(type = "integer",
                          nrow = 3,
                          ncol = 5))
     bSym <- nCompiler:::argType2symbol(b,
@@ -205,12 +205,22 @@ test_that("nimMatrix(type = \"integer\")",
     expect_identical(bSym$isArg, TRUE)
 })
 
+test_that("list type works",
+{
+    l <- quote(list())
+    lSym <- nCompiler:::argType2symbol(l, name = "l", isArg = TRUE)
+    expect_identical(lSym$name, "l")
+    expect_identical(lSym$type, "list")
+    expect_identical(lSym$isRef, FALSE)
+    expect_identical(lSym$isArg, TRUE)
+})
+
 test_that("list arguments handled correctly",
 {
     ## working from a list
     a <- quote(numericMatrix())
     b <- NULL
-    bExplicit = quote(nimMatrix(type = "integer"))
+    bExplicit = quote(nMatrix(type = "integer"))
     aRef <- TRUE
     bRef <- FALSE
     symTab <- nCompiler:::argTypeList2symbolTable(
@@ -247,7 +257,7 @@ test_that("symbolNC works",
             nc1 <- nClass(
               Cpublic = list(a = 'numericScalar')
             )
-            sym_nc1 <- argType2symbol('nc1', 'nc1obj')
+            sym_nc1 <- nCompiler:::argType2symbol('nc1', 'nc1obj')
             expect_equal(sym_nc1$genCppVar()$generate(),
                          "std::shared_ptr<nc1> nc1obj")
           })
@@ -257,6 +267,6 @@ cat("\nSee test-types.R for notes on remaining issues to test.\n")
 ## Need to enforce that with isRef=TRUE, no form of default value is valid,
 ## even in a nimble type declaration.
 ## Need to add expect_error tests.
-## Need to test case of providing a nimType object directly.
+## Need to test case of providing a nType object directly.
 
 
