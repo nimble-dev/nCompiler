@@ -431,6 +431,23 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  Literal <- function(code, symTab, auxEnv, handlingInfo) {
+    if (length(code$args) > 2)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'cppLiteral has argument length > 2.'
+      ),
+      call. = FALSE)
+    if (length(code$args) == 2) {
+      ## Add types that the user specified in their literal C++ code to symTab
+      type_list <- lapply(code$args[[2]]$args, `[[`, 'name')
+      symbols <- argTypeList2symbolTable(type_list)$getSymbols()
+      for (sym in symbols) symTab$addSymbol(sym)
+    }
+    invisible(NULL)
+  }
+)
 
 inLabelAbstractTypesEnv(
     Return <- 

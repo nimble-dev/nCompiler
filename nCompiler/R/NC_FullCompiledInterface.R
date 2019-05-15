@@ -53,9 +53,10 @@
 # 
 
 #' @export
-build_compiled_nClass <- function(NCgenerator, 
-                                      newCobjFun, 
-                                      env = parent.frame()) {
+build_compiled_nClass <- function(NCgenerator,
+                                  newCobjFun,
+                                  env = parent.frame(),
+                                  quoted = FALSE) {
   NCI <- NCinternals(NCgenerator)
   CmethodNames <- NCI$methodNames
   RmethodNames <- setdiff(names(NCgenerator$public_methods), 
@@ -70,31 +71,64 @@ build_compiled_nClass <- function(NCgenerator,
                            buildActiveBinding_for_compiled_nClass)
   names(activeBindings) = CfieldNames
   classname <- paste0(NCgenerator$classname, '_compiled')
-  new_env <- new.env(parent = env)
-  
-  ans <- R6::R6Class(
-    classname = classname,
-    private = list(
-      CppObj = NULL
-    ),
-    public = c(
-      list(initialize = function(CppObj) {
-        if(missing(CppObj)) {
-          newCobjFun <- parent.env(parent.env(self))$.newCobjFun
-          if(is.null(newCobjFun))
-            stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
-          CppObj <- newCobjFun()
-        }
-        private$CppObj <- CppObj
-      }),
-      NCgenerator$public_methods[RmethodNames],
-      NCgenerator$public_fields[RfieldNames],
-      CinterfaceMethods),
-    active = activeBindings,
-    portable = FALSE,
-    inherit = nCompiler:::nClassClass,
-    parent_env = new_env
+
+  ans <- substitute(
+    expr = R6::R6Class(
+                 classname = CLASSNAME,
+                 private = list(
+                   CppObj = NULL
+                 ),
+                 public = c(
+                   list(initialize = function(CppObj) {
+                     if(missing(CppObj)) {
+                       newCobjFun <- NEWCOBJFUN
+                       if(is.null(newCobjFun))
+                         stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+                       CppObj <- newCobjFun()
+                     }
+                     private$CppObj <- CppObj
+                   }),
+                   RPUBLIC,
+                   RFIELDS,
+                   CINTERFACE),
+                 active = ACTIVEBINDINGS,
+                 portable = FALSE,
+                 inherit = nCompiler:::nClassClass,
+                 parent_env = NULL ## when quoted = TRUE, env argument is not used
+               ),
+    env = list(
+      CLASSNAME = classname,
+      NEWCOBJFUN = parse(text = paste0('new_', NCgenerator$classname),
+                         keep.source = FALSE)[[1]],
+      RPUBLIC = parse(text = deparse(
+                        NCgenerator$public_methods[RmethodNames]
+                      ), keep.source = FALSE)[[1]],
+      RFIELDS = parse(text = deparse(
+                        NCgenerator$public_fields[RfieldNames]
+                      ), keep.source = FALSE)[[1]],
+      CINTERFACE = parse(text = deparse(
+                           CinterfaceMethods
+                         ), keep.source = FALSE)[[1]],
+      ACTIVEBINDINGS = parse(text = deparse(activeBindings))[[1]]
+    )
   )
+
+  if (quoted) return(ans)
+
+  ans <- eval(ans)
+  ans$public_methods$initialize <- function(CppObj) {
+    if(missing(CppObj)) {
+      newCobjFun <- parent.env(parent.env(self))$.newCobjFun
+      if(is.null(newCobjFun))
+        stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+      CppObj <- newCobjFun()
+    }
+    private$CppObj <- CppObj
+  }
+
+  new_env <- new.env(parent = env)
+  ans$parent_env <- new_env
+
   if(!missing(newCobjFun)) {
     # Similar to .internals in nClass,
     # we put newCobjFun in two places:
