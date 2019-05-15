@@ -424,6 +424,14 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  Distribution <- function(code, symTab, auxEnv, handlingInfo) {
+    code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Literal <- function(code, symTab, auxEnv, handlingInfo) {
     if (length(code$args) > 2)
       stop(exprClassProcessingErrorMsg(

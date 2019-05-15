@@ -318,6 +318,18 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  RR_Distribution <- function(code, symTab) {
+    paste0(
+      'RR_', code$name, '(',
+      paste0(
+        unlist(lapply(code$args, compile_generateCpp, symTab)),
+        collapse = ', '
+      ), ')'
+    )
+  }
+)
+
+inGenCppEnv(
   ## This differs from old system
   ## EigenCast(A, type) -> A.cast<type>() if A$type$nDim > 0
   ## EigenCast(A, type) -> static_cast<type>(A) if A is scalar
