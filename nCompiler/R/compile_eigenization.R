@@ -456,6 +456,10 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   PromoteAllButLastArg <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (length(code$args) == 0)
+      stop(exprClassProcessingErrorMsg(
+        code, 'In PromoteAllButLastArg: expected at least one arg, but code has none.'
+      ), call. = FALSE)
     promoteTypes(code, 1:(length(code$args) - 1))
     invisible(NULL)
   }

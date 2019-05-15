@@ -369,7 +369,7 @@ assignOperatorDef(
     'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
   list(
     labelAbstractTypes = list(
-      handler = 'ReturnTypeNoPromote',
+      handler = 'Distribution',
       returnTypeCode = returnTypeCodes$double
     ),
     eigenImpl = list(
