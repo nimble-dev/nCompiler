@@ -199,6 +199,7 @@ assignOperatorDef(
   'cppLiteral',
   list(
     help = 'cppLiteral("x = y;") inserts x = y; directly into the C++ output.',
+    labelAbstractTypes = list(handler = 'Literal'),
     cppOutput = list(handler = 'Literal')
   )
 )
@@ -411,6 +412,32 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
+    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Distribution',
+      returnTypeCode = returnTypeCodes$double
+    ),
+    eigenImpl = list(
+      toEigen = 'Yes',
+      handler = 'PromoteAllButLastArg'
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
+## assignOperatorDef(
+##   c('list'),
+##   list(
+##     labelAbstractTypes = list(handler = 'List'),
+##   eigenImpl = list(toEigen = 'No'),
+##   cppOutput = list(handler = 'List')
+## )
+
 specificCallReplacements <- list(
 #    '^' = 'pow',
 #    '%%' = 'nimMod',
@@ -427,7 +454,7 @@ specificCallReplacements <- list(
     phi = 'iprobit',
     ceiling = 'ceil',
     trunc = 'ftrunc',
-    nimDim = 'dim',
+    nDim = 'dim',
     checkInterrupt = 'R_CheckUserInterrupt')
 
 for(op in names(specificCallReplacements))

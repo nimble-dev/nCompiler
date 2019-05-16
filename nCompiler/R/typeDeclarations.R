@@ -17,7 +17,7 @@
 ## a = matrix(type = "integer", nrow = 10, ncol, init = FALSE)
 
 #' @export
-nimType <- function(scalarType, nDim, isRef = FALSE, ...) {
+nType <- function(scalarType, nDim, isRef = FALSE, ...) {
     symbolBasic$new(type = scalarType,
                     nDim = nDim,
                     isRef = isRef,
@@ -34,105 +34,110 @@ typeDeclarationList <- list(
     },
     ## integer types:
     integerScalar = function(value) {
-        nimType("integer", 0)
+        nType("integer", 0)
     },
     integerVector = function(length = 0,
                              ...) {
-        nimType("integer", 1, ...)
+        nType("integer", 1, ...)
     },
     integerMatrix = function(value,
                              ...) {
-        nimType("integer", 2, ...)
+        nType("integer", 2, ...)
     },
     integerArray = function(value,
                             nDim = 1,
                             ...) {
-        nimType("integer", nDim)
+        nType("integer", nDim)
     },
     ## logical types
     logicalScalar = function(value) {
-        nimType("logical", 0)
+        nType("logical", 0)
     },
     logicalVector = function(length = 0,
                              ...) {
-        nimType("logical", 1)
+        nType("logical", 1)
     },
     logicalMatrix = function(value,
                              ...) {
-        nimType("logical", 2)
+        nType("logical", 2)
     },
     logicalArray = function(value,
                             nDim = 1,
                             ...) {
-        nimType("logical", nDim)
+        nType("logical", nDim)
     },
     ## numeric types
     numericScalar = function(value) {
-        nimType("double", 0)
+        nType("double", 0)
     },
     numericVector = function(length = NA,
                              ...) {
-        nimType("double", 1, size = length, ...)
+        nType("double", 1, size = length, ...)
     },
     numericMatrix = function(value,
                              ...) {
-        nimType("double", 2, ...)
+        nType("double", 2, ...)
     },
     numericArray = function(value,
                             nDim = 1,
                             ...) {
-        nimType("double", nDim, ...)
+        nType("double", nDim, ...)
     },
     ## versions with type as a declared argument
-    nimScalar = function(...,
+    nScalar = function(...,
                          type = "double") {
-        nimType(type, 0)
+        nType(type, 0)
     },
-    nimVector = function(value,
+    nVector = function(value,
                          length,
                          ...,
                          type = "double") {
-        nimType(type, 1)
+        nType(type, 1)
     },
-    nimMatrix = function(value,
+    nMatrix = function(value,
                          ...,
                          type = "double") {
-        nimType(type, 2)
+        nType(type, 2)
     },
-    nimArray = function(value,
+    nArray = function(value,
                         dim,
                         ...,
                         type = "double") {
-        nimType(type, length(dim))
+        nType(type, length(dim))
     },
     ## vector versions with type embedded in keyword
-    nimInteger = function(length = 0,
+    nInteger = function(length = 0,
                           ...) {
-        nimType("integer", 1)
+        nType("integer", 1)
     },
-    nimLogical = function(length = 0,
+    nLogical = function(length = 0,
                           ...) {
-        nimType("logical", 1)
+        nType("logical", 1)
     },
-    nimNumeric = function(length = 0,
+    nNumeric = function(length = 0,
                           ...) {
-        nimType("double", 1)
+        nType("double", 1)
     },
     ## versions from original.nCompiler
     double = function(nDim = 0,
                       ...) {
-        nimType("double", nDim)
+        nType("double", nDim)
     },
     integer = function(nDim = 0,
                        ...) {
-        nimType("integer", nDim)
+        nType("integer", nDim)
     },
     logical = function(nDim = 0,
                        ...) {
-        nimType("logical", nDim)
+        nType("logical", nDim)
     },
     void = function(...) {
-        nimType("void", 0)
+        nType("void", 0)
+    },
+
+    ## lists
+    list = function(...) {
+        symbolList$new(...)
     },
 
     ## determine type from an evaluated object
@@ -147,13 +152,13 @@ typeDeclarationList <- list(
                         "argument must be integer, double or logical."),
                  call. = FALSE)
         }
-        nDim <- length(nimDim(x))
+        nDim <- length(nDim(x))
         if(!(nDim >= 0 &
              nDim <= 6))
             stop(paste0("Invalid number of dimensions used to declare a.nCompiler ",
                         "argument.  Dimensions from 0-6 are allowed."),
                  call. = FALSE)  
-        nimType(scalarType, nDim)
+        nType(scalarType, nDim)
     }
     ## universal handler for creating symbolBasic objects
 )
@@ -183,7 +188,7 @@ argType2symbol <- function(argType,
             argType <- NULL
     
     ans <- try({
-        ## TO-DO: Case 1: It is a nimType object
+        ## TO-DO: Case 1: It is a nType object
         ##    To be implemented
         ##
         ## Case 2: It is a valid declaration

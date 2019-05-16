@@ -207,9 +207,9 @@ compile_eigenize <- function(code,
 }
 
 inEigenizeEnv(
-  promoteTypes <- function(code) {
+  promoteTypes <- function(code, which_args = seq_along(code$args)) {
     resultType <- code$type$type
-    for(i in seq_along(code$args)) {
+    for(i in which_args) {
       if(inherits(code$args[[i]], 'exprClass')) {
         if(code$args[[i]]$type$type != resultType)
             eigenCast(code, i, resultType)
@@ -450,6 +450,17 @@ inEigenizeEnv(
     promoteArgTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
     convertToMethod(code, handlingInfo)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  PromoteAllButLastArg <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (length(code$args) == 0)
+      stop(exprClassProcessingErrorMsg(
+        code, 'In PromoteAllButLastArg: expected at least one arg, but code has none.'
+      ), call. = FALSE)
+    promoteTypes(code, 1:(length(code$args) - 1))
     invisible(NULL)
   }
 )

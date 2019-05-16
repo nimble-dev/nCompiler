@@ -4,12 +4,14 @@
 \alias{set_nOption}
 \title{Set nCompiler Option}
 \usage{
-set_nOption(name, value)
+set_nOption(x, value, listName = NULL)
 }
 \arguments{
+\item{x}{a character string holding an option name}
+
 \item{value}{the new value of the option}
 
-\item{x}{a character string holding an option name}
+\item{listName}{an optional character string with the name of a list in which to find \code{x}}
 }
 \value{
 \code{value}
