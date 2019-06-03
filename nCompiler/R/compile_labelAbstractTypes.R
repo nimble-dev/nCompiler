@@ -432,6 +432,96 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  IndexingBracket <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+
+    drop_idx <- which(names(code$args) == 'drop')
+    if (length(drop_idx) > 0)
+      args <- code$args[-drop_idx] ## the args other than drop
+    else
+      args <- code$args
+
+    ## the indexed object should be the first arg among those other than drop
+    nDim <- args[[1]]$type$nDim
+
+    index_args <- args[-1]
+    if (length(index_args) != nDim)
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          "In IndexingBracket: number of indexing arguments does not match the object's dimension"
+        ), call. = FALSE
+      )
+
+    nDrop <- 0
+    for (i in seq_along(index_args)) {
+      ## for now, can't handle indexing args other than those that are empty,
+      ## numeric literal, variable names with known dimensions, or created via :
+      if (index_args[[i]]$isCall && index_args[[i]]$name != ':')
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            'In IndexingBracket: indexing expressions other than : not currently supported'
+          ), call. = FALSE
+        )
+      if (index_args[[i]]$name != '') {
+        if (is.null(index_args[[i]]$type) ||
+            is.null(index_args[[i]]$type$nDim))
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0("In IndexingBracket: '", index_args[[i]]$name,
+                     "' has no dimension")
+            ), call. = FALSE
+          )
+        if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
+        if (index_args[[i]]$type$nDim > 1)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0("In IndexingBracket: the dimension of '", index_args[[i]]$name,
+                     "' is too large: ", index_args[[i]]$name$type$nDim, " > 1")
+            ), call. = FALSE
+          )
+      }
+    }
+
+    ## drop must be named if provided, so this should work
+    drop <- code$args$drop
+    if (inherits(drop, 'exprClass')) {
+      if (drop$isLiteral) {
+        ## TODO: replace with logical symbol in AST
+        if (is.na(drop$name) || is.nan(drop$name))
+          ## the user provided a literal NA or NaN drop arg and even when drop is
+          ## passed in explicity as NA or NaN R treats it as TRUE
+          drop <- TRUE
+        else
+          drop <- as.logical(drop$name)
+      } else {
+        ## TODO: what if user provided a vector? R would use first element...
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            'In IndexingBracket: the drop argument must be a literal.'
+          ), call. = FALSE
+        )
+      }
+    }
+
+    ## if drop is still NULL at this point, it wasn't included as an arg
+    ## so use the default which is drop = TRUE
+    if (is.null(drop)) drop <- TRUE
+
+    if (isTRUE(drop)) {
+      nDim <- nDim - nDrop
+    }
+    code$type <- symbolBasic$new(nDim = nDim, type = args[[1]]$type$type)
+    browser()
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Literal <- function(code, symTab, auxEnv, handlingInfo) {
     if (length(code$args) > 2)
       stop(exprClassProcessingErrorMsg(

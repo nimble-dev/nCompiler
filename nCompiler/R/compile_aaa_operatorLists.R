@@ -62,6 +62,9 @@ assignOperatorDef(
 assignOperatorDef(
   c('['),
   list(
+    labelAbstractTypes = list(
+      handler = 'IndexingBracket'
+    ),
     cppOutput = list(
       handler = 'Bracket')
   )
