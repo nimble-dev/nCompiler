@@ -435,29 +435,33 @@ inLabelAbstractTypesEnv(
   IndexingBracket <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
-    drop_idx <- which(names(code$args) == 'drop')
-    if (length(drop_idx) > 0)
-      args <- code$args[-drop_idx] ## the args other than drop
-    else
-      args <- code$args
+    ## drop must be named if provided, so this should work
+    drop_arg <- code$args$drop
+    code$args$drop <- NULL ## remove from AST
 
     ## the indexed object should be the first arg among those other than drop
-    nDim <- args[[1]]$type$nDim
+    obj <- code$args[[1]]
+    index_args <- code$args[-1]
+    nDim <- obj$type$nDim
 
-    index_args <- args[-1]
     if (length(index_args) != nDim)
       stop(
         exprClassProcessingErrorMsg(
           code,
           paste0(
             "In IndexingBracket: number of indexing arguments does not match the dimension of '",
-            args[[1]]$name, "'; expected ", nDim, " but received ", length(index_args), "."
-          ), call. = FALSE
-        )
+            obj$name, "'; expected ", nDim, " but received ", length(index_args), "."
+          )
+        ), call. = FALSE
       )
+
+    code$args <- NULL ## reset args
+    setArg(code, 1, obj) ## put indexed object back as first arg
 
     nDrop <- 0
     for (i in seq_along(index_args)) {
+      ## ensure that indexing args appear before drop in AST
+      setArg(code, i + 1, index_args[[i]])
       ## for now, can't handle indexing args other than those that are empty,
       ## numeric literal, variable names with known dimensions, or created via :
       if (index_args[[i]]$isCall && index_args[[i]]$name != ':')
@@ -491,19 +495,16 @@ inLabelAbstractTypesEnv(
       }
     }
 
-    ## drop must be named if provided, so this should work
-    drop_arg <- code$args$drop
     drop <- TRUE
-    put_drop_in_AST <- FALSE
     if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
         ## if the user provided a literal NA or NaN drop arg and even when drop
         ## is passed in explicity as NA or NaN R treats it as TRUE
         if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
-          put_drop_in_AST <- TRUE
+          drop_arg <- newLiteralLogicalExpression()
         } else if (drop_arg$type$type != 'logical') {
           drop <- as.logical(drop_arg$name)
-          put_drop_in_AST <- TRUE
+          drop_arg <- newLiteralLogicalExpression(drop)
         }
       } else {
         ## TODO: what if user provided a vector? R would use first element...
@@ -515,21 +516,16 @@ inLabelAbstractTypesEnv(
         )
       }
     } else if (is.null(drop_arg)) {
-      put_drop_in_AST <- TRUE
+      drop_arg <- newLiteralLogicalExpression()
     }
 
-    if (put_drop_in_AST) {
-      drop_arg <- newLiteralLogicalExpression(drop)
-      ## setting the arg by name leads to the warning
-      ## "caller and/or callerID are not set correctly"
-      setArg(code, 'drop', drop_arg)
-    }
+    ## set 'drop' as the last arg in the AST
+    setArg(code, length(code$args) + 1, drop_arg)
 
     if (isTRUE(drop)) {
       nDim <- nDim - nDrop
     }
-    code$type <- symbolBasic$new(nDim = nDim, type = args[[1]]$type$type)
-    browser()
+    code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }
 )
