@@ -15,11 +15,20 @@
 #' @return A function that will internally call the compiled C++ code.
 #' @export
 nCompile_nFunction <- function(NF,
-                                  dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                                  cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
-                                  env = parent.frame(),
-                                  control = list(),
-                                  ...) {
+                               dir = file.path(tempdir(), 'nCompiler_generatedCode'),
+                               cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
+                               env = parent.frame(),
+                               control = list(),
+                               name,
+                               ...) {
+  ## ... is used for internal arguments that are not necessarily documents or 
+  ## promised to stay stable.
+  dotArgs <- list(...)
+  ## When called from nCompile, stopAfterRcppPacket will be TRUE.
+  ## While this could also be done from the control() list, 
+  ## we leave that to the user.  E.g. That might set endStage even
+  ## earlier.
+  stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
     ## See options.R for defaults
     controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
@@ -35,9 +44,17 @@ nCompile_nFunction <- function(NF,
       on.exit(set_nOption('logging', loggingOpt, 'compilerOptions'))
     }
 
-    ## will be used for C++
-    funName <- substitute(NF)
-    funName <- Rname2CppName(substr(deparse(funName), 1, 10))
+    ## funName will be used for C++, with a unique tag appended
+    nameFromNFarg <- substitute(NF)
+    if(!missing(name)) {
+      funName <- name
+    } else {
+      funName <- NFinternals(NF)$uniqueName
+      if(is.null(funName)) {
+        funName <- nameFromNFarg
+        funName <- Rname2CppName(substr(deparse(funName), 1, 10))
+      }      
+    }
     
     NF_Compiler <- NF_CompilerClass$new(f = NF,
                                         funName=  funName)
@@ -55,7 +72,14 @@ nCompile_nFunction <- function(NF,
       return(NF_Compiler)
     
     cppDef <- NF_Compiler$cppDef
-    filebase <- Rname2CppName(cppDef$name)
+    ## We append "_c_" so that the filename does not match the function name.
+    ## That prevents Rcpp's "context" system from making a mistake
+    ## when we combine multiple RcppPacket contents into a single file.
+    ## It seems to check if there are any .cpp files with names that
+    ## match names of exported functions, and to think they should
+    ## be compiled if so.  If one has compiled a nFunction individually
+    ## and the in combination with other files, this could cause a problem.
+    filebase <- paste0(Rname2CppName(cppDef$name), '_c_')
     RcppPacket <- cppDefs_2_RcppPacket(cppDef,
                                        filebase = filebase)
     NFinternals(NF)$RcppPacket <- RcppPacket
@@ -76,27 +100,29 @@ nCompile_nFunction <- function(NF,
         appendToLog(paste("---- End compilation log", nameMsg, " ----\n"))
     }
     
+    if(stopAfterRcppPacket) 
+      return(NF)
     ## Next two steps should be replaced with single call to cpp_nCompiler.  See nCompile_nClass
     stageName <- 'writeCpp'
     if(NFcompilerMaybeStop(stageName, controlFull)) 
       return(NF)
     if(isTRUE(controlFull$writeCpp)) {
       writeCpp_nCompiler(RcppPacket,
-                     dir = dir)
+                         dir = dir)
       if(isTRUE(get_nOption('pause_after_writing_files')))
         browser()
     }
     NF_Compiler$stageCompleted <- stageName
-
+    
     stageName = 'compileCpp'    
     if(NFcompilerMaybeStop(stageName, controlFull)) 
       return(NF)
     
     if(isTRUE(controlFull$compileCpp)) {
       ans <- compileCpp_nCompiler(RcppPacket,
-                              dir = dir,
-                              cacheDir = cacheDir,
-                              env = env)
+                                  dir = dir,
+                                  cacheDir = cacheDir,
+                                  env = env)
       NF_Compiler$stageCompleted <- stageName
       return(ans)
     }

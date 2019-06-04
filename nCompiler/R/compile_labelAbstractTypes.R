@@ -89,6 +89,25 @@ compile_labelAbstractTypes <- function(code,
         }
 
         opInfo <- operatorDefEnv[[code$name]]
+        ## TO-DO: Check for methods or nFunctions.
+        if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
+          browser()
+          obj <- get(code$name, envir = auxEnv$closure)
+          if(isNF(obj)) {
+            uniqueName <- NFinternals(obj)$uniqueName
+            if(length(uniqueName)==0)
+              stop(
+                exprClassProcessingErrorMsg(
+                  code,
+                  paste0('nFunction ', code$name, 'is being called, but it is malformed because it has no internal name.')),
+                call. = FALSE)
+            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
+              auxEnv$needed_nFunctions[[uniqueName]] <- NFinternals(obj)
+            }
+            opInfo <- operatorDefEnv[['nFunction']]
+          }
+        }
+        
         if(!is.null(opInfo)) {
             handlingInfo <- opInfo[["labelAbstractTypes"]]
             if(!is.null(handlingInfo)) {
@@ -105,33 +124,6 @@ compile_labelAbstractTypes <- function(code,
                     }
                     return(ans)
                 }
-            }
-        }
-        ## To-Do: update handling nClass method calls
-        if(symTab$symbolExists(code$name, TRUE)) { ## could be a nFunction object
-            return(size_nFunction(code, symTab, auxEnv) )
-        }
-        ## To-do: update RCfunction 
-        ## Finally, it could be an RCfunction (a nFunction with no setup == a simple function) {
-        if(exists(code$name)) {
-            obj <- get(code$name)
-            if(is.rcf(obj)) { ## it is an RC function
-                nfmObj <- environment(obj)$nfMethodRCobject
-                uniqueName <- nfmObj$uniqueName
-                if(length(uniqueName)==0)
-                    stop(
-                        exprClassProcessingErrorMsg(
-                            code,
-                            'In size processing: A no-setup nFunction with no internal name is being called.'),
-                        call. = FALSE)
-                if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-                    auxEnv$needed_nFunctions[[uniqueName]] <- nfmObj
-                }
-                ## new with nCompilerLists: we need to initiate compilation here so we can get full returnType information, including of nimbleLists
-                RCfunProc <-
-                    auxEnv$.nCompilerProject$compileRCfun(obj,
-                                                        initialTypeInference = TRUE)
-                return(sizeRCfunction(code, symTab, auxEnv, nfmObj, RCfunProc))
             }
         }
     }
@@ -155,6 +147,26 @@ inLabelAbstractTypesEnv(
                argType, ##4
                if(argType == 'logical') 'integer' else argType ##5
                )
+    }
+)
+
+inLabelAbstractTypesEnv(
+  Generic_nFunction <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo)
+        obj <- get(code$name, envir = auxEnv$closure)
+        ## TO-DO: Add error-trapping of argument types 
+        returnSym <- NFinternals(obj)$returnSym
+        if(is.null(returnSym))
+          stop(
+            exprClassProcessingErrorMsg(
+              code, paste('In Generic_nFunction: the nFunction ', code$name, 
+                          ' does not have a valid returnType.')
+            ), call. = FALSE
+          )
+        code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+        if(length(inserts) == 0) NULL else inserts
     }
 )
 

@@ -1,4 +1,4 @@
-nFunctionLabelMaker <- labelFunctionCreator('nimFun')
+nFunctionLabelMaker <- labelFunctionCreator('nFun')
 
 ## nFunction represents a pure function, not a class, although it
 ## may sometimes be implemented as a class.
@@ -27,13 +27,13 @@ nFunctionLabelMaker <- labelFunctionCreator('nimFun')
 ## Hence an object can be used as a function but also has slots (accessed with @)
 ## for internal content.
 nFunctionClass <- setClass(
-    Class = "nFunction",
-    contains = "function",
-    slots = list(
-        internals = "ANY"       ## An NF_InternalsClass.
-      , originalCode = "ANY"
-        
-    )
+  Class = "nFunction",
+  contains = "function",
+  slots = list(
+    internals = "ANY"       ## An NF_InternalsClass.
+    , originalCode = "ANY"
+    
+  )
 )
 
 #' Create a nFunction.
@@ -75,38 +75,38 @@ nFunctionClass <- setClass(
 #' }
 #' @export
 nFunction <- function(fun,
-                           name = NA,
-                           argTypes = list(),
-                           refArgs = list(),
-                           returnType = NULL,
-                           enableDerivs = list(),
-                           check = get_nOption('check_nFunction'),
-                           returnCallable = TRUE,
-                           where = parent.frame(),
-                           ...
-                           ) {
-    ## Provide a default label is one is needed.
-    if(is.na(name))
-        name <- nFunctionLabelMaker()
-
-    ## Create internals that will be used for compilation.
-    internals <- NF_InternalsClass$new(fun,
-                                       name = name,
-                                       argTypes = argTypes,
-                                       refArgs = refArgs,
-                                       returnType = returnType,
-                                       enableDerivs = enableDerivs,
-                                       check = check,
-                                       where = where)
-    ## Return a callable function.
-    ## This will be modified:
-    ## 1. to provide pass-by-reference behavior
-    ## as requested for any arguments.
-    ## 2. with any returnType() statement removed.
-    if(returnCallable) {
-        modifiedFun <- internals$getFunction()
-        nFunctionClass(modifiedFun, internals = internals)
-    }
-    else
-        internals
+                      name = NA,
+                      argTypes = list(),
+                      refArgs = list(),
+                      returnType = NULL,
+                      enableDerivs = list(),
+                      check = get_nOption('check_nFunction'),
+                      returnCallable = TRUE,
+                      where = parent.frame(),
+                      ...
+) {
+  ## Provide a default label is one is needed.
+  if(is.na(name))
+    name <- nFunctionLabelMaker()
+  
+  ## Create internals that will be used for compilation.
+  internals <- NF_InternalsClass$new(fun,
+                                     name = name,
+                                     argTypes = argTypes,
+                                     refArgs = refArgs,
+                                     returnType = returnType,
+                                     enableDerivs = enableDerivs,
+                                     check = check,
+                                     where = where)
+  ## Return a callable function.
+  ## This will be modified:
+  ## 1. to provide pass-by-reference behavior
+  ## as requested for any arguments.
+  ## 2. with any returnType() statement removed.
+  if(returnCallable) {
+    modifiedFun <- internals$getFunction()
+    nFunctionClass(modifiedFun, internals = internals)
+  }
+  else
+    internals
 }
