@@ -46,7 +46,8 @@ exprClasses_labelForEigenization <- function(code) {
         if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
 
         if(length(code$implementation$toEigen) > 0) {
-            if(code$implementation$toEigen == 'yes') {
+          if(code$implementation$toEigen == 'yes' ||
+             (code$implementation$toEigen == 'maybe' && code$type$nDim > 0)) {
          ##   if(anyNonScalar(code)) {
                 output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
         	return(output)
@@ -465,3 +466,50 @@ inEigenizeEnv(
   }
 )
 
+inEigenizeEnv(
+  IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    n_args <- length(code$args)
+    code$name <- paste0('Eigen::MakeStridedTensorMap<', code$nDim, '>::make')
+
+    ## labelAbstractTypes IndexingBracket handler put drop as last arg
+    drop <- code$args[[n_args]]$name
+    index_args <- code$args[2:(n_args - 1)]
+    code$args[2:n_args] <- NULL
+
+    blocks_expr <- setArg(
+      code, 2,
+      exprClass$new(name = 'Eigen::MakeIndexBlocks',
+                    isName = FALSE, isCall = TRUE)
+    )
+
+    for (i in seq_along(index_args)) {
+      ## create b__ call as arg to blocks_expr
+      setArg(
+        blocks_expr, i,
+        exprClass$new(name = 'b__',
+                      isName = FALSE, isCall = TRUE)
+      )
+
+      if (index_args[[i]]$isName && index_args[[i]]$name != '') {
+
+        setArg(blocks_expr$args[[i]], 1, index_args[[i]])
+
+      } else if (index_args[[i]]$isLiteral) {
+
+        setArg(blocks_expr$args[[i]], 1, index_args[[i]])
+        if (!drop)
+          setArg(blocks_expr$args[[i]], 2, copyExprClass(index_args[[i]]))
+
+      } else if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
+
+        setArg(blocks_expr$args[[i]], 1, index_args[[i]]$args[[1]])
+        setArg(blocks_expr$args[[i]], 2, index_args[[i]]$args[[2]])
+
+      }
+    }
+
+    ## remove drop from AST
+    code$args[[n_args]] <- NULL
+    invisible(NULL)
+  }
+)
