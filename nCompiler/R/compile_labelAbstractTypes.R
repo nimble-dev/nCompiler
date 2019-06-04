@@ -449,7 +449,9 @@ inLabelAbstractTypesEnv(
       stop(
         exprClassProcessingErrorMsg(
           code,
-          "In IndexingBracket: number of indexing arguments does not match the object's dimension"
+          paste0(
+            "In IndexingBracket: number of indexing arguments does not match the dimension of '",
+            args[[1]]$name, "'; expected ", nDim, " but received ", length(index_args), "."
         ), call. = FALSE
       )
 
@@ -461,7 +463,7 @@ inLabelAbstractTypesEnv(
         stop(
           exprClassProcessingErrorMsg(
             code,
-            'In IndexingBracket: indexing expressions other than : not currently supported'
+            "In IndexingBracket: indexing expressions other than ':' not currently supported."
           ), call. = FALSE
         )
       if (index_args[[i]]$name != '') {
@@ -471,7 +473,7 @@ inLabelAbstractTypesEnv(
             exprClassProcessingErrorMsg(
               code,
               paste0("In IndexingBracket: '", index_args[[i]]$name,
-                     "' has no dimension")
+                     "' has no dimension.")
             ), call. = FALSE
           )
         if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
@@ -479,8 +481,10 @@ inLabelAbstractTypesEnv(
           stop(
             exprClassProcessingErrorMsg(
               code,
-              paste0("In IndexingBracket: the dimension of '", index_args[[i]]$name,
-                     "' is too large: ", index_args[[i]]$name$type$nDim, " > 1")
+              paste0(
+                "In IndexingBracket: the dimension of '", index_args[[i]]$name,
+                " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
+              )
             ), call. = FALSE
           )
       }
