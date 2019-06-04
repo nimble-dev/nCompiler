@@ -234,6 +234,13 @@ newAssignmentExpression <- function() {
     exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
 }
 
+newLiteralLogicalExpression <- function(value = TRUE) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'logical',
+                          nDim = 0)
+  exprClass$new(isLiteral = TRUE, name = value, type = type)
+}
+
 ## This modifies the code$caller in place
 ## and generates the temp expr
 buildSimpleIntermCall <- function(code) {

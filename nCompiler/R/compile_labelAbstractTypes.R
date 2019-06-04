@@ -452,7 +452,8 @@ inLabelAbstractTypesEnv(
           paste0(
             "In IndexingBracket: number of indexing arguments does not match the dimension of '",
             args[[1]]$name, "'; expected ", nDim, " but received ", length(index_args), "."
-        ), call. = FALSE
+          ), call. = FALSE
+        )
       )
 
     nDrop <- 0
@@ -491,16 +492,19 @@ inLabelAbstractTypesEnv(
     }
 
     ## drop must be named if provided, so this should work
-    drop <- code$args$drop
-    if (inherits(drop, 'exprClass')) {
-      if (drop$isLiteral) {
-        ## TODO: replace with logical symbol in AST
-        if (is.na(drop$name) || is.nan(drop$name))
-          ## the user provided a literal NA or NaN drop arg and even when drop is
-          ## passed in explicity as NA or NaN R treats it as TRUE
-          drop <- TRUE
-        else
-          drop <- as.logical(drop$name)
+    drop_arg <- code$args$drop
+    drop <- TRUE
+    put_drop_in_AST <- FALSE
+    if (inherits(drop_arg, 'exprClass')) {
+      if (drop_arg$isLiteral) {
+        ## if the user provided a literal NA or NaN drop arg and even when drop
+        ## is passed in explicity as NA or NaN R treats it as TRUE
+        if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
+          put_drop_in_AST <- TRUE
+        } else if (drop_arg$type$type != 'logical') {
+          drop <- as.logical(drop_arg$name)
+          put_drop_in_AST <- TRUE
+        }
       } else {
         ## TODO: what if user provided a vector? R would use first element...
         stop(
@@ -510,11 +514,16 @@ inLabelAbstractTypesEnv(
           ), call. = FALSE
         )
       }
+    } else if (is.null(drop_arg)) {
+      put_drop_in_AST <- TRUE
     }
 
-    ## if drop is still NULL at this point, it wasn't included as an arg
-    ## so use the default which is drop = TRUE
-    if (is.null(drop)) drop <- TRUE
+    if (put_drop_in_AST) {
+      drop_arg <- newLiteralLogicalExpression(drop)
+      ## setting the arg by name leads to the warning
+      ## "caller and/or callerID are not set correctly"
+      setArg(code, 'drop', drop_arg)
+    }
 
     if (isTRUE(drop)) {
       nDim <- nDim - nDrop
