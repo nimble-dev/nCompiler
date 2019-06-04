@@ -46,8 +46,7 @@ exprClasses_labelForEigenization <- function(code) {
         if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
 
         if(length(code$implementation$toEigen) > 0) {
-          if(code$implementation$toEigen == 'yes' ||
-             (code$implementation$toEigen == 'maybe' && code$type$nDim > 0)) {
+          if(code$implementation$toEigen == 'yes') {
          ##   if(anyNonScalar(code)) {
                 output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
         	return(output)
@@ -469,7 +468,7 @@ inEigenizeEnv(
 inEigenizeEnv(
   IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     n_args <- length(code$args)
-    code$name <- paste0('Eigen::MakeStridedTensorMap<', code$nDim, '>::make')
+    code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
     ## labelAbstractTypes IndexingBracket handler put drop as last arg
     drop <- code$args[[n_args]]$name
