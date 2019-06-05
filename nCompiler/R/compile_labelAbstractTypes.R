@@ -444,6 +444,21 @@ inLabelAbstractTypesEnv(
     index_args <- code$args[-1]
     nDim <- obj$type$nDim
 
+    code$args <- NULL ## reset args
+
+    brackets_empty <- length(index_args) == 1 &&
+      index_args[[1]]$isName &&
+      index_args[[1]]$name == ""
+
+    if (brackets_empty) {
+      ## no indexing is happening, so just replace [ with the obj in the AST
+      ## and return
+      setArg(code$caller, code$callerArgID, obj)
+      return(invisible(NULL))
+    }
+
+    ## at this point, the indexing args are not empty and their length must
+    ## the input obj dimension
     if (length(index_args) != nDim)
       stop(
         exprClassProcessingErrorMsg(
@@ -455,30 +470,41 @@ inLabelAbstractTypesEnv(
         ), call. = FALSE
       )
 
-    code$args <- NULL ## reset args
     setArg(code, 1, obj) ## put indexed object back as first arg
 
     nDrop <- 0
     for (i in seq_along(index_args)) {
       ## ensure that indexing args appear before drop in AST
       setArg(code, i + 1, index_args[[i]])
-      ## for now, can't handle indexing args other than those that are empty,
-      ## numeric literal, variable names with known dimensions, or created via :
-      if (index_args[[i]]$isCall && index_args[[i]]$name != ':')
+      ## for now, can't handle indexing args of nDim > 0 other than those
+      ## created via ':'
+      ## TODO: allow for (more) general expressions
+      if (index_args[[i]]$isCall &&
+          index_args[[i]]$name != ':' &&
+          index_args[[i]]$type$nDim != 0)
         stop(
           exprClassProcessingErrorMsg(
             code,
-            "In IndexingBracket: indexing expressions other than ':' not currently supported."
+            "In IndexingBracket: non-scalar indexing expressions other than ':' not currently supported."
           ), call. = FALSE
         )
       if (index_args[[i]]$name != '') {
         if (is.null(index_args[[i]]$type) ||
-            is.null(index_args[[i]]$type$nDim))
+            is.null(index_args[[i]]$type$nDim)) ## would this really happen?
           stop(
             exprClassProcessingErrorMsg(
               code,
               paste0("In IndexingBracket: '", index_args[[i]]$name,
                      "' has no dimension.")
+            ), call. = FALSE
+          )
+        ## TODO: allow for scalar logicals?
+        if (index_args[[i]]$type$type == 'logical')
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0("In IndexingBracket: '", index_args[[i]]$name,
+                     "' is a logical which is not allowed when indexing.")
             ), call. = FALSE
           )
         if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
@@ -505,6 +531,8 @@ inLabelAbstractTypesEnv(
         } else if (drop_arg$type$type != 'logical') {
           drop <- as.logical(drop_arg$name)
           drop_arg <- newLiteralLogicalExpression(drop)
+        } else { ## drop is logical
+          drop <- drop_arg$name
         }
       } else {
         ## TODO: what if user provided a vector? R would use first element...
@@ -515,7 +543,7 @@ inLabelAbstractTypesEnv(
           ), call. = FALSE
         )
       }
-    } else if (is.null(drop_arg)) {
+    } else if (is.null(drop_arg)) { ## drop arg wasn't provided
       drop_arg <- newLiteralLogicalExpression()
     }
 

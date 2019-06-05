@@ -472,8 +472,12 @@ inEigenizeEnv(
 
     ## labelAbstractTypes IndexingBracket handler put drop as last arg
     drop <- code$args[[n_args]]$name
-    index_args <- code$args[2:(n_args - 1)]
-    code$args[2:n_args] <- NULL
+
+    ## the labelAbstractTypes IndexingBracket handler ensures that index_args
+    ## is not just the empty argument ""
+    index_args <- code$args[-c(1, n_args)]
+
+    code$args[-c(1, n_args)] <- NULL
 
     blocks_expr <- setArg(
       code, 2,
@@ -489,20 +493,16 @@ inEigenizeEnv(
                       isName = FALSE, isCall = TRUE)
       )
 
-      if (index_args[[i]]$isName && index_args[[i]]$name != '') {
+      if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
+        ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
+        setArg(blocks_expr$args[[i]], 1, index_args[[i]]$args[[1]])
+        setArg(blocks_expr$args[[i]], 2, index_args[[i]]$args[[2]])
 
-        setArg(blocks_expr$args[[i]], 1, index_args[[i]])
-
-      } else if (index_args[[i]]$isLiteral) {
-
+      } else if (index_args[[i]]$name != '') { ## not a call
+        ## the labelAbstractTypes handler ensures index_args[[i]] is scalar
         setArg(blocks_expr$args[[i]], 1, index_args[[i]])
         if (!drop)
           setArg(blocks_expr$args[[i]], 2, copyExprClass(index_args[[i]]))
-
-      } else if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
-
-        setArg(blocks_expr$args[[i]], 1, index_args[[i]]$args[[1]])
-        setArg(blocks_expr$args[[i]], 2, index_args[[i]]$args[[2]])
 
       }
     }
