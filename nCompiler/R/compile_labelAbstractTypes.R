@@ -528,7 +528,7 @@ inLabelAbstractTypesEnv(
         ## is passed in explicity as NA or NaN R treats it as TRUE
         if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
           drop_arg <- newLiteralLogicalExpression()
-        } else if (drop_arg$type$type != 'logical') {
+        } else if (is.null(drop_arg$type) || drop_arg$type$type != 'logical') {
           drop <- as.logical(drop_arg$name)
           drop_arg <- newLiteralLogicalExpression(drop)
         } else { ## drop is logical
