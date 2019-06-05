@@ -23,31 +23,21 @@ NFvirtual_CompilerClass <- R6::R6Class(
         needed_nFunctions = list(), ## formerly neededRCfuns
         initialTypeInferenceDone = FALSE,
         initialize = function(f = NULL,
-                              funName,
+                              ## funName,
                               const = FALSE) {
             const <<- const
             if(!is.null(f)) {
-                if(missing(funName)) {
-                    sf <- substitute(f)
-                    name <<- Rname2CppName(deparse(sf))
+                isNFinternals <- inherits(f, 'NF_InternalsClass')
+                if(!(isNF(f) || isNFinternals)) {
+                  stop('Attempt to compile something is neither an nFunction nor an object of class NF_InternalsClass')
+                } 
+                if(isNFinternals) {
+                  NFinternals <<- f
                 } else {
-                    name <<- funName
+                  NFinternals <<- NFinternals(f)
                 }
-                origName <<- name
-                name <<- paste(name,
-                               nFunctionIDMaker(),
-                               sep = "_")
-                if(is.function(f)) {
-                    if(inherits(f, "nFunction"))
-                        NFinternals <<- NFinternals(f)
-                    else
-                        stop('Attempt to compile a function that is not a nFunction.')
-                } else {
-                    if(!inherits(f, 'NF_InternalsClass')) {
-                        stop('Attempt to compile something is neither a function nor an object of class NF_InternalsClass')
-                    }
-                    NFinternals <<- f
-                }                
+                origName <<- NFinternals$uniqueName
+                name <<- NFinternals$cpp_code_name
                 origRcode <<- NFinternals$code
                 newRcode <<- NFinternals$code
             }

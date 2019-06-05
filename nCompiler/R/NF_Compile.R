@@ -3,6 +3,12 @@
 ## 2. Create an RcppPacket, which organizes the content from the cppDef more usefully for Rcpp. 
 ## 3. Call cpp_nCompiler
 
+## There are four potential names associated with an nFunction:
+## 1. its NFinternals uniqueName
+## 2. its NFinternals cpp_code_name
+## 3. a name of it as an R object (which it doesn't know)
+## 4. a name of it as a compiled nFunction (which we attempt to deduce reasonably).
+
 #' Compile a nFunction
 #'
 #' Compiler a nFunction via automatic generation and compilation of C++.
@@ -19,45 +25,36 @@ nCompile_nFunction <- function(NF,
                                cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                                env = parent.frame(),
                                control = list(),
-                               name,
+                              ## name,
                                ...) {
   ## ... is used for internal arguments that are not necessarily documents or 
   ## promised to stay stable.
   dotArgs <- list(...)
+  
+  if(!isNF(NF))
+    stop(paste0("Argument NF must be an nFunction."))
   ## When called from nCompile, stopAfterRcppPacket will be TRUE.
   ## While this could also be done from the control() list, 
   ## we leave that to the user.  E.g. That might set endStage even
   ## earlier.
   stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
     ## See options.R for defaults
-    controlFull <- updateDefaults(
-        get_nOption('compilerOptions'),
-        control
-    )
-    loggingOpt <- get_nOption('compilerOptions')[['logging']]
-    logging <- controlFull$logging
-
-    if (logging != loggingOpt) { ## control and nOptions values differ
-      ## to make logging option accessible in handlers, must set in .nOptions
-      set_nOption('logging', logging, 'compilerOptions')
-      ## reset compilerOptions$logging to previous value
-      on.exit(set_nOption('logging', loggingOpt, 'compilerOptions'))
-    }
-
-    ## funName will be used for C++, with a unique tag appended
-    nameFromNFarg <- substitute(NF)
-    if(!missing(name)) {
-      funName <- name
-    } else {
-      funName <- NFinternals(NF)$uniqueName
-      if(is.null(funName)) {
-        funName <- nameFromNFarg
-        funName <- Rname2CppName(substr(deparse(funName), 1, 10))
-      }      
-    }
-    
-    NF_Compiler <- NF_CompilerClass$new(f = NF,
-                                        funName=  funName)
+  controlFull <- updateDefaults(
+    get_nOption('compilerOptions'),
+    control
+  )
+  loggingOpt <- get_nOption('compilerOptions')[['logging']]
+  logging <- controlFull$logging
+  
+  if (logging != loggingOpt) { ## control and nOptions values differ
+    ## to make logging option accessible in handlers, must set in .nOptions
+    set_nOption('logging', logging, 'compilerOptions')
+    ## reset compilerOptions$logging to previous value
+    on.exit(set_nOption('logging', loggingOpt, 'compilerOptions'))
+  }
+  
+  NF_Compiler <- NF_CompilerClass$new(f = NF)
+                                      ## , funName = funName)
     NF_Compiler$createCpp(control = controlFull)
     if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
                                 controlFull)) {
@@ -102,7 +99,8 @@ nCompile_nFunction <- function(NF,
     
     if(stopAfterRcppPacket) 
       return(NF)
-    ## Next two steps should be replaced with single call to cpp_nCompiler.  See nCompile_nClass
+    ## Next two steps should be replaced with single call to cpp_nCompiler.
+    ## See nCompile_nClass
     stageName <- 'writeCpp'
     if(NFcompilerMaybeStop(stageName, controlFull)) 
       return(NF)

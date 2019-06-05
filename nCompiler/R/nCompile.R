@@ -28,10 +28,13 @@ nCompile <- function(...,
       unitResults[[i]] <- nCompile_nFunction(units[[i]],
                                              stopAfterRcppPacket = TRUE,
                                              env = env,
-                                             control = control,
-                                             name = names(units)[i])
+                                             control = control)
+                                            #, name = names(units)[i])
     }
   }
+  cpp_names <- lapply(units, 
+                      function(x)
+                        NFinternals(x)$cpp_code_name)
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
   RcppPacket_list <- lapply(unitResults, 
@@ -45,18 +48,18 @@ nCompile <- function(...,
                               cacheDir = cacheDir,
                               env = resultEnv,
                               returnList = returnList)
-  ## Names of ans will have C++ unique-ifiers appended.
-  ## Next we attempt to rename results using input names.
-  ## TO-DO: Add some error-trapping here in case of 
-  ## multiple matches or other problems.
-  ## What we really need is grep for the most complete match.
-  ## startsWith could help, but we need more care than that.
+  ## Next we re-order results using input names,
+  ## in case the ordering in the C++ code or in Rcpp's handling
+  ## does not match order of units.
+  ## cpp_names should be 1-to-1 with names(ans)
+  ## We want to return with names(ans) changed to
+  ## names(units) corresponding to cpp_names.
   if(is.list(ans)) {
     newNames <- names(ans)
     for(i in seq_along(units)) {
-      iRes <- grep(names(units)[i], names(ans))
+      iRes <- which(cpp_names[i] == names(ans))
       if(length(iRes) != 1) {
-        warning("Name matching of results had a problem. This part of the system needs attention.  Returning list of compiled results with internal C++ names.")
+        warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
         return(ans)
       }
       newNames[iRes] <- names(units)[i]

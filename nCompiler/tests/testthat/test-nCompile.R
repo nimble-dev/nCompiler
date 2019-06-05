@@ -10,6 +10,7 @@ test_that("Compile one nFunction via nCompile, returning a list.",
                 return(ans)
               }
             )
+            debug(nCompiler:::nCompile)
             test <- nCompile(addScalars, returnList = TRUE)
             expect_equal(test$addScalars(2, 3), 5)
           })

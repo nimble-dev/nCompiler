@@ -1,4 +1,4 @@
-## NEW: This is adapted from.nCompiler's nfMethodRC
+## NEW: This is adapted from nCompiler's nfMethodRC
 ## NF_InternalsClass combines nfMethodRCinterface and nfMethodRC,
 ## unless we re-encounter a need to separate them.
 NF_InternalsClass <- R6::R6Class(
@@ -10,6 +10,7 @@ NF_InternalsClass <- R6::R6Class(
         returnSym = NULL,
         where = NULL,
         uniqueName = character(),
+        cpp_code_name = character(),
         template = NULL,
         code = NULL,
         RcppPacket = NULL,
@@ -78,6 +79,13 @@ NF_InternalsClass <- R6::R6Class(
             }
             returnSym <<- argType2symbol(returnTypeDecl,
                                          origName = "returnType")
+            ## We set the cpp_code_name here so that other nFunctions
+            ## that call this one can determine, during compilation,
+            ## what this one's cpp function name will be:
+            cpp_code_name <<- paste(name,
+                                    nFunctionIDMaker(),
+                                    sep = "_")
+            
         },
         getFunction = function() {
             functionAsList <- list(as.name('function'))
