@@ -209,61 +209,22 @@ processNFstages <- function(NFcompiler,
     ## set up abstract syntax tree (exprClass objects)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
     if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-        eval(NFcompilerMaybeDebug(stageName, controlFull))
-        NFtry(
-            compilerStage_initializeCode(
-                NFcompiler,
-                debug), 
-            stageName,
-            use_nCompiler_error_handling)
-        NFcompiler$stageCompleted <- stageName
-
-        if (logging) {
-          logAST(NFcompiler$code, 'AST initialized:',
-                 showType = FALSE, showImpl = FALSE)
-          logAfterStage(stageName)
-        }
-
-        ## SIMPLE TRANSFORMATIONS (e.g. name changes)
-        stageName <- 'simpleTransformations'
-        if (logging) logBeforeStage(stageName)
-        if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-        eval(NFcompilerMaybeDebug(stageName, controlFull))
-        ## Make modifications that do not need size processing
-        NFtry(
-            compilerStage_simpleTransformations(
-                NFcompiler,
-                debug), 
-            stageName,
-            use_nCompiler_error_handling)
-        NFcompiler$stageCompleted <- stageName
-        if (logging) {
-          logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
-          logAfterStage(stageName)
-        }
-    }
-
-        ## build intermediate variables:
-        ## Currently this only affects eigen, chol, and run.time
-    stageName <- 'simpleIntermediates'
-    if (logging) logBeforeStage(stageName)
-    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-        eval(NFcompilerMaybeDebug(stageName, controlFull))
-        NFtry({
-            compilerStage_simpleIntermediates(NFcompiler,
-                                              debug)
-        }, 
+      eval(NFcompilerMaybeDebug(stageName, controlFull))
+      NFtry(
+        compilerStage_initializeCode(
+          NFcompiler,
+          debug), 
         stageName,
         use_nCompiler_error_handling)
-        NFcompiler$stageCompleted <- stageName
-        if (logging) {
-          logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
-          logAfterStage(stageName)
-        }
-
+      NFcompiler$stageCompleted <- stageName
+      
+      if (logging) {
+        logAST(NFcompiler$code, 'AST initialized:',
+               showType = FALSE, showImpl = FALSE)
+        logAfterStage(stageName)
+      }
     }
-
+    
     stageName <- 'initializeAuxiliaryEnvironment'
     if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
@@ -272,12 +233,67 @@ processNFstages <- function(NFcompiler,
         NFtry({
             compilerStage_initializeAuxEnv(NFcompiler,
                                            debug)
-        }, 
+        },
         stageName,
         use_nCompiler_error_handling)
         NFcompiler$stageCompleted <- stageName
         if (logging) logAfterStage(stageName)
     }
+    
+    ## SIMPLE TRANSFORMATIONS (e.g. name changes)
+    stageName <- 'simpleTransformations'
+    if (logging) logBeforeStage(stageName)
+    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+      eval(NFcompilerMaybeDebug(stageName, controlFull))
+      ## Make modifications that do not need size processing
+      NFtry(
+        compilerStage_simpleTransformations(
+          NFcompiler,
+          debug), 
+        stageName,
+        use_nCompiler_error_handling)
+      NFcompiler$stageCompleted <- stageName
+      if (logging) {
+        logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
+        logAfterStage(stageName)
+      }
+    }
+    
+    ## build intermediate variables:
+    ## Currently this only affects eigen, chol, and run.time
+    stageName <- 'simpleIntermediates'
+    if (logging) logBeforeStage(stageName)
+    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+      eval(NFcompilerMaybeDebug(stageName, controlFull))
+      NFtry({
+        compilerStage_simpleIntermediates(NFcompiler,
+                                          debug)
+      }, 
+      stageName,
+      use_nCompiler_error_handling)
+      NFcompiler$stageCompleted <- stageName
+      if (logging) {
+        logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
+        logAfterStage(stageName)
+      }
+    }
+
+    # stageName <- 'initializeAuxiliaryEnvironment'
+    # if (logging) logBeforeStage(stageName)
+    # if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+    # if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+    #     eval(NFcompilerMaybeDebug(stageName, controlFull))
+    #     NFtry({
+    #         compilerStage_initializeAuxEnv(NFcompiler,
+    #                                        debug)
+    #     }, 
+    #     stageName,
+    #     use_nCompiler_error_handling)
+    #     NFcompiler$stageCompleted <- stageName
+    #     if (logging) logAfterStage(stageName)
+    # }
     
     ## annotate sizes and types
     stageName <- 'labelAbstractTypes'

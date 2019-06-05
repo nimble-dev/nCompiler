@@ -3,9 +3,10 @@ NFcompilerStages <- list(
     setInputOutputTypes = 1,
     substituteMangledArgumentNames = 2,
     initializeCode = 3,
-    simpleTransformations = 4,
-    simpleIntermediates = 5,
-    initializeAuxiliaryEnvironment = 6,
+    initializeAuxiliaryEnvironment = 4,
+    simpleTransformations = 5,
+    simpleIntermediates = 6,
+#    initializeAuxiliaryEnvironment = 6,
     labelAbstractTypes = 7,            # set 'type' field of every exprClass in a syntax tree
     setToEigen = 8,                    # set 'toEigen' field to values ['Yes' | 'No' | 'Maybe'].
                                        # Yes means eigen is required (e.g. %*%).  No means eigen can't be used (e.g. print).  Maybe means eigen can be used or not (e.g. +).  

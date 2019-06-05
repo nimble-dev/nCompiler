@@ -52,7 +52,8 @@ compilerStage_simpleTransformations <-
                 })
         }
         compile_simpleTransformations(NFcompiler$code,
-                                      NFcompiler$symbolTable)
+                                      NFcompiler$symbolTable,
+                                      NFcompiler$auxEnv)
     }
 
 compilerStage_simpleIntermediates <-

@@ -101,12 +101,26 @@ cpp_nFunctionClass <- R6::R6Class(
         },
         buildFunction = function(NF_Compiler,
                                  parentST = NULL) {
-            cpp_nFunction_buildFunction(self,
-                                            NF_Compiler,
-                                            parentST)
+          cpp_nFunction_buildFunction(self,
+                                      NF_Compiler,
+                                      parentST)
+          cpp_include_needed_nFunctions(self, NF_Compiler)          
         }
     )
 )
+
+cpp_include_needed_nFunctions <- function(cppDef,
+                                          NF_Compiler) {
+  browser()
+  needed_cpp_code_names <- lapply(NF_Compiler$auxEnv$needed_nFunctions,
+                             function(x)
+                               NFinternals(get(x[[1]], envir = x[[2]]))$cpp_code_name)
+  if(length(needed_cpp_code_names)) {
+    needed_filebases <- make_cpp_filebase(unlist(needed_cpp_code_names))
+    cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"',needed_filebases, '.h\"'))
+  }
+  invisible(NULL)
+}
 
 cpp_nFunction_buildFunction <- function(cppDef,
                                             NF_Compiler,

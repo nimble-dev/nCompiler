@@ -91,19 +91,12 @@ compile_labelAbstractTypes <- function(code,
         opInfo <- operatorDefEnv[[code$name]]
         ## TO-DO: Check for methods or nFunctions.
         if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
-          browser()
+          ## An nFunction should already have been transformed to
+          ## have code$name nFunction in stage simpleTransformatnions.
+          ## But if not (if a custom handler was provided that avoided that change),
+          ## it will still be caught here.
           obj <- get(code$name, envir = auxEnv$closure)
           if(isNF(obj)) {
-            uniqueName <- NFinternals(obj)$uniqueName
-            if(length(uniqueName)==0)
-              stop(
-                exprClassProcessingErrorMsg(
-                  code,
-                  paste0('nFunction ', code$name, 'is being called, but it is malformed because it has no internal name.')),
-                call. = FALSE)
-            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-              auxEnv$needed_nFunctions[[uniqueName]] <- NFinternals(obj)
-            }
             opInfo <- operatorDefEnv[['nFunction']]
           }
         }
@@ -155,7 +148,10 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
-        obj <- get(code$name, envir = auxEnv$closure)
+        obj <- get(code$aux$nFunctionInfo$nFunctionName,
+                   envir = code$aux$nFunctionInfo$where)
+        ## code$aux$nFunctionInfo$where should be same as auxEnv$closure
+        
         ## TO-DO: Add error-trapping of argument types 
         returnSym <- NFinternals(obj)$returnSym
         if(is.null(returnSym))

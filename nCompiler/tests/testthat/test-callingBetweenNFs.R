@@ -18,7 +18,7 @@ test_that("One nFunction can call another and be compiled.",
                 return(ans)
               }
             )
-            ##debug(nCompiler:::compile_labelAbstractTypes)
+            ## debug(nCompiler:::compile_labelAbstractTypes)
             test <- nCompile(f2, f1)
           })
 

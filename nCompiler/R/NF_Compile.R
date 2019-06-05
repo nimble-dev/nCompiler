@@ -55,20 +55,20 @@ nCompile_nFunction <- function(NF,
   
   NF_Compiler <- NF_CompilerClass$new(f = NF)
                                       ## , funName = funName)
-    NF_Compiler$createCpp(control = controlFull)
-    if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
-                                controlFull)) {
-      if(get_nOption('verbose')) 
-        message(paste0("Returning after stage ",
-                       NF_Compiler$stageCompleted))
-      return(NF_Compiler)
-    }
-    stageName <- 'makeRcppPacket'
-    if (logging) logBeforeStage(stageName)
-    if(NFcompilerMaybeStop(stageName, controlFull)) 
-      return(NF_Compiler)
-    
-    cppDef <- NF_Compiler$cppDef
+  NF_Compiler$createCpp(control = controlFull)
+  if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
+                              controlFull)) {
+    if(get_nOption('verbose')) 
+      message(paste0("Returning after stage ",
+                     NF_Compiler$stageCompleted))
+    return(NF_Compiler)
+  }
+  stageName <- 'makeRcppPacket'
+  if (logging) logBeforeStage(stageName)
+  if(NFcompilerMaybeStop(stageName, controlFull)) 
+    return(NF_Compiler)
+  
+  cppDef <- NF_Compiler$cppDef
     ## We append "_c_" so that the filename does not match the function name.
     ## That prevents Rcpp's "context" system from making a mistake
     ## when we combine multiple RcppPacket contents into a single file.
@@ -76,7 +76,7 @@ nCompile_nFunction <- function(NF,
     ## match names of exported functions, and to think they should
     ## be compiled if so.  If one has compiled a nFunction individually
     ## and the in combination with other files, this could cause a problem.
-    filebase <- paste0(Rname2CppName(cppDef$name), '_c_')
+    filebase <- make_cpp_filebase(cppDef$name) ## append _c_
     RcppPacket <- cppDefs_2_RcppPacket(cppDef,
                                        filebase = filebase)
     NFinternals(NF)$RcppPacket <- RcppPacket

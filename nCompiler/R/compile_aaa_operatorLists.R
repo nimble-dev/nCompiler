@@ -31,9 +31,12 @@ getOperatorDef <- function(op, field = NULL, key = NULL) {
 assignOperatorDef(
   'nFunction',
   list(
+    simpleTransformations = list(
+      handler = 'Generic_nFunction'),
     labelAbstractTypes = list(
-      handler = 'Generic_nFunction'
-    )
+      handler = 'Generic_nFunction'),
+    cppOutput = list(
+      handler = 'Generic_nFunction')
   )
 )
 
