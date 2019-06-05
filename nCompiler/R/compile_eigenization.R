@@ -472,12 +472,13 @@ inEigenizeEnv(
 
     ## labelAbstractTypes IndexingBracket handler put drop as last arg
     drop <- code$args[[n_args]]$name
+    ## remove the drop arg from AST
+    code$args[[n_args]] <- NULL
 
     ## the labelAbstractTypes IndexingBracket handler ensures that index_args
     ## is not just the empty argument ""
-    index_args <- code$args[-c(1, n_args)]
-
-    code$args[-c(1, n_args)] <- NULL
+    index_args <- code$args[-1]
+    code$args[-1] <- NULL ## clear indexing args from AST
 
     blocks_expr <- setArg(
       code, 2,
@@ -486,29 +487,34 @@ inEigenizeEnv(
     )
 
     for (i in seq_along(index_args)) {
-      ## create b__ call as arg to blocks_expr
-      setArg(
-        blocks_expr, i,
-        exprClass$new(name = 'b__',
-                      isName = FALSE, isCall = TRUE)
-      )
+      ## create b__ call
+      b_expr <- exprClass$new(name = 'b__',
+                              isName = FALSE, isCall = TRUE)
 
       if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
         ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
-        setArg(blocks_expr$args[[i]], 1, index_args[[i]]$args[[1]])
-        setArg(blocks_expr$args[[i]], 2, index_args[[i]]$args[[2]])
+        setArg(b_expr, 1, index_args[[i]]$args[[1]])
+        setArg(b_expr, 2, index_args[[i]]$args[[2]])
 
       } else if (index_args[[i]]$name != '') { ## not a call
         ## the labelAbstractTypes handler ensures index_args[[i]] is scalar
-        setArg(blocks_expr$args[[i]], 1, index_args[[i]])
+        setArg(b_expr, 1, index_args[[i]])
         if (!drop)
-          setArg(blocks_expr$args[[i]], 2, copyExprClass(index_args[[i]]))
+          setArg(b_expr, 2, copyExprClass(index_args[[i]]))
 
       }
-    }
 
-    ## remove drop from AST
-    code$args[[n_args]] <- NULL
+      ## subtract 1 from each of this b__ call's numeric arguments
+      for (j in seq_along(b_expr$args)) {
+        if (b_expr$args[[j]]$type$type %in% c('integer', 'double')) {
+          insertExprClassLayer(b_expr, j, '-')
+          setArg(b_expr$args[[j]], 2, literalIntegerExpr(1))
+        }
+      }
+
+      ## add the b__ call to the AST as arg to blocks_expr
+      setArg(blocks_expr, i, b_expr)
+    }
     invisible(NULL)
   }
 )

@@ -230,15 +230,41 @@ isEigScalar <- function(code) {
   code$isLiteral || (code$isName && identical(code$type$nDim, 0))
 }
 
-newAssignmentExpression <- function() {
+AssignmentExpr <- function() {
     exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
 }
 
-newLiteralLogicalExpression <- function(value = TRUE) {
+literalDoubleExpr <- function(value) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'double',
+                          nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
+literalIntegerExpr <- function(value) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'integer',
+                          nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
+literalLogicalExpr <- function(value = TRUE) {
   type <- symbolBasic$new(name = 'NONAME',
                           type = 'logical',
                           nDim = 0)
-  exprClass$new(isLiteral = TRUE, name = value, type = type)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
 }
 
 ## This modifies the code$caller in place

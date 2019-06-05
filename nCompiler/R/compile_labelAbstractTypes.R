@@ -490,7 +490,7 @@ inLabelAbstractTypesEnv(
         )
       if (index_args[[i]]$name != '') {
         if (is.null(index_args[[i]]$type) ||
-            is.null(index_args[[i]]$type$nDim)) ## would this really happen?
+            is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
           stop(
             exprClassProcessingErrorMsg(
               code,
@@ -527,10 +527,10 @@ inLabelAbstractTypesEnv(
         ## if the user provided a literal NA or NaN drop arg and even when drop
         ## is passed in explicity as NA or NaN R treats it as TRUE
         if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
-          drop_arg <- newLiteralLogicalExpression()
+          drop_arg <- literalLogicalExpr()
         } else if (is.null(drop_arg$type) || drop_arg$type$type != 'logical') {
           drop <- as.logical(drop_arg$name)
-          drop_arg <- newLiteralLogicalExpression(drop)
+          drop_arg <- literalLogicalExpr(drop)
         } else { ## drop is logical
           drop <- drop_arg$name
         }
@@ -544,7 +544,7 @@ inLabelAbstractTypesEnv(
         )
       }
     } else if (is.null(drop_arg)) { ## drop arg wasn't provided
-      drop_arg <- newLiteralLogicalExpression()
+      drop_arg <- literalLogicalExpr()
     }
 
     ## set 'drop' as the last arg in the AST
