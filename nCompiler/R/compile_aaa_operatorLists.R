@@ -127,9 +127,14 @@ assignOperatorDef(
           toEigen = 'Yes',
             handler = 'cWiseAddSub'),
         cppOutput = list(
-            handler = 'BinaryOrUnary')
+          handler = 'BinaryOrUnary'),
+        testthat = list(
+          isBinary = TRUE,
+          testMath = TRUE,
+          testAD = TRUE)
     )
 )
+updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
 
 assignOperatorDef(
   c('min', 'max'),
@@ -143,7 +148,10 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'Reduction',
       method = TRUE),
-    cppOutput = list()
+    cppOutput = list(),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
@@ -159,7 +167,10 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseBinary',
       method = TRUE),
-    cppOutput = list()
+    cppOutput = list(),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('pmax', 'cppOutput', 'cppString', 'cwiseMax')
@@ -219,7 +230,10 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = 'TensorReduction'
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 
@@ -237,12 +251,15 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE)
   )
 )
 
 assignOperatorDef(
-  c('exp', 'inverse', 'lgamma', 'log', 'rsqrt', 'sqrt', 'square', 'tanh'),
+  c('exp', 'inverse', 'lgamma', 'log', 'rsqrt', 'sqrt', 'tanh'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
@@ -255,7 +272,11 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -273,7 +294,11 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -291,7 +316,11 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    )
+    ),
+    testthat = list(
+      isUnary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -306,7 +335,10 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
@@ -326,7 +358,11 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -342,7 +378,11 @@ assignOperatorDef(
       toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -358,7 +398,11 @@ assignOperatorDef(
       method = TRUE),
     cppOutput = list(
       cppString = 'pow',
-      handler = '')
+      handler = ''),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE,
+      testAD = TRUE)
   )
 )
 
@@ -373,7 +417,10 @@ assignOperatorDef(
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
-      cppString = ' % ')
+      cppString = ' % '),
+    testthat = list(
+      isBinary = TRUE,
+      testMath = TRUE)
   )
 )
 
