@@ -1,3 +1,5 @@
+# not working
+# (These work when run directly, but not when run through test_package().)
 context("nClass interface")
 
 test_that(

@@ -58,6 +58,7 @@ Collate:
     NF_PassByReference.R
     NF_ProcessCompilerStages.R
     NF_Utils.R
+    nCompile.R
     nTry.R
     packaging.R
     RcppExports.R

@@ -52,7 +52,8 @@ compilerStage_simpleTransformations <-
                 })
         }
         compile_simpleTransformations(NFcompiler$code,
-                                      NFcompiler$symbolTable)
+                                      NFcompiler$symbolTable,
+                                      NFcompiler$auxEnv)
     }
 
 compilerStage_simpleIntermediates <-
@@ -76,6 +77,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                                 names = passedArgNames)
     NFcompiler$auxEnv[['passedArgumentNames']] <- passedArgNames ## only the names are used.
     NFcompiler$auxEnv[['nameSubList']] <- nameSubList
+    NFcompiler$auxEnv[['closure']] <- NFcompiler$NFinternals$where
     invisible(NULL)
 }
 

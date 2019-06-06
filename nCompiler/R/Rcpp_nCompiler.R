@@ -129,7 +129,7 @@ collate_nCompiler_CppCode <- function(preamble = character(),
       closeifndefOut)
 }
 
-## We need a way to get ignore.stderr = TRue and ignore.stdout = TRUE
+## We need a way to get ignore.stderr = TRUE and ignore.stdout = TRUE
 ## into the system() call in the middle of Rcpp::sourceCpp.  This
 ## suppresses lots of junk warnings from Eigen code we don't control
 ## and would be a pain to try to modify.
@@ -152,8 +152,8 @@ sourceCppEnv$system <- function(...) {
 
 ## Manage a call to Rcpp's sourceCpp()
 sourceCpp_nCompiler <- function(file,
-                            cacheDir,
-                            ...) {
+                                cacheDir,
+                                ...) {
   if(!requireLocalDLLpackage()) {
     stop("Unable to load or create nCompLocal.")
   }
@@ -177,7 +177,7 @@ sourceCpp_nCompiler <- function(file,
 ## them.
 ## C++ code (not intended to be called directly).
 
-#' Call Rcpp's C++ compilation system for.nCompiler-generated
+#' Call Rcpp's C++ compilation system for nCompiler-generated content
 #'
 #' @param cpp_nCompilerPacket An object containing content for .h and .cpp
 #'     files.
@@ -221,10 +221,36 @@ cpp_nCompiler <- function(Rcpp_packet,
                    ...)
 }
 
+writeCpp_nCompiler_combine <- function(RcppPacket_list,
+                                       cppfile,
+                                       dir = file.path(tempdir(), 'nCompiler_generatedCode'),
+                                       header.dir) {
+  if(missing(cppfile))
+    stop("A cppfile name must be provided for the combined contents of the RcppPackets.")
+  dir.create(dir, showWarnings = FALSE)
+  cppfilepath <- file.path(dir, cppfile)
+  con <- file(cppfilepath, open = "w")
+  for(RcppPacket in RcppPacket_list) {
+    ## write all cpp contents to one file
+    writeCpp_nCompiler(RcppPacket,
+                       con = con,
+                       include_h = FALSE)
+    ## write each h contents to its own file
+    writeCpp_nCompiler(RcppPacket,
+                       dir = dir,
+                       header.dir = header.dir,
+                       include_cpp = FALSE)
+  }
+  close(con)
+  invisible(RcppPacket_list)
+}
+
 #' @export
 writeCpp_nCompiler <- function(Rcpp_packet,
                            dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                            con = NULL,
+                           include_h = TRUE,
+                           include_cpp = TRUE,
                            header.dir
                           ) {
   if(!missing(header.dir)) {
@@ -234,55 +260,67 @@ writeCpp_nCompiler <- function(Rcpp_packet,
     header.dir <- dir
   
   makeStandardFiles <- is.null(con)
-  if(makeStandardFiles) {
-    dir.create(dir, showWarnings = FALSE)
-    if(header.dir != dir)
-      dir.create(header.dir, showWarnings = FALSE)
-    cppfile <- paste0(Rcpp_packet$filebase,
-                      ".cpp")
-    hfile <- paste0(Rcpp_packet$filebase,
-                    ".h")
-    
-    cppfilepath <- file.path(dir, cppfile)
-    con <- file(cppfilepath,
-               open = "w")
+  if(include_cpp) { 
+    if(makeStandardFiles) {
+      dir.create(dir, showWarnings = FALSE)
+      cppfile <- paste0(Rcpp_packet$filebase,
+                        ".cpp")
+      cppfilepath <- file.path(dir, cppfile)
+      con <- file(cppfilepath,
+                  open = "w")
+    }
+    writeLines(Rcpp_packet$cppContent, con)
+    if(makeStandardFiles)
+      close(con)
+  } 
+  if(include_h) {
+    if(makeStandardFiles) {
+      if(header.dir != dir)
+        dir.create(header.dir, showWarnings = FALSE)
+      hfile <- paste0(Rcpp_packet$filebase,
+                      ".h")
+      con <- file(file.path(header.dir,
+                            hfile),
+                  open = "w")
+    }
+    writeLines(Rcpp_packet$hContent, con)
+    if(makeStandardFiles)
+      close(con)
   }
-  writeLines(Rcpp_packet$cppContent, con)
-  if(makeStandardFiles) {
-    close(con)
-    con <- file(file.path(header.dir,
-                         hfile),
-               open = "w")
-  }
-  writeLines(Rcpp_packet$hContent,
-             con)
-  if(makeStandardFiles)
-    close(con)
   invisible(Rcpp_packet)
 }
 
 #' @export
 compileCpp_nCompiler <- function(Rcpp_packet,
-                             dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                             cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
-                             env = parent.frame(),
-                             ...) {
+                                 dir = file.path(tempdir(), 'nCompiler_generatedCode'),
+                                 cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
+                                 env = parent.frame(),
+                                 returnList = FALSE, ## force result list even for a singleton
+                                 ...) {
   if(!dir.exists(dir)) 
     stop(paste0("directory ", dir, " does not exist."))
-  cppfile <- paste0(Rcpp_packet$filebase,
-                    ".cpp")
+  if(is.character(Rcpp_packet)) {
+    cppfile <- Rcpp_packet
+  } else {
+    cppfile <- paste0(Rcpp_packet$filebase,
+                      ".cpp")
+  }
   cppfilepath <- file.path(dir, cppfile)
   
   exported <- sourceCpp_nCompiler(file = cppfilepath,
-                              cacheDir = cacheDir,
-                              ...)
+                                  cacheDir = cacheDir,
+                                  env = env,
+                                  ...)
   
   ## Next lines copy/imitate Rcpp::cppFunction,
   ## for now without error checking until we see
   ## final uses.
   numFunctions <- length(exported$functions)
   if(numFunctions == 0) return(invisible(NULL))
-  if(numFunctions == 1) return(get(exported$functions[[1]], env))
-  return(lapply(exported$functions,
-                function(x) get(x, env)))
+  if(numFunctions == 1 & !returnList) return(get(exported$functions[[1]], env))
+  return(structure(
+    lapply(exported$functions, 
+           function(x) get(x, env)),
+    names = exported$functions)
+    )
 }

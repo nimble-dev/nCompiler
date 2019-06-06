@@ -17,7 +17,7 @@ test_that("writePackage and buildPackage work for nFunction",
             writePackage(foo, package.name = "fooPackage", clean = TRUE)
             ans <- buildPackage("fooPackage")
             ## Need to get this name fixed
-            expect_equal(fooPackage::objs_oB_oB1_cB_cB_NFID_1(2), 3)
+            expect_equal(fooPackage::foo_NFID_1(2), 3)
           })
 
 test_that("writePackage and buildPackage work for nClass", 

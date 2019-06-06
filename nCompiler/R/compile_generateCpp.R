@@ -50,10 +50,10 @@ compile_generateCpp <- function(code,
                                       else
                                           'false')
     }
-        if(is.list(code) )
-        stop(paste0("Error generating C++ code, there is a list where there ",
-                    "shouldn't be one.  It is probably inside map information.",
-                    call. = FALSE))
+    if(is.list(code) )
+      stop(paste0("Error generating C++ code, there is a list where there ",
+                  "shouldn't be one.  It is probably inside map information.",
+                  call. = FALSE))
 
     if(length(code$isName) == 0)
         stop("Error generating C++ code, length(code$isName) == 0.", call. = FALSE)
@@ -137,6 +137,18 @@ inGenCppEnv(
                            collapse = ', '),
                ')' )
     }
+)
+
+inGenCppEnv(
+  Generic_nFunction <- function(code, symTab) {
+    paste0(code$aux$nFunctionInfo$cpp_code_name,
+           '(', paste0(unlist(lapply(code$args,
+                                     compile_generateCpp,
+                                     symTab,
+                                     asArg = TRUE) ),
+                       collapse = ', '),
+           ')' )
+  }
 )
 
 inGenCppEnv(
