@@ -457,9 +457,23 @@ inLabelAbstractTypesEnv(
       return(invisible(NULL))
     }
 
-    ## at this point, the indexing args are not empty and their length must
-    ## the input obj dimension
-    if (length(index_args) != nDim)
+    ## at this point, the indexing args are not empty
+    if (nDim == 0) {
+      ## indexed object is a scalar so there should be at most 1 indexing arg
+      if (length(index_args) != 1)
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            paste0(
+              "In IndexingBracket: '", obj$name,
+              "' is a scalar; expected at most 1 indexing arg but received ",
+              length(index_args), "."
+            )
+          ), call. = FALSE
+        )
+    } else if (length(index_args) != nDim) {
+      ## indexed object is not scalar, the indexing args are not empty,
+      ## and so their number should be equal to the obj dimension
       stop(
         exprClassProcessingErrorMsg(
           code,
@@ -469,6 +483,7 @@ inLabelAbstractTypesEnv(
           )
         ), call. = FALSE
       )
+    }
 
     setArg(code, 1, obj) ## put indexed object back as first arg
 
@@ -476,20 +491,23 @@ inLabelAbstractTypesEnv(
     for (i in seq_along(index_args)) {
       ## ensure that indexing args appear before drop in AST
       setArg(code, i + 1, index_args[[i]])
-      ## for now, can't handle indexing args of nDim > 0 other than those
-      ## created via ':'
-      ## TODO: allow for (more) general expressions
-      if (index_args[[i]]$isCall &&
-          index_args[[i]]$name != ':' &&
-          index_args[[i]]$type$nDim != 0)
-        stop(
-          exprClassProcessingErrorMsg(
-            code,
-            "In IndexingBracket: non-scalar indexing expressions other than ':' not currently supported."
-          ), call. = FALSE
-        )
+
+      ## do a bunch of indexing arg error checking
+      if (index_args[[i]]$isCall)
+        ## for now, can't handle indexing args of nDim > 0 other than those
+        ## created via ':'
+        ## TODO: allow for (more) general expressions
+        if (index_args[[i]]$name != ':' && index_args[[i]]$type$nDim != 0)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              "In IndexingBracket: non-scalar indexing expressions other than ':' not currently supported."
+            ), call. = FALSE
+          )
+
       if (index_args[[i]]$name != '') {
-        if (is.null(index_args[[i]]$type) ||
+        ## not a call resulting in non-scalar other than ':'
+        if (is.null(index_args[[i]]$type) || ## missing index nDim info
             is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
           stop(
             exprClassProcessingErrorMsg(
@@ -499,7 +517,7 @@ inLabelAbstractTypesEnv(
             ), call. = FALSE
           )
         ## TODO: allow for scalar logicals?
-        if (index_args[[i]]$type$type == 'logical')
+        if (index_args[[i]]$type$type == 'logical') ## index logical
           stop(
             exprClassProcessingErrorMsg(
               code,
@@ -507,8 +525,7 @@ inLabelAbstractTypesEnv(
                      "' is a logical which is not allowed when indexing.")
             ), call. = FALSE
           )
-        if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
-        if (index_args[[i]]$type$nDim > 1)
+        if (index_args[[i]]$type$nDim > 1) ## bad index nDim
           stop(
             exprClassProcessingErrorMsg(
               code,
@@ -518,11 +535,27 @@ inLabelAbstractTypesEnv(
               )
             ), call. = FALSE
           )
+        if (nDim == 0 && index_args[[i]]$type$nDim != 0) ## indexing a scalar with non-scalar
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0(
+                "In IndexingBracket: '", obj$name,
+                "' is a scalar but the indexing arg has dimension ",
+                index_args[[i]]$type$nDim, "."
+              )
+            ), call. = FALSE
+          )
+        ## no errors were triggered so increment nDrop if the arg is scalar
+        if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
       }
     }
 
     drop <- TRUE
-    if (inherits(drop_arg, 'exprClass')) {
+    if (nDim == 0) {
+      ## if we're indexing a scalar, just ignore the drop arg
+      drop <- FALSE
+    } else if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
         ## if the user provided a literal NA or NaN drop arg and even when drop
         ## is passed in explicity as NA or NaN R treats it as TRUE
@@ -547,12 +580,15 @@ inLabelAbstractTypesEnv(
       drop_arg <- literalLogicalExpr()
     }
 
-    ## set 'drop' as the last arg in the AST
-    setArg(code, length(code$args) + 1, drop_arg)
-
     if (isTRUE(drop)) {
       nDim <- nDim - nDrop
     }
+
+    if (nDim != 0) {
+      ## set 'drop' as the last arg in the AST
+      setArg(code, length(code$args) + 1, drop_arg)
+    }
+    
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }

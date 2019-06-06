@@ -112,6 +112,14 @@ test_that("indexing arg variations give correct results", {
           return(ans)
           returnType(numericArray(nDim = 3))
         }
+      ),
+      test5 = nFunction(
+        ## return scalar
+        function(x = numericArray(nDim = 3)) {
+          ans <- x[3, 1, 2]
+          return(ans)
+          returnType(numericScalar())
+        }
       )
     )
   )
@@ -188,10 +196,37 @@ test_that("compilation of [ throws errors as expected ", {
       returnType(numericArray(nDim = 2))
     }
   )
-  expect_error(nCompiler_nFunction(nf1))
-  expect_error(nCompiler_nFunction(nf2))
-  expect_error(nCompiler_nFunction(nf3))
-  expect_error(nCompiler_nFunction(nf4))
-  expect_error(nCompiler_nFunction(nf5))
-  expect_error(nCompiler_nFunction(nf6))
+  nf7 = nFunction( ## index a scalar with more than 1 indexing arg
+    function(x = numericArray(nDim = 3)) {
+      a <- x[3, 1, 2]
+      ans <- a[1, 1]
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  nf8 = nFunction( ## index a scalar with non-scalar
+    function(x = numericArray(nDim = 3)) {
+      a <- x[3, 1, 2]
+      ans <- a[1:2]
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  nf9 = nFunction( ## index a scalar with a scalar (not currently supported)
+    function(x = numericArray(nDim = 3)) {
+      a <- x[3, 1, 2]
+      ans <- a[1]
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  expect_error(nCompile_nFunction(nf1))
+  expect_error(nCompile_nFunction(nf2))
+  expect_error(nCompile_nFunction(nf3))
+  expect_error(nCompile_nFunction(nf4))
+  expect_error(nCompile_nFunction(nf5))
+  expect_error(nCompile_nFunction(nf6))
+  expect_error(nCompile_nFunction(nf7))
+  expect_error(nCompile_nFunction(nf8))
+  expect_error(nCompile_nFunction(nf9))
 })
