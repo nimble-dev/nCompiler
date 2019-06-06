@@ -1,6 +1,6 @@
 context("Testing indexing")
 
-test_that("drop arg variations give correct results", {
+test_that("drop arg variations give correct results, 3D input", {
   nC <- nClass(
     Cpublic = list(
       test1 = nFunction(function(x = numericArray(nDim = 3)) {
@@ -59,43 +59,37 @@ test_that("drop arg variations give correct results", {
       })
     )
   )
-
   cobj <- nCompile_nClass(nC)$new()
-
-  x <- array(1:27, c(3, 3, 3))
-
+  x <- array(1:105, c(3, 5, 7))
   for (i in seq_along(ls(nC$public_methods)[-1])) {
     test_i  <- paste0('test', i)
-    expect_equal(
-      nC$public_methods[[test_i]](x), ## R
-      cobj[[test_i]](x)               ## C++
-    )
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
   }
-
 })
 
-test_that("indexing arg variations give correct results", {
+test_that("indexing arg variations give correct results, 3D input", {
   nC <- nClass(
     Cpublic = list(
-      test1 = nFunction(
-        ## empty indexing args works
+      test1 = nFunction( ## empty indexing args works
         function(x = numericArray(nDim = 3)) {
           ans <- x[]
           return(ans)
           returnType(numericArray(nDim = 3))
         }
       ),
-      test2 = nFunction(
-        ## basic scalar expressions work as indexing args
+      test2 = nFunction( ## basic scalar expressions work as indexing args
         function(x = numericArray(nDim = 3)) {
           i  <- 1
           ans <- x[i+1, 2:3, ]
           return(ans)
-          returnType(numericArray(nDim = 2))
+          returnType(numericMatrix())
         }
       ),
-      test3 = nFunction(
-        ## basic scalar expressions work as indexing args, drop = FALSE
+      test3 = nFunction( ## basic scalar expressions work as indexing args, drop = FALSE
         function(x = numericArray(nDim = 3)) {
           i  <- 1
           ans <- x[2*i + 1, 2:3, , drop = FALSE]
@@ -112,9 +106,205 @@ test_that("indexing arg variations give correct results", {
           return(ans)
           returnType(numericArray(nDim = 3))
         }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- array(1:105, c(3, 5, 7))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+test_that("assignment involving indexing give correct results, 3D input", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## assign scalar to indexed block (does not work)
+        function(x = numericArray(nDim = 3)) {
+          ans <- x
+          ## ans[1:2, 2:3, ] <- 0 ## this fails
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
       ),
-      test5 = nFunction(
-        ## return scalar
+      test2 = nFunction( ## assign scalar to indexed scalar (does not work)
+        function(x = numericArray(nDim = 3)) {
+          ans <- x
+          ans[2, 3, 7] <- 0 ## this fails
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
+      ),
+      test3 = nFunction( ## assign indexed block to indexed block
+        function(x = numericArray(nDim = 3)) {
+          ans <- x
+          ans[2, 2:3, ] <- x[1, 3:4, ]
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- array(1:105, c(3, 5, 7))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+test_that("expressions involving indexing give correct results, 3D input", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## exp of indexed block
+        function(x = numericArray(nDim = 3)) {
+          i  <- 1
+          ans <- exp(x[2, 2:3, ])
+          return(ans)
+          returnType(numericMatrix())
+        }
+      ),
+      test2 = nFunction( ## add indexed blocks
+        function(x = numericArray(nDim = 3)) {
+          ans <- x[1, 3:4, 4] + x[1, 5:6, 2]
+          return(ans)
+          returnType(numericVector())
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- array(1:105, c(3, 8, 7))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+test_that("scalar input gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return scalar, empty indexing arg
+        function(x = numericScalar()) {
+          ans <- x[]
+          return(ans)
+          returnType(numericScalar())
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- 3
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    expect_equal(
+      nC$public_methods[[test_i]](x), ## R
+      cobj[[test_i]](x)               ## C++
+    )
+  }
+})
+
+test_that("vector input gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return vector
+        function(x = numericVector()) {
+          ans <- x[1:4]
+          return(ans)
+          returnType(numericVector())
+        }
+      ),
+      test2 = nFunction( ## return scalar
+        function(x = numericVector()) {
+          ans <- x[3]
+          return(ans)
+          returnType(numericScalar())
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- 1:11
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+
+test_that("matrix input gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return matrix
+        function(x = numericMatrix()) {
+          ans <- x[3:6, 1:2]
+          return(ans)
+          returnType(numericMatrix())
+        }
+      ),
+      test2 = nFunction( ## return vector
+        function(x = numericMatrix()) {
+          ans <- x[2, 1:3]
+          return(ans)
+          returnType(numericVector())
+        }
+      ),
+      test3 = nFunction( ## return scalar
+        function(x = numericMatrix()) {
+          ans <- x[3, 1]
+          return(ans)
+          returnType(numericScalar())
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- matrix(1:21, c(7, 3))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+test_that("3-dimensional input array gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return matrix
+        function(x = numericArray(nDim = 3)) {
+          ans <- x[3, 1:4, ]
+          return(ans)
+          returnType(numericMatrix())
+        }
+      ),
+      test2 = nFunction( ## return vector
+        function(x = numericArray(nDim = 3)) {
+          ans <- x[3, 1:4, 2]
+          return(ans)
+          returnType(numericVector())
+        }
+      ),
+      test3 = nFunction( ## return scalar
         function(x = numericArray(nDim = 3)) {
           ans <- x[3, 1, 2]
           return(ans)
@@ -123,19 +313,92 @@ test_that("indexing arg variations give correct results", {
       )
     )
   )
-
   cobj <- nCompile_nClass(nC)$new()
-
-  x <- array(1:27, c(3, 3, 3))
-
+  x <- array(1:84, c(3, 4, 7))
   for (i in seq_along(ls(nC$public_methods)[-1])) {
     test_i  <- paste0('test', i)
-    expect_equal(
-      nC$public_methods[[test_i]](x), ## R
-      cobj[[test_i]](x)               ## C++
-    )
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
   }
+})
 
+test_that("4-dimensional input array gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return 4D array
+        function(x = numericArray(nDim = 4)) {
+          ans <- x[2:3, , 2:4, ]
+          return(ans)
+          returnType(numericArray(nDim = 4))
+        }
+      ),
+      test2 = nFunction( ## return 3D array
+        function(x = numericArray(nDim = 4)) {
+          ans <- x[3, 1:4, 2:4, ]
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
+      ),
+      test3 = nFunction( ## return matrix
+        function(x = numericArray(nDim = 4)) {
+          ans <- x[3, 1:4, 3, ]
+          return(ans)
+          returnType(numericMatrix())
+        }
+      ),
+      test4 = nFunction( ## return vector
+        function(x = numericArray(nDim = 4)) {
+          ans <- x[3, 1:4, 2, 11]
+          return(ans)
+          returnType(numericVector())
+        }
+      ),
+      test5 = nFunction( ## return scalar
+        function(x = numericArray(nDim = 4)) {
+          ans <- x[3, 1, 2, 5]
+          return(ans)
+          returnType(numericScalar())
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- array(1:924, c(3, 7, 4, 11))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+})
+
+test_that("5-dimensional input array gives correct results", {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction( ## return 4D array
+        function(x = numericArray(nDim = 5)) {
+          ans <- x[1:2, , 2:4, 3, ]
+          return(ans)
+          returnType(numericArray(nDim = 4))
+        }
+      )
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- array(1:2310, c(2, 3, 7, 5, 11))
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x)
+    outR <- nC$public_methods[[test_i]](x)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
 })
 
 test_that("3:3 style indexing arg doesn't drop dimension", {
