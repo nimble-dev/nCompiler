@@ -111,7 +111,6 @@ cpp_nFunctionClass <- R6::R6Class(
 
 cpp_include_needed_nFunctions <- function(cppDef,
                                           NF_Compiler) {
-  browser()
   needed_cpp_code_names <- lapply(NF_Compiler$auxEnv$needed_nFunctions,
                              function(x)
                                NFinternals(get(x[[1]], envir = x[[2]]))$cpp_code_name)
