@@ -82,12 +82,6 @@ compile_generateCpp <- function(code,
         return(ans)
     }
     opInfo <- operatorDefEnv[[code$name]]
-    if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
-      obj <- get(code$name, envir = auxEnv$closure)
-      if(isNF(obj)) {
-        opInfo <- operatorDefEnv[['nFunction']]
-      }
-    }
     if(!is.null(opInfo)) {
         handlingInfo <- opInfo[["cppOutput"]]
         if(!is.null(handlingInfo)) {

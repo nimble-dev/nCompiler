@@ -1,6 +1,6 @@
 context("Testing nClass compilation")
 
-test_that("nnCompile_nClass works",
+test_that("nCompile_nClass works",
 {
     nc1 <- nClass(
         Rpublic = list(

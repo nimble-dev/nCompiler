@@ -20,6 +20,8 @@ test_that("One nFunction can call another and be compiled.",
             )
             ## debug(nCompiler:::compile_labelAbstractTypes)
             test <- nCompile(f2, f1)
+            expect_equal(test$f1(2, 3), 5)
+            expect_equal(test$f2(2, 3), 5)
           })
 
 test_that("One nFunction can call another with non-scalar and be compiled.",
@@ -42,5 +44,7 @@ test_that("One nFunction can call another with non-scalar and be compiled.",
             )
             ## debug(nCompiler:::compile_labelAbstractTypes)
             test <- nCompile(f2, f1)
+            expect_equal(test$f1(1:3, 11:13), array((1:3)+(11:13)))
+            expect_equal(test$f2(1:3, 11:13), array((1:3)+(11:13)))
           })
 

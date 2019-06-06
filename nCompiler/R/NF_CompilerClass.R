@@ -51,7 +51,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
                                      neededTypes = NULL) {
             argNames <- NFinternals$argSymTab$getSymbolNames()
             symbolTable <<- NFinternals$argSymTab$clone(deep = TRUE)
-            mangledArgumentNames <<- mangleArgumentNames( argNames )
+            mangledArgumentNames <- mangleArgumentNames( argNames )
             symbolTable$setSymbolNames(mangledArgumentNames)
                         
             nameSubList <<- lapply(mangledArgumentNames,
