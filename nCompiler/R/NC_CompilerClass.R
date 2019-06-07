@@ -40,8 +40,7 @@ NCvirtual_CompilerClass <- R6::R6Class(
             methodNames <- myNCinternals$methodNames
             for(m in methodNames) {
                 thisMethod <- NCgenerator$public_methods[[m]]
-                NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod,
-                                                          funName = m)
+                NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod)
             }
         },
         setupMethodSymbolTables = function() {

@@ -1,3 +1,5 @@
+# not working
+# Works when run directly, but not through test_package.
 context("Test serialization with cereal package")
 
 test_that("serialization works",

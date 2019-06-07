@@ -1,3 +1,7 @@
+make_cpp_filebase <- function(cpp_code_name) {
+  paste0(Rname2CppName(cpp_code_name), '_c_')
+}
+
 nf_substituteExceptFunctionsAndDollarSigns <- function(code, subList) {
     ## this is almost like doing substitute with code and subList, but it doesn't traverse the RHS of a '$' operator
     ## and it doesn't replace and function names

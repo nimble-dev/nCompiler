@@ -62,3 +62,43 @@ Eigen::Tensor<double, 3>  STM5 ( Eigen::Tensor<double, 3> x )  {
     Eigen::MakeStridedTensorMap<3>::make(x, Eigen::MakeIndexBlocks(b__(0, 5), b__(1, 2), b__(0, 3)));
   return(ans);
 }
+
+// [[Rcpp::export]]
+Eigen::Tensor<double, 2>  STM6 ( Eigen::Tensor<double, 3> x )  {
+  // This test checkes use of a map on the LHS of an assignment.
+  // Make a 3D tensor within the 3D origin
+  Eigen::Tensor<double, 2> ans;
+  // x[2:5, 3, 2:3]
+  ans = Eigen::MakeStridedTensorMap<2>::make(x, Eigen::MakeIndexBlocks(b__(1, 4), b__(2), b__(1, 2)));
+  return(ans);
+}
+
+// [[Rcpp::export]]
+Eigen::Tensor<double, 2>  STM7 ( Eigen::Tensor<double, 3> x )  {
+  // This test checkes use of a map on the LHS of an assignment.
+  // Make a 3D tensor within the 3D origin
+  Eigen::Tensor<double, 2> ans;
+  // x[5, 1:3, 2:3]
+  ans = Eigen::MakeStridedTensorMap<2>::make(x, Eigen::MakeIndexBlocks(b__(4), b__(0, 2), b__(1, 2)));
+  return(ans);
+}
+
+// [[Rcpp::export]]
+Eigen::Tensor<double, 1>  STM8 ( Eigen::Tensor<double, 3> x )  {
+  // This test checkes use of a map on the LHS of an assignment.
+  // Make a 3D tensor within the 3D origin
+  Eigen::Tensor<double, 1> ans;
+  // x[5, 1:3, 2]
+  ans = Eigen::MakeStridedTensorMap<1>::make(x, Eigen::MakeIndexBlocks(b__(4), b__(0, 2), b__(1)));
+  return(ans);
+}
+
+// [[Rcpp::export]]
+Eigen::Tensor<double, 2>  STM9 ( Eigen::Tensor<double, 3> x )  {
+  // This test checkes use of a map on the LHS of an assignment.
+  // Make a 3D tensor within the 3D origin
+  Eigen::Tensor<double, 2> ans;
+  // x[5, , 2:3]
+  ans = Eigen::MakeStridedTensorMap<2>::make(x, Eigen::MakeIndexBlocks(b__(4), b__(), b__(1, 2)));
+  return(ans);
+}

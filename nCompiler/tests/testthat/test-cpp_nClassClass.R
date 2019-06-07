@@ -17,7 +17,7 @@ test_that("basic cpp_nClassClass",
         code$generate()
        ,
         list("double x;",
-             "y = x + z;",
+             "y = x+z;",
              "return(y);")
     )
 
@@ -45,7 +45,7 @@ test_that("basic cpp_nClassClass",
        c(
          "double  test_class::test ( double x )  {",
          "double x;",
-         "y = x + z;",
+         "y = x+z;",
          "return(y);",
          "}"
        )
