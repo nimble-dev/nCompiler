@@ -17,6 +17,7 @@
 #include "typedefs.h"
 #include "recyclingRule.h"
 #include "nCompiler_Rcpp.h"
+#include "cWiseUnary_external.h"
 
 /* // Copy from SEXP to Eigen Tensor when scalar types are the same */
 /* template<class fromT, class toT, int nDim> */
