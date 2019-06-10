@@ -594,7 +594,7 @@ inLabelAbstractTypesEnv(
 
     if (nDim != 0) {
       ## set 'drop' as the last arg in the AST
-      setArg(code, length(code$args) + 1, drop_arg)
+      setArg(code, 'drop', drop_arg)
     }
     
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)

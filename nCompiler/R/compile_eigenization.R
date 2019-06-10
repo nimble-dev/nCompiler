@@ -470,10 +470,10 @@ inEigenizeEnv(
     n_args <- length(code$args)
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
-    ## labelAbstractTypes IndexingBracket handler put drop as last arg
-    drop <- code$args[[n_args]]$name
+    ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
+    drop <- code$args$drop$name
     ## remove the drop arg from AST
-    code$args[[n_args]] <- NULL
+    code$args$drop <- NULL
 
     ## the labelAbstractTypes IndexingBracket handler ensures that index_args
     ## is not just the empty argument ""
