@@ -249,7 +249,7 @@ isEigScalar <- function(code) {
   code$isLiteral || (code$isName && identical(code$type$nDim, 0))
 }
 
-AssignmentExpr <- function() {
+newAssignmentExpression <- function() {
     exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
 }
 
