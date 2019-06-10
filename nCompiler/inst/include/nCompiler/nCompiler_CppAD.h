@@ -56,9 +56,9 @@ std::shared_ptr<nC_derivClass> getDerivs_(nCompilerCppADinfoClass &ADinfo,
   std::vector<double> value_ans = ADinfo.ADtape->Forward(0, ADinfo.independentVars);
   Index q = value_ans.size();
   Index n = ADinfo.independentVars.size();
-  Eigen::array< Index, 1> sizeValue = {q};
+  Eigen::array< Index, 1> sizeValue = {{q}};
   ans->value.resize(sizeValue);
-  Eigen::array< Index, 2> sizeGrad = {n, q};
+  Eigen::array< Index, 2> sizeGrad = {{n, q}};
   ans->gradient.resize(sizeGrad);
   std::copy(value_ans.begin(), value_ans.end(), ans->value.data());
   std::vector<double> w(q, 0);
