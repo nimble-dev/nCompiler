@@ -137,7 +137,7 @@ class nCompiler_EigenRef_SEXP_converter {
     //    REAL(Sinput)[0] = xCopy[0];
   }
  private:
-  SEXP &Sinput;
+  SEXP Sinput;
   IndexArray indexArray;
   EigenTensorType xCopy;
 };
