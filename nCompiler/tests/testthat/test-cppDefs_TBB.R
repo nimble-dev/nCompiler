@@ -1,3 +1,4 @@
+# not working
 context("cppDefs for TBB")
 
 ## cppFunctionClass::constructorContent
@@ -13,9 +14,28 @@ nc <- nClass(
         return(ans)
       },
       returnType = 'numericScalar'
+    ),
+    c = nConstructor(
+      fun = function(){},
+      initializerList = list(quote(x(x_)))
     )
   )
 )
 
 Cnc <- nCompile_nClass(nc, control = list(endStage = 'makeCppDef'))
 class(Cnc)
+Cnc$cppFunctionDefs[['constructor_']] <- 
+Cnc$initializerContent <- lapply(list(quote(x(x_)), quote(y(y_))), nParse)
+Cnc$generate()
+
+initCode <- quote(x(x_))
+ninitCode <- nParse(initCode)
+nCompiler:::compile_generateCpp(ninitCode, Cnc$symbolTable)
+
+initializerContent <- list(quote(x(x_)))
+initializerContent <- lapply(initializerContent, nParse)
+initializers <- lapply(initializerContent, nCompiler:::compile_generateCpp)
+result <- paste0(':\n',
+                 paste(initializers, collapse = ",\n"))
+result
+

@@ -15,7 +15,6 @@ cpp_nClassBaseClass <- R6::R6Class(
         built = NULL,
         loaded = NULL,
         Cwritten = NULL,
-        cpp_nFunctionDefs = list(),
         getDefs = function() {
             super$getDefs()
         },

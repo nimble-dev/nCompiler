@@ -40,6 +40,11 @@ NCvirtual_CompilerClass <- R6::R6Class(
             methodNames <- myNCinternals$methodNames
             for(m in methodNames) {
                 thisMethod <- NCgenerator$public_methods[[m]]
+                browser()
+                if(isConstructor(thisMethod)) {
+                  
+                  NFinternals(thisMethod)$cpp_code_name <- self$name
+                }
                 NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod)
             }
         },

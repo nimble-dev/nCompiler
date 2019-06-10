@@ -223,7 +223,18 @@ processNFstages <- function(NFcompiler,
                showType = FALSE, showImpl = FALSE)
         logAfterStage(stageName)
       }
+      
+      ## Initialize initializerList if present (only for constructors)
+      if(!is.null(NFcompiler$NFinternals$aux)) {
+        if(!is.null(NFcompiler$NFinternals$aux$initializerList)) {
+          NFcompiler$NFinternals$aux$initializerList_exprClasses <- 
+            lapply(NFcompiler$NFinternals$aux$initializerList, nParse)
+        }
+      }
+      
     }
+    
+    
     
     stageName <- 'initializeAuxiliaryEnvironment'
     if (logging) logBeforeStage(stageName)

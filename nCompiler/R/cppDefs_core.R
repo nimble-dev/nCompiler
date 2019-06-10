@@ -532,7 +532,7 @@ cppFunctionClass <- R6::R6Class(
                   template = NULL,
                   const = FALSE,
                   classMethod = FALSE,
-                  constructorContent = NULL,
+                  initializerList = NULL,
                   commentsAbove = character(),
                   initialize = function(...) {
                       self$name <- character()
@@ -603,11 +603,10 @@ cppFunctionClass <- R6::R6Class(
                           else
                             character(0),
                           
-                          if(!is.null(self$constructorContent))
-                            generatorConstructorContent(self$constructorContent)
+                          if(!is.null(self$initializerList))
+                            generatorinitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
                           else
                             character(0),
-                          
                           '{'
                         ), ## end paste
                         self$code$generate(...),
@@ -616,6 +615,17 @@ cppFunctionClass <- R6::R6Class(
                   }
                   )
 )
+
+generatorinitializerList <- function(initializerList) { 
+  ## initializerList should be a list of exprClass objects
+  if(length(initializerList) == 0) return(character(0))
+  ## When no symbolTable is provided to compile_generateCpp, it just outputs
+  ## code$name entries.
+  initializers <- lapply(initializerList, compile_generateCpp)
+  result <- paste0(':\n',
+                   paste(initializers, collapse = ",\n"))
+  result
+}
 
 generateFunctionHeader <- function(returnType,
                                    name,

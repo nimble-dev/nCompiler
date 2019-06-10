@@ -104,10 +104,21 @@ cpp_nFunctionClass <- R6::R6Class(
           cpp_nFunction_buildFunction(self,
                                       NF_Compiler,
                                       parentST)
-          cpp_include_needed_nFunctions(self, NF_Compiler)          
+          cpp_include_needed_nFunctions(self, NF_Compiler)
+          cpp_include_aux_content(self, NF_Compiler)
         }
     )
 )
+
+                                   NF_Compiler) {
+  ## Available aux content:
+  ## initializerList for a constructor
+  if(is.null(NF_Compiler$NFinternals$aux)) return(invisible(NULL))
+  if(!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
+    cppDef$initializerList <- 
+      NF_Compiler$NFinternals$aux$initializerList_exprClasses
+  }
+}
 
 cpp_include_needed_nFunctions <- function(cppDef,
                                           NF_Compiler) {

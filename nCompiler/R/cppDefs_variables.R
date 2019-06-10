@@ -48,6 +48,14 @@ cppVarClass <- R6::R6Class(
     )
 )
 
+cppVar2cppVarFull <- function(cppVar, ...) {
+  cppVarFullClass$new(name = name,
+                      baseType = baseType, 
+                      ptr = ptr,
+                      ref = ref,
+                      ...)
+}
+
 ## Here is the full version that can handle most c++ variable declarations.
 ## One thing that cannot be handled is function pointers or member pointers
 cppVarFullClass <- R6::R6Class(
@@ -232,6 +240,9 @@ cppRcppList <- function(name = character(0), ...)
 emptyTypeInfo <- function()
   cppVarClass$new(baseType = character()) ## for return type of constructors and destructors
 
+cppBlank <- function() {
+  cppVarClass$new(name = "", baseType = "")
+}
 cppDouble <- function(name = character(0), ...)
     cppVarClass$new(name = name, baseType = 'double', ...)
 cppInt <- function(name = character(0), ...)
