@@ -211,7 +211,26 @@ setCaller <- function(value, expr, ID) {
 
 setArg <- function(expr, ID, value) {
     expr$args[[ID]] <- value
-    if(inherits(value, 'exprClass')) setCaller(value, expr, ID)
+    if(inherits(value, 'exprClass')) {
+      if (is.character(ID)) {
+        arg_name <- ID
+        ID <- which(names(expr$args) == arg_name)
+        if (length(ID) == 0)
+          ID <- length(expr$args) + 1 ## add to end
+        else if (length(ID) > 1)
+          stop(
+            exprClassProcessingErrorMsg(
+              expr,
+              paste0(
+                "Attempted to set '", arg_name, "' as an argument of '",
+                expr$name, "' by name, but it appears multiple times in the ",
+                "list of arguments."
+              )
+            ), call. = FALSE
+          )
+      }
+      setCaller(value, expr, ID)
+    }
     invisible(value)
 }
 
