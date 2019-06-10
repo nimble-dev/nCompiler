@@ -500,9 +500,9 @@ cppCodeBlockClass <- R6::R6Class(
                     recurseSetCppADExprs(self$code, TRUE) 
                 outputCppCode <- c(outputCppCode,
                                    compile_generateCpp(self$code,
-                                                          useSymTab,
-                                                          indent = ' ',
-                                                          showBracket = FALSE)
+                                                       useSymTab,
+                                                       indent = ' ',
+                                                       showBracket = FALSE)
                                    )
                 if(isTRUE(self$cppADCode))
                     recurseSetCppADExprs(self$code, FALSE) 
@@ -532,6 +532,7 @@ cppFunctionClass <- R6::R6Class(
                   template = NULL,
                   const = FALSE,
                   classMethod = FALSE,
+                  constructorContent = NULL,
                   commentsAbove = character(),
                   initialize = function(...) {
                       self$name <- character()
@@ -590,22 +591,28 @@ cppFunctionClass <- R6::R6Class(
                           }
                       c(self$commentsAbove,
                         paste(
-                            generateFunctionHeader(self$returnType,
-                                                   self$name,
-                                                   argsListToUse,
-                                                   scopes,
-                                                   self$template,
-                                                   static = FALSE,
-                                                   ...),
-                            if(self$const)
-                                ' const '
-                            else
-                                character(0),
-                            '{'
+                          generateFunctionHeader(self$returnType,
+                                                 self$name,
+                                                 argsListToUse,
+                                                 scopes,
+                                                 self$template,
+                                                 static = FALSE,
+                                                 ...),
+                          if(self$const)
+                            ' const '
+                          else
+                            character(0),
+                          
+                          if(!is.null(self$constructorContent))
+                            generatorConstructorContent(self$constructorContent)
+                          else
+                            character(0),
+                          
+                          '{'
                         ), ## end paste
                         self$code$generate(...),
                         list('}')
-                        )## end c()
+                      )## end c()
                   }
                   )
 )
