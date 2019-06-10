@@ -91,21 +91,10 @@ symbolBasic <-
                                                    constructor = "(M_PI)")
                            )
                 }
-                if(isArg) {
-                    EigenUseRef <- TRUE
-                    if(EigenUseRef) {
-                        ## Use plain tensor for experiments with Exporter
-                        return(cppEigenTensor(name = self$name,
-                                              nDim = self$nDim,
-                                              scalarType = cType))
-                        ## return(cppEigenTensorRef(name = self$name,
-                        ##                          nDim = self$nDim,
-                        ##                          scalarType = cType))
-                    } else {
-                        return(cppTemplate(name = self$name,
-                                           ref = TRUE,
-                                           const = TRUE))
-                    }
+                if(self$isRef) {
+                    return(cppEigenTensorRef(name = self$name,
+                                             nDim = self$nDim,
+                                             scalarType = cType))
                 } else {
                     return(cppEigenTensor(name = self$name,
                                           nDim = self$nDim,

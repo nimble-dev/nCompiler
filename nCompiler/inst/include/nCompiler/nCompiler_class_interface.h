@@ -122,7 +122,12 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived set"<<std::endl;
 #endif
-      reinterpret_cast<T*>(intBasePtr)->*ptr = Rcpp::as<P>(Svalue);
+      //      reinterpret_cast<T*>(intBasePtr)->*ptr = Rcpp::as<P>(Svalue);
+      // Originally we defined an Rcpp::Exporter specialization as needed,
+      // which is called via as<>.  However, we gain more flexibility in
+      // argument passing by defining new Rcpp::traits::input_parameter specializations.
+      // As a result, it is simpler her to create a new P object via this pathway.
+      reinterpret_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Svalue));
     }
   };
 

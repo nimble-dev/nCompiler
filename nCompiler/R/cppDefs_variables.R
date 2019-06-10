@@ -166,15 +166,9 @@ cppTemplateDeclaration <- function(templateNames,
 cppEigenTensorRef <- function(name = character(),
                               nDim,
                               scalarType) {
-    ## This would only be used for an argument...
-    cppVarFullClass$new(name = name,
-                       baseType = "Eigen::TensorRef",
-                       templateArgs = list(
-                           ## ... so it is ok to have no name here
-                           cppEigenTensor(nDim = nDim,
-                                          scalarType = scalarType)
-                       )
-                       )
+    ans <- cppEigenTensor(name, nDim, scalarType)
+    ans$ref <- TRUE
+    ans
 }
 
 cppADinfo <- function(name = character(),

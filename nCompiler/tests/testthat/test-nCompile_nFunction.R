@@ -31,6 +31,26 @@ test_that("addVectors double",
     expect_equal(test(x, y), array(x + 1.1, dim = length(x)))
 })
 
+test_that("addVectors double with a reference argument", 
+          {
+            addVectors <- nFunction(
+              fun = function(x,
+                             y) {
+                returnType(double(1))
+                ans <- x + 1.1 ## 1 is mistaken for integer
+                return(ans)
+              },
+              argTypes = list(x = 'numericVector',
+                              y = 'numericVector'),
+              refArgs = 'x'
+            )
+            test <- nCompile_nFunction(addVectors)
+            set.seed(1)
+            x <- rnorm(3)
+            y <- rnorm(3)
+            expect_equal(test(x, y), array(x + 1.1, dim = length(x)))
+          })
+
 test_that("addArrays double",
 {
     addArrays <- nFunction(
