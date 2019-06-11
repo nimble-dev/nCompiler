@@ -209,29 +209,45 @@ setCaller <- function(value, expr, ID) {
     invisible(value)
 }
 
-setArg <- function(expr, ID, value) {
-    expr$args[[ID]] <- value
-    if(inherits(value, 'exprClass')) {
-      if (is.character(ID)) {
-        arg_name <- ID
-        ID <- which(names(expr$args) == arg_name)
-        if (length(ID) == 0)
-          ID <- length(expr$args) + 1 ## add to end
-        else if (length(ID) > 1)
+setArg <- function(expr, ID, value, add = FALSE) {
+  if(inherits(value, 'exprClass')) {
+    if (is.character(ID)) {
+      arg_name <- ID
+      ID <- which(names(expr$args) == arg_name)
+      if (length(ID) == 0) {
+        if (isTRUE(add)) {
+          ## add to end
+          expr$args[[arg_name]] <- value
+          ID <- length(expr$args)
+        } else
           stop(
             exprClassProcessingErrorMsg(
               expr,
               paste0(
                 "Attempted to set '", arg_name, "' as an argument of '",
-                expr$name, "' by name, but it appears multiple times in the ",
-                "list of arguments."
+                expr$name, "' by name, but '", arg_name, "' was not found ",
+                "in the list of arguments. To add a new named argument to ",
+                "the end of the argument list, use 'add = TRUE'."
               )
             ), call. = FALSE
           )
-      }
-      setCaller(value, expr, ID)
-    }
-    invisible(value)
+      } else if (length(ID) > 1)
+        stop(
+          exprClassProcessingErrorMsg(
+            expr,
+            paste0(
+              "Attempted to set '", arg_name, "' as an argument of '",
+              expr$name, "' by name, but it appears multiple times in the ",
+              "list of arguments."
+            )
+          ), call. = FALSE
+        )
+    } else ## 'ID' is not a string
+      expr$args[[ID]] <- value
+    setCaller(value, expr, ID)
+  } else ## 'value' is not an instance of exprClass
+    expr$args[[ID]] <- value
+  invisible(value)
 }
 
 checkArgDims <- function(expr, ID, nDimRange) {
