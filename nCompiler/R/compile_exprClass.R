@@ -148,12 +148,29 @@ addIndentToList <- function(x, indent) {
 
 ## error trapping utilities to be used from the various processing steps
 exprClassProcessingErrorMsg <- function(code, msg) {
-    contextCode <- if (!is.null(code$caller))
-                     paste(unlist(nDeparse(code$caller)), collapse = '\n')
-                   else character()
-    ans <- paste0(msg, '\n This occurred for: ', nDeparse(code),'\n', collapse = '')
-    if(!is.null(contextCode)) ans <- paste(ans, 'This was part of the call: ', contextCode, collapse = '')
-    ans
+  deparsed_code <- try(nDeparse(code), silent = TRUE)
+  ans <- paste0(
+    msg, '\n This occured for',
+    if (!inherits(deparsed_code, 'try-error'))
+      paste0(': ', deparsed_code, collapse = '\n')
+    else
+      paste0(" the code beginning at '", code$name, "'."),
+    '\n'
+  )
+  if (!is.null(code$caller)) {
+    deparsed_caller <- try(nDeparse(code$caller), silent = TRUE)
+    if (!inherits(deparsed_caller, 'try-error'))
+      ans <- paste(
+        ans, 'This was part of the call: ',
+        paste(unlist(deparsed_caller), collapse = '\n')
+      )
+    else
+      ans <- paste(
+        ans, 'This was part of the call beginning at ',
+        code$caller$name, "."
+      )
+  }
+  ans
 }
 
 
