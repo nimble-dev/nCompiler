@@ -46,7 +46,7 @@ exprClasses_labelForEigenization <- function(code) {
         if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
 
         if(length(code$implementation$toEigen) > 0) {
-            if(code$implementation$toEigen == 'yes') {
+          if(code$implementation$toEigen == 'yes') {
          ##   if(anyNonScalar(code)) {
                 output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
         	return(output)
@@ -465,3 +465,56 @@ inEigenizeEnv(
   }
 )
 
+inEigenizeEnv(
+  IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    n_args <- length(code$args)
+    code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
+
+    ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
+    drop <- code$args$drop$name
+    ## remove the drop arg from AST
+    code$args$drop <- NULL
+
+    ## the labelAbstractTypes IndexingBracket handler ensures that index_args
+    ## is not just the empty argument ""
+    index_args <- code$args[-1]
+    code$args[-1] <- NULL ## clear indexing args from AST
+
+    blocks_expr <- setArg(
+      code, 2,
+      exprClass$new(name = 'Eigen::MakeIndexBlocks',
+                    isName = FALSE, isCall = TRUE)
+    )
+
+    for (i in seq_along(index_args)) {
+      ## create b__ call
+      b_expr <- exprClass$new(name = 'b__',
+                              isName = FALSE, isCall = TRUE)
+
+      if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
+        ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
+        setArg(b_expr, 1, index_args[[i]]$args[[1]])
+        setArg(b_expr, 2, index_args[[i]]$args[[2]])
+
+      } else if (index_args[[i]]$name != '') { ## not a call
+        ## the labelAbstractTypes handler ensures index_args[[i]] is scalar
+        setArg(b_expr, 1, index_args[[i]])
+        if (!drop)
+          setArg(b_expr, 2, copyExprClass(index_args[[i]]))
+
+      }
+
+      ## subtract 1 from each of this b__ call's numeric arguments
+      for (j in seq_along(b_expr$args)) {
+        if (b_expr$args[[j]]$type$type %in% c('integer', 'double')) {
+          insertExprClassLayer(b_expr, j, '-')
+          setArg(b_expr$args[[j]], 2, literalIntegerExpr(1))
+        }
+      }
+
+      ## add the b__ call to the AST as arg to blocks_expr
+      setArg(blocks_expr, i, b_expr)
+    }
+    invisible(NULL)
+  }
+)

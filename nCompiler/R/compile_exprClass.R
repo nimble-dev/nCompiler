@@ -226,10 +226,46 @@ setCaller <- function(value, expr, ID) {
     invisible(value)
 }
 
-setArg <- function(expr, ID, value) {
-    expr$args[[ID]] <- value
-    if(inherits(value, 'exprClass')) setCaller(value, expr, ID)
-    invisible(value)
+setArg <- function(expr, ID, value, add = FALSE) {
+  arg_names <- names(expr$args)
+  expr$args[[ID]] <- value
+  if(inherits(value, 'exprClass')) {
+    if (is.character(ID)) {
+      arg_name <- ID
+      ID <- which(arg_names == arg_name)
+      if (length(ID) == 0) {
+        if (isTRUE(add))
+          ID <- length(expr$args) ## add to end
+        else {
+          ## remove the arg from the AST since added at beginning
+          expr$args[[arg_name]] <- NULL
+          stop(
+            exprClassProcessingErrorMsg(
+              expr,
+              paste0(
+                "Attempted to set '", arg_name, "' as an argument of '",
+                expr$name, "' by name, but '", arg_name, "' was not found ",
+                "in the list of arguments. To add a new named argument to ",
+                "the end of the argument list, use 'add = TRUE'."
+              )
+            ), call. = FALSE
+          )
+        }
+      } else if (length(ID) > 1)
+        stop(
+          exprClassProcessingErrorMsg(
+            expr,
+            paste0(
+              "Attempted to set '", arg_name, "' as an argument of '",
+              expr$name, "' by name, but it appears multiple times in the ",
+              "list of arguments."
+            )
+          ), call. = FALSE
+        )
+    }
+    setCaller(value, expr, ID)
+  }
+  invisible(value)
 }
 
 checkArgDims <- function(expr, ID, nDimRange) {
@@ -249,6 +285,39 @@ isEigScalar <- function(code) {
 
 newAssignmentExpression <- function() {
     exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
+}
+
+literalDoubleExpr <- function(value) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'double',
+                          nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
+literalIntegerExpr <- function(value) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'integer',
+                          nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
+literalLogicalExpr <- function(value = TRUE) {
+  type <- symbolBasic$new(name = 'NONAME',
+                          type = 'logical',
+                          nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
 }
 
 ## This modifies the code$caller in place
