@@ -210,16 +210,18 @@ setCaller <- function(value, expr, ID) {
 }
 
 setArg <- function(expr, ID, value, add = FALSE) {
+  arg_names <- names(expr$args)
+  expr$args[[ID]] <- value
   if(inherits(value, 'exprClass')) {
     if (is.character(ID)) {
       arg_name <- ID
-      ID <- which(names(expr$args) == arg_name)
+      ID <- which(arg_names == arg_name)
       if (length(ID) == 0) {
-        if (isTRUE(add)) {
-          ## add to end
-          expr$args[[arg_name]] <- value
-          ID <- length(expr$args)
-        } else
+        if (isTRUE(add))
+          ID <- length(expr$args) ## add to end
+        else {
+          ## remove the arg from the AST since added at beginning
+          expr$args[[arg_name]] <- NULL
           stop(
             exprClassProcessingErrorMsg(
               expr,
@@ -231,6 +233,7 @@ setArg <- function(expr, ID, value, add = FALSE) {
               )
             ), call. = FALSE
           )
+        }
       } else if (length(ID) > 1)
         stop(
           exprClassProcessingErrorMsg(
@@ -242,11 +245,9 @@ setArg <- function(expr, ID, value, add = FALSE) {
             )
           ), call. = FALSE
         )
-    } else ## 'ID' is not a string
-      expr$args[[ID]] <- value
+    }
     setCaller(value, expr, ID)
-  } else ## 'value' is not an instance of exprClass
-    expr$args[[ID]] <- value
+  }
   invisible(value)
 }
 
