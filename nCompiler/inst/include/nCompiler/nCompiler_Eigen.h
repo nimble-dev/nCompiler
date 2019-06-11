@@ -17,6 +17,7 @@
 #include "typedefs.h"
 #include "recyclingRule.h"
 #include "nCompiler_Rcpp.h"
+#include "cWiseUnary_external.h"
 
 // The following Exporter implements Rcpp::as< Eigen::Tensor<T, nDim> >
 namespace Rcpp {
