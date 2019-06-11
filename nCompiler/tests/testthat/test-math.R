@@ -5,7 +5,8 @@ source('./testing_utils.R')
 test_math <- function(test_batch, info, size = 3,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose'),
-                      compile_all_funs = FALSE) {
+                      compile_all_funs = FALSE, gold_file = '',
+                      write_gold_file = FALSE) {
   compile_error <- sapply(
     test_batch, function(param)
       !is.null(param$knownFailure) && grepl('compiles', param$knownFailure)
@@ -16,7 +17,7 @@ test_math <- function(test_batch, info, size = 3,
   if (length(nFuns_error) > 0) {
     names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
     nC_error <- gen_nClass(list(Cpublic = nFuns_error))
-    expect_error(nCompile_nClass(nC_error), info = info)
+    expect_error(nCompile_nClass(nC_error, control = control), info = info)
   }
 
   ## these tests should compile
@@ -31,14 +32,25 @@ test_math <- function(test_batch, info, size = 3,
       for (name in names(nFuns)) {
         if (verbose)
           cat(paste('### Compiling function for test of:', name, '###\n'))
-        nCompile_nFunction(nFuns[[name]])
+        nCompile_nFunction(nFuns[[name]], control)
       }
     }
     
     names(nFuns) <- paste0('nFun', 1:length(nFuns))
     nC <- gen_nClass(list(Cpublic = nFuns))
 
-    nC_compiled <- nCompile_nClass(nC)
+    ## don't compile if gold_file is not empty
+    if (!identical(gold_file, '')) {
+      control$endStage <- 15 ## makeRcppPacket
+      return(
+        test_gold_file(
+          nCompile_nClass(nC, control = control),
+          gold_file, write_gold_file
+        )
+      )
+    }
+
+    nC_compiled <- nCompile_nClass(nC, control = control)
     obj <- nC_compiled$new()
 
     for (i in seq_along(compiles)) {

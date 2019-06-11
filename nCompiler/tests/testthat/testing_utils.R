@@ -273,3 +273,30 @@ getBinaryArgChecks <- function(op) {
     list(NULL, NULL)
   )
 }
+
+## TODO: decide how to integrate this function with test_batch
+test_gold_file <- function(uncompiled, gold_file = '', batch_mode = FALSE,
+                           overwrite = FALSE) {
+  ## for now, assume uncompiled is either an nFunction or
+  ## an instant of cpp_nClassClass
+  filebase <- basename(gold_file)
+  con <- file(gold_file, open = "w")
+  if (isNF(uncompiled)) {
+    RcppPacket <- NFinternals(uncompiled)$RcppPacket
+    RcppPacket$filebase <- filebase
+  } else if (inherits(uncompiled, 'cpp_nClassClass'))
+    RcppPacket <- nCompiler:::cppDefs_2_RcppPacket(
+      uncompiled, filebase = filebase
+    )
+  browser()
+  if (isTRUE(overwrite)) ## either create or overwrite gold_file
+    nCompiler:::writeCpp_nCompiler(,
+      Rcpp_packet, dir = dirname(gold_file), con
+    )
+  else {
+    ## the file gold_file is assumed to already exist
+    ## TODO: see how nimble uses gold files
+    old_file <- readLines(gold_file)
+  }
+  invisible(NULL)
+}
