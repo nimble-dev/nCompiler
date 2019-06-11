@@ -151,11 +151,11 @@ exprClassProcessingErrorMsg <- function(code, msg) {
   deparsed_code <- try(nDeparse(code), silent = TRUE)
   ans <- paste0(
     msg, '\n This occured for',
-    ifelse(
-      !inherits(deparsed_code, 'try-error'),
-      paste0(': ', deparsed_code, collapse = '\n'),
-      paste0(" the code beginning at '", code$name, "'.")
-    ), '\n'
+    if (!inherits(deparsed_code, 'try-error'))
+      paste0(': ', deparsed_code, collapse = '\n')
+    else
+      paste0(" the code beginning at '", code$name, "'."),
+    '\n'
   )
   if (!is.null(code$caller)) {
     deparsed_caller <- try(nDeparse(code$caller), silent = TRUE)
