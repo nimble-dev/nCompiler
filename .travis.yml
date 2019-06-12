@@ -21,4 +21,4 @@ install:
   - R CMD INSTALL nCompiler --install-tests
 
 script:
-  - ./run_tests.R types
+  - ./run_tests.R
