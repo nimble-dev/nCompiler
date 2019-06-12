@@ -4,10 +4,10 @@
 #define R_NO_REMAP
 #endif
 
-#include <nimble/nimbleEigen.h>
+#include <nCompiler/nCompiler_Eigen.h>
 using namespace Rcpp;
-// [[Rcpp::plugins(nimbleEigenPlugin)]]
-// [[Rcpp::depends(nimbleCompiler)]]
+// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+// [[Rcpp::depends(nCompiler)]]
 
 RcppExport SEXP tensor2D_by_copy(SEXP Sx) {
 BEGIN_RCPP
