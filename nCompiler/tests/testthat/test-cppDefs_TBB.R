@@ -39,3 +39,27 @@ result <- paste0(':\n',
                  paste(initializers, collapse = ",\n"))
 result
 
+## Set up an nFunction for purposes of having a body of a for loop
+## to explore how to construct parallel_loop_body
+
+forloop <- nFunction(
+  fun = function(x = 'numericVector') {
+    y <- x
+    for(i in 1:10) {
+      y[i] <- 2.* x[i]
+    }
+    return(y)
+  },
+  returnType = 'numericVector'
+)
+cpp_forloop <- nCompile_nFunction(forloop,
+                                  control = list(endStage = 'makeCppDef'))
+body_code <- cpp_forloop$cppDef$code$code
+orig_loop_code <- body_code$args[[2]]$args[[1]]
+
+debug(nCompiler:::cppParallelBodyClass_init_impl)
+nCompiler:::cppParallelBodyClass_init_impl(cppDef=NULL,
+                               orig_loop_code = orig_loop_code,
+                               symbolTable = cpp_forloop$cppDef$code$symbolTable,
+                               copyVars = c("ARG1_x_"),
+                               noncopyVars = c("y"))

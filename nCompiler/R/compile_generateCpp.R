@@ -239,6 +239,25 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  GeneralFor <- function(code, symTab) {
+    init <- compile_generateCpp(code$args[[1]], symTab)
+    cond <- compile_generateCpp(code$args[[2]], symTab)
+    incr <- compile_generateCpp(code$args[[3]], symTab)
+    body <- compile_generateCpp(code$args[[4]], symTab)
+    opener <- paste0('for(',
+                     init,'; ',
+                     cond,'; ',
+                     incr,')')
+    if(is.list(body)) {
+      body[[1]] <- paste(opener, body[[1]])
+      return(body)
+    } else {
+      return(paste(opener, body))
+    }
+  }
+)
+
+inGenCppEnv(
   For <- function(code, symTab) {
     if(code$args[[2]]$name != ':') stop('Error: for now for loop ranges must be defined with :')
     begin <- compile_generateCpp(code$args[[2]]$args[[1]], symTab)

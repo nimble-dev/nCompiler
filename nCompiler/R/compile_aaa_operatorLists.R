@@ -61,6 +61,14 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('GeneralFor'),
+  list(
+    cppOutput = list(
+      handler = 'GeneralFor')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
