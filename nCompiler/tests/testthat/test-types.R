@@ -1,4 +1,4 @@
-context("Testing nCompiler types")
+context("Testing nCompiler types.")
 
 test_that("numericVector(5)",
 {
