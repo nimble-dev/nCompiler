@@ -1,0 +1,25 @@
+language: r
+
+os: osx
+
+notifications:
+  email:
+    recipients:
+      - pdevalpine@berkeley.edu
+    on_success: always
+    on_failure: always
+
+branches:
+  only:
+    - master
+
+latex: false  # Work around tlmgr issues.
+
+install:
+  - ./install_requirements.R
+  - R CMD build nCompiler
+  - R CMD INSTALL nCompiler --install-tests
+  - Rscript -e 'library(nCompiler); setup_nCompLocal()'
+
+script:
+  - ./run_tests.R

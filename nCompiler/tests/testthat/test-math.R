@@ -1,3 +1,4 @@
+# not working.  This actually works but I am turning it off as we get travis-ci working.
 context("Testing of math functions in nCompiler code\n")
 
 utils <- system.file(
