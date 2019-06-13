@@ -135,6 +135,8 @@ assignOperatorDef(
     )
 )
 updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
+## IDEA: descriptive name for filenaming gold files
+updateOperatorDef('-', 'testthat', 'desc_name', 'minus')
 
 assignOperatorDef(
   c('min', 'max'),

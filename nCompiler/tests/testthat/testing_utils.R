@@ -1,3 +1,6 @@
+require(nCompiler)
+require(testthat)
+
 make_input <- function(argType, argCheck = NULL, size = 3) {
   arg <- switch(
     argType,
@@ -58,11 +61,12 @@ gen_nClass <- function(param) {
 }
 
 ## Runs test_fun on a list of params.
+## ... additional args to pass to test_gold_file
 test_batch <- function(test_fun, batch,
                        case_name = deparse(substitute(batch)), size = 3,
                        dir = file.path(tempdir(), "nCompiler_generatedCode"),
                        control = list(), verbose = nOptions('verbose'),
-                       skip = c()) {
+                       skip = c(), gold_test = FALSE, ...) {
   indices <- seq_along(batch)
   if (is.numeric(skip) && all(skip > 0 & skip %% 1 == 0))
     indices <- indices[-skip] ## skip is indices in batch to skip
@@ -71,43 +75,67 @@ test_batch <- function(test_fun, batch,
   if (is.logical(skip) && length(skip) == length(indices))
     indices <- indices[!skip] ## skip[i] is TRUE if we should skip the corresponding test
 
-  for (i in indices) {
-    param <- batch[[i]]
-    name <- names(batch)[i]
-    msg <- paste0(case_name, ' #', i, ' (', name, ')')
-    if (is.null(param$skip) || !param$skip) {
-      if (verbose) {
+  if (identical(gold_file, '')) {
+    for (i in indices) {
+      param <- batch[[i]]
+      name <- names(batch)[i]
+      msg <- paste0(case_name, ' #', i, ' (', name, ')')
+      if (is.null(param$skip) || !param$skip) {
+        if (verbose) {
+          cat("### -------------------------------------------- ###\n")
+          cat(paste0("### Testing ", msg, " ###\n"))
+        }
+        test_param(
+          test_fun, batch[[i]], msg, size, dir, control, verbose, ...
+        )
+        if (verbose) cat("### -------------------------------------------- ###\n")
+      } else if (verbose) {
         cat("### -------------------------------------------- ###\n")
-        cat(paste0("### Testing ", msg, " ###\n"))
+        cat(paste0('### Skipping ', msg, ' ###\n'))
+        cat("### -------------------------------------------- ###\n")
       }
-      test_param(test_fun, batch[[i]], msg, size, dir, control, verbose)
-      if (verbose) cat("### -------------------------------------------- ###\n")
-    } else if (verbose) {
-      cat("### -------------------------------------------- ###\n")
-      cat(paste0('### Skipping ', msg, ' ###\n'))
-      cat("### -------------------------------------------- ###\n")
     }
+
+  } else {
+    ## TODO: use skip in gold file testing?
+    RcppPackets <- lapply(
+      batch, test_fun,
+      '', size, dir, control, verbose,
+      gold_file = gold_file, batch_mode = TRUE
+    )
+    hContent <- unlist(sapply(RcppPackets, `[[`, 'hContent'))
+    cppContent <- unlist(sapply(RcppPackets, `[[`, 'cppContent'))
+    RcppPacket <- list(
+      hContent = hContent,
+      cppContent = cppContent
+      ## filebase not needed
+    )
+    ## construct an RcppPacket for test_gold_file
+    ## If ... contains write_gold_file = TRUE, then it is just written.
+    ## Otherwise, read gold_file and check that current generated code matches.
+    test_gold_file(RcppPacket, , ...)
   }
 }
 
-## This is a parametrized test, where `param` is a list with names:
-##   param$name - A descriptive test name.
+## TODO: this function needs to be refactored or removed
+## This is a parametrized test, where `param_list` is a list of lists with names:
+##   param$name - An op name
 ##   param$expr - A quoted expression `quote(out <- some_function_of(arg1, arg2, ...))`.
 ##   param$argTypes - A list of the input types.
 ##   param$returnType - The output type character string.
-test_param <- function(test_fun, param, case_name = 'test case', size = 3,
+test_param <- function(test_fun, param_list, test_name = '', size = 3,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                      control = list(), verbose = nOptions('verbose')) {
-  if (!is.list(param)) stop('param must be a list', call.=FALSE)
+                      control = list(), verbose = nOptions('verbose'), ...) {
+  if (!is.list(param_list)) stop('param must be a list', call.=FALSE)
 
   ## in some cases, expect_error does not suppress error messages (I believe
   ## this has to do with how we trap errors in compilation), so make sure user
   ## realizes expectation
-  if('knownFailureReport' %in% names(param) && param$knownFailureReport)
+  if('knownFailureReport' %in% names(param_list) && param_list$knownFailureReport)
     cat("\nBegin expected error message:\n")
 
   test_that(case_name, {
-    test_fun(param, case_name, size, dir, control, verbose)
+    test_fun(param, test_name, size, dir, control, verbose, ...)
   })
 
   invisible(NULL)
@@ -274,29 +302,57 @@ getBinaryArgChecks <- function(op) {
   )
 }
 
+compare_files_using_diff <- function(trial_file, correct_file, main = "") {
+  if (main == "") main <- paste0(trial_file, ' and ', correct_file, ' do not match\n')
+  diff_out <- system2('diff', c(trial_file, correct_file), stdout = TRUE)
+  test_that(
+    paste0(main, paste0(diff_out, collapse = '\n')),
+    expect_true(length(diff_out) == 0)
+  )
+  invisible(NULL)
+}
+
 ## TODO: decide how to integrate this function with test_batch
-test_gold_file <- function(uncompiled, gold_file = '', batch_mode = FALSE,
-                           overwrite = FALSE) {
-  ## for now, assume uncompiled is either an nFunction or
-  ## an instant of cpp_nClassClass
-  filebase <- basename(gold_file)
-  con <- file(gold_file, open = "w")
+test_gold_file <- function(uncompiled,
+                           filename = paste0('test_', date()),
+                           write_gold_file = FALSE,
+                           batch_mode = FALSE) {
+  ## TODO: escape test_name to create a proper filename
+  ##       use operatorDefEnv?
+  filename <- paste0(gsub(' ', '_', filename), '.gold')
+  filepath <- paste0(
+    system.file(
+      file.path('tests', 'testthat'),
+      package = 'nCompiler'
+    ), '/gold_files/', filename
+  )
   if (isNF(uncompiled)) {
     RcppPacket <- NFinternals(uncompiled)$RcppPacket
-    RcppPacket$filebase <- filebase
   } else if (inherits(uncompiled, 'cpp_nClassClass'))
     RcppPacket <- nCompiler:::cppDefs_2_RcppPacket(
-      uncompiled, filebase = filebase
+      uncompiled, filebase = '.'
+      ## filebase won't be used since we provide 'con' to writeCpp_nCompiler
     )
-  browser()
-  if (isTRUE(overwrite)) ## either create or overwrite gold_file
-    nCompiler:::writeCpp_nCompiler(,
-      Rcpp_packet, dir = dirname(gold_file), con
+  else ## assume uncompiled is an RcppPacket
+    RcppPacket <- uncompiled
+  if (isTRUE(write_gold_file)) { ## either create or overwrite gold_file
+    ## TODO: create gold file directory and write to that directory
+    con <- file(filepath, open = "w")
+    nCompiler:::writeCpp_nCompiler(
+      RcppPacket, con = con
     )
-  else {
-    ## the file gold_file is assumed to already exist
-    ## TODO: see how nimble uses gold files
-    old_file <- readLines(gold_file)
+    close(con)
+  } else if (isFALSE(batch_mode)) {
+    ## read the existing gold file and compare to the current RcppPacket
+    ## TODO: reset nClass ID counters
+    temp_file <- paste0(filepath, 'tmp')
+    con <- file(temp_file, open = "w")
+    nCompiler:::writeCpp_nCompiler(
+      RcppPacket, con = con
+    )
+    close(con)
+    compare_files_using_diff(temp_file, filepath)
+    ## TODO: file.remove(temp_file) ?
   }
-  invisible(NULL)
+  invisible(RcppPacket)
 }
