@@ -53,6 +53,8 @@ modifyBatchOnMatch(
 ## binaryOpTests
 ################
 
+## TODO: 
+
 makeBinaryOpTestBatch <- function(op, argTypes) {
   o <- mapply(function(argTuple) makeOperatorParam(op, argTuple),
               argTypes, SIMPLIFY = FALSE)

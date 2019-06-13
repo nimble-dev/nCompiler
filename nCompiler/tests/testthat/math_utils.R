@@ -3,32 +3,20 @@ test_math <- function(param_list, test_name = '', size = 3,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose'),
                       compile_all_funs = FALSE, gold_test = FALSE, ...) {
-
-  ## if gold_test is TRUE, go directly to nCompiler stages without any
-  ## checking for knownFailures and without proceeding to C++ compilation
-  if (isTRUE(gold_test)) {
-    nFuns <- lapply(param_list, gen_nFunction)
-    nC <- gen_nClass(list(Cpublic = nFuns))
-    control$endStage <- 15 ## makeRcppPacket
-    ## make sure generated class / function names are the same every time
-    nCompiler:::resetLabelFunctionCreators()
-    return(
-      test_gold_file(
-        nCompile_nClass(nC, control = control), test_name, ...)
-    )
-  }
-
   compile_error <- sapply(
     param_list, function(param)
       !is.null(param$knownFailure) && grepl('compiles', param$knownFailure)
   )
 
-  ## these tests should fail during compilation
-  nFuns_error <- lapply(param_list[compile_error], gen_nFunction)
-  if (length(nFuns_error) > 0) {
-    names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
-    nC_error <- gen_nClass(list(Cpublic = nFuns_error))
-    expect_error(nCompile_nClass(nC_error, control = control), info = test_name)
+  ## only test knownFailures in full testing
+  if (isFALSE(gold_test)) {
+    ## these tests should fail during compilation
+    nFuns_error <- lapply(param_list[compile_error], gen_nFunction)
+    if (length(nFuns_error) > 0) {
+      names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
+      nC_error <- gen_nClass(list(Cpublic = nFuns_error))
+      expect_error(nCompile_nClass(nC_error, control = control), info = test_name)
+    }
   }
 
   ## these tests should compile
@@ -37,19 +25,33 @@ test_math <- function(param_list, test_name = '', size = 3,
 
   if (length(nFuns) > 0) {
 
+    nFun_names <- names(nFuns) ## for verbose output
+    names(nFuns) <- paste0('nFun', 1:length(nFuns))
+
+    nC <- gen_nClass(list(Cpublic = nFuns))
+
+    ## if gold_test is TRUE, go directly to nCompiler stages without any
+    ## checking for knownFailures and without proceeding to C++ compilation
+    if (isTRUE(gold_test)) {
+      control$endStage <- 15 ## makeRcppPacket
+      ## make sure generated class / function names are the same every time
+      nCompiler:::resetLabelFunctionCreators()
+      return(
+        test_gold_file(
+          nCompile_nClass(nC, control = control), test_name, ...)
+      )
+    }
+
     if (compile_all_funs) {
       ## useful for debugging an nClass compilation failure
       ## e.g. test_math(binaryOpTests[['+']], compile_all_funs = TRUE)
-      for (name in names(nFuns)) {
+      for (i in seq_along(nFuns)) {
         if (verbose)
-          cat(paste('### Compiling function for test of:', name, '###\n'))
-        nCompile_nFunction(nFuns[[name]], control)
+          cat(paste('### Compiling function for test of:', nFun_names[i], '###\n'))
+        nCompile_nFunction(nFuns[[i]], control)
       }
     }
     
-    names(nFuns) <- paste0('nFun', 1:length(nFuns))
-    nC <- gen_nClass(list(Cpublic = nFuns))
-
     nC_compiled <- nCompile_nClass(nC, control = control)
     obj <- nC_compiled$new()
 
@@ -110,31 +112,34 @@ test_math <- function(param_list, test_name = '', size = 3,
 ## batch_of_ops: list with one named entry per operator
 ##               which itself is a list with any number of
 ##               test parameterizations (op + arg types)
-test_math_suite <- function(batch_of_ops, full, granularity) {
+## TODO: improve the way this works / is used to include granularity = 1
+test_math_suite <- function(batch_of_ops, test_name = 'math', full, granularity,
+                            write_gold_file, gold_file_dir) {
   if (!full) {
 
-    for (op in names(batch_of_ops)) ## granularity level is 3
+    for (op in names(batch_of_ops)) {## granularity level is 3
       test_math(
-        batch_of_ops[[op]], op, verbose = VERBOSE, gold_test = TRUE,
-        write_gold_file = WRITE_GOLD_FILES
+        batch_of_ops[[op]], paste0(c(test_name, op), collapse = '_'),
+        gold_test = TRUE, write_gold_file = write_gold_file,
+        gold_file_dir = gold_file_dir
       )
+    }
 
   } else if (granularity == 4) {
     
     for (unaryOpTest in unlist(batch_of_ops, recursive = FALSE))
       ## TODO: avoid having to wrap unaryOpTest in list()?
-      test_math(list(unaryOpTest), unaryOpTest$name, verbose = VERBOSE)
+      test_math(list(unaryOpTest), unaryOpTest$name)
 
   } else if (granularity == 3) {
 
     for (op in names(batch_of_ops))
-      test_math(batch_of_ops[[op]], op, verbose = VERBOSE)
+      test_math(batch_of_ops[[op]], op)
 
   } else if (granularity == 2) {
 
     test_math(
       unlist(batch_of_ops), deparse(substitute(batch_of_ops)),
-      verbose = VERBOSE
     )
   }
 }

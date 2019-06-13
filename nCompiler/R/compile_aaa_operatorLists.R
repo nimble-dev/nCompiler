@@ -135,8 +135,9 @@ assignOperatorDef(
     )
 )
 updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
-## IDEA: descriptive name for filenaming gold files
-updateOperatorDef('-', 'testthat', 'desc_name', 'minus')
+## add descriptive name for filenaming gold files
+updateOperatorDef('-', 'testthat', 'alpha_name', 'minus')
+updateOperatorDef('+', 'testthat', 'alpha_name', 'plus')
 
 assignOperatorDef(
   c('min', 'max'),
@@ -349,6 +350,14 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
+updateOperatorDef('==', 'testthat', 'alpha_name', 'eq')
+updateOperatorDef('!=', 'testthat', 'alpha_name', 'neq')
+updateOperatorDef('<=', 'testthat', 'alpha_name', 'le')
+updateOperatorDef('>=', 'testthat', 'alpha_name', 'ge')
+updateOperatorDef('<', 'testthat', 'alpha_name', 'lt')
+updateOperatorDef('>', 'testthat', 'alpha_name', 'gt')
+updateOperatorDef('&', 'testthat', 'alpha_name', 'and')
+updateOperatorDef('|', 'testthat', 'alpha_name', 'or')
 
 assignOperatorDef(
   c('/'),
@@ -367,6 +376,7 @@ assignOperatorDef(
       testAD = TRUE)
   )
 )
+updateOperatorDef('/', 'testthat', 'alpha_name', 'div')
 
 assignOperatorDef(
   c('*'),
@@ -387,6 +397,7 @@ assignOperatorDef(
       testAD = TRUE)
   )
 )
+updateOperatorDef('*', 'testthat', 'alpha_name', 'mult')
 
 assignOperatorDef(
   c('^'),
@@ -407,6 +418,7 @@ assignOperatorDef(
       testAD = TRUE)
   )
 )
+updateOperatorDef('^', 'testthat', 'alpha_name', 'pow')
 
 assignOperatorDef(
   c('%%'),
@@ -425,6 +437,7 @@ assignOperatorDef(
       testMath = TRUE)
   )
 )
+updateOperatorDef('%%', 'testthat', 'alpha_name', 'mod')
 
 assignOperatorDef(
   c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',

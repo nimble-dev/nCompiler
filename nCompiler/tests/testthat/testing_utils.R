@@ -206,6 +206,17 @@ getMatchingOps <- function(field, key, value) {
   names(values)[values == value]
 }
 
+get_ops_values <- function(field, key) {
+  ## Returns vector of operator names where a given field has
+  ## a key with a given value, or an empty vector if no matches.
+  ops <- ls(nCompiler:::operatorDefEnv)
+  values <- unlist(
+    sapply(ops, nCompiler:::getOperatorDef, field, key)
+  )
+  if (is.null(values)) return(character(0))
+  return(values)
+}
+
 returnTypeString <- function(op, argTypes) {
   ## Takes an operator and its input types as a character vector and
   ## creates a string representing the returnType for the operation.
@@ -313,19 +324,24 @@ compare_files_using_diff <- function(trial_file, correct_file, main = "") {
 }
 
 ## TODO: decide how to integrate this function with test_batch
-test_gold_file <- function(uncompiled,
-                           filename = paste0('test_', date()),
-                           write_gold_file = FALSE,
-                           batch_mode = FALSE) {
-  ## TODO: escape test_name to create a proper filename
-  ##       use operatorDefEnv?
+test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
+                           gold_file_dir = system.file(
+                             file.path('tests', 'testthat', 'gold_files'),
+                             package = 'nCompiler'
+                           ), write_gold_file = FALSE, batch_mode = FALSE) {
   filename <- paste0(gsub(' ', '_', filename), '.gold')
-  filepath <- paste0(
-    system.file(
-      file.path('tests', 'testthat'),
-      package = 'nCompiler'
-    ), '/gold_files/', filename
-  )
+  ## replace operators that can't be used in filenames with an alphabetic name
+  ## greedily replace by ordering according to decreasing number of characters
+  replacements <- get_ops_values('testthat', 'alpha_name')
+  replacements <- replacements[
+    order(nchar(names(replacements)), decreasing = TRUE)
+  ]
+  for (i in seq_along(replacements)) {
+    filename <- gsub(
+      names(replacements)[i], replacements[i], filename, fixed = TRUE
+    )
+  }
+  filepath <- file.path(gold_file_dir, filename)
   if (isNF(uncompiled)) {
     RcppPacket <- NFinternals(uncompiled)$RcppPacket
   } else if (inherits(uncompiled, 'cpp_nClassClass'))
@@ -344,7 +360,6 @@ test_gold_file <- function(uncompiled,
     close(con)
   } else if (isFALSE(batch_mode)) {
     ## read the existing gold file and compare to the current RcppPacket
-    ## TODO: reset nClass ID counters
     temp_file <- paste0(filepath, 'tmp')
     con <- file(temp_file, open = "w")
     nCompiler:::writeCpp_nCompiler(
