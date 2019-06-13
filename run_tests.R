@@ -40,9 +40,9 @@ if(!specificTests) {
                               )
                        )
   allTests <- allTests[!notWorking]
-  cat('Running nCompiler tests.\nIgnoring "not working" because specific tests were requested.\n')
-} else {
   cat('Running nCompiler tests.\nInclude "not working" (not case sensitive) in the first line of a test file if it should not be run.\n')
+} else {
+  cat('Running nCompiler tests.\nIgnoring "not working" because specific tests were requested.\n')
 }
 for(test in allTests) {
     cat('TESTING', test, '\n')
