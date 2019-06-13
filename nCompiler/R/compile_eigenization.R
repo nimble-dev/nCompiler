@@ -128,27 +128,6 @@ compile_eigenize <- function(code,
                 compile_eigenize(code$args[[3]], symTab, auxEnv)
             return(invisible(NULL))
         }
-        ## STOPPED HERE
-        if(code$name == 'nimSwitch') {
-            if(length(code$args) > 2) 
-                for(iSwitch in 3:length(code$args)) 
-                    compile_eigenize(code$args[[iSwitch]], symTab, auxEnv)
-            return(invisible(NULL))
-        }
-        ## The map might become moot or much less common
-        if(code$name == 'map') {
-            ## Generate EigenMap and new assignment with strides
-            setupExprs <- c(setupExprs,
-                            eigenizeNameStrided(code, symTab, auxEnv, workEnv))
-            return(setupExprs)
-        }
-        if(code$name == '[') { ## If there is still A[i] in the code, it is because it is equivalent to a scalar and does not need eigenization
-            if(code$type$nDim == 0) {
-                return(NULL)
-            } else {
-                writeLines(paste0('Warning, in eigenizing ',nDeparse(code), ' the [ is still there but nDim is not 0 (not a scalar).') )
-            }
-        }
         opInfo <- operatorDefEnv[[code$name]]
         if(!is.null(opInfo)) {
             handlingInfo <- opInfo[["eigenImpl"]]

@@ -1,8 +1,8 @@
-context("nCompiler's extensions to as<> and wrap<> templates")
+context("nCompiler's extensions to as<> and wrap<> templates.  (A warning about lack of Rcpp::export attributes or RCPP_MODULE declarations is expected.")
 library(Rcpp)
-test_that("basic use of as<> and wrap<> work",{
+test_that("basic use of as<> and wrap<> work. (Warning about no Rcpp::Export or RCPP_MODULE declarations is expected.)",{
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'as_wrap_tests.cpp'), package = 'nCompiler')
-  test <- sourceCpp(cppfile)
+  test <- QuietSourceCpp(cppfile)
   sofile <- {
     files <- list.files(test$buildDirectory)
     files[grepl("sourceCpp", files)][1]

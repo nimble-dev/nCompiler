@@ -19,6 +19,7 @@ install:
   - ./install_requirements.R
   - R CMD build nCompiler
   - R CMD INSTALL nCompiler --install-tests
+  - Rscript -e 'library(nCompiler); setup_nCompLocal()'
 
 script:
-  - ./run_tests.R types
+  - ./run_tests.R

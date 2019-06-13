@@ -1,4 +1,4 @@
-context("Testing nCompiler types")
+context("Testing nCompiler types.")
 
 test_that("numericVector(5)",
 {
@@ -159,7 +159,7 @@ test_that("infer type from evaluating default, with scoping needed",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("trap error from duplicate setting of isRef",
+test_that("Trap error from duplicate setting of isRef. (This should show a warning.)",
 {
   ## Error-trapping:
   ## Duplicate setting of ref
