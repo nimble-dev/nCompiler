@@ -1,4 +1,3 @@
-## not working
 context("Testing indexing")
 
 test_that("drop arg variations give correct results, 3D input", {
