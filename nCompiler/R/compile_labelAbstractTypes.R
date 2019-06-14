@@ -561,7 +561,7 @@ inLabelAbstractTypesEnv(
 
     drop <- TRUE
     if (nDim == 0) {
-      ## if we're indexing a scalar, just ignore the drop arg
+      ## if we're indexing a scalar, don't add the drop arg to the AST
       drop <- FALSE
     } else if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
@@ -596,7 +596,7 @@ inLabelAbstractTypesEnv(
       ## set 'drop' as the last arg in the AST
       setArg(code, 'drop', drop_arg, add = TRUE)
     }
-    
+
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }

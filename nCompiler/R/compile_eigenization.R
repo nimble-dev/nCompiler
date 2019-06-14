@@ -446,6 +446,7 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (code$type$nDim == 0) return(invisible(NULL))
     n_args <- length(code$args)
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
