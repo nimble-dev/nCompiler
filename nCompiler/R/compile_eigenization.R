@@ -465,8 +465,8 @@ inEigenizeEnv(
                     isName = FALSE, isCall = TRUE)
     )
     ## wrap b__ calls in {{ }} to silence the missing braces C++ warning
-    ## setArg(blocks_expr, 1, encloseExpr())
-    enclose <- setArg(blocks_expr, 1, encloseExpr())
+    setArg(blocks_expr, 1, encloseExpr())
+    inner_enclose <- setArg(blocks_expr, 3, encloseExpr())
 
     for (i in seq_along(index_args)) {
       ## create b__ call
@@ -495,7 +495,7 @@ inEigenizeEnv(
       }
 
       ## add the b__ call to the AST as arg to the inner enclose expression
-      setArg(enclose, i + 2, b_expr)
+      setArg(inner_enclose, i + 2, b_expr)
     }
     invisible(NULL)
   }
