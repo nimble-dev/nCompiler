@@ -449,6 +449,15 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('enclose'),
+  list(
+    cppOutput = list(
+      handler = 'Enclose'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(

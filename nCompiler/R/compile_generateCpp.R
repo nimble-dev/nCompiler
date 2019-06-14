@@ -324,6 +324,26 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  ## Use the first and second args to wrap remaining arguments (separated by
+  ## ',') on the left and right, respectively. E.g., wrap args using {}, [], (),
+  ## or <>.
+  Enclose <- function(code, symTab) {
+    if (length(code$args) < 2) {
+      ## TODO: throw error
+    }
+    left <- removeArg(code, 1)
+    right <- removeArg(code, 1)
+    paste0(
+      left, paste0(
+        unlist(
+          lapply(code$args, compile_generateCpp, symTab, asArg = TRUE)
+        ), collapse = ', '
+      ), right
+    )
+  }
+)
+
+inGenCppEnv(
   Literal <- function(code, symTab) {
     code$args[[1]]$name
   }

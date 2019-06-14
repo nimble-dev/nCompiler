@@ -464,6 +464,9 @@ inEigenizeEnv(
       exprClass$new(name = 'Eigen::MakeIndexBlocks',
                     isName = FALSE, isCall = TRUE)
     )
+    ## wrap b__ calls in {{ }} to silence the missing braces C++ warning
+    ## setArg(blocks_expr, 1, encloseExpr())
+    enclose <- setArg(blocks_expr, 1, encloseExpr())
 
     for (i in seq_along(index_args)) {
       ## create b__ call
@@ -491,8 +494,8 @@ inEigenizeEnv(
         }
       }
 
-      ## add the b__ call to the AST as arg to blocks_expr
-      setArg(blocks_expr, i, b_expr)
+      ## add the b__ call to the AST as arg to the inner enclose expression
+      setArg(enclose, i + 2, b_expr)
     }
     invisible(NULL)
   }

@@ -268,6 +268,14 @@ setArg <- function(expr, ID, value, add = FALSE) {
   invisible(value)
 }
 
+removeArg <- function(expr, ID) {
+  ## TODO: make more robust
+  ## leads to Warning: caller and/or callerID are not set correctly.
+  value <- expr$args[[ID]]
+  expr$args[[ID]] <- NULL
+  value
+}
+
 checkArgDims <- function(expr, ID, nDimRange) {
   if (expr$args[[ID]]$type$nDim < nDimRange[1] ||
       expr$args[[ID]]$type$nDim > nDimRange[2])
@@ -285,6 +293,14 @@ isEigScalar <- function(code) {
 
 newAssignmentExpression <- function() {
     exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
+}
+
+encloseExpr <- function(left = '{', right = '}') {
+  expr <- exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE,
+                        name = 'enclose')
+  setArg(expr, 1, left)
+  setArg(expr, 2, right)
+  expr
 }
 
 literalDoubleExpr <- function(value) {
