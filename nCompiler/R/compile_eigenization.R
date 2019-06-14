@@ -467,7 +467,7 @@ inEigenizeEnv(
     )
     ## wrap b__ calls in {{ }} to silence the missing braces C++ warning
     setArg(blocks_expr, 1, encloseExpr())
-    inner_enclose <- setArg(blocks_expr, 3, encloseExpr())
+    inner_enclose <- setArg(blocks_expr$args[[1]], 3, encloseExpr())
 
     for (i in seq_along(index_args)) {
       ## create b__ call
