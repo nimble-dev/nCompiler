@@ -39,3 +39,6 @@ rsconnect/
 *.o
 *.so
 .Rproj.user
+
+# emacs autosave files
+*~
