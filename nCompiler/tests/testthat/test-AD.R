@@ -98,7 +98,7 @@ test_AD <- function(param, info = '', size = 3,
                     dir = file.path(tempdir(), "nCompiler_generatedCode"),
                     control = list(), verbose = nOptions('verbose'),
                     debug = nOptions('compilerOptions')[['debug']],
-                    compile_all_funs = FALSE) {
+                    compile_all_funs = FALSE, ...) {
   if (!is.null(param$debug) && param$debug || debug) browser()
 
   nC <- gen_nClass(param)

@@ -1,0 +1,136 @@
+#ifndef __nClass_1_CPP
+#define __nClass_1_CPP
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <iostream>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <Rmath.h>
+#include <math.h>
+#include "..h"
+using namespace Rcpp;
+// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+// [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(nCompiler)]]
+// [[Rcpp::depends(Rcereal)]]
+
+double  nClass_1::nFun_1_NFID_1 ( Eigen::Tensor<double, 1> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = (ARG1_arg1_).mean();
+return(ans);
+}
+double  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<int, 1> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+double  nClass_1::nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+double  nClass_1::nFun_4_NFID_4 ( Eigen::Tensor<double, 2> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = (ARG1_arg1_).mean();
+return(ans);
+}
+double  nClass_1::nFun_5_NFID_5 ( Eigen::Tensor<int, 2> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+double  nClass_1::nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+double  nClass_1::nFun_7_NFID_7 ( Eigen::Tensor<double, 3> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = (ARG1_arg1_).mean();
+return(ans);
+}
+double  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<int, 3> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+double  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> ARG1_arg1_ )  {
+double ans;
+flex_(ans) = ((ARG1_arg1_).cast<double>()).mean();
+return(ans);
+}
+
+// [[Rcpp::export]]
+SEXP  new_nClass_1 (  )  {
+return(loadedObjectEnv(new_nCompiler_object<nClass_1>()));
+}
+
+NCOMPILER_INTERFACE(
+nClass_1,
+NCOMPILER_FIELDS(),
+NCOMPILER_METHODS(
+method("nFun1", &nClass_1::nFun_1_NFID_1),
+method("nFun2", &nClass_1::nFun_2_NFID_2),
+method("nFun3", &nClass_1::nFun_3_NFID_3),
+method("nFun4", &nClass_1::nFun_4_NFID_4),
+method("nFun5", &nClass_1::nFun_5_NFID_5),
+method("nFun6", &nClass_1::nFun_6_NFID_6),
+method("nFun7", &nClass_1::nFun_7_NFID_7),
+method("nFun8", &nClass_1::nFun_8_NFID_8),
+method("nFun9", &nClass_1::nFun_9_NFID_9)
+)
+)
+#endif
+#ifndef __nClass_1_H
+#define __nClass_1_H
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <Rinternals.h>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_class_interface.h>
+
+class nClass_1 : public genericInterfaceC<nClass_1> {
+public:
+double  nFun_1_NFID_1 ( Eigen::Tensor<double, 1> ARG1_arg1_ );
+double  nFun_2_NFID_2 ( Eigen::Tensor<int, 1> ARG1_arg1_ );
+double  nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> ARG1_arg1_ );
+double  nFun_4_NFID_4 ( Eigen::Tensor<double, 2> ARG1_arg1_ );
+double  nFun_5_NFID_5 ( Eigen::Tensor<int, 2> ARG1_arg1_ );
+double  nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> ARG1_arg1_ );
+double  nFun_7_NFID_7 ( Eigen::Tensor<double, 3> ARG1_arg1_ );
+double  nFun_8_NFID_8 ( Eigen::Tensor<int, 3> ARG1_arg1_ );
+double  nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> ARG1_arg1_ );
+};
+
+SEXP  new_nClass_1 (  );
+
+
+#endif
