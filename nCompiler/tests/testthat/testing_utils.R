@@ -63,7 +63,7 @@ gen_nClass <- function(param) {
 ## Runs test_fun on a list of params.
 ## ... additional args to pass to test_gold_file
 test_batch <- function(test_fun, batch,
-                       case_name = deparse(substitute(batch)), size = 3,
+                       test_name = deparse(substitute(batch)), size = 3,
                        dir = file.path(tempdir(), "nCompiler_generatedCode"),
                        control = list(), verbose = nOptions('verbose'),
                        skip = c(), gold_test = FALSE, ...) {
@@ -75,11 +75,11 @@ test_batch <- function(test_fun, batch,
   if (is.logical(skip) && length(skip) == length(indices))
     indices <- indices[!skip] ## skip[i] is TRUE if we should skip the corresponding test
 
-  if (identical(gold_file, '')) {
+  if (isFALSE(gold_test)) {
     for (i in indices) {
       param <- batch[[i]]
       name <- names(batch)[i]
-      msg <- paste0(case_name, ' #', i, ' (', name, ')')
+      msg <- paste0(test_name, ' #', i, ' (', name, ')')
       if (is.null(param$skip) || !param$skip) {
         if (verbose) {
           cat("### -------------------------------------------- ###\n")
@@ -97,11 +97,10 @@ test_batch <- function(test_fun, batch,
     }
 
   } else {
-    ## TODO: use skip in gold file testing?
     RcppPackets <- lapply(
       batch, test_fun,
-      '', size, dir, control, verbose,
-      gold_file = gold_file, batch_mode = TRUE
+      test_name, size, dir, control, verbose,
+      gold_test = TRUE, batch_mode = TRUE
     )
     hContent <- unlist(sapply(RcppPackets, `[[`, 'hContent'))
     cppContent <- unlist(sapply(RcppPackets, `[[`, 'cppContent'))
@@ -113,7 +112,7 @@ test_batch <- function(test_fun, batch,
     ## construct an RcppPacket for test_gold_file
     ## If ... contains write_gold_file = TRUE, then it is just written.
     ## Otherwise, read gold_file and check that current generated code matches.
-    test_gold_file(RcppPacket, , ...)
+    test_gold_file(RcppPacket, ...)
   }
 }
 
@@ -134,8 +133,8 @@ test_param <- function(test_fun, param_list, test_name = '', size = 3,
   if('knownFailureReport' %in% names(param_list) && param_list$knownFailureReport)
     cat("\nBegin expected error message:\n")
 
-  test_that(case_name, {
-    test_fun(param, test_name, size, dir, control, verbose, ...)
+  test_that(test_name, {
+    test_fun(param_list, test_name, size, dir, control, verbose, ...)
   })
 
   invisible(NULL)
@@ -323,7 +322,6 @@ compare_files_using_diff <- function(trial_file, correct_file, main = "") {
   invisible(NULL)
 }
 
-## TODO: decide how to integrate this function with test_batch
 test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
                            gold_file_dir = system.file(
                              file.path('tests', 'testthat', 'gold_files'),
@@ -352,7 +350,6 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   else ## assume uncompiled is an RcppPacket
     RcppPacket <- uncompiled
   if (isTRUE(write_gold_file)) { ## either create or overwrite gold_file
-    ## TODO: create gold file directory and write to that directory
     con <- file(filepath, open = "w")
     nCompiler:::writeCpp_nCompiler(
       RcppPacket, con = con
