@@ -58,8 +58,9 @@ body_code <- cpp_forloop$cppDef$code$code
 orig_loop_code <- body_code$args[[2]]$args[[1]]
 
 debug(nCompiler:::cppParallelBodyClass_init_impl)
-nCompiler:::cppParallelBodyClass_init_impl(cppDef=NULL,
-                               orig_loop_code = orig_loop_code,
-                               symbolTable = cpp_forloop$cppDef$code$symbolTable,
-                               copyVars = c("ARG1_x_"),
-                               noncopyVars = c("y"))
+test <- nCompiler:::cppParallelBodyClass_init_impl(cppDef=NULL,
+                                                   name = "parallel_loop_body",
+                                                   orig_loop_code = orig_loop_code,
+                                                   symbolTable = cpp_forloop$cppDef$code$symbolTable,
+                                                   copyVars = c("ARG1_x_"),
+                                                   noncopyVars = c("y"))

@@ -22,6 +22,7 @@ cppParallelBodyClass <- R6::R6Class(
 )
 
 cppParallelBodyClass_init_impl <- function(cppDef,
+                                           name = "parallel_loop_body",
                                            orig_loop_code = orig_loop_code,
                                            loop_body = orig_loop_code$args[[3]],
                                            loop_range = orig_loop_code$args[[2]],
@@ -33,8 +34,10 @@ cppParallelBodyClass_init_impl <- function(cppDef,
   ## 2. Create operator()
   ## 3. Create constructor
   #####
-  ## Create symbolTable. Assume we are using cpp symbol tables
+  ## Create symbolTables. Assume we are using cpp symbol tables
+  ## newSymTab is the symbolTable for the class.
   newSymTab <- symbolTableClass$new()
+  ## newLocalSymTab is the symbolTable for the body of operator()
   newLocalSymTab <- symbolTableClass$new()
   for(v in copyVars) {
     sym <- symbolTable$getSymbol(v, inherits = TRUE)$clone()
@@ -53,16 +56,19 @@ cppParallelBodyClass_init_impl <- function(cppDef,
     newSymTab$addSymbol(sym)  
   }
   ## Create operator()
-  browser()
   generalForExpr <- exprClass$new(name = 'GeneralFor', isCall = TRUE,
                                   isName = FALSE, isAssign = FALSE, isLiteral = FALSE)
   indexName <- loop_var$name
-  setArg(generalForExpr, 1, nParse(quote(cppLiteral(paste(indexName,"= r__.begin()")))))
-  setArg(generalForExpr, 2, nParse(quote(cppLiteral(paste(indexName,"!= r__.end()")))))
-  setArg(generalForExpr, 3, nParse(quote(cppLiteral(paste0("++", indexName)))))
+  ## TO-DO: Make "=" work same as "<-"
+  ## Make fun() work
+  ## 
+  setArg(generalForExpr, 1, nParse(paste0("cppLiteral(\"", indexName, " = r__.begin()\" )")))
+  setArg(generalForExpr, 2, nParse(paste0("cppLiteral(\"", indexName, " != r__.end()\" )")))
+  setArg(generalForExpr, 3, nParse(paste0("cppLiteral(\"++", indexName, "\")")))
   setArg(generalForExpr, 4, loop_body)
   body_code_block <- cppCodeBlockClass$new(code = generalForExpr,
                                            symbolTable = newLocalSymTab)
+  ## argSymTab is the symbolTable for the arguments to operator()
   argSymTab <- symbolTableClass$new()
   argSymTab$addSymbol(cppVarFullClass$new(name = 'r__',
                                           baseType = "blocked_range<int>",
@@ -74,11 +80,28 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                        const = TRUE,
                                        returnType = cppVoid())
   ## create constructor
-#  argSymTab ## Should take by reference all copy and noncopy vars
-#  initializerList ## Should include initializer code for each one
-#  emptycode ## Should be an empty code block
-#  emptyLocalSymTab ## should be an empty local symbolTable
-#  constructor <- cppFunctionClass$new(name = 'parallel_loop_body' ##FIXME
-#                                      )
+  ctorArgSymTab <- newSymTab$clone(deep = TRUE)
+  initializerList <- list()
+  for(iSym in seq_along(ctorArgSymTab$symbols)) {
+    thisSymName <- ctorArgSymTab$symbols[[iSym]]$name
+    thisArgName <- paste0(thisSymName, '_')
+    ctorArgSymTab$symbols[[iSym]]$name <- thisArgName
+    initializerList[[iSym]] <- nParse(substitute(X(X_), 
+                                                 list(X = as.name(thisSymName),
+                                                      X_ = as.name(thisArgName))))
+  }
+  constructor <- cppFunctionClass$new(name = name,
+                                      args = ctorArgSymTab,
+                                      code = cppCodeBlockClass$new(
+                                        code = nParse(quote({})),
+                                        symbolTable = symbolTableClass$new()
+                                      ),
+                                      initializerList = initializerList,
+                                      returnType = cppBlank())
+  result <- cppClassClass$new(
+    name = name,
+    cppFunctionDefs = list(`operator()` = `operator()`,
+                           constructor = constructor),
+    symbolTable = newSymTab)
+  result
 }
-#environment(cppParallelBodyClass_init_impl) <- environment(nCompiler::isNF)
