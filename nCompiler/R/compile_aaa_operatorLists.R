@@ -78,13 +78,21 @@ assignOperatorDef(
       handler = 'IndexingBracket'
     ),
     eigenImpl = list(
-      toEigen = 'Maybe',
       handler = 'IndexingBracket'
     ),
     cppOutput = list(
-      handler = 'Bracket')
+      handler = 'IndexingBracket')
   )
 )
+
+assignOperatorDef(
+  c('index('),
+  list(
+    cppOutput = list(
+      handler = 'IndexingParen')
+  )
+)
+
 
 assignOperatorDef(
   c('<-','<<-','='),

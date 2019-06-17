@@ -561,8 +561,11 @@ inLabelAbstractTypesEnv(
 
     drop <- TRUE
     if (nDim == 0) {
-      ## if we're indexing a scalar, don't add the drop arg to the AST
+      # If we're indexing a scalar, any drop arg provided is ignored.
       drop <- FALSE
+      # Add scalar_obj = TRUE to the AST by name so later stages know that the
+      # indexed object was already scalar.
+      setArg(code, 'scalar_obj', TRUE, add = TRUE)
     } else if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
         ## if the user provided a literal NA or NaN drop arg and even when drop

@@ -311,16 +311,25 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  Bracket <- function(code, symTab) {
-    brackets <- if(length(code$args) <= 2) c('[',']') else c('(',')')
-    paste0( compile_generateCpp(code$args[[1]], symTab), 
-            brackets[1], 
-            paste0(unlist(lapply(code$args[-1], 
-                                 function(x) MinusOne(compile_generateCpp(x, symTab) ) ) ),
-                   collapse = ', '), 
-            brackets[2] 
+  IndexingBracket <- function(code, symTab, brackets = c('[', ']')) {
+    paste0(
+      compile_generateCpp(code$args[[1]], symTab),
+      brackets[1],
+      paste0(
+        unlist(
+          lapply(code$args[-1], function(x)
+            MinusOne(compile_generateCpp(x, symTab)))
+        ), collapse = ', '
+      ),
+      brackets[2]
     )
-}
+  }
+)
+
+inGenCppEnv(
+  IndexingParen <- function(code, symTab) {
+    IndexingBracket(code, symTab, c('(', ')'))
+  }
 )
 
 inGenCppEnv(
