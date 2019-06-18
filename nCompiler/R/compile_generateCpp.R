@@ -311,6 +311,12 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  Paren <- function(code, symTab) {
+    paste0('(', compile_generateCpp(code$args[[1]], symTab), ')')
+  }
+)
+
+inGenCppEnv(
   Bracket <- function(code, symTab) {
     brackets <- if(length(code$args) <= 2) c('[',']') else c('(',')')
     paste0( compile_generateCpp(code$args[[1]], symTab), 
