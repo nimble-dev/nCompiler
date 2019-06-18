@@ -333,6 +333,12 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  Paren <- function(code, symTab) {
+    paste0('(', compile_generateCpp(code$args[[1]], symTab), ')')
+  }
+)
+
+inGenCppEnv(
   Literal <- function(code, symTab) {
     code$args[[1]]$name
   }

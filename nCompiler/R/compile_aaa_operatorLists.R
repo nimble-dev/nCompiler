@@ -72,6 +72,17 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('('),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryCwise'
+    ),
+    cppOutput = list(
+      handler = 'Paren')
+  )
+)
+
+assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
