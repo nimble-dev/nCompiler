@@ -75,11 +75,17 @@ assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'IndexingBracket'
+      handler = 'Bracket'
     ),
     eigenImpl = list(
-      handler = 'IndexingBracket'
-    ),
+      handler = 'Bracket'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('index['),
+  list(
     cppOutput = list(
       handler = 'IndexingBracket')
   )

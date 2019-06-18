@@ -445,12 +445,14 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  Bracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     n_args <- length(code$args)
     if (code$type$nDim == 0) {
       # Either we're indexing a vector and we keep '[' in the AST, or we're
       # indexing a non-vector object and we use 'index(' instead.
-      if (n_args > 2 || isTRUE(code$args$scalar_obj)) code$name <- 'index('
+      # TODO: if (code$args[[1]]$type$nDim == 0)
+      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
+      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
       return(invisible(NULL))
     }
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
