@@ -36,9 +36,9 @@ typeDeclarationList <- list(
     integerScalar = function(value) {
         nType("integer", 0)
     },
-    integerVector = function(length = 0,
+    integerVector = function(length = NA,
                              ...) {
-        nType("integer", 1, ...)
+        nType("integer", 1, size = length, ...)
     },
     integerMatrix = function(value,
                              ...) {
@@ -47,15 +47,15 @@ typeDeclarationList <- list(
     integerArray = function(value,
                             nDim = 1,
                             ...) {
-        nType("integer", nDim)
+        nType("integer", nDim, ...)
     },
     ## logical types
     logicalScalar = function(value) {
         nType("logical", 0)
     },
-    logicalVector = function(length = 0,
+    logicalVector = function(length = NA,
                              ...) {
-        nType("logical", 1)
+        nType("logical", 1, size = length, ...)
     },
     logicalMatrix = function(value,
                              ...) {
@@ -64,7 +64,7 @@ typeDeclarationList <- list(
     logicalArray = function(value,
                             nDim = 1,
                             ...) {
-        nType("logical", nDim)
+        nType("logical", nDim, ...)
     },
     ## numeric types
     numericScalar = function(value) {
