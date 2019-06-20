@@ -1,7 +1,5 @@
 context("Testing Automatic Differentiation")
 
-source('testing_utils.R')
-
 test_that("compileNimbleClass works (with AD for a scalar)", {
   library(nCompiler)
   nc1 <- nClass(
@@ -94,132 +92,98 @@ test_that("AD with indexing works (with AD for a matrix)", {
   expect_equal(value(derivs, "gradient"), gradient)
 })
 
-test_AD <- function(param, info = '', size = 3,
-                    dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                    control = list(), verbose = nOptions('verbose'),
-                    debug = nOptions('compilerOptions')[['debug']],
-                    compile_all_funs = FALSE, ...) {
-  if (!is.null(param$debug) && param$debug || debug) browser()
+utils <- system.file(
+  file.path(
+    'tests', 'testthat',
+    c('testing_utils.R', 'AD_utils.R')
+  ),
+  package = 'nCompiler'
+)
+for (util_file in utils) source(util_file)
 
-  nC <- gen_nClass(param)
-  set_nOption('automaticDerivatives', TRUE)
+###################################
+# construct AD test lists
+# TODO: move this into another file
+###################################
 
-  if (compile_all_funs) {
-    nFuns <- param$Cpublic
-    ## useful for debugging an nClass compilation failure
-    ## e.g. test_AD(ADopTests[['- numericVector']], compile_all_funs = TRUE)
-    for (name in names(nFuns)) {
-      if (verbose)
-        cat(paste('### Compiling function for test of:', name, '###\n'))
-      nCompile_nFunction(nFuns[[name]])
-    }
-  }
+unaryOpsAD <- intersect(
+  getMatchingOps('testthat', 'testAD', TRUE),
+  getMatchingOps('testthat', 'isUnary', TRUE)
+)
+binaryOpsAD <- intersect(
+  getMatchingOps('testthat', 'testAD', TRUE),
+  getMatchingOps('testthat', 'isBinary', TRUE)
+)
 
-  info <- paste0(info, ": compiles")
-  ## need expect_error not expect_failure(expect_something()) because otherwise
-  ## R error will stop execution
-  wrap_if_matches(param$knownFailure, info, expect_error, {
-    args <- sapply(param$argTypes, make_input, size = size, USE.NAMES = FALSE)
-    if (verbose) cat("## Compiling nClass ##\n")
-    if (!is.null(param$dir)) dir <- param$dir
-    compiled_nC <- nCompile_nClass(nC, dir = dir, control = control, interface = "generic")
-    expect_true(is.function(compiled_nC)) ## compilation succeeded
+## derivatives currently only available for scalar and vector inputs
+unaryArgTypes <- c('numericScalar', 'numericVector(7)')
+unaryOpTestsAD <- make_AD_test_batch(unaryOpsAD, unaryArgTypes)
 
-    info <- paste0(info, ": runs")
-    wrap_if_matches(param$knownFailure, info, expect_failure, {
-      obj <- compiled_nC()
-      expect_true(nCompiler:::is.loadedObjectEnv(obj))
-      for (i in seq_along(param$enableDerivs)) {
-        fun_i <- param$enableDerivs[i]
-        nF_i <- nC$public_methods[[fun_i]]
-        expect_equal(method(obj, fun_i)(args[i]), nF_i(args[i]))
-        derivs <- method(obj, paste0(fun_i, "_derivs_"))(args[i], c(0, 1))
-        expect_true(nCompiler:::is.loadedObjectEnv(derivs))
-        value(derivs, "gradient")
-        ## expect_equal(value(derivs, "gradient"), )
-      }
-      if (verbose) cat("### -------------------------------------------- ###\n")
+binaryArgTypes <- list(
+  c('numericScalar', 'numericScalar'),
+  c('numericScalar', 'numericVector(7)'),
+  c('numericVector(7)', 'numericVector(7)'),
+  c('numericVector(7)', 'numericScalar')
+)
+binaryOpTestsAD <- make_AD_test_batch(binaryOpsAD, binaryArgTypes)
 
-    })
-  })
-  invisible(NULL)
-}
+#############
+# run testing
+#############
 
-## derivatives only available for scalar and vector inputs
-argTypes <- c('numericScalar', 'numericVector')
+## TODO: clear comments of what to do at the top of files
+WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
+FULL_TESTING <- FALSE
 
-makeADtest <- function(op, argType, size = 3) {
-  opParam <- makeOperatorParam(op, argType)
-  name <- opParam$name
-  isBinary <- nCompiler:::getOperatorDef(op, 'testthat', 'isBinary')
-  isUnary <- nCompiler:::getOperatorDef(op, 'testthat', 'isUnary')
-  if (!is.null(isBinary) && isBinary) {
-    binaryOpParam1 <- binaryOpParam2 <- opParam
-    tmp <- binaryOpParam2$expr[[3]][[2]]
-    ## put in a constant as the other arg
-    binaryOpParam1$expr[[3]][[3]] <- binaryOpParam2$expr[[3]][[2]] <- 1.5
-    ## put back in variable arg as second arg in binaryOpParam2
-    binaryOpParam2$expr[[3]][[3]] <- tmp
-    name1 <- paste(name, 1.5)
-    binaryOpParam1$name <- name1
-    name2 <- paste(op, 1.5, argType)
-    binaryOpParam2$name <- name2
-    opParams <- list(binaryOpParam1, binaryOpParam2)
-  }
-  if (!is.null(isUnary) && isUnary) {
-    if (exists('opParams', inherits = FALSE)) opParams[[3]] <- opParam
-    else opParams <- list(opParam)
-  }
-  if (!exists('opParams', inherits = FALSE))
-    stop(
-      paste0('Something\'s wrong... Operator ', op,
-             ' is neither unary nor binary.'),
-      call. = FALSE
-    )
-  nFuns <- lapply(opParams, function(param) {
-    if (param$argTypes$arg1 == 'numericVector') {
-      typeString <- paste0('numericVector(length = ', size, ')')
-      param$argTypes$arg1 <- typeString
-      param$returnType <- typeString
-    }
-    nFun <- gen_nFunction(param)
-    nFun
-  })
-  names(nFuns) <- paste0('nFun', 1:length(nFuns))
-  list(
-    name = name,
-    argTypes = rep(argType, length(nFuns)),
-    Rpublic = list(),
-    Cpublic = nFuns,
-    enableDerivs = names(nFuns)
+## FULL_TESTING_GRANULARITY levels:
+##   1 = put all test params in one giant nClass
+##   2 = group operators by type in one nClass
+##   3 = one nClass per operator (this is also what gold testing does)
+##   4 = one nClass with one nFunction per operator/input combo
+FULL_TESTING_GRANULARITY <- NA
+
+if (WRITE_GOLD_FILES) {
+  gold_file_dir <- readline(
+    # set this to your local repo's gold_files dir
+    prompt = 'Where do you want to save the gold files? '
+  )
+} else {
+  gold_file_dir <- system.file(
+    file.path('tests', 'testthat', 'gold_files'),
+    package = 'nCompiler'
   )
 }
 
-ADops <- getMatchingOps('testthat', 'testAD', TRUE)
-
-ADopTests <- unlist(
-  recursive = FALSE,
-  x = lapply(
-    ADops,
-    function(x) {
-      mapply(
-        makeADtest,
-        argType = argTypes,
-        MoreArgs = list(op = x),
-        SIMPLIFY = FALSE
-      )
-    })
+## run_test_suite handles granularity levels 2-4 and does nothing if
+## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by
+## putting all of the tests in one long list and calling test_math directly.
+run_test_suite(
+  unaryOpTestsAD, 'AD_unaryOpTests', test_AD, FULL_TESTING,
+  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
+  gold_file_dir
 )
-names(ADopTests) <- sapply(ADopTests, `[[`, 'name')
 
+run_test_suite(
+  binaryOpTestsAD, 'AD_binaryOpTests', test_AD, FULL_TESTING,
+  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
+  gold_file_dir
+)
+
+## handle granularity level 1
+if (FULL_TESTING && isTRUE(FULL_TESTING_GRANULARITY == 1)) {
+  ## put everything in one giant nClass
+  test_base(
+    c(unlist(unaryOpTestsAD), unlist(binaryOpTestsAD)), 'testing AD', test_AD
+  )
+}
+
+# TODO: move knownFailures to separate file
 ## tests with numericVector fail to compile for an unknown reason
-modifyOnMatch(ADopTests, '.+ numericVector', 'knownFailure', '.* compiles')
+# modifyOnMatch(ADopTests, '.+ numericVector', 'knownFailure', '.* compiles')
 
 ## .method operators don't work with scalar input
-modifyOnMatch(
-  ADopTests,
-  '(\\^|abs|atan|cube|exp|inverse|lgamma|log|logit|rsqrt|sqrt|square|tanh) numericScalar',
-  'knownFailure', '.* compiles'
-)
-
-test_batch(test_AD, ADopTests)
+## modifyOnMatch(
+##   ADopTests,
+##   '(\\^|abs|atan|cube|exp|inverse|lgamma|log|logit|rsqrt|sqrt|square|tanh) numericScalar',
+##   'knownFailure', '.* compiles'
+## )

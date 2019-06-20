@@ -13,8 +13,16 @@ for (util_file in utils) source(util_file)
 WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
 FULL_TESTING <- FALSE
 
+## FULL_TESTING_GRANULARITY levels:
+##   1 = put all test params in one giant nClass
+##   2 = group operators by type in one nClass
+##   3 = one nClass per operator
+##   4 = one nClass with one nFunction per operator/input combo
+FULL_TESTING_GRANULARITY <- NA
+
 if (WRITE_GOLD_FILES) {
   gold_file_dir <- readline(
+    # set this to your local repo's gold_files dir
     prompt = 'Where do you want to save the gold files? '
   )
 } else {
@@ -24,28 +32,23 @@ if (WRITE_GOLD_FILES) {
   )
 }
 
-## FULL_TESTING_GRANULARITY levels:
-##   1 = put all test params in one giant nClass
-##   2 = group operators by type in one nClass
-##   3 = one nClass per operator
-##   4 = one nClass with one nFunction per operator/input combo
-FULL_TESTING_GRANULARITY <- 1
-
-## test_math_suite handles granularity levels 2-4 and does nothing if
+## run_test_suite handles granularity levels 2-4 and does nothing if
 ## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by
 ## putting all of the tests in one long list and calling test_math directly.
-test_math_suite(
-  unaryOpTests, 'math_unaryOpTests', FULL_TESTING, FULL_TESTING_GRANULARITY,
-  write_gold_file = WRITE_GOLD_FILES, gold_file_dir
+run_test_suite(
+  unaryOpTests, 'math_unaryOpTests', test_math, FULL_TESTING,
+  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
+  gold_file_dir
 )
 
-test_math_suite(
-  binaryOpTests, 'math_binaryOpTests', FULL_TESTING, FULL_TESTING_GRANULARITY,
-  write_gold_file = WRITE_GOLD_FILES, gold_file_dir
+run_test_suite(
+  binaryOpTests, 'math_binaryOpTests', test_math, FULL_TESTING,
+  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
+  gold_file_dir
 )
 
 ## handle granularity level 1
-if (FULL_TESTING && FULL_TESTING_GRANULARITY == 1) {
+if (FULL_TESTING && isTRUE(FULL_TESTING_GRANULARITY == 1)) {
   ## put everything in one giant nClass
   test_math(
     c(unlist(unaryOpTests), unlist(binaryOpTests)), 'testing math'

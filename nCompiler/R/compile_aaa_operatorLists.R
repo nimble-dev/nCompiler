@@ -160,6 +160,7 @@ assignOperatorDef(
       method = TRUE),
     cppOutput = list(),
     testthat = list(
+      reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
   )
@@ -242,6 +243,7 @@ assignOperatorDef(
       handler = 'TensorReduction'
     ),
     testthat = list(
+      reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
   )
@@ -263,6 +265,7 @@ assignOperatorDef(
       handler = ''
     ),
     testthat = list(
+      reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
   )
@@ -422,7 +425,7 @@ assignOperatorDef(
     testthat = list(
       isBinary = TRUE,
       testMath = TRUE,
-      testAD = TRUE)
+      testAD = FALSE)
   )
 )
 updateOperatorDef('^', 'testthat', 'alpha_name', 'pow')
@@ -447,6 +450,15 @@ assignOperatorDef(
 updateOperatorDef('%%', 'testthat', 'alpha_name', 'mod')
 
 assignOperatorDef(
+  c('%*%'),
+  list(
+    testthat = list(
+      matrixMultOp = TRUE,
+      isBinary = TRUE)
+  )
+)
+
+assignOperatorDef(
   c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
     'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
   list(
@@ -460,6 +472,9 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = 'RR_Distribution'
+    ),
+    testthat = list(
+      recyclingRuleOp = TRUE
     )
   )
 )

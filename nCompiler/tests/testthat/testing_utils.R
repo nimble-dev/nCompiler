@@ -60,6 +60,85 @@ gen_nClass <- function(param) {
   )
 }
 
+# Run a few early steps that are common to test_math and
+# test_AD:
+# 1. Isolate params that lead to known compilation failures and if not gold
+#    testing, verify that those params do indeed fail to compile.
+# 2. Isolate params that are not known to lead to compilation failures and
+#    create an nFunction for each.
+# 3. Put the nFunctions in one nClass and:
+#    a) If this is a gold test, run the test and return.
+#    b) If not and compile_all_funs is TRUE, compile each nFunction
+#       individually.
+# 4. Compile the nClass and return the compiled object.
+test_base <- function(param_list, test_name = '', test_fun = NULL,
+                      dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                      control = list(), verbose = nOptions('verbose'),
+                      compile_all_funs = FALSE, gold_test = FALSE, ...) {
+  # TODO: port over the nimble AD testing knownFailure setup
+  compile_error <- sapply(
+    param_list, function(param)
+      !is.null(param$knownFailure) && grepl('compiles', param$knownFailure)
+  )
+
+  ## only test knownFailures in full testing
+  if (isFALSE(gold_test)) {
+    ## these tests should fail during compilation
+    nFuns_error <- lapply(param_list[compile_error], gen_nFunction)
+    if (length(nFuns_error) > 0) {
+      names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
+      nC_error <- gen_nClass(list(Cpublic = nFuns_error))
+      expect_error(nCompile_nClass(nC_error, control = control), info = test_name)
+    }
+  }
+
+  ## these tests should compile
+  compiles <- param_list[!compile_error]
+  nCompiler:::resetLabelFunctionCreators()
+  nFuns <- lapply(compiles, gen_nFunction)
+
+  if (length(nFuns) > 0) {
+
+    nFun_names <- names(nFuns) ## for verbose output
+    names(nFuns) <- paste0('nFun', 1:length(nFuns))
+
+    enableDerivs_filter <- sapply(compiles, function(param) {
+      isTRUE(param$enableDerivs)
+    })
+
+    if (sum(enableDerivs_filter) > 0) set_nOption('automaticDerivatives', TRUE)
+
+    nC <- gen_nClass(list(
+      Cpublic = nFuns,
+      enableDerivs = names(nFuns)[enableDerivs_filter]
+    ))
+
+    ## if gold_test is TRUE, go directly to nCompiler stages without any
+    ## checking for knownFailures and without proceeding to C++ compilation
+    if (isTRUE(gold_test)) {
+      control$endStage <- 15 ## makeRcppPacket
+      ## make sure generated class / function names are the same every time
+      return(
+        test_gold_file(
+          nCompile_nClass(nC, control = control), test_name, ...)
+      )
+    } else if (compile_all_funs) {
+      ## useful for debugging an nClass compilation failure
+      ## e.g. test_math(binaryOpTests[['+']], compile_all_funs = TRUE)
+      for (i in seq_along(nFuns)) {
+        if (verbose)
+          cat(paste('### Compiling function for test of:', nFun_names[i], '###\n'))
+        nCompile_nFunction(nFuns[[i]], control)
+      }
+    }
+    if (is.function(test_fun))
+      test_fun( # run remainder of test
+        list(param_list = compiles, nC = nC),
+        control = control, verbose = verbose
+      )
+  }
+}
+
 ## Runs test_fun on a list of params.
 ## ... additional args to pass to test_gold_file
 test_batch <- function(test_fun, batch,
@@ -216,6 +295,111 @@ get_ops_values <- function(field, key) {
   return(values)
 }
 
+## Takes an operator and its input types as a character vector and
+## creates a string representing the returnType for the operation.
+##
+## op:       An operator string
+## argTypes: A character vector of argTypes (e.g. "double(0)".
+##
+return_type_string <- function(op, argTypes) {
+
+  returnTypeCode <- nCompiler:::getOperatorDef(op, 'labelAbstractTypes',
+                                               'returnTypeCode')
+  recycling_rule_op <- nCompiler:::getOperatorDef(op, 'testthat',
+                                                  'recyclingRuleOp')
+
+  if (is.null(returnTypeCode))
+    if (!isTRUE(recycling_rule_op)) return(argTypes[1])
+    else returnTypeCode <- 1
+
+  scalarTypeString <- switch(
+    returnTypeCode,
+    'numeric', # 1
+    'integer', # 2
+    'logical'  # 3
+  )
+
+  args <- lapply(
+    argTypes, function(argType)
+      nCompiler:::argType2symbol(argType)
+  )
+
+  if (is.null(scalarTypeString)) ## returnTypeCode is 4 or 5
+    scalarTypeString <-
+      if (length(argTypes) == 1)
+        if (returnTypeCode == 5 && args[[1]]$type == 'logical') 'integer'
+        else args[[1]]$type
+      else if (length(argTypes) == 2) {
+        aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type)
+        if (returnTypeCode == 5 && aot == 'logical') 'integer'
+        else aot
+      } else {
+        stop(
+          paste0(
+            'Testing does not currently know how to handle ops with more than 2',
+            ' args and returnTypeCode not equal to 1, 2, or 3.',
+          call. = FALSE
+          )
+        )
+      }
+
+  ## arithmeticOutputType might return 'double'
+  if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
+
+  reduction_op <- nCompiler:::getOperatorDef(op, 'testthat', 'reductionOp')
+
+  # TODO: other labelAbstractTypes handlers for reductions?
+  nDim <- if (isTRUE(reduction_op)) 0
+          else max(sapply(args, `[[`, 'nDim'))
+
+  if (nDim > 3)
+    stop(
+      'Testing does not currently support args with nDim > 3',
+      call. = FALSE
+    )
+
+  matrix_mult_op <- nCompiler:::getOperatorDef(op, 'testthat', 'matrixMultOp')
+
+  # if arg sizes weren't provided this will just be NULL
+  sizes <- if (nDim == 0) NULL
+           else if (length(argTypes) == 1) args[[1]]$size
+           else if (isTRUE(matrix_mult_op))  {
+             if (!length(argTypes) == 2)
+               stop(
+                 paste0(
+                   'matrixMultOps should only have 2 args but got ',
+                   length(argTypes)
+                 ), call. = FALSE
+               )
+             if (is.null(args[[1]]$size)) NULL
+             else c(args[[1]]$size[1], args[[2]]$size[2])
+           } else if (nDim == 2) {
+             # one arg is a matrix but this is not matrix multiplication so
+             # assume that output size is same as the first arg with nDim == 2
+             has_right_nDim <- sapply(args, function(arg) arg$nDim == nDim)
+             args[has_right_nDim][[1]]$size
+           } else {
+             # nDim is 1 so either recycling rule or simple vector operator
+             if (is.null(args[[1]]$size)) NULL
+             else max((sapply(args, `[[`, 'size')))
+           }
+
+  size_string <- if (is.null(sizes)) 'NA' else paste0(
+    'c(', paste(sizes, collapse = ', '), ')'
+  )
+
+  dimString <- switch(
+    nDim + 1,
+    'Scalar()', # nDim is 0
+    paste0('Vector(', size_string, ')'), # nDim is 1
+    paste0('Matrix(sizes = ', size_string, ')'), # nDim is 2
+    paste0('Array(nDim = 3, sizes = ', size_string, ')') # nDim is 3
+  )
+
+  return(paste0(scalarTypeString, dimString))
+}
+
+# TODO: replace usage of returnTypeString with return_type_string and remove.
 returnTypeString <- function(op, argTypes) {
   ## Takes an operator and its input types as a character vector and
   ## creates a string representing the returnType for the operation.
@@ -273,6 +457,44 @@ returnTypeString <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
+make_op_param <- function(op, argTypes, more_args = NULL) {
+  arg_names <- names(argTypes)
+
+  if (is.null(arg_names)) {
+    arg_names <- paste0('arg', 1:length(argTypes))
+    op_args <- lapply(arg_names, as.name)
+  } else {
+    op_args <- sapply(arg_names, as.name, simplify = FALSE)
+  }
+
+  args_string <- paste0(arg_names, ' = ', argTypes, collapse = ' ')
+  name <- paste(op, args_string)
+
+  expr <- substitute(
+    ans <- this_call,
+    list(
+      this_call = as.call(c(
+        substitute(FOO, list(FOO = as.name(op))),
+        op_args, more_args
+      ))
+    )
+  )
+
+  argTypesList <- as.list(argTypes)
+  names(argTypesList) <- arg_names
+  argTypesList <- lapply(argTypesList, function(arg) {
+    parse(text = arg)[[1]]
+  })
+
+  list(
+    name = name,
+    expr = expr,
+    argTypes = argTypesList,
+    returnType = return_type_string(op, argTypes)
+  )
+}
+
+# TODO: replace usage of makeOperatorParam with make_op_param and remove.
 makeOperatorParam <- function(op, argTypes) {
   if (length(argTypes) == 1) {
     name <- paste(op, argTypes)
@@ -367,4 +589,56 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
     ## TODO: file.remove(temp_file) ?
   }
   invisible(RcppPacket)
+}
+
+## Takes an argSymbol and if argSymbol$size is NA adds default sizes.
+add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4)) {
+  if (any(is.na(argSymbol$size))) {
+    if (argSymbol$nDim == 1)
+      argSymbol$size <- vector_size
+    else if (argSymbol$nDim == 2)
+      argSymbol$size <- matrix_size
+  }
+  invisible(argSymbol)
+}
+
+## batch_of_ops: list with one named entry per operator
+##               which itself is a list with any number of
+##               test parameterizations (op + arg types)
+## TODO: improve the way this works / is used to include granularity = 1
+run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
+                           full = FALSE, granularity = NA,
+                           write_gold_file = FALSE, gold_file_dir = system.file(
+                             file.path('tests', 'testthat', 'gold_files'),
+                             package = 'nCompiler'
+                           )) {
+  if (!full) {
+
+    ## Run gold file testing with one file per op in batch_of_ops.
+    ## Don't pass test_fun to test_base so that only gold testing runs.
+    for (op in names(batch_of_ops)) {
+      test_base(
+        batch_of_ops[[op]], paste0(c(test_name, op), collapse = '_'),
+        gold_test = TRUE, write_gold_file = write_gold_file,
+        gold_file_dir = gold_file_dir
+      )
+    }
+
+  } else if (isTRUE(granularity == 4)) {
+
+    for (test_param in unlist(batch_of_ops, recursive = FALSE))
+      ## TODO: avoid having to wrap test_param in list()?
+      test_base(list(test_param), test_param$name, test_fun)
+
+  } else if (isTRUE(granularity == 3)) {
+
+    for (op in names(batch_of_ops))
+      test_base(batch_of_ops[[op]], op, test_fun)
+
+  } else if (isTRUE(granularity == 2)) {
+
+    test_base(
+      unlist(batch_of_ops), deparse(substitute(batch_of_ops)), test_fun
+    )
+  }
 }
