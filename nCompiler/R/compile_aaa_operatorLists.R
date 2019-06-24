@@ -61,6 +61,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_for'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelFor'),
+    finalTransformations = list(
+      handler = "ParallelFor") ## Creates GeneralFor in the parallel_loop_body class
+  )
+)
+
+assignOperatorDef(
   c('GeneralFor'),
   list(
     cppOutput = list(

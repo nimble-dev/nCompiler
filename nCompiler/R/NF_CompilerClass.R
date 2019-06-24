@@ -428,6 +428,13 @@ processNFstages <- function(NFcompiler,
       logAfterStage(stageName)
     }
 
+    ## Expand into fully-fledged stage: finalTransformations
+    NFtry(
+      compilerStage_finalTransformations(NFcompiler,
+                                       debug), 
+      "finalTransformations",
+      use_nCompiler_error_handling)
+    
     stageName <- 'addDebugging'
     if (logging) logBeforeStage(stageName)
     if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))

@@ -49,11 +49,12 @@ cppVarClass <- R6::R6Class(
 )
 
 cppVar2cppVarFull <- function(cppVar, ...) {
-  cppVarFullClass$new(name = name,
-                      baseType = baseType, 
-                      ptr = ptr,
-                      ref = ref,
-                      ...)
+  ans <- cppVarFullClass$new(name = cppVar$name,
+                             baseType = cppVar$baseType, 
+                             ptr = cppVar$ptr,
+                             ref = cppVar$ref,
+                             ...)
+  ans
 }
 
 ## Here is the full version that can handle most c++ variable declarations.

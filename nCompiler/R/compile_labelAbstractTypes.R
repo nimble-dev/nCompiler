@@ -214,13 +214,15 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   For <- function(code, symTab, auxEnv, handlingInfo) {
     if(length(code$args) != 3)
-      stop(paste('Error in labelAbstractTypes handler For:',
-                 'expected 3 arguments to a for-loop'), call. = FALSE)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler For:',
+              'expected 3 arguments to a for-loop')), call. = FALSE)
     ## first handle type of the indexing variable
     if(!inherits(code$args[[2]], 'exprClass'))
       stop(
         exprClassProcessingErrorMsg(
-          code, paste('In sizeFor: expected the index',
+          code, paste('In labelAbstractTypes handler For: expected the index',
                       'range to be an expression (exprClass).')
         ), call. = FALSE
       )
@@ -231,14 +233,43 @@ inLabelAbstractTypesEnv(
       symbolBasic$new(name = code$args[[1]]$name,
                       nDim = 0, type = code$args[[2]]$type$type)
 
-    ## code$args[[1]]$sizeExprs <- list()
-    ## code$args[[1]]$toEigenize <- 'no'
+    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
+      if (TRUE) 
+        symTab$addSymbol(code$args[[1]]$type)
 
+    ## Now the 3rd arg, the body of the loop, can be processed
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+    return(if (length(inserts) == 0) invisible(NULL) else inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 5) 
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelFor:',
+              'expected 5 arguments to a parallel_for-loop')), call. = FALSE)
+    ## first handle type of the indexing variable
+    if(!inherits(code$args[[2]], 'exprClass'))
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste('In labelAbstractTypes handler ParallelFor: expected the index',
+                      'range to be an expression (exprClass).')
+        ), call. = FALSE
+      )
+    
+    inserts <- compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv)
+    
+    code$args[[1]]$type <-
+      symbolBasic$new(name = code$args[[1]]$name,
+                      nDim = 0, type = code$args[[2]]$type$type)
+    
     ## If index is unknown, create it in typeEnv and in the symTab (old nimble comment)
     if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
-      if (TRUE) ##!auxEnv$.AllowUnknowns)
+      if (TRUE) 
         symTab$addSymbol(code$args[[1]]$type)
-    ## auxEnv[[code$args[[1]]$name]]$sizeExprs <- list()
 
     ## Now the 3rd arg, the body of the loop, can be processed
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))

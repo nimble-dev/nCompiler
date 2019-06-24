@@ -6,17 +6,42 @@ cppParallelBodyClass <- R6::R6Class(
   inherit = cppClassClass,
   portable = FALSE,
   public = list(
-    initialize = function(loop_body, 
-                          loop_range,
+    initialize = function(loop_body,
+                          loop_var,
                           symbolTable,
                           copyVars = character(),
                           noncopyVars = character()) {
       cppParallelBodyClass_init_impl(self,
-                                     loop_body,
-                                     loop_range,
-                                     symbolTable,
-                                     copyVars,
-                                     noncopyVars)
+                                     loop_body = loop_body,
+                                     loop_var = loop_var,
+                                     symbolTable = symbolTable,
+                                     copyVars = copyVars,
+                                     noncopyVars = noncopyVars)
+    },
+    generate = function(declaration = FALSE, ...) {
+      ## This version of generate creates a fully inlined version
+      ## when declaration is TRUE and returns an empty string
+      ## when declaration is FALSE.
+      if(declaration) {
+        symbolsToUse <- if(inherits(symbolTable, 'symbolTableClass'))
+          symbolTable$getSymbols()
+        else
+          list()
+        
+        output <- c(generateClassHeader(name, inheritance),
+                    list('public:'), ## In the future we can separate public and private
+                    lapply(generateObjectDefs(symbolsToUse),
+                           function(x)
+                             if(length(x)==0)
+                               ''
+                           else
+                             pasteSemicolon(x, indent = '  ')),
+                    generateAll(cppFunctionDefs),
+                    '};'
+        )
+        unlist(output)
+      } else
+        ""
     }
   )
 )
@@ -25,11 +50,11 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                            name = "parallel_loop_body",
                                            orig_loop_code = orig_loop_code,
                                            loop_body = orig_loop_code$args[[3]],
-                                           loop_range = orig_loop_code$args[[2]],
                                            loop_var = orig_loop_code$args[[1]],
                                            symbolTable,
                                            copyVars,
                                            noncopyVars) {
+  browser()
   ## 1. Create symbolTable for copyVars + noncopyVars
   ## 2. Create operator()
   ## 3. Create constructor
@@ -40,8 +65,13 @@ cppParallelBodyClass_init_impl <- function(cppDef,
   ## newLocalSymTab is the symbolTable for the body of operator()
   newLocalSymTab <- symbolTableClass$new()
   for(v in copyVars) {
-    sym <- symbolTable$getSymbol(v, inherits = TRUE)$clone()
-    localSym <- sym$clone()
+    sym <- symbolTable$getSymbol(v, inherits = TRUE)
+    if(is.null(sym)) {
+      stop(paste0("No variable named: ", v),
+           call. = FALSE)
+    }
+    sym <- sym$clone(deep = TRUE)
+    localSym <- sym$clone(deep = TRUE)
     sym$ref <- TRUE
     sym$name <- paste0(sym$name, "_orig_")
     newSymTab$addSymbol(sym)
@@ -51,7 +81,12 @@ cppParallelBodyClass_init_impl <- function(cppDef,
     newLocalSymTab$addSymbol(localSym) ## put in local symbol table
   }
   for(v in noncopyVars) {
-    sym <- symbolTable$getSymbol(v, inherits = TRUE)$clone()
+    sym <- symbolTable$getSymbol(v, inherits = TRUE)
+    if(is.null(sym)) {
+      stop(paste0("No variable named: ", v),
+           call. = FALSE)
+    }
+    sym <- sym$clone(deep = TRUE)
     sym$ref <- TRUE
     newSymTab$addSymbol(sym)  
   }
@@ -98,10 +133,9 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                       ),
                                       initializerList = initializerList,
                                       returnType = cppBlank())
-  result <- cppClassClass$new(
-    name = name,
-    cppFunctionDefs = list(`operator()` = `operator()`,
-                           constructor = constructor),
-    symbolTable = newSymTab)
-  result
+  cppDef$name <- name
+  cppDef$cppFunctionDefs <- list(`operator()` = `operator()`,
+                                 constructor = constructor)
+  cppDef$symbolTable <- newSymTab
+  invisible(NULL)
 }

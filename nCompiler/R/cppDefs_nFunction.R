@@ -116,7 +116,7 @@ cpp_include_aux_content <- function(self,
   ## initializerList for a constructor
   if(is.null(NF_Compiler$NFinternals$aux)) return(invisible(NULL))
   if(!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
-    cppDef$initializerList <- 
+    self$initializerList <- 
       NF_Compiler$NFinternals$aux$initializerList_exprClasses
   }
 }

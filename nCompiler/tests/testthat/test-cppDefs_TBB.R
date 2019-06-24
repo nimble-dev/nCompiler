@@ -24,7 +24,6 @@ nc <- nClass(
 
 Cnc <- nCompile_nClass(nc, control = list(endStage = 'makeCppDef'))
 class(Cnc)
-Cnc$cppFunctionDefs[['constructor_']] <- 
 Cnc$initializerContent <- lapply(list(quote(x(x_)), quote(y(y_))), nParse)
 Cnc$generate()
 

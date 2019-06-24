@@ -30,6 +30,7 @@ Collate:
     compile_liftMaps.R
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
+    compile_finalTransformations.R
     compile_setToEigen.R
     cppDefs_ADutils.R
     cppDefs_core.R
@@ -48,7 +49,6 @@ Collate:
     NC_LoadedObjectEnv.R
     NC_Serialize.R
     NC_SimpleInterface.R
-    NC_TBBclass.R
     NC_Utils.R
     NF.R
     NF_Compile.R
