@@ -104,11 +104,9 @@ assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'Bracket'
-    ),
+      handler = 'Bracket'),
     eigenImpl = list(
-      handler = 'Bracket'
-    )
+      handler = 'Bracket') # converts `[` to `index[`
   )
 )
 

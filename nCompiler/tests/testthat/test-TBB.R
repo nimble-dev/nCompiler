@@ -19,11 +19,26 @@ test_that("Simple parallel example works", {
     )
   )
 
+  nc <- nClass(
+    Cpublic = list(
+      go = nFunction(
+        fun = function(x = 'numericVector') {
+          y <- x
+          for(i in 1:10) {
+            y[i] <- 2 * x[i]
+          }
+          return(y)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+  
   # Cnc <- nCompile_nClass(nc, control = list(endStage = "makeCppDef"))
   # writeCode(Cnc$generate())
   # writeCode(Cnc$generate(TRUE))
   
-  #set_nOption("showCompilerOutput", TRUE)
+  set_nOption("showCompilerOutput", TRUE)
   Cnc <- nCompile_nClass(nc)
   nc1 <- nc$new()
   Cnc1 <- Cnc$new()
