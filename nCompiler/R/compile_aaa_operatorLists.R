@@ -89,8 +89,10 @@ assignOperatorDef(
       handler = 'Bracket'
     ),
     eigenImpl = list(
-      handler = 'Bracket'
-    )
+      handler = 'Bracket' ## converts `[` to `index[`
+    ),
+    cppOutput = list(
+      handler = 'IndexingBracket') ## needed for generated code such as for AD.
   )
 )
 
