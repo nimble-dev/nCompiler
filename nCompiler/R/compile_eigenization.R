@@ -94,14 +94,15 @@ compile_eigenize <- function(code,
     if(code$isCall) {
         if(code$name == '{') {
             for(i in seq_along(code$args)) {
-                recurse <- FALSE
-                if(code$args[[i]]$name == 'eigenize') {
-                    removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
-                    recurse <- TRUE
-                }
-                if(code$args[[i]]$name %in%
-                   c('for', ifOrWhile, '{', 'nimSwitch'))
-                    recurse <- TRUE
+                ## recurse <- FALSE
+                ## if(code$args[[i]]$name == 'eigenize') {
+                ##     removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
+                ##     recurse <- TRUE
+                ## }
+                ## if(code$args[[i]]$name %in%
+                ##    c('for', ifOrWhile, '{', 'nimSwitch'))
+                ##     recurse <- TRUE
+                recurse <- TRUE
                 if(recurse) {
                     setupCalls <- unlist(
                         compile_eigenize(code$args[[i]],

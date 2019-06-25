@@ -374,23 +374,23 @@ processNFstages <- function(NFcompiler,
     }
     
     ## label lines suitable for implementation by Eigen back-end
-    stageName <- 'labelForEigen'
-    if (logging) logBeforeStage(stageName)
-    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-      eval(NFcompilerMaybeDebug(stageName, controlFull))
-      NFtry({
-        compileInfo_labelForEigenization(NFcompiler,
-                                       debug)
-      }, 
-      stageName,
-      use_nCompiler_error_handling)
-      NFcompiler$stageCompleted <- stageName
-      if (logging) {
-        logAST(NFcompiler$code)
-        logAfterStage(stageName)
-      }
-    }
+    ## stageName <- 'labelForEigen'
+    ## if (logging) logBeforeStage(stageName)
+    ## if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+    ## if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+    ##   eval(NFcompilerMaybeDebug(stageName, controlFull))
+    ##   NFtry({
+    ##     compileInfo_labelForEigenization(NFcompiler,
+    ##                                    debug)
+    ##   }, 
+    ##   stageName,
+    ##   use_nCompiler_error_handling)
+    ##   NFcompiler$stageCompleted <- stageName
+    ##   if (logging) {
+    ##     logAST(NFcompiler$code)
+    ##     logAfterStage(stageName)
+    ##   }
+    ## }
 
     ## modify code either for Eigen or Tensorflow back-end
     stageName <- 'doImplementation'
