@@ -27,7 +27,7 @@
 #include "StridedTensorMapInfo.h"
 
 #undef USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP
-#define DEBUG_STRIDED_TENSOR_MAP
+// #define DEBUG_STRIDED_TENSOR_MAP
 
 namespace Eigen {
 
@@ -426,7 +426,6 @@ struct TensorEvaluator<const StridedTensorMap<PlainObjectType, Options_, MakePoi
     m_device(device),
     m_strides(m_STM.strides())
   {
-    std::cout<<"In TensorEvaluator constructor for StridedTensorMap"<<std::endl;
     // Handle degenerate intervals by gracefully clamping and allowing m_dimensions to be zero
     DSizes<Index,NumDims> startIndicesClamped, stopIndicesClamped;
     for (size_t i = 0; i < internal::array_size<Dimensions>::value; ++i) {
@@ -582,7 +581,7 @@ struct MakeIndexBlocksTypes {
 template <typename ...P>
 typename MakeIndexBlocksTypes<P...>::type MakeIndexBlocks(P ...p) {
   typedef typename MakeIndexBlocksTypes<P...>::type returnType;
-  returnType ans = {p...};
+  returnType ans = {{p...}};
   return ans;
   // return returnType({p...}); // does not work
 }

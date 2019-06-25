@@ -1,0 +1,80 @@
+#ifndef __nClass_1_CPP
+#define __nClass_1_CPP
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <iostream>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <Rmath.h>
+#include <math.h>
+#include "..h"
+using namespace Rcpp;
+// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+// [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(nCompiler)]]
+// [[Rcpp::depends(Rcereal)]]
+
+int  nClass_1::nFun_1_NFID_1 ( int arg1, int arg2 )  {
+int ans;
+flex_(ans) = arg1 % arg2;
+return(ans);
+}
+
+// [[Rcpp::export]]
+SEXP  new_nClass_1 (  )  {
+return(loadedObjectEnv(new_nCompiler_object<nClass_1>()));
+}
+
+NCOMPILER_INTERFACE(
+nClass_1,
+NCOMPILER_FIELDS(),
+NCOMPILER_METHODS(
+method("nFun1", &nClass_1::nFun_1_NFID_1)
+)
+)
+#endif
+#ifndef __nClass_1_H
+#define __nClass_1_H
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <Rinternals.h>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_class_interface.h>
+
+class nClass_1 : public genericInterfaceC<nClass_1> {
+public:
+int  nFun_1_NFID_1 ( int arg1, int arg2 );
+};
+
+SEXP  new_nClass_1 (  );
+
+
+#endif

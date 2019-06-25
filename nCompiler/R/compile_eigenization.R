@@ -46,7 +46,7 @@ exprClasses_labelForEigenization <- function(code) {
         if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
 
         if(length(code$implementation$toEigen) > 0) {
-            if(code$implementation$toEigen == 'yes') {
+          if(code$implementation$toEigen == 'yes') {
          ##   if(anyNonScalar(code)) {
                 output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
         	return(output)
@@ -127,27 +127,6 @@ compile_eigenize <- function(code,
             if(length(code$args)==3)
                 compile_eigenize(code$args[[3]], symTab, auxEnv)
             return(invisible(NULL))
-        }
-        ## STOPPED HERE
-        if(code$name == 'nimSwitch') {
-            if(length(code$args) > 2) 
-                for(iSwitch in 3:length(code$args)) 
-                    compile_eigenize(code$args[[iSwitch]], symTab, auxEnv)
-            return(invisible(NULL))
-        }
-        ## The map might become moot or much less common
-        if(code$name == 'map') {
-            ## Generate EigenMap and new assignment with strides
-            setupExprs <- c(setupExprs,
-                            eigenizeNameStrided(code, symTab, auxEnv, workEnv))
-            return(setupExprs)
-        }
-        if(code$name == '[') { ## If there is still A[i] in the code, it is because it is equivalent to a scalar and does not need eigenization
-            if(code$type$nDim == 0) {
-                return(NULL)
-            } else {
-                writeLines(paste0('Warning, in eigenizing ',nDeparse(code), ' the [ is still there but nDim is not 0 (not a scalar).') )
-            }
         }
         opInfo <- operatorDefEnv[[code$name]]
         if(!is.null(opInfo)) {
@@ -465,3 +444,64 @@ inEigenizeEnv(
   }
 )
 
+inEigenizeEnv(
+  Bracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    n_args <- length(code$args)
+    if (code$type$nDim == 0) {
+      # Either we're indexing a vector and we keep '[' in the AST, or we're
+      # indexing a non-vector object and we use 'index(' instead.
+      # TODO: if (code$args[[1]]$type$nDim == 0)
+      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
+      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      return(invisible(NULL))
+    }
+    code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
+
+    ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
+    drop <- code$args$drop$name
+    ## remove the drop arg from AST
+    code$args$drop <- NULL
+
+    ## the labelAbstractTypes IndexingBracket handler ensures that index_args
+    ## is not just the empty argument ""
+    index_args <- code$args[-1]
+    code$args[-1] <- NULL ## clear indexing args from AST
+
+    blocks_expr <- setArg(
+      code, 2,
+      exprClass$new(name = 'Eigen::MakeIndexBlocks',
+                    isName = FALSE, isCall = TRUE)
+    )
+
+    for (i in seq_along(index_args)) {
+      ## create b__ call
+      b_expr <- exprClass$new(name = 'b__',
+                              isName = FALSE, isCall = TRUE)
+
+      if (index_args[[i]]$isCall && index_args[[i]]$name == ':') {
+        ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
+        setArg(b_expr, 1, index_args[[i]]$args[[1]])
+        setArg(b_expr, 2, index_args[[i]]$args[[2]])
+
+      } else if (index_args[[i]]$name != '') { ## not a call
+        ## the labelAbstractTypes handler ensures index_args[[i]] is scalar
+        setArg(b_expr, 1, index_args[[i]])
+        if (!drop)
+          setArg(b_expr, 2, copyExprClass(index_args[[i]]))
+
+      }
+
+      ## subtract 1 from each of this b__ call's numeric arguments
+      for (j in seq_along(b_expr$args)) {
+        if (b_expr$args[[j]]$type$type %in% c('integer', 'double')) {
+          insertExprClassLayer(b_expr, j, '-')
+          setArg(b_expr$args[[j]], 2, literalIntegerExpr(1))
+        }
+      }
+
+      ## add the b__ call to the AST as arg to blocks_expr
+      setArg(blocks_expr, i, b_expr)
+    }
+    invisible(NULL)
+  }
+)

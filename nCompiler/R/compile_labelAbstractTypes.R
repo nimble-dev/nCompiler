@@ -471,6 +471,169 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  Bracket <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+
+    ## drop must be named if provided, so this should work
+    drop_arg <- code$args$drop
+    code$args$drop <- NULL ## remove from AST
+
+    ## the indexed object should be the first arg among those other than drop
+    obj <- code$args[[1]]
+    index_args <- code$args[-1]
+    nDim <- obj$type$nDim
+
+    code$args <- NULL ## reset args
+
+    brackets_empty <- length(index_args) == 1 &&
+      index_args[[1]]$isName &&
+      index_args[[1]]$name == ""
+
+    if (brackets_empty) {
+      ## no indexing is happening, so just replace [ with the obj in the AST
+      ## and return
+      setArg(code$caller, code$callerArgID, obj)
+      return(invisible(NULL))
+    }
+
+    ## at this point, the indexing args are not empty
+    if (nDim == 0) {
+      ## indexed object is a scalar so there should be at most 1 indexing arg
+      if (length(index_args) != 1)
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            paste0(
+              "In Bracket: '", obj$name,
+              "' is a scalar; expected at most 1 indexing arg but received ",
+              length(index_args), "."
+            )
+          ), call. = FALSE
+        )
+    } else if (length(index_args) != nDim) {
+      ## indexed object is not scalar, the indexing args are not empty,
+      ## and so their number should be equal to the obj dimension
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste0(
+            "In Bracket: number of indexing arguments does not match the dimension of '",
+            obj$name, "'; expected ", nDim, " but received ", length(index_args), "."
+          )
+        ), call. = FALSE
+      )
+    }
+
+    setArg(code, 1, obj) ## put indexed object back as first arg
+
+    nDrop <- 0
+    for (i in seq_along(index_args)) {
+      ## ensure that indexing args appear before drop in AST
+      setArg(code, i + 1, index_args[[i]])
+
+      ## do a bunch of indexing arg error checking
+      if (index_args[[i]]$isCall)
+        ## for now, can't handle indexing args of nDim > 0 other than those
+        ## created via ':'
+        ## TODO: allow for (more) general expressions
+        if (index_args[[i]]$name != ':' && index_args[[i]]$type$nDim != 0)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              "In Bracket: non-scalar indexing expressions other than ':' not currently supported."
+            ), call. = FALSE
+          )
+
+      if (index_args[[i]]$name != '') {
+        ## not a call resulting in non-scalar other than ':'
+        if (is.null(index_args[[i]]$type) || ## missing index nDim info
+            is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0("In Bracket: '", index_args[[i]]$name,
+                     "' has no dimension.")
+            ), call. = FALSE
+          )
+        ## TODO: allow for scalar logicals?
+        if (index_args[[i]]$type$type == 'logical') ## index logical
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0("In Bracket: '", index_args[[i]]$name,
+                     "' is a logical which is not allowed when indexing.")
+            ), call. = FALSE
+          )
+        if (index_args[[i]]$type$nDim > 1) ## bad index nDim
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0(
+                "In Bracket: the dimension of '", index_args[[i]]$name,
+                " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
+              )
+            ), call. = FALSE
+          )
+        if (nDim == 0 && index_args[[i]]$type$nDim != 0) ## indexing a scalar with non-scalar
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0(
+                "In Bracket: '", obj$name,
+                "' is a scalar but the indexing arg has dimension ",
+                index_args[[i]]$type$nDim, "."
+              )
+            ), call. = FALSE
+          )
+        ## no errors were triggered so increment nDrop if the arg is scalar
+        if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
+      }
+    }
+
+    drop <- TRUE
+    if (nDim == 0) {
+      # If we're indexing a scalar, any drop arg provided is ignored.
+      drop <- FALSE
+    } else if (inherits(drop_arg, 'exprClass')) {
+      if (drop_arg$isLiteral) {
+        ## if the user provided a literal NA or NaN drop arg and even when drop
+        ## is passed in explicity as NA or NaN R treats it as TRUE
+        if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
+          drop_arg <- literalLogicalExpr()
+        } else if (is.null(drop_arg$type) || drop_arg$type$type != 'logical') {
+          drop <- as.logical(drop_arg$name)
+          drop_arg <- literalLogicalExpr(drop)
+        } else { ## drop is logical
+          drop <- drop_arg$name
+        }
+      } else {
+        ## TODO: what if user provided a vector? R would use first element...
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            'In Bracket: the drop argument must be a literal.'
+          ), call. = FALSE
+        )
+      }
+    } else if (is.null(drop_arg)) { ## drop arg wasn't provided
+      drop_arg <- literalLogicalExpr()
+    }
+
+    if (isTRUE(drop)) {
+      nDim <- nDim - nDrop
+    }
+
+    if (nDim != 0) {
+      ## set 'drop' as the last arg in the AST
+      setArg(code, 'drop', drop_arg, add = TRUE)
+    }
+
+    code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Literal <- function(code, symTab, auxEnv, handlingInfo) {
     if (length(code$args) > 2)
       stop(exprClassProcessingErrorMsg(

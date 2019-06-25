@@ -3,13 +3,13 @@ context("Testing cppVariable classes")
 
 test_that("cppVariable classes work", 
 {
-  TR1 <- nCompiler:::cppEigenTensorRef("arg1",
-                                          nDim = 2,
-                                          'double')
- expect_identical(
-   TR1$generate()
-   ,
-   "Eigen::TensorRef<Eigen::Tensor<double, 2> > arg1"
- )
+    TR1 <- nCompiler:::cppEigenTensorRef("arg1",
+                                         nDim = 2,
+                                         'double')
+    expect_identical(
+        TR1$generate()
+       ,
+        "Eigen::Tensor<double, 2> & arg1"
+    )
 }
 )

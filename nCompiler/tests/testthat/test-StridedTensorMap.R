@@ -2,7 +2,7 @@ context("StridedTensorMap")
 library(Rcpp)
 test_that("basic uses of StridedTensorMap work",{
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'StridedTensorMap_tests.cpp'), package = 'nCompiler')
-  test <- sourceCpp(cppfile)
+  test <- QuietSourceCpp(cppfile)
   x <- array(1:(6*5*4), dim = c(6, 5, 4))
   expect_equal(STM1(x), x[, 2:3, ][2, 2, 3])
   expect_equal(STM2(x), x[, 2:3, ])

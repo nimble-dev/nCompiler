@@ -14,8 +14,12 @@ test_that("writePackage and buildPackage work for nFunction",
               }
             )
             
-            writePackage(foo, package.name = "fooPackage", clean = TRUE)
-            ans <- buildPackage("fooPackage")
+            writePackage(foo,
+                         dir = tempdir(),
+                         package.name = "fooPackage",
+                         clean = TRUE)
+            ans <- buildPackage("fooPackage",
+                                dir = tempdir())
             ## Need to get this name fixed
             expect_equal(fooPackage::foo_NFID_1(2), 3)
           })
@@ -42,11 +46,16 @@ test_that("writePackage and buildPackage work for nClass",
               )
             )
             writePackage(
-              nc1, package.name = "nc1Package", clean = TRUE,
-              nClass_full_interface = FALSE
+                nc1,
+                dir = tempdir(),
+                package.name = "nc1Package",
+                clean = TRUE,
+                nClass_full_interface = FALSE
             )
-            buildPackage("nc1Package", dir = ".", lib = "test_package_nc1Package_lib")
-            expect_true(require("nc1Package", lib.loc = "test_package_nc1Package_lib"))
+            buildPackage("nc1Package",
+                         dir = tempdir())
+                         #, lib = "test_package_nc1Package_lib")
+            expect_true(require("nc1Package")) #, lib.loc = "test_package_nc1Package_lib"))
             expect_true(is.function(nc1Package::new_nc1))
             obj <- nc1Package::new_nc1()
             expect_equal(method(obj, 'cp1')(2), 3)
@@ -74,9 +83,14 @@ test_that("writePackage and buildPackage work for nClass with full interface",
     )
   )
   writePackage(
-    nc2, package.name = "nc2Package", clean = TRUE
+      nc2,
+      dir = tempdir(),
+      package.name = "nc2Package",
+      clean = TRUE
   )
-  expect_true(buildPackage("nc2Package", dir = ".", lib = "test_package_nc2Package_lib"))
+  expect_true(buildPackage("nc2Package",
+                           dir = tempdir()))
+                           #, lib = "test_package_nc2Package_lib"))
   expect_true(isCompiledNCgenerator(nc2Package::nc2))
   obj <- nc2Package::nc2$new()
   expect_true(inherits(obj, "nClass"))
