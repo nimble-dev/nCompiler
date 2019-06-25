@@ -67,12 +67,6 @@ exprClass_print <- function(AST,
 
     ## output string for implementation
     implDisp <- character()
-    if(showImpl)
-        if(!is.null(AST$implementation$toEigen))
-            implDisp <- paste0("E(",
-                               AST$implementation$toEigen, ## yes, no or maybe
-                               ")"
-                               )
     assertDisp <- character()
     writeLines(paste0(indent,
                       if(argName=="")

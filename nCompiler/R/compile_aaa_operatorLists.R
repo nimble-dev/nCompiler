@@ -64,10 +64,7 @@ assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
-      handler = 'Colon'),
-    eigenImpl = list(
-      toEigen = 'Maybe'
-    )
+        handler = 'Colon')
   )
 )
 
@@ -119,7 +116,6 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = 'Assign'),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Assign'
     ),
     cppOutput = list(
@@ -133,9 +129,6 @@ assignOperatorDef(
     list(
         labelAbstractTypes = list(
             handler = 'Return'),
-        eigenImpl = list(
-          toEigen = 'Yes'
-        ),
         cppOutput = list(
             handler = 'Return')
     )
@@ -158,8 +151,7 @@ assignOperatorDef(
           handler = 'BinaryUnaryCwise',
           returnTypeCode = returnTypeCodes$promoteNoLogical),
         eigenImpl = list(
-          toEigen = 'Yes',
-            handler = 'cWiseAddSub'),
+          handler = 'cWiseAddSub'),
         cppOutput = list(
           handler = 'BinaryOrUnary'),
         testthat = list(
@@ -179,9 +171,8 @@ assignOperatorDef(
     simpleTransformations = list(
       handler = 'minMax'),
     labelAbstractTypes = list(
-      toEigen = 'Yes',
-      handler = 'UnaryReduction',
-      returnTypeCode = returnTypeCodes$promoteNoLogical),
+        handler = 'UnaryReduction',
+        returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       handler = 'Reduction',
       method = TRUE),
@@ -198,7 +189,6 @@ assignOperatorDef(
   c('pmin', 'pmax'),
   list(
     labelAbstractTypes = list(
-      toEigen = 'Yes',
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
@@ -261,7 +251,6 @@ assignOperatorDef(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Reduction',
       method = TRUE
     ),
@@ -282,7 +271,6 @@ assignOperatorDef(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Reduction',
       method = TRUE
     ),
@@ -303,7 +291,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary',
       method = TRUE
     ),
@@ -325,7 +312,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary',
       method = TRUE
     ),
@@ -347,7 +333,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary_external',
       method = TRUE
     ),
@@ -369,7 +354,6 @@ assignOperatorDef(
       handler = 'BinaryCwiseLogical',
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -400,7 +384,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -421,7 +404,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -440,7 +422,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
       method = TRUE),
     cppOutput = list(
@@ -461,7 +442,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
@@ -482,7 +462,6 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$double
     ),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'PromoteAllButLastArg'
     ),
     cppOutput = list(
