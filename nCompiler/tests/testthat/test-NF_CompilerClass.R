@@ -18,7 +18,7 @@ test_that("NF_CompilerClass steps",
                )
   NFC$setupSymbolTable()
   expect_identical(NFC$symbolTable$getSymbolNames(),
-                   "ARG1_a_")
+                   "a")
   expect_identical(NFinternals(foo)$argSymTab$getSymbolNames(),
                    "a")
   ## check that symbols have the same content...
@@ -49,7 +49,7 @@ test_that("NF_CompilerClass steps",
   expect_equal(
     all.vars(NFC$newRcode)
    ,
-    "ARG1_a_"
+    "a"
   )
 
   ## 3. initializeCode
