@@ -453,6 +453,17 @@ inEigenizeEnv(
       # TODO: if (code$args[[1]]$type$nDim == 0)
       if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
       else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
+      ## We see inconsistent C++ compiler behavior around casting a double index
+      ## to a long index, so we do it explicitly.
+      ## Right now we will hard-code the type "long" assuming it is the underlying
+      ## type. We could more generally use EigenType::Index where EigenType is the type
+      ## of the indexed variable, assuming it can't be an expression.
+      if(length(code$args)>1) {
+        for(i in 2:length(code$args)) {
+          insertExprClassLayer(code, i, "static_cast<long>")
+        }
+      }
       return(invisible(NULL))
     }
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
