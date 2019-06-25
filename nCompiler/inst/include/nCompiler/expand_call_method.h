@@ -25,6 +25,40 @@ template<class P, typename T>
 	     );
     }
 
+    template<typename ptrtype, typename A1, typename A2, typename A3>
+    static P call(T *obj, ptrtype ptr, SEXP Sargs) {
+      return((obj->*ptr)(Rcpp::as<A1>(VECTOR_ELT(Sargs, 0)),
+			 Rcpp::as<A2>(VECTOR_ELT(Sargs, 1)),
+			 Rcpp::as<A3>(VECTOR_ELT(Sargs, 2))));
+    }
+
+    template<typename ptrtype, typename A1, typename A2, typename A3, typename A4>
+    static P call(T *obj, ptrtype ptr, SEXP Sargs) {
+      return((obj->*ptr)(Rcpp::as<A1>(VECTOR_ELT(Sargs, 0)),
+			 Rcpp::as<A2>(VECTOR_ELT(Sargs, 1)),
+			 Rcpp::as<A3>(VECTOR_ELT(Sargs, 2)),
+			 Rcpp::as<A4>(VECTOR_ELT(Sargs, 3))));
+    }
+
+    template<typename ptrtype, typename A1, typename A2, typename A3, typename A4, typename A5>
+    static P call(T *obj, ptrtype ptr, SEXP Sargs) {
+      return((obj->*ptr)(Rcpp::as<A1>(VECTOR_ELT(Sargs, 0)),
+			 Rcpp::as<A2>(VECTOR_ELT(Sargs, 1)),
+			 Rcpp::as<A3>(VECTOR_ELT(Sargs, 2)),
+			 Rcpp::as<A4>(VECTOR_ELT(Sargs, 3)),
+			 Rcpp::as<A5>(VECTOR_ELT(Sargs, 4))));
+    }
+
+    template<typename ptrtype, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+    static P call(T *obj, ptrtype ptr, SEXP Sargs) {
+      return((obj->*ptr)(Rcpp::as<A1>(VECTOR_ELT(Sargs, 0)),
+			 Rcpp::as<A2>(VECTOR_ELT(Sargs, 1)),
+			 Rcpp::as<A3>(VECTOR_ELT(Sargs, 2)),
+			 Rcpp::as<A4>(VECTOR_ELT(Sargs, 3)),
+			 Rcpp::as<A5>(VECTOR_ELT(Sargs, 4)),
+			 Rcpp::as<A6>(VECTOR_ELT(Sargs, 5))));
+    }
+
   };
 
 #endif
