@@ -27,7 +27,7 @@ cpp_nFunctionClass <- R6::R6Class(
                             nCompilerIncludeFile("nCompiler_Eigen.h"),
                             nCompilerIncludeFile("nCompiler_TBB.h"),
                             '<Rmath.h>',
-                            '<math.h>')
+                            '<math.h>'
       )
       usingEigen <- TRUE
       if(usingEigen) {

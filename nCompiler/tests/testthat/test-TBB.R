@@ -23,6 +23,7 @@ test_that("Simple parallel example works", {
   # writeCode(Cnc$generate())
   # writeCode(Cnc$generate(TRUE))
   
+  #set_nOption("showCompilerOutput", TRUE)
   Cnc <- nCompile_nClass(nc)
   nc1 <- nc$new()
   Cnc1 <- Cnc$new()
