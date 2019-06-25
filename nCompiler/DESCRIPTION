@@ -66,6 +66,7 @@ Collate:
     RcppExports.R
     Rcpp_nCompiler.R
     Rcpp_nCompiler_plugin.R
+    Rexecution.R
     Rhooks.R
     symbolTable.R
     symbolTableClass.R
