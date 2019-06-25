@@ -2,7 +2,7 @@
 % Please edit documentation in R/Rcpp_nCompiler.R
 \name{cpp_nCompiler}
 \alias{cpp_nCompiler}
-\title{Call Rcpp's C++ compilation system for.nCompiler-generated}
+\title{Call Rcpp's C++ compilation system for nCompiler-generated content}
 \usage{
 cpp_nCompiler(Rcpp_packet, dir = file.path(tempdir(),
   "nCompiler_generatedCode"), cacheDir = file.path(tempdir(),
@@ -31,7 +31,7 @@ If one function is being compiled, \code{cpp_nCompiler} returns
     \code{NULL}.
 }
 \description{
-Call Rcpp's C++ compilation system for.nCompiler-generated
+Call Rcpp's C++ compilation system for nCompiler-generated content
 }
 \details{
 \code{cpp_nCompiler} is not intended to be called directly.
