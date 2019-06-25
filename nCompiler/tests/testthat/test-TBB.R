@@ -25,3 +25,7 @@ writeCode(Cnc$generate(TRUE))
 
 set_nOption("showCompilerOutput", TRUE)
 Cnc <- nCompile_nClass(nc)
+nc1 <- nc$new()
+## nc1$go(101:110) ## does not run uncompiled
+Cnc1 <- Cnc$new()
+Cnc1$go(101:110) ## runs in parallel

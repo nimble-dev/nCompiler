@@ -19,26 +19,16 @@ cpp_nFunctionClass <- R6::R6Class(
       self$Hpreamble <- pluginIncludes
       self$CPPpreamble <- pluginIncludes
       self$Hincludes <- c(self$Hincludes,
-                          #nCompilerIncludeFile("NimArr.h"),
                           "<Rinternals.h>",
-                          nCompilerIncludeFile("nCompiler_Eigen.h")
-                          ##,
-                          #nCompilerIncludeFile("accessorClasses.h"),
-                          #nCompilerIncludeFile("nimDists.h"),
-                          #nCompilerIncludeFile("nimOptim.h")
+                          nCompilerIncludeFile("nCompiler_Eigen.h"),
+                          nCompilerIncludeFile("nCompiler_TBB.h")
       )
       self$CPPincludes <- c(self$CPPincludes,
                             nCompilerIncludeFile("nCompiler_Eigen.h"),
+                            nCompilerIncludeFile("nCompiler_TBB.h"),
                             '<Rmath.h>',
                             '<math.h>',
-                            nCompilerIncludeFile("cWiseUnary_external.cpp"),
-                            #nCompilerIncludeFile("EigenTypedefs.h"),
-                            #nCompilerIncludeFile("Utils.h"),
-                            #nCompilerIncludeFile("accessorClasses.h"),
-                            if(isTRUE(nOptions('experimentalUseTensorflow')))
-                              nCompilerIncludeFile("tensorflow.h")
-                            else
-                              character()
+                            nCompilerIncludeFile("cWiseUnary_external.cpp")
       )
       usingEigen <- TRUE
       if(usingEigen) {
@@ -53,6 +43,7 @@ cpp_nFunctionClass <- R6::R6Class(
                             "using namespace Rcpp;",
                             "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
                             "// [[Rcpp::depends(RcppEigenAD)]]",
+                            "// [[Rcpp::depends(RcppParallel)]]",
                             "// [[Rcpp::depends(nCompiler)]]",
                             "// [[Rcpp::depends(Rcereal)]]")
       } else {

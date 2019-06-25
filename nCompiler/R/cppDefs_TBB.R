@@ -54,7 +54,6 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                            symbolTable,
                                            copyVars,
                                            noncopyVars) {
-  browser()
   ## 1. Create symbolTable for copyVars + noncopyVars
   ## 2. Create operator()
   ## 3. Create constructor
@@ -64,6 +63,16 @@ cppParallelBodyClass_init_impl <- function(cppDef,
   newSymTab <- symbolTableClass$new()
   ## newLocalSymTab is the symbolTable for the body of operator()
   newLocalSymTab <- symbolTableClass$new()
+  ## Put loop_var in newLocalSymTab
+  indexName <- loop_var$name
+  sym <- symbolTable$getSymbol(indexName, inherits = TRUE)
+  if(is.null(sym)) {
+    stop(paste0("No variable named: ", indexName),
+         call. = FALSE)
+  }
+  indexSym <- sym$clone(deep = TRUE)
+  newLocalSymTab$addSymbol(indexSym)
+  ## Make symbol table entries and code for the copyVars
   for(v in copyVars) {
     sym <- symbolTable$getSymbol(v, inherits = TRUE)
     if(is.null(sym)) {
@@ -106,7 +115,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
   ## argSymTab is the symbolTable for the arguments to operator()
   argSymTab <- symbolTableClass$new()
   argSymTab$addSymbol(cppVarFullClass$new(name = 'r__',
-                                          baseType = "blocked_range<int>",
+                                          baseType = "tbb::blocked_range<int>",
                                           ref = TRUE, 
                                           const = TRUE))
   `operator()` <- cppFunctionClass$new(name = "operator()", 

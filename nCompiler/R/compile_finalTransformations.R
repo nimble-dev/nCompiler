@@ -42,7 +42,7 @@ inFinalTransformationsEnv(
     code$args[[5]] <- shareVars ## Citto
     auxEnv$parallelContent <- c(auxEnv$parallelContent, code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
-    blocked_range_expr <- exprClass$new(name = "blocked_range<int>",
+    blocked_range_expr <- exprClass$new(name = "tbb::blocked_range<int>",
                                         isCall = TRUE,
                                         isName = FALSE, isLiteral = FALSE, isAssign = FALSE)
     setArg(blocked_range_expr, 1, copyExprClass(code$args[[2]]$args[[1]]))

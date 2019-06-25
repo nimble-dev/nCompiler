@@ -42,7 +42,8 @@ cpp_nClassBaseClass <- R6::R6Class(
       
       self$Hincludes <- c(self$Hincludes,
                           "<Rinternals.h>",
-                          nCompilerIncludeFile("nCompiler_Eigen.h"))
+                          nCompilerIncludeFile("nCompiler_Eigen.h"),
+                          nCompilerIncludeFile("nCompiler_TBB.h"))
       CPPincludes <<- list()
       usingEigen <- TRUE
       ## The following need to be here, not just in cpp_nFunction, in case there is a nClass with no methods.
@@ -58,6 +59,7 @@ cpp_nClassBaseClass <- R6::R6Class(
                             "using namespace Rcpp;",
                             "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
                             "// [[Rcpp::depends(RcppEigenAD)]]",
+                            "// [[Rcpp::depends(RcppParallel)]]",
                             "// [[Rcpp::depends(nCompiler)]]",
                             "// [[Rcpp::depends(Rcereal)]]")
       } else {
@@ -166,7 +168,6 @@ cpp_nClassClass <- R6::R6Class(
       }
     },
     buildParallelClassDefs = function() {
-      browser()
       for(i in seq_along(Compiler$NFcompilers)) {
         parallelContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelContent
         if(!is.null(parallelContent)) {
