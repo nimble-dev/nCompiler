@@ -22,123 +22,154 @@
 ## returns: a list with the randomly generated input and possibly the compiled
 ##          nimbleFunction instance, or NULL if the test has a known compilation
 ##          failure
-test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
+##
+## TODO: update argument descriptions
+##
+test_AD <- function(base_list, verbose = nimbleOptions('verbose'),
                     catch_failures = FALSE, control = list(), seed = 0,
                     nimbleProject_name = '', return_compiled_nf = FALSE,
                     knownFailures = list()) {
-  param_list <- test_base_list$param_list
-  nC <- test_base_list$nC
-  nC_compiled <- test_base_list$nC_compiled
-  nC_compiled_obj <- test_base_list$nC_compiled_obj
-
   # TODO: use debug flag from somewhere?
   # if (!is.null(param$debug) && param$debug) browser()
 
-  if (FALSE) { # TODO: implement full testing with wrt args
+  param_list <- base_list$param_list
+  nC <- base_list$nC
+
+  ##
+  ## compile the nClass 'nC'
+  ##
+
+  ## user provided compiled nimbleFunction?
+  nC_compiled <- base_list$nC_compiled
+  if (is.null(nC_compiled)) {
+    if (verbose) cat("## Compiling nClass \n")
+
+    nC_compiled <- try(
+      nCompile_nClass(nC, control = control, interface = 'generic'),
+      silent = TRUE
+    )
+  }
+  if (inherits(nC_compiled, 'try-error')) {
+    msg <- paste0(
+      'The test of ', param$name, ' failed to compile.\n', CnfInst[1]
+    )
+
+    if (isTRUE(catch_failures)) {
+      warning(msg, call. = FALSE, immediate. = TRUE)
+      return(invisible(NULL))
+    } else {
+      stop(msg, call = FALSE)
+    }
+  }
+
+  nC_obj <- nC_compiled()
+
+  for (i in seq_along(param_list)) {
+
+    param <- param_list[[i]]
+
+    if (verbose) cat("## Testing ", param$name, "\n", sep = '')
+
+    ## TODO: remove dependence on this Cpublic method naming convention
+    nFun_i <- paste0('nFun', i)
 
     # reset the seed for every test
     if (is.numeric(seed)) set.seed(seed)
-  
-    for (i in seq_along(param_list)) {
-      param <- param_list[[i]]
-      nFun_i <- paste0('nFun', i)
 
-      ##
-      ## generate inputs for the Cpublic methods
-      ##
-      opParam <- param$opParam
-      if (is.null(param$input_gen_funs) || is.null(names(param$input_gen_funs)))
-        if (length(param$input_gen_funs) <= 1)
-          input <- lapply(opParam$args, arg_type_2_input, param$input_gen_funs)
+    ##
+    ## generate inputs for the Cpublic methods
+    ##
+    if (is.null(param$input_gen_funs) || is.null(names(param$input_gen_funs)))
+      if (length(param$input_gen_funs) <= 1)
+        input <- lapply(param$argTypes, arg_type_2_input, param$input_gen_funs)
+    else
+      stop(
+        'input_gen_funs of length greater than 1 must have names',
+        call. = FALSE
+      )
+    else {
+      input <- sapply(
+        names(param$argTypes),
+        function(name)
+          arg_type_2_input(param$argTypes[[name]], param$input_gen_funs[[name]]),
+        simplify = FALSE
+      )
+    }
+    ##
+    ## generate inputs that depend on the other inputs
+    ##
+    is_fun <- sapply(input, is.function)
+    input[is_fun] <- lapply(
+      input[is_fun], function(fun) {
+        eval(as.call(c(fun, input[names(formals(fun))])))
+      }
+    )
+
+    ##
+    ## call R versions of nimbleFunction methods with generated input
+    ##
+    if (verbose)
+      cat("## Calling uncompiled version of nClass method '",
+          nFun_i, "'\n", sep = '')
+
+    Rderivs <- try(
+      lapply(param$wrts, function(wrt) {
+
+        this_nf <- nC$public_methods[[nFun_i]]
+        nCompiler:::nDerivs_nf(
+          derivFxnCall = as.call(c(quote(this_nf), input)),
+          wrt = wrt
+        )
+      }), silent = TRUE
+    )
+    if (inherits(Rderivs, 'try-error')) {
+      msg <- paste(
+        'Calling R version of test', param$name,
+        'resulted in an error:\n', Rderivs[1]
+      )
+      if (isTRUE(catch_failures)) ## continue to compilation
+        warning(msg, call. = FALSE, immediate. = TRUE)
       else
-        stop(
-          'input_gen_funs of length greater than 1 must have names',
-          call. = FALSE
-        )
-      else {
-        input <- sapply(
-          names(opParam$args),
-          function(name)
-            arg_type_2_input(opParam$args[[name]], param$input_gen_funs[[name]]),
-          simplify = FALSE
-        )
-      }
-      ##
-      ## generate inputs that depend on the other inputs
-      ##
-      is_fun <- sapply(input, is.function)
-      input[is_fun] <- lapply(
-        input[is_fun], function(fun) {
-          eval(as.call(c(fun, input[names(formals(fun))])))
-        }
-      )
+        stop(msg, call. = FALSE) ## throw an error here
+    }
 
-      ## TODO: currently there is no implementation of R version
-      ##
-      ## call R versions of nimbleFunction methods with generated input
-      ##
-      if (verbose) cat("## Calling R versions of nimbleFunction methods\n")
-      Rderivs <- try(
-        sapply(names(param$methods), function(method) {
-          do.call(
-            ## can't access nfInst[[method]] until $ has been used :(
-            eval(substitute(nfInst$method, list(method = as.name(method)))), input
-          )
-        }, USE.NAMES = TRUE), silent = TRUE
-      )
-      if (inherits(Rderivs, 'try-error')) {
-        msg <- paste(
-          'Calling R version of test', opParam$name,
-          'resulted in an error:\n', Rderivs[1]
-        )
-        if (isTRUE(catch_failures)) ## continue to compilation
-          warning(msg, call. = FALSE, immediate. = TRUE)
-        else
-          stop(msg, call. = FALSE) ## throw an error here
-      }
+    Cval <- do.call(method(nC_obj, nFun_i), input)
 
-      ##
-      ## compile the nimbleFunction (this happens in test_base())
-      ##
-      if (!is.null(param$dir)) dir <- param$dir
-      
-      compilation_fails <- is_compilation_failure(param$name, knownFailures)
-      CnfInst <- param$CnfInst ## user provided compiled nimbleFunction?
-      if (is.null(CnfInst)) {
-        if (verbose) cat("## Compiling nimbleFunction \n")
-        CnfInst <- wrap_if_true(compilation_fails, expect_error, {
-          compileNimble(
-            nfInst, dirName = dir, projectName = nimbleProject_name,
-            control = control
-          )
-        }, wrap_in_try = isTRUE(catch_failures))
-      }
-      if (isTRUE(catch_failures) && inherits(CnfInst, 'try-error')) {
-        warning(
-          paste0(
-            'The test of ', opParam$name,
-            ' failed to compile.\n', CnfInst[1]
-          ),
-          call. = FALSE,
-          immediate. = TRUE
-        )
-        ## stop the test here because it didn't compile
-        return(invisible(NULL))
-      } else if (compilation_fails) {
-        if (verbose) cat("## Compilation failed, as expected \n")
-      }
-      
-      ##
-      ## call compiled nimbleFunction methods with generated input
-      ##
-      Cderivs <- sapply(names(param$methods), function(method) {
+    ##
+    ## call Cpublic methods of compiled nClass with generated input
+    ##
+    if (verbose)
+      cat("## Calling compiled version of nClass method '",
+          nFun_i, "'\n", sep = '')
+
+    Cderivs <- lapply(param$wrts, function(wrt) {
+
+      gradient <- value(
         do.call(
-          ## same issue as with Rderivs
-          eval(substitute(CnfInst$method, list(method = as.name(method)))),
-          input
-        )
-      }, USE.NAMES = TRUE)
-      if ('log' %in% names(opParam$args)) {
+          method(nC_obj, paste0(nFun_i, '_derivs_')),
+          c(input, list(order = c(0, 1, 2), wrt = wrt))
+        ),
+        'gradient'
+      )
+      list(value = Cval, jacobian = gradient)
+    })
+
+    for (wrt in names(param$wrts)) {
+      if (verbose)
+        cat("## Testing equality of outputs for ", wrt, '\n')
+      expect_equal( ## check values
+        as.vector(Cderivs[[wrt]]$value),
+        as.vector(Rderivs[[wrt]]$value)
+      )
+      expect_equal( ## check jacobians
+        as.vector(Cderivs[[wrt]]$jacobian),
+        as.vector(Rderivs[[wrt]]$jacobian)
+      )
+    }
+
+    ## TODO: test hessian and distribution fun's log arg
+    if (FALSE) {
+      if ('log' %in% names(param$args)) {
         input2 <- input
         input2$log <- as.numeric(!input$log)
         Rderivs2 <- try(
@@ -179,7 +210,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
             Rderivs[[method_name]]$value,
             tolerance = tol1
           )
-          if ('log' %in% names(opParam$args)) {
+          if ('log' %in% names(param$args)) {
             if (verbose) cat("## Checking log behavior for values\n")
             expect_equal(
               Cderivs2[[method_name]]$value,
@@ -202,7 +233,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
           warning(
             paste0(
               'There was something wrong with the values of ',
-              opParam$name, ' with wrt = c(',
+              param$name, ' with wrt = c(',
               paste0(param$wrts[[method_name]], collapse = ', '), ').\n',
               value_test[1]
             ),
@@ -233,7 +264,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
             Rderivs[[method_name]]$jacobian,
             tolerance = tol2
           )
-          if ('log' %in% names(opParam$args)) {
+          if ('log' %in% names(param$args)) {
             if (verbose) cat("## Checking log behavior for jacobians\n")
             expect_equal(
               Cderivs2[[method_name]]$jacobian,
@@ -256,7 +287,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
           warning(
             paste0(
               'There was something wrong with the jacobian of ',
-              opParam$name, ' with wrt = c(',
+              param$name, ' with wrt = c(',
               paste0(param$wrts[[method_name]], collapse = ', '), ').\n',
               jacobian_test[1]
             ),
@@ -287,7 +318,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
             Rderivs[[method_name]]$hessian,
             tolerance = tol3
           )
-          if ('log' %in% names(opParam$args)) {
+          if ('log' %in% names(param$args)) {
             if (verbose) cat("## Checking log behavior for hessians\n")
             expect_equal(
               Cderivs2[[method_name]]$hessian,
@@ -310,7 +341,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
           warning(
             paste0(
               'There was something wrong with the hessian of ',
-              opParam$name, ' with wrt = c(',
+              param$name, ' with wrt = c(',
               paste0(param$wrts[[method_name]], collapse = ', '), ').\n',
               hessian_test[1]
             ),
@@ -336,7 +367,7 @@ test_AD <- function(test_base_list, verbose = nimbleOptions('verbose'),
         nimble:::clearCompiled(CnfInst)
         invisible(list(input = input))
       }
-    }
+    } ## if (FALSE) {
   }
   invisible(NULL)
 }
@@ -414,7 +445,9 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
     }
     if (!is.null(this_wrt)) wrts <- c(wrts, list(unique(this_wrt)))
   }
-  unique(wrts)
+  wrts <- unique(wrts)
+  names(wrts) <- paste0('wrt: ', sapply(wrts, paste, collapse = ', '))
+  wrts
 }
 
 ## Make a test parameterization to be used by test_AD. This method is primarily

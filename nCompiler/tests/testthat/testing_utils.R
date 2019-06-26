@@ -36,6 +36,45 @@ make_input <- function(argType, argCheck = NULL, size = 3) {
     return(arg)
 }
 
+## Takes an argSymbol and if argSymbol$size is NA adds default sizes.
+add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4)) {
+  if (any(is.na(argSymbol$size))) {
+    if (argSymbol$nDim == 1)
+      argSymbol$size <- vector_size
+    else if (argSymbol$nDim == 2)
+      argSymbol$size <- matrix_size
+  }
+  invisible(argSymbol)
+}
+
+arg_type_2_input <- function(argType, input_gen_fun = NULL) {
+  argSymbol <- add_missing_size(
+    nCompiler:::argType2symbol(argType)
+  )
+  type <- argSymbol$type
+  nDim <- argSymbol$nDim
+  size <- argSymbol$size
+  if (is.null(input_gen_fun))
+    input_gen_fun <- switch(
+      type,
+      "double"  = function(arg_size) rnorm(prod(arg_size)),
+      "integer" = function(arg_size) rgeom(prod(arg_size), 0.5),
+      "logical" = function(arg_size)
+        sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
+    )
+  arg <- switch(
+    nDim + 1,
+    input_gen_fun(1), ## nDim is 0
+    input_gen_fun(size), ## nDim is 1
+    matrix(input_gen_fun(size), nrow = size[1], ncol = size[2]), ## nDim is 2
+    array(input_gen_fun(size), dim = size) ## nDim is 3
+  )
+  if (is.null(arg))
+    stop('Something went wrong while making test input.', call.=FALSE)
+  return(arg)
+}
+
+
 gen_nFunction <- function(param) {
   fun <- function() {}
   formals(fun) <- lapply(param$argTypes, function(x) quote(expr=))
@@ -60,17 +99,20 @@ gen_nClass <- function(param) {
   )
 }
 
-# Run a few early steps that are common to test_math and
-# test_AD:
-# 1. Isolate params that lead to known compilation failures and if not gold
-#    testing, verify that those params do indeed fail to compile.
-# 2. Isolate params that are not known to lead to compilation failures and
-#    create an nFunction for each.
-# 3. Put the nFunctions in one nClass and:
-#    a) If this is a gold test, run the test and return.
-#    b) If not and compile_all_funs is TRUE, compile each nFunction
-#       individually.
-# 4. Compile the nClass and return the compiled object.
+## Run a few early steps that are common to test_math and test_AD:
+##
+## 1. Isolate params that lead to known compilation failures and if not gold
+##    testing, verify that those params do indeed fail to compile.
+## 2. Isolate params that are not known to lead to compilation failures and
+##    create an nFunction for each.
+## 3. Put the nFunctions in one nClass and:
+##    a) If this is a gold test, run the test and return.
+##    b) If not and compile_all_funs is TRUE, compile each nFunction
+##       individually.
+## 4. Compile the nClass and return the compiled object.
+##
+## TODO: add argument descriptions
+##
 test_base <- function(param_list, test_name = '', test_fun = NULL,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose'),
@@ -94,7 +136,11 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
 
   ## these tests should compile
   compiles <- param_list[!compile_error]
+
+  ## Ensure that generated strings for unique names
+  ## have counters that start at 1
   nCompiler:::resetLabelFunctionCreators()
+
   nFuns <- lapply(compiles, gen_nFunction)
 
   if (length(nFuns) > 0) {
@@ -591,20 +637,50 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   invisible(RcppPacket)
 }
 
-## Takes an argSymbol and if argSymbol$size is NA adds default sizes.
-add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4)) {
-  if (any(is.na(argSymbol$size))) {
-    if (argSymbol$nDim == 1)
-      argSymbol$size <- vector_size
-    else if (argSymbol$nDim == 2)
-      argSymbol$size <- matrix_size
-  }
-  invisible(argSymbol)
-}
-
-## batch_of_ops: list with one named entry per operator
-##               which itself is a list with any number of
-##               test parameterizations (op + arg types)
+## batch_of_ops:    A list such as that made by make_AD_test_batch(),
+##                  with one named entry per operator,
+##                  which itself is a list with any number of
+##                  test parameterizations (op + arg types), e.g.:
+##                  list(
+##                    '-' = list(
+##                      '- arg1 = numericScalar arg2 = numericScalar' = list(
+##                        name = '- arg1 = numericScalar arg2 = numericScalar',
+##                        expr = quote(ans <- arg1 - arg2),
+##                        argTypes = list(
+##                          quote(numericScalar),
+##                          quote(numericScalar)
+##                        ),
+##                        # TODO: why string when argTypes are quoted?
+##                        returnType = 'numericScalar()',
+##                        wrts = list(
+##                          'arg1',
+##                          'arg2',
+##                          c('arg1', 'arg2'),
+##                          c('arg2', 'arg1')
+##                        )
+##                      ),
+##                      '- arg1 = numericScalar arg2 = numericVector(7)' = list(
+##                        ...
+##                      )
+##                    ),
+##                    '+' = list(
+##                      ...
+##                    )
+##                  )
+## test_name:       Optional name describing the batch_of_ops (e.g. "unaryOpTests").
+## test_fun:        Optional testing function (such as test_math() or test_AD()) to
+##                  use in test_base().
+## full:            If TRUE, run full testing rather than gold file testing.
+## granularity:     When 'full' is TRUE, determines how to  divide the batch_of_ops
+##                  into separate calls to test_base():
+##                  1 = not currently handled by run_test_suite
+##                  2 = put all test params in 'batch_of_ops' in one big nClass
+##                  3 = one nClass per operator (this is also what gold testing does)
+##                  4 = one nClass with one nFunction per operator/input combo
+## write_gold_file: When TRUE, test_gold_file() saves gold files to
+##                  gold_file_dir. Has no effect when 'full' is TRUE.
+## gold_file_dir:   Where test_gold_file() should look for and save gold files.
+##
 ## TODO: improve the way this works / is used to include granularity = 1
 run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
                            full = FALSE, granularity = NA,
@@ -638,7 +714,7 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
   } else if (isTRUE(granularity == 2)) {
 
     test_base(
-      unlist(batch_of_ops), deparse(substitute(batch_of_ops)), test_fun
+      unlist(batch_of_ops, recursive = FALSE), deparse(substitute(batch_of_ops)), test_fun
     )
   }
 }
