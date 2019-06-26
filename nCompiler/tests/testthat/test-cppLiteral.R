@@ -32,8 +32,8 @@ test_that("cppLiteral with list including vector works", {
       z <- x + y
       cppLiteral(
 'ans = Rcpp::List::create(
-  Rcpp::Named("x") = Rcpp::wrap(ARG1_x_),
-  Rcpp::Named("y") = ARG2_y_,
+  Rcpp::Named("x") = Rcpp::wrap(x),
+  Rcpp::Named("y") = y,
   Rcpp::Named("z") = Rcpp::wrap(z)
 );',
         types = list(ans = list())

@@ -1,4 +1,4 @@
-context("Testing indexing")
+context("Testing indexing (a bunch of correct caught-error messages are expected as part of this test)")
 
 test_that("drop arg variations give correct results, 3D input", {
   nC <- nClass(
