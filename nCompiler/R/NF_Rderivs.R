@@ -170,7 +170,7 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
       ))
   }
 
-  unique_dims <- sapply(arg_symbols, '[[', 'size')
+  unique_dims <- lapply(arg_symbols, '[[', 'size')
 
   ## Get product of dimensions, which we call size
   ## ordered by fxnArgs
