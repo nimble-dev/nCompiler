@@ -106,13 +106,6 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
   return(outList)
 }
 
-# TODO: in nimble this is in all_utils.R ... where is a good spot for this?
-dimOrLength <- function(obj, scalarize = FALSE) {
-  if(scalarize) if(length(obj) == 1) return(numeric(0))
-  if(is.null(dim(obj))) return(length(obj))
-  return(dim(obj))
-}
-
 # TODO: not actually using the nFxn argument
 nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
                        wrt = NULL, derivFxnCall = NULL, fxnEnv = parent.frame()){
@@ -127,6 +120,7 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
       fxnCall[['order']] <- order
 
   nf <- eval(derivFxnCall[[1]], envir = fxnEnv)
+  derivFxnCall <- match.call(nf, derivFxnCall)
   fA <- formals(nf)
   
   if(is.null(wrt)) {
@@ -156,39 +150,23 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
   # get the user-supplied arguments to the nFunction
   derivFxnCall_args <- as.list(derivFxnCall)[-1]
 
-  # handle partial matches of named derivFxnCall args with the nFunction's
-  # formal args
-  names(derivFxnCall_args) <- match.arg(
-    names(derivFxnCall_args), names(fA), several.ok = TRUE
-  )
-
-  # match args to the formals
-  formal_index <- sapply(names(derivFxnCall_args), function(x) {
-    if (!is.na(x)) which(names(fA) == x) else 0
-  })
-  needs_index <- formal_index == 0
-  index_fill <- (1:length(fA))[!1:length(fA) %in% formal_index]
-  formal_index[needs_index] <- index_fill
-
-  # reorder the args to match the formals ordering
-  derivFxnCall_args <- derivFxnCall_args[formal_index]
-  names(derivFxnCall_args) <- names(fA)
-
   ## Get the value of the args
   fxnArgs <- lapply(derivFxnCall_args,
                     function(x) 
                       eval(x, envir = fxnEnv))
 
-  arg_symbols <- slot(nf, 'internals')$argSymTab$getSymbols()
+  arg_symbols <- NFinternals(nf)$argSymTab$getSymbols()
 
+  ## check that supplied args have sizes we expect from the symbol table
   for (arg_name in names(fA)) {
-    if (!all(arg_symbols[[arg_name]]$size == dimOrLength(fxnArgs[[arg_name]])))
+    if (!identical(as.integer(arg_symbols[[arg_name]]$size),
+                   as.integer(nDim(fxnArgs[[arg_name]]))))
       stop(paste0(
         "Error:  the '", arg_name, "' argument you provided to the nFunction '",
-        deparse(derivFxnCall[[1]]), "' in this call to nDerivs() does not have",
+        deparse(derivFxnCall[[1]]), "' in nDerivs() does not have",
         ' the right sizes. Expected (',
         paste(arg_symbols[[arg_name]]$size, collapse = ', '), ') but got (',
-        dimOrLength(fxnArgs[[arg_name]]), ').'
+        nDim(fxnArgs[[arg_name]]), ').'
       ))
   }
 
@@ -213,7 +191,7 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
     ## Below, x represents the input argument to func
     this_unique_wrt_string <- wrt_unique_name_strings[i]
     ##
-    dims <- dimOrLength(fxnArgs[[this_unique_wrt_string]])
+    dims <- nDim(fxnArgs[[this_unique_wrt_string]])
     ##
     assign(this_unique_wrt_string, array(1:prod(dims), dim = dims), envir = eval_env)
     
