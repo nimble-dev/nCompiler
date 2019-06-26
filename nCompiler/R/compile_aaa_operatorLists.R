@@ -72,19 +72,44 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('('),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryCwise'
+    ),
+    cppOutput = list(
+      handler = 'Paren')
+  )
+)
+
+assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'IndexingBracket'
+      handler = 'Bracket'
     ),
     eigenImpl = list(
-      toEigen = 'Maybe',
-      handler = 'IndexingBracket'
-    ),
-    cppOutput = list(
-      handler = 'Bracket')
+      handler = 'Bracket'
+    )
   )
 )
+
+assignOperatorDef(
+  c('index['),
+  list(
+    cppOutput = list(
+      handler = 'IndexingBracket')
+  )
+)
+
+assignOperatorDef(
+  c('index('),
+  list(
+    cppOutput = list(
+      handler = 'IndexingParen')
+  )
+)
+
 
 assignOperatorDef(
   c('<-','<<-','='),

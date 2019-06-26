@@ -27,49 +27,49 @@ using namespace Rcpp;
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]
 
-Eigen::Tensor<double, 1>  nClass_1::nFun_1_NFID_1 ( Eigen::Tensor<double, 1> ARG1_arg1_ )  {
+Eigen::Tensor<double, 1>  nClass_1::nFun_1_NFID_1 ( Eigen::Tensor<double, 1> arg1 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 1>  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<int, 1> ARG1_arg1_ )  {
+Eigen::Tensor<int, 1>  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<int, 1> arg1 )  {
 Eigen::Tensor<int, 1> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 1>  nClass_1::nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> ARG1_arg1_ )  {
+Eigen::Tensor<int, 1>  nClass_1::nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> arg1 )  {
 Eigen::Tensor<int, 1> ans;
-ans = ((ARG1_arg1_).cast<int>()).cube();
+ans = ((arg1).cast<int>()).cube();
 return(ans);
 }
-Eigen::Tensor<double, 2>  nClass_1::nFun_4_NFID_4 ( Eigen::Tensor<double, 2> ARG1_arg1_ )  {
+Eigen::Tensor<double, 2>  nClass_1::nFun_4_NFID_4 ( Eigen::Tensor<double, 2> arg1 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 2>  nClass_1::nFun_5_NFID_5 ( Eigen::Tensor<int, 2> ARG1_arg1_ )  {
+Eigen::Tensor<int, 2>  nClass_1::nFun_5_NFID_5 ( Eigen::Tensor<int, 2> arg1 )  {
 Eigen::Tensor<int, 2> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 2>  nClass_1::nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> ARG1_arg1_ )  {
+Eigen::Tensor<int, 2>  nClass_1::nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> arg1 )  {
 Eigen::Tensor<int, 2> ans;
-ans = ((ARG1_arg1_).cast<int>()).cube();
+ans = ((arg1).cast<int>()).cube();
 return(ans);
 }
-Eigen::Tensor<double, 3>  nClass_1::nFun_7_NFID_7 ( Eigen::Tensor<double, 3> ARG1_arg1_ )  {
+Eigen::Tensor<double, 3>  nClass_1::nFun_7_NFID_7 ( Eigen::Tensor<double, 3> arg1 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 3>  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<int, 3> ARG1_arg1_ )  {
+Eigen::Tensor<int, 3>  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<int, 3> arg1 )  {
 Eigen::Tensor<int, 3> ans;
-ans = (ARG1_arg1_).cube();
+ans = (arg1).cube();
 return(ans);
 }
-Eigen::Tensor<int, 3>  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> ARG1_arg1_ )  {
+Eigen::Tensor<int, 3>  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> arg1 )  {
 Eigen::Tensor<int, 3> ans;
-ans = ((ARG1_arg1_).cast<int>()).cube();
+ans = ((arg1).cast<int>()).cube();
 return(ans);
 }
 
@@ -119,15 +119,15 @@ using namespace Rcpp;
 
 class nClass_1 : public genericInterfaceC<nClass_1> {
 public:
-Eigen::Tensor<double, 1>  nFun_1_NFID_1 ( Eigen::Tensor<double, 1> ARG1_arg1_ );
-Eigen::Tensor<int, 1>  nFun_2_NFID_2 ( Eigen::Tensor<int, 1> ARG1_arg1_ );
-Eigen::Tensor<int, 1>  nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> ARG1_arg1_ );
-Eigen::Tensor<double, 2>  nFun_4_NFID_4 ( Eigen::Tensor<double, 2> ARG1_arg1_ );
-Eigen::Tensor<int, 2>  nFun_5_NFID_5 ( Eigen::Tensor<int, 2> ARG1_arg1_ );
-Eigen::Tensor<int, 2>  nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> ARG1_arg1_ );
-Eigen::Tensor<double, 3>  nFun_7_NFID_7 ( Eigen::Tensor<double, 3> ARG1_arg1_ );
-Eigen::Tensor<int, 3>  nFun_8_NFID_8 ( Eigen::Tensor<int, 3> ARG1_arg1_ );
-Eigen::Tensor<int, 3>  nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> ARG1_arg1_ );
+Eigen::Tensor<double, 1>  nFun_1_NFID_1 ( Eigen::Tensor<double, 1> arg1 );
+Eigen::Tensor<int, 1>  nFun_2_NFID_2 ( Eigen::Tensor<int, 1> arg1 );
+Eigen::Tensor<int, 1>  nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> arg1 );
+Eigen::Tensor<double, 2>  nFun_4_NFID_4 ( Eigen::Tensor<double, 2> arg1 );
+Eigen::Tensor<int, 2>  nFun_5_NFID_5 ( Eigen::Tensor<int, 2> arg1 );
+Eigen::Tensor<int, 2>  nFun_6_NFID_6 ( Eigen::Tensor<bool, 2> arg1 );
+Eigen::Tensor<double, 3>  nFun_7_NFID_7 ( Eigen::Tensor<double, 3> arg1 );
+Eigen::Tensor<int, 3>  nFun_8_NFID_8 ( Eigen::Tensor<int, 3> arg1 );
+Eigen::Tensor<int, 3>  nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> arg1 );
 };
 
 SEXP  new_nClass_1 (  );

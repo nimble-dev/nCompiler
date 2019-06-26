@@ -440,7 +440,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  IndexingBracket <- function(code, symTab, auxEnv, handlingInfo) {
+  Bracket <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
     ## drop must be named if provided, so this should work
@@ -473,7 +473,7 @@ inLabelAbstractTypesEnv(
           exprClassProcessingErrorMsg(
             code,
             paste0(
-              "In IndexingBracket: '", obj$name,
+              "In Bracket: '", obj$name,
               "' is a scalar; expected at most 1 indexing arg but received ",
               length(index_args), "."
             )
@@ -486,7 +486,7 @@ inLabelAbstractTypesEnv(
         exprClassProcessingErrorMsg(
           code,
           paste0(
-            "In IndexingBracket: number of indexing arguments does not match the dimension of '",
+            "In Bracket: number of indexing arguments does not match the dimension of '",
             obj$name, "'; expected ", nDim, " but received ", length(index_args), "."
           )
         ), call. = FALSE
@@ -509,7 +509,7 @@ inLabelAbstractTypesEnv(
           stop(
             exprClassProcessingErrorMsg(
               code,
-              "In IndexingBracket: non-scalar indexing expressions other than ':' not currently supported."
+              "In Bracket: non-scalar indexing expressions other than ':' not currently supported."
             ), call. = FALSE
           )
 
@@ -520,7 +520,7 @@ inLabelAbstractTypesEnv(
           stop(
             exprClassProcessingErrorMsg(
               code,
-              paste0("In IndexingBracket: '", index_args[[i]]$name,
+              paste0("In Bracket: '", index_args[[i]]$name,
                      "' has no dimension.")
             ), call. = FALSE
           )
@@ -529,7 +529,7 @@ inLabelAbstractTypesEnv(
           stop(
             exprClassProcessingErrorMsg(
               code,
-              paste0("In IndexingBracket: '", index_args[[i]]$name,
+              paste0("In Bracket: '", index_args[[i]]$name,
                      "' is a logical which is not allowed when indexing.")
             ), call. = FALSE
           )
@@ -538,7 +538,7 @@ inLabelAbstractTypesEnv(
             exprClassProcessingErrorMsg(
               code,
               paste0(
-                "In IndexingBracket: the dimension of '", index_args[[i]]$name,
+                "In Bracket: the dimension of '", index_args[[i]]$name,
                 " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
               )
             ), call. = FALSE
@@ -548,7 +548,7 @@ inLabelAbstractTypesEnv(
             exprClassProcessingErrorMsg(
               code,
               paste0(
-                "In IndexingBracket: '", obj$name,
+                "In Bracket: '", obj$name,
                 "' is a scalar but the indexing arg has dimension ",
                 index_args[[i]]$type$nDim, "."
               )
@@ -561,7 +561,7 @@ inLabelAbstractTypesEnv(
 
     drop <- TRUE
     if (nDim == 0) {
-      ## if we're indexing a scalar, just ignore the drop arg
+      # If we're indexing a scalar, any drop arg provided is ignored.
       drop <- FALSE
     } else if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
@@ -580,7 +580,7 @@ inLabelAbstractTypesEnv(
         stop(
           exprClassProcessingErrorMsg(
             code,
-            'In IndexingBracket: the drop argument must be a literal.'
+            'In Bracket: the drop argument must be a literal.'
           ), call. = FALSE
         )
       }
@@ -596,7 +596,7 @@ inLabelAbstractTypesEnv(
       ## set 'drop' as the last arg in the AST
       setArg(code, 'drop', drop_arg, add = TRUE)
     }
-    
+
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }

@@ -27,9 +27,9 @@ using namespace Rcpp;
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]
 
-int  nClass_1::nFun_1_NFID_1 ( int ARG1_arg1_, int ARG2_arg2_ )  {
+int  nClass_1::nFun_1_NFID_1 ( int arg1, int arg2 )  {
 int ans;
-flex_(ans) = ARG1_arg1_ % ARG2_arg2_;
+flex_(ans) = arg1 % arg2;
 return(ans);
 }
 
@@ -71,7 +71,7 @@ using namespace Rcpp;
 
 class nClass_1 : public genericInterfaceC<nClass_1> {
 public:
-int  nFun_1_NFID_1 ( int ARG1_arg1_, int ARG2_arg2_ );
+int  nFun_1_NFID_1 ( int arg1, int arg2 );
 };
 
 SEXP  new_nClass_1 (  );
