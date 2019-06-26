@@ -9,6 +9,7 @@ NF_InternalsClass <- R6::R6Class(
         argSymTab = list(),
         returnSym = NULL,
         where = NULL,
+        isMethod = FALSE,
         uniqueName = character(),
         cpp_code_name = character(),
         template = NULL,

@@ -49,9 +49,10 @@ NCvirtual_CompilerClass <- R6::R6Class(
                                                   neededTypes = list())
             }
         },
-        createCppMethods = function(control) {
+        createCppMethods = function(control,
+                                    sourceObj) {
             for(i in seq_along(NFcompilers)) {
-                NFcompilers[[i]]$createCpp()
+                NFcompilers[[i]]$createCpp(sourceObj = sourceObj)
             }
         }
     )
@@ -67,12 +68,14 @@ NC_CompilerClass <- R6::R6Class(
             super$initialize(NC = NC,
                              className = className)
         },
-        createCpp = function(control = list()) {
+        createCpp = function(control = list(),
+                             sourceObj) {
             controlFull <- updateDefaults(
                 get_nOption('compilerOptions'),
                 control
             )
-            process(control = controlFull)
+            process(control = controlFull,
+                    sourceObj)
             cppDef <<- cpp_nClassClass$new(
                 Compiler = self,
                 name = self$name
@@ -80,7 +83,8 @@ NC_CompilerClass <- R6::R6Class(
             cppDef$buildAll()
             invisible(NULL)
         },
-        process = function(control = list()) {
+        process = function(control = list(),
+                           sourceObj) {
             controlFull <- updateDefaults(
                 get_nOption('compilerOptions'),
                 control
@@ -88,7 +92,8 @@ NC_CompilerClass <- R6::R6Class(
             if(is.null(symbolTable)) {
                 makeSymbolTables()
             }
-            createCppMethods(control = controlFull)
+            createCppMethods(control = controlFull,
+                             sourceObj)
             ##collectNeededTypes()
             invisible(NULL)
         },

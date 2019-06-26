@@ -33,7 +33,8 @@ nCompile_nClass <- function(NC,
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC)
     ## Use the compiler to generate a cppDef
-    NC_Compiler$createCpp(control = controlFull)
+    NC_Compiler$createCpp(control = controlFull,
+                          sourceObj = NC) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     ##
