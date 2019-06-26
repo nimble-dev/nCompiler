@@ -264,7 +264,7 @@ inLabelAbstractTypesEnv(
         ), call. = FALSE
       )
 
-    code$type <- symbolBasic$new(nDim = 1, type = 'int')
+    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
 
     invisible(inserts)
   }
