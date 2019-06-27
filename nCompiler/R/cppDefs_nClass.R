@@ -271,7 +271,9 @@ addADmethodMacros = function(funName, args) {
         },
 
         addADclassContent = function() {
-           ## self$CPPincludes <- c("<cppad/cppad.hpp>", self$CPPincludes)
+            ## self$CPPincludes <- c("<cppad/cppad.hpp>", self$CPPincludes)
+            if(!length( NCinternals(self$Compiler$NCgenerator)$enableDerivs ))
+                return(invisible(NULL))
             self$Hincludes <- c(##"<cppad/cppad.hpp>",
                                nCompilerIncludeFile("nCompiler_CppAD.h"), Hincludes)
           ##  addInheritance("nFunctionCppADbase")
