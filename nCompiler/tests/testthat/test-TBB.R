@@ -37,8 +37,6 @@ test_that("Simple parallel example works", {
   # Cnc <- nCompile_nClass(nc, control = list(endStage = "makeCppDef"))
   # writeCode(Cnc$generate())
   # writeCode(Cnc$generate(TRUE))
-  
-  set_nOption("showCompilerOutput", TRUE)
   Cnc <- nCompile_nClass(nc)
   nc1 <- nc$new()
   Cnc1 <- Cnc$new()
