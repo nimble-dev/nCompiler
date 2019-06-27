@@ -154,16 +154,16 @@ assignOperatorDef(
           handler = 'cWiseAddSub'),
         cppOutput = list(
           handler = 'BinaryOrUnary'),
-        testthat = list(
+        testing = list(
           isBinary = TRUE,
           testMath = TRUE,
           testAD = TRUE)
     )
 )
-updateOperatorDef('-', 'testthat', 'isUnary', TRUE)
+updateOperatorDef('-', 'testing', 'isUnary', TRUE)
 ## add descriptive name for filenaming gold files
-updateOperatorDef('-', 'testthat', 'alpha_name', 'minus')
-updateOperatorDef('+', 'testthat', 'alpha_name', 'plus')
+updateOperatorDef('-', 'testing', 'alpha_name', 'minus')
+updateOperatorDef('+', 'testing', 'alpha_name', 'plus')
 
 assignOperatorDef(
   c('min', 'max'),
@@ -177,7 +177,7 @@ assignOperatorDef(
       handler = 'Reduction',
       method = TRUE),
     cppOutput = list(),
-    testthat = list(
+    testing = list(
       reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
@@ -196,7 +196,7 @@ assignOperatorDef(
       handler = 'cWiseBinary',
       method = TRUE),
     cppOutput = list(),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE)
   )
@@ -258,7 +258,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = 'TensorReduction'
     ),
-    testthat = list(
+    testing = list(
       reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
@@ -279,7 +279,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = ''
     ),
-    testthat = list(
+    testing = list(
       reductionOp = TRUE,
       isUnary = TRUE,
       testMath = TRUE)
@@ -300,7 +300,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = ''
     ),
-    testthat = list(
+    testing = list(
       isUnary = TRUE,
       testMath = TRUE,
       testAD = TRUE)
@@ -321,7 +321,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = ''
     ),
-    testthat = list(
+    testing = list(
       isUnary = TRUE,
       testMath = TRUE,
       testAD = TRUE)
@@ -342,7 +342,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = ''
     ),
-    testthat = list(
+    testing = list(
       isUnary = TRUE,
       testMath = TRUE,
       testAD = TRUE)
@@ -360,7 +360,7 @@ assignOperatorDef(
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
       handler = 'MidOperator'),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE)
   )
@@ -371,14 +371,14 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
-updateOperatorDef('==', 'testthat', 'alpha_name', 'eq')
-updateOperatorDef('!=', 'testthat', 'alpha_name', 'neq')
-updateOperatorDef('<=', 'testthat', 'alpha_name', 'le')
-updateOperatorDef('>=', 'testthat', 'alpha_name', 'ge')
-updateOperatorDef('<', 'testthat', 'alpha_name', 'lt')
-updateOperatorDef('>', 'testthat', 'alpha_name', 'gt')
-updateOperatorDef('&', 'testthat', 'alpha_name', 'and')
-updateOperatorDef('|', 'testthat', 'alpha_name', 'or')
+updateOperatorDef('==', 'testing', 'alpha_name', 'eq')
+updateOperatorDef('!=', 'testing', 'alpha_name', 'neq')
+updateOperatorDef('<=', 'testing', 'alpha_name', 'le')
+updateOperatorDef('>=', 'testing', 'alpha_name', 'ge')
+updateOperatorDef('<', 'testing', 'alpha_name', 'lt')
+updateOperatorDef('>', 'testing', 'alpha_name', 'gt')
+updateOperatorDef('&', 'testing', 'alpha_name', 'and')
+updateOperatorDef('|', 'testing', 'alpha_name', 'or')
 
 assignOperatorDef(
   c('/'),
@@ -390,13 +390,13 @@ assignOperatorDef(
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE,
       testAD = TRUE)
   )
 )
-updateOperatorDef('/', 'testthat', 'alpha_name', 'div')
+updateOperatorDef('/', 'testing', 'alpha_name', 'div')
 
 assignOperatorDef(
   c('*'),
@@ -410,13 +410,13 @@ assignOperatorDef(
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE,
       testAD = TRUE)
   )
 )
-updateOperatorDef('*', 'testthat', 'alpha_name', 'mult')
+updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
 
 assignOperatorDef(
   c('^'),
@@ -430,13 +430,13 @@ assignOperatorDef(
     cppOutput = list(
       cppString = 'pow',
       handler = ''),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE,
       testAD = FALSE)
   )
 )
-updateOperatorDef('^', 'testthat', 'alpha_name', 'pow')
+updateOperatorDef('^', 'testing', 'alpha_name', 'pow')
 
 assignOperatorDef(
   c('%%'),
@@ -449,17 +449,17 @@ assignOperatorDef(
     cppOutput = list(
       handler = 'MidOperator',
       cppString = ' % '),
-    testthat = list(
+    testing = list(
       isBinary = TRUE,
       testMath = TRUE)
   )
 )
-updateOperatorDef('%%', 'testthat', 'alpha_name', 'mod')
+updateOperatorDef('%%', 'testing', 'alpha_name', 'mod')
 
 assignOperatorDef(
   c('%*%'),
   list(
-    testthat = list(
+    testing = list(
       matrixMultOp = TRUE,
       isBinary = TRUE)
   )
@@ -479,7 +479,7 @@ assignOperatorDef(
     cppOutput = list(
       handler = 'RR_Distribution'
     ),
-    testthat = list(
+    testing = list(
       recyclingRuleOp = TRUE
     )
   )
