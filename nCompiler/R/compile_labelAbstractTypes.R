@@ -325,39 +325,14 @@ inLabelAbstractTypesEnv(
       stop(
         exprClassProcessingErrorMsg(
           code, paste(
-                  'In sizeColonOperator: Problem determining',
-                  'size for : without two arguments.'
+                  "In sizeColonOperator: Problem determining ",
+                  "size for ':' without two arguments."
                 )
         ), call. = FALSE
       )
 
-    for (i in 1:2) {
-        if (inherits(code$args[[i]], 'exprClass')) {
-            if (!code$args[[i]]$isName) {
-              if (!(code$args[[i]]$name == '[' &&
-                    (code$args[[i]]$args[[1]]$name == 'dim' &&
-                     code$args[[i]]$args[[1]]$args[[1]]$name == 'nfVar'))) {
-                inserts <- c(
-                  inserts ##, sizeInsertIntermediate(code, i, symTab, typeEnv)
-                )
-              }
-            }
-        }
-    }
+    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
 
-    code$type <- symbolBasic$new(nDim = 1, type = 'double')
-
-    ## could generate an assertion that second arg is >= first arg
-    if(is.numeric(code$args[[1]]) & is.numeric(code$args[[2]])) {
-      ## do we need to annotate code$type$size here?
-      ## code$sizeExprs <- list(code$args[[2]] - code$args[[1]] + 1)
-    } else { ## at least one part is an expression
-        ## This is an awkward case:
-        ## sizeExprs are R parse trees, not exprClasses
-        ## But in this case, we want the expression from an exprClass.
-        ## so we need to nimDeparse and then parse them
-        ## code$sizeExprs <- list(substitute( A - B + 1, list(A = parse(text = nimDeparse(code$args[[2]]), keep.source = FALSE)[[1]], B = parse(text = nimDeparse(code$args[[1]]), keep.source = FALSE)[[1]] ) ) )
-    }
     invisible(inserts)
   }
 )
