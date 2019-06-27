@@ -118,6 +118,7 @@ test_AD <- function(base_list, verbose = nimbleOptions('verbose'),
 
         this_nf <- nC$public_methods[[nFun_i]]
         nCompiler:::nDerivs_nf(
+          ## TODO: the name of this arg is going to be changed to fxnCall
           derivFxnCall = as.call(c(quote(this_nf), input)),
           wrt = wrt
         )
