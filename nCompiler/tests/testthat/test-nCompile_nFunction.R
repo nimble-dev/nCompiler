@@ -1,5 +1,22 @@
 context("Testing nFunction compilation")
 
+nc <- nClass(
+  Cpublic = list(
+    go = nFunction(
+      fun = function(x = 'numericVector') {
+        y <- x
+        for(i in 1:10) {
+          y[i] <- 2 * x[i]
+        }
+        return(y)
+      },
+      returnType = 'numericVector'
+    )
+  )
+)
+Cnc <- nCompile_nClass(nc)
+Cnc$new()$go(1:10)
+
 test_that("addScalars double",
 {
     addScalars <- nFunction(

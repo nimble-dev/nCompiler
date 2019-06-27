@@ -24,6 +24,11 @@ if (WRITE_GOLD_FILES) {
   )
 }
 
+## Ensure that generated strings for unique names
+## have counters that start at 1
+nCompiler:::nFunctionIDMaker(reset = TRUE)
+nCompiler:::nClassIDMaker(reset = TRUE)
+
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass
 ##   2 = group operators by type in one nClass

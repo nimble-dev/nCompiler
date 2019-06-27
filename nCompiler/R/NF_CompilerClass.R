@@ -279,21 +279,6 @@ processNFstages <- function(NFcompiler,
         logAfterStage(stageName)
       }
     }
-
-    # stageName <- 'initializeAuxiliaryEnvironment'
-    # if (logging) logBeforeStage(stageName)
-    # if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-    # if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-    #     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    #     NFtry({
-    #         compilerStage_initializeAuxEnv(NFcompiler,
-    #                                        debug)
-    #     }, 
-    #     stageName,
-    #     use_nCompiler_error_handling)
-    #     NFcompiler$stageCompleted <- stageName
-    #     if (logging) logAfterStage(stageName)
-    # }
     
     ## annotate sizes and types
     stageName <- 'labelAbstractTypes'
@@ -316,26 +301,6 @@ processNFstages <- function(NFcompiler,
           logAST(NFcompiler$code, showImpl = FALSE)
           logAfterStage(stageName)
         }
-    }
-
-    ## experimental
-    ##    if(isTRUE(nOptions('experimentalNewSizeProcessing'))) {
-    stageName <- 'setToEigen'
-    if (logging) logBeforeStage(stageName)
-    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-      eval(NFcompilerMaybeDebug(stageName, controlFull))
-      NFtry({
-        compilerStage_setToEigen(NFcompiler,
-                                 debug)
-      }, 
-      stageName,
-      use_nCompiler_error_handling)
-      NFcompiler$stageCompleted <- stageName
-      if (logging) {
-        logAST(NFcompiler$code)
-        logAfterStage(stageName)
-      }
     }
 
     ## insert new lines created by size processing
@@ -373,25 +338,6 @@ processNFstages <- function(NFcompiler,
       if (logging) logAfterStage(stageName)
     }
     
-    ## label lines suitable for implementation by Eigen back-end
-    stageName <- 'labelForEigen'
-    if (logging) logBeforeStage(stageName)
-    if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-    if(!NFcompilerMaybeSkip(stageName, controlFull)) {
-      eval(NFcompilerMaybeDebug(stageName, controlFull))
-      NFtry({
-        compileInfo_labelForEigenization(NFcompiler,
-                                       debug)
-      }, 
-      stageName,
-      use_nCompiler_error_handling)
-      NFcompiler$stageCompleted <- stageName
-      if (logging) {
-        logAST(NFcompiler$code)
-        logAfterStage(stageName)
-      }
-    }
-
     ## modify code either for Eigen or Tensorflow back-end
     stageName <- 'doImplementation'
     if (logging) logBeforeStage(stageName)
