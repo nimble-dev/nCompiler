@@ -31,7 +31,6 @@ Collate:
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
     compile_finalTransformations.R
-    compile_setToEigen.R
     cppDefs_ADutils.R
     cppDefs_core.R
     cppDefs_nFunction.R

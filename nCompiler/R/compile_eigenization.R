@@ -1,64 +1,3 @@
-######################################
-## System to label for eigenization ##
-######################################
-
-## exprClasses_labelForEigenization 
-##
-## This works recursively through a parse tree (exprClass object)
-## Any expression in which any piece has a size expression (in its exprClass object) that is not all 1s
-## will be wrapped in eigenize(). The exception is expressions that have indexing.
-##
-## e.g. In Y <- t(A) %*% A
-## The result of t(A) %*% A might be length 1, but the A and t(A) have size expressions != 1, so this whole line becomes
-## eigenize(Y <- t(A) %*% A)
-##
-## On the other hand, Y <- B[3,4] is not wrapped in eigenize() because, even though B might have non-1 size expressions,
-## the exprClass object for `[`(B, 3, 4) has size expressions == list(1, 1)
-##
-## two kinds of intermediates should have already been pulled out:
-## 1. arguments to nFunctions or keywords like return() that ever involve non-scalar-equivalent steps
-## 2. nFunctions that return non-scalar-equivalent and are used within a larger expression
-
-exprClasses_labelForEigenization <- function(code) {
-
-    if(code$isCall) {
-        if(code$name == '{') {
-            for(i in seq_along(code$args)) {
-                exprClasses_labelForEigenization(code$args[[i]])
-            }
-            return(invisible(NULL))
-        }
-        if(code$name == 'for') {
-            exprClasses_labelForEigenization(code$args[[3]])
-            return(invisible(NULL))
-        }
-        if(code$name %in% ifOrWhile) {
-            exprClasses_labelForEigenization(code$args[[2]])
-            if(length(code$args) == 3) exprClasses_labelForEigenization(code$args[[3]])
-            return(invisible(NULL))
-        }
-        if(code$name == 'nimSwitch') {
-            if(length(code$args) > 2)
-                for(iSwitch in 3:length(code$args))
-                    exprClasses_labelForEigenization(code$args[[iSwitch]])
-            return(invisible(NULL))
-        }
-        if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
-
-        if(length(code$implementation$toEigen) > 0) {
-          if(code$implementation$toEigen == 'yes') {
-         ##   if(anyNonScalar(code)) {
-                output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
-        	return(output)
-         ##   }
-            }
-        }
-    }
-    invisible(NULL)
-}
-
-
-
 ##############
 ## Eigenize ##
 ##############
@@ -94,14 +33,15 @@ compile_eigenize <- function(code,
     if(code$isCall) {
         if(code$name == '{') {
             for(i in seq_along(code$args)) {
-                recurse <- FALSE
-                if(code$args[[i]]$name == 'eigenize') {
-                    removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
-                    recurse <- TRUE
-                }
-                if(code$args[[i]]$name %in%
-                   c('for', ifOrWhile, '{', 'nimSwitch'))
-                    recurse <- TRUE
+                ## recurse <- FALSE
+                ## if(code$args[[i]]$name == 'eigenize') {
+                ##     removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
+                ##     recurse <- TRUE
+                ## }
+                ## if(code$args[[i]]$name %in%
+                ##    c('for', ifOrWhile, '{', 'nimSwitch'))
+                ##     recurse <- TRUE
+                recurse <- TRUE
                 if(recurse) {
                     setupCalls <- unlist(
                         compile_eigenize(code$args[[i]],
@@ -453,6 +393,17 @@ inEigenizeEnv(
       # TODO: if (code$args[[1]]$type$nDim == 0)
       if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
       else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
+      ## We see inconsistent C++ compiler behavior around casting a double index
+      ## to a long index, so we do it explicitly.
+      ## Right now we will hard-code the type "long" assuming it is the underlying
+      ## type. We could more generally use EigenType::Index where EigenType is the type
+      ## of the indexed variable, assuming it can't be an expression.
+      if(length(code$args)>1) {
+        for(i in 2:length(code$args)) {
+          insertExprClassLayer(code, i, "static_cast<long>")
+        }
+      }
       return(invisible(NULL))
     }
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')

@@ -6,13 +6,12 @@ NFcompilerStages <- list(
     initializeAuxiliaryEnvironment = 4,
     simpleTransformations = 5,
     simpleIntermediates = 6,
-#    initializeAuxiliaryEnvironment = 6,
     labelAbstractTypes = 7,            # set 'type' field of every exprClass in a syntax tree
-    setToEigen = 8,                    # set 'toEigen' field to values ['Yes' | 'No' | 'Maybe'].
+##    setToEigen = 8
                                        # Yes means eigen is required (e.g. %*%).  No means eigen can't be used (e.g. print).  Maybe means eigen can be used or not (e.g. +).  
     addInsertions = 9,                 # Convert insertions entries of exprClass objects into lines of code in the syntax tree.  (Currently there are none.)
     setImplementation = 10,            # Mark symbols in the symbolTable with their implementation.  Currently only "Eigen"
-    labelForEigen = 11,                # Surround lines of code with eigenize() if they should be eigenized.
+#    labelForEigen = 11
     doImplementation = 12,             # Strip eigenize() and convert the line of code it contains to eigen code.
     addDebugging = 13,
     makeCppDef = 14,                    # Create a cppDef object to manage C++ code.

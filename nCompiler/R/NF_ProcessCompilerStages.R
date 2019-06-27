@@ -124,27 +124,6 @@ compilerStage_labelAbstractTypes <-
     invisible(NULL)
 }
 
-compilerStage_setToEigen <-
-  function(compileInfo,
-           debug = FALSE) {
-    if(debug) {
-      browser()
-      setToEigenEnv$.debug <- TRUE
-      nimDebug(compile_setToEigen)
-      nimDebugHandlerEnv(setToEigenEnv)
-      on.exit({
-        setToEigenEnv$.debug <- FALSE
-        nimUndebug(compile_setToEigen)
-        nimUndebugHandlerEnv(setToEigenEnv)
-      })
-    }
-    compile_setToEigen(compileInfo$code,
-                       compileInfo$symbolTable,
-                       compileInfo$auxEnv)
-    invisible(NULL)
-  }
-
-
 compileInfo_insertAssertions <- function(compileInfo,
                                          debug = FALSE) {
     if(debug) browser()
@@ -152,24 +131,6 @@ compileInfo_insertAssertions <- function(compileInfo,
     if(inherits(tryResult, 'try-error')) {
         stop(
             paste('There is some problem at the insertAdditions processing',
-                  'step for this code:\n',
-                  paste(deparse(compileInfo$origRcode),
-                        collapse = '\n'),
-                  collapse = '\n'),
-            call. = FALSE)
-    }
-    invisible(NULL)
-}
-
-compileInfo_labelForEigenization <- function(compileInfo,
-                                             debug = FALSE) {
-    if(debug) browser()
-    tryResult <- try(
-        exprClasses_labelForEigenization(compileInfo$code)
-    )
-    if(inherits(tryResult, 'try-error')) {
-        stop(
-            paste('There is some problem at the Eigen labeling processing ',
                   'step for this code:\n',
                   paste(deparse(compileInfo$origRcode),
                         collapse = '\n'),
