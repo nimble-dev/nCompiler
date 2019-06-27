@@ -107,13 +107,28 @@ compile_labelAbstractTypes <- function(code,
           ## But if not (if a custom handler was provided that avoided that change),
           ## it will still be caught here.
           if(!is.null(obj)) {
-            if(isNF(obj))
+            if(isNF(obj)) {
               opInfo <- operatorDefEnv[['nFunction']]
-            else
+              uniqueName <- NFinternals(obj)$uniqueName
+              if(length(uniqueName)==0)
+                stop(
+                  exprClassProcessingErrorMsg(
+                    code,
+                    paste0('nFunction ', code$name, 'is being called, ',
+                           'but it is malformed because it has no internal name.')),
+                  call. = FALSE)
+              if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
+                ## We could put the nFunction itself in the needed_nFunctions list,
+                ## but we do not as a way to avoid having many references to R6 objects
+                ## in a blind attempt to facilitate garbage collection based on past experience.
+                ## Instead, we provide what is needed to look up the nFunction again later.
+                auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
+              }
+            } else
               stop(exprClassProcessingErrorMsg(code,
                 paste0(code$name, 'is being used as a function, but it is not a nFunction.')),
                 call. = FALSE)
-              }
+          }
         }
         
         if(!is.null(opInfo)) {
