@@ -49,6 +49,7 @@ test_AD <- function(base_list, verbose = nimbleOptions('verbose'),
       silent = TRUE
     )
   }
+  ## TODO: use an expect_* here instead?
   if (inherits(nC_compiled, 'try-error')) {
     msg <- paste0(
       'The test of ', param$name, ' failed to compile.\n', CnfInst[1]
@@ -157,13 +158,20 @@ test_AD <- function(base_list, verbose = nimbleOptions('verbose'),
     for (wrt in names(param$wrts)) {
       if (verbose)
         cat("## Testing equality of outputs for ", wrt, '\n')
-      expect_equal( ## check values
-        as.vector(Cderivs[[wrt]]$value),
-        as.vector(Rderivs[[wrt]]$value)
-      )
-      expect_equal( ## check jacobians
-        as.vector(Cderivs[[wrt]]$jacobian),
-        as.vector(Rderivs[[wrt]]$jacobian)
+      test_that(
+        paste0("Compiled and uncompiled values and jacobians match for ", wrt),
+        {
+          expect_equal( ## check values
+            as.vector(Cderivs[[wrt]]$value),
+            as.vector(Rderivs[[wrt]]$value),
+            info = paste0("values with ", wrt)
+          )
+          expect_equal( ## check jacobians
+            as.vector(Cderivs[[wrt]]$jacobian),
+            as.vector(Rderivs[[wrt]]$jacobian),
+            info = paste0("jacobians with ", wrt)
+          )
+        }
       )
     }
 

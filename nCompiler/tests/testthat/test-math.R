@@ -50,7 +50,7 @@ run_test_suite(
 ## handle granularity level 1
 if (FULL_TESTING && isTRUE(FULL_TESTING_GRANULARITY == 1)) {
   ## put everything in one giant nClass
-  test_math(
+  test_base(
     c(unlist(unaryOpTests, recursive = FALSE),
       unlist(binaryOpTests, recursive = FALSE)),
     'testing math'

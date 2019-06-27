@@ -129,8 +129,11 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
     nFuns_error <- lapply(param_list[compile_error], gen_nFunction)
     if (length(nFuns_error) > 0) {
       names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
+      ## TODO: compile all nFunctions to ensure each one fails to compile?
       nC_error <- gen_nClass(list(Cpublic = nFuns_error))
-      expect_error(nCompile_nClass(nC_error, control = control), info = test_name)
+      test_that(paste0(test_name, " knownFailures fail to compile"),
+        expect_error(nCompile_nClass(nC_error, control = control))
+      )
     }
   }
 

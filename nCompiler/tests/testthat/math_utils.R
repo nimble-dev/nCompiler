@@ -45,18 +45,20 @@ test_math <- function(test_base_list, size = 3, catch_failures = FALSE,
       }
 
       if (verbose) cat("## Calling compiled nFunction ##\n")
-      wrap_if_matches(param$knownFailure, 'runs', expect_error, {
-        ansC <- do.call(nC_compiled_obj[[nFun_i]], args)
-        if(verbose) cat("## Testing equality ##\n")
-        if(is.array(ansC)) {
-          expect_equal(as.array(ansR),
-                       ansC,
-                       info = paste("Test:", param$name))
-        } else {
-          expect_equal(ansR,
-                       ansC,
-                       info = paste("Test:", param$name))
-        }
+      test_that("uncompiled and compiled math outputs match", {
+        wrap_if_matches(param$knownFailure, 'runs', expect_error, {
+          ansC <- do.call(nC_compiled_obj[[nFun_i]], args)
+          if (verbose) cat("## Testing equality ##\n")
+          if (is.array(ansC)) {
+            expect_equal(as.array(ansR),
+                         ansC,
+                         info = paste("Test:", param$name))
+          } else {
+            expect_equal(ansR,
+                         ansC,
+                         info = paste("Test:", param$name))
+          }
+        })
       })
     }
   }
