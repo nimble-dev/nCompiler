@@ -92,12 +92,12 @@ test_that("nCompile_nClass works with one method calling another",
                   returnType = 'numericScalar')
               )
             )
-            
-            ans <- try(nCompile_nClass(nc1, interface = "generic", control = list(endStage = 'writeCpp')))
+            ans <- try(nCompile_nClass(nc1, interface = "generic"))
             expect_true(is.function(ans)) ## compilation succeeded
             obj <- ans()
             expect_true(class(obj) == "loadedObjectEnv")
             expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+            expect_equal(method(obj, "Cbar")(1.2), 2.2)
           })
 
 test_that("nCompile_nClass works 2",
