@@ -127,7 +127,7 @@ installLocalDLLpackage <- function(lib, source.dir = '.') {
 #' @seealso \link{\code{setup_nCompLocal}}
 #' 
 #' @export
-buildLocalDLLpackage <- function(dir = get_nOption("localDLLdir"),
+buildLocalDLLpackage <- function(dir = file.path(tempdir(), get_nOption("localDLLdir")),
                                  create.dir = TRUE,
                                  installInR = FALSE,
                                  cleanup = TRUE) {
@@ -184,7 +184,9 @@ buildLocalDLLpackage <- function(dir = get_nOption("localDLLdir"),
 #' @export
 setup_nCompLocal <- function() {
   # This function builds and installs a package in R's standard location
-  buildLocalDLLpackage(installInR = TRUE)
+  buildLocalDLLpackage(
+    dir = file.path(tempdir(), "setup_nCompLocal_files"),
+    installInR = TRUE)
 }
 
 #' Find and load, or possibly create, nCompLocal package.
@@ -210,7 +212,7 @@ requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
   if(!found)
     found <- require("nCompLocal", quietly = TRUE)
   if(!found) {
-    localDLLdir <- get_nOption("localDLLdir")
+    localDLLdir <- file.path(tempdir(), get_nOption("localDLLdir"))
     if(!is.null(localDLLdir)) {
       if(dir.exists(localDLLdir))
         found <- require("nCompLocal", lib.loc = file.path(localDLLdir, "nCompLocalLibrary"), quietly = TRUE)
@@ -222,7 +224,12 @@ requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
   } 
   if(buildIfMissing) {
       ok <- try({
-          message("Creating nCompLocal package from nCompiler.  This happens once per session if necessary, or once-per-installation if you run \"setup_nCompLocal()\".  See help(\"setup_nCompLocal\") for more information.")
+          message(paste0("Creating nCompLocal package from nCompiler.  ",
+                         "This happens once per session if necessary, or ",
+                         "once-per-installation if you run \"setup_nCompLocal()\". ",
+                         " See help(\"setup_nCompLocal\") for more information.  ",
+                         "(There may be a spurious warning message, after this ",
+                         "message, saying there is no nCompLocal package.) "))
       buildLocalDLLpackage()
       found <- require("nCompLocal", lib.loc = file.path(localDLLdir, "nCompLocalLibrary"), quietly = TRUE)
     })
