@@ -590,18 +590,19 @@ cppFunctionClass <- R6::R6Class(
                               return(character(0))
                           }
                       c(self$commentsAbove,
-                        paste(
+                        paste0(
                           generateFunctionHeader(self$returnType,
                                                  self$name,
                                                  argsListToUse,
                                                  scopes,
                                                  self$template,
                                                  static = FALSE,
-                                                 ...),
+                                                 ...), ' ',
                           if(self$const)
                             ' const '
                           else
-                            character(0),
+                            character(),
+                          ' ',
                           
                           if(!is.null(self$initializerList))
                             generatorinitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
