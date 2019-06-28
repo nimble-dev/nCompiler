@@ -5,60 +5,38 @@
 ## System to processSpecificCalls ##
 ####################################
 
+
 compile_simpleTransformations <- function(code,
-                                          symTab, 
-                                          auxEnv, 
+                                          symTab,
+                                          auxEnv,
                                           opInfoName = "simpleTransformations",
                                           handlerEnv = simpleTransformationsEnv) {
-    nErrorEnv$stateInfo <- paste0("handling simpleTransformations for ", code$name, ".")
-    if(code$isName) return(invisible())
-    if(code$isCall) {
-        for(i in seq_along(code$args)) {
-            if(inherits(code$args[[i]], 'exprClass')) {
-                compile_simpleTransformations(code$args[[i]], 
-                                              symTab, 
-                                              auxEnv,
-                                              opInfoName,
-                                              handlerEnv)
-            }
-        }
-        
-        opInfo <- operatorDefEnv[[code$name]]
-        ## TO-DO: Check for methods or nFunctions.
-        if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
-          obj <- get(code$name, envir = auxEnv$closure)
-          if(isNF(obj)) {
-            uniqueName <- NFinternals(obj)$uniqueName
-            if(length(uniqueName)==0)
-              stop(
-                exprClassProcessingErrorMsg(
-                  code,
-                  paste0('nFunction ', 
-                         code$name, 
-                         'is being called, but it is malformed because it has no internal name.')),
-                call. = FALSE)
-            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-              ## Avoid many references to R6 objects in a blind attempt to 
-              ## facilitate garbage collection.
-              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, 
-                                                             auxEnv$closure)
-            }
-            opInfo <- operatorDefEnv[['nFunction']]
-          }
-        }
-        
-        if(!is.null(opInfo)) {
-            handlingInfo <- opInfo[[ opInfoName ]]
-            if(!is.null(handlingInfo)) {
-                handler <- handlingInfo[['handler']]
-                if(!is.null(handler))
-                    eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                         envir = handlerEnv)
-            }
-        }
+  nErrorEnv$stateInfo <- paste0("handling ", opInfoName, " for ", code$name, ".")
+  if(code$isName) return(invisible())
+  if(code$isCall) {
+    for(i in seq_along(code$args)) {
+      if(inherits(code$args[[i]], 'exprClass')) {
+        compile_simpleTransformations(code$args[[i]],
+                                      symTab,
+                                      auxEnv,
+                                      opInfoName,
+                                      handlerEnv)
+      }
     }
-    nErrorEnv$stateInfo <- character()
-    invisible(NULL)
+    
+    opInfo <- operatorDefEnv[[code$name]]        
+    if(!is.null(opInfo)) {
+      handlingInfo <- opInfo[[opInfoName]]
+      if(!is.null(handlingInfo)) {
+        handler <- handlingInfo[['handler']]
+        if(!is.null(handler))
+          eval(call(handler, code, symTab, auxEnv, handlingInfo),
+               envir = handlerEnv)
+      }
+    }
+  }
+  nErrorEnv$stateInfo <- character()
+  invisible(NULL)
 }
 
 simpleTransformationsEnv <- new.env()

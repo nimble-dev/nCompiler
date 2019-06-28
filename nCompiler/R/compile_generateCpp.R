@@ -140,9 +140,9 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  Generic_nFunction <- function(code, symTab) {
-    paste0(code$aux$nFunctionInfo$cpp_code_name,
-           '(', paste0(unlist(lapply(code$args,
+    Generic_nFunction <- function(code, symTab) {
+    paste0(compile_generateCpp(code$args[[1]], symTab),
+           '(', paste0(unlist(lapply(code$args[-1],
                                      compile_generateCpp,
                                      symTab,
                                      asArg = TRUE) ),

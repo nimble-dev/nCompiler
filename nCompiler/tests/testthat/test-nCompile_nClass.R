@@ -69,6 +69,37 @@ test_that("nCompile_nClass works when there are no member data",
             expect_equal(method(obj, "Cfoo")(1.2), 2.2)
           })
 
+test_that("nCompile_nClass works with one method calling another",
+          {
+            nc1 <- nClass(
+              Rpublic = list(
+                Rv = NULL,
+                Rfoo = function(x) x+1
+              ),
+              Cpublic = list(
+                Cfoo = nFunction(
+                  fun = function(x) {
+                    return(x+1)
+                  },
+                  argTypes = list(x = 'numericScalar'),
+                  returnType = 'numericScalar'),
+                Cbar = nFunction(
+                  fun = function(w) {
+                    ans <- Cfoo(w)
+                    return(ans)
+                  },
+                  argTypes = list(w = 'numericScalar'),
+                  returnType = 'numericScalar')
+              )
+            )
+            ans <- try(nCompile_nClass(nc1, interface = "generic"))
+            expect_true(is.function(ans)) ## compilation succeeded
+            obj <- ans()
+            expect_true(class(obj) == "loadedObjectEnv")
+            expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+            expect_equal(method(obj, "Cbar")(1.2), 2.2)
+          })
+
 test_that("nCompile_nClass works 2",
 {
     nc1 <- nClass(

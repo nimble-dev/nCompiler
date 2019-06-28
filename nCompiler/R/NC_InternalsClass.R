@@ -19,6 +19,7 @@ NC_InternalsClass <- R6::R6Class(
         for(i in seq_along(Cpublic)) {
           if(isNF(Cpublic[[i]])) {
             isMethod[i] <- TRUE
+            NFinternals(Cpublic[[i]])$isMethod <- TRUE
             next;
           }
           if(is.function(Cpublic[[i]])) {
