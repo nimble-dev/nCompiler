@@ -78,7 +78,8 @@ NF_CompilerClass <- R6::R6Class(
     public = list(
         cppDef = NULL,
         ##Rwrapper = NULL,
-        createCpp = function(control = list()) {
+        createCpp = function(control = list(),
+                             sourceObj = NULL) {
             ## Do all steps to create C++ (and R wrapper).
             ## When the function is a class method, the NC_CompilerClass
             ## object manages these steps by calling process() and createCppInternal().
@@ -86,7 +87,8 @@ NF_CompilerClass <- R6::R6Class(
                 get_nOption('compilerOptions'),
                 control
             )
-            process(control = controlFull)
+            process(control = controlFull,
+                    sourceObj = sourceObj)
             createCppInternal()
         },
         createCppInternal = function() {
@@ -101,9 +103,10 @@ NF_CompilerClass <- R6::R6Class(
             invisible(NULL)
         },
         process = function(control = list(),
-                           doKeywords = TRUE,
-                          .nCompilerProject = NULL,
-                           initialTypeInferenceOnly = FALSE) {
+                           sourceObj = NULL,
+                           doKeywords = TRUE, ## deprecated?
+                          .nCompilerProject = NULL,  ## deprecated?
+                           initialTypeInferenceOnly = FALSE) { ## deprecated? 
             ## Do all steps of manipulating the abstract syntax tree
             ## to the point where it is ready to be used for C++ generation.
             controlFull <- updateDefaults(
@@ -112,6 +115,7 @@ NF_CompilerClass <- R6::R6Class(
             )
             processNFstages(self,
                             controlFull,
+                            sourceObj,
                             doKeywords,
                            .nCompilerProject,
                             initialTypeInferenceOnly)
@@ -121,6 +125,7 @@ NF_CompilerClass <- R6::R6Class(
 
 processNFstages <- function(NFcompiler,
                             control = list(),
+                            sourceObj = NULL,
                             doKeywords = TRUE,
                            .nCompilerProject = NULL,
                             initialTypeInferenceOnly = FALSE) {
@@ -232,6 +237,7 @@ processNFstages <- function(NFcompiler,
         eval(NFcompilerMaybeDebug(stageName, controlFull))
         NFtry({
             compilerStage_initializeAuxEnv(NFcompiler,
+                                           sourceObj,
                                            debug)
         },
         stageName,
