@@ -67,6 +67,24 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_for'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelFor'),
+    finalTransformations = list(
+      handler = "ParallelFor") ## Creates GeneralFor in the parallel_loop_body class
+  )
+)
+
+assignOperatorDef(
+  c('GeneralFor'),
+  list(
+    cppOutput = list(
+      handler = 'GeneralFor')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
@@ -89,11 +107,9 @@ assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'Bracket'
-    ),
+      handler = 'Bracket'),
     eigenImpl = list(
-      handler = 'Bracket' ## converts `[` to `index[`
-    ),
+      handler = 'Bracket'), ## converts `[` to `index[`
     cppOutput = list(
       handler = 'IndexingBracket') ## needed for generated code such as for AD.
   )

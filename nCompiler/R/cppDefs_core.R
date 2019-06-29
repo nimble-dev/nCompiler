@@ -500,9 +500,9 @@ cppCodeBlockClass <- R6::R6Class(
                     recurseSetCppADExprs(self$code, TRUE) 
                 outputCppCode <- c(outputCppCode,
                                    compile_generateCpp(self$code,
-                                                          useSymTab,
-                                                          indent = ' ',
-                                                          showBracket = FALSE)
+                                                       useSymTab,
+                                                       indent = ' ',
+                                                       showBracket = FALSE)
                                    )
                 if(isTRUE(self$cppADCode))
                     recurseSetCppADExprs(self$code, FALSE) 
@@ -532,6 +532,7 @@ cppFunctionClass <- R6::R6Class(
                   template = NULL,
                   const = FALSE,
                   classMethod = FALSE,
+                  initializerList = NULL,
                   commentsAbove = character(),
                   initialize = function(...) {
                       self$name <- character()
@@ -589,26 +590,43 @@ cppFunctionClass <- R6::R6Class(
                               return(character(0))
                           }
                       c(self$commentsAbove,
-                        paste(
-                            generateFunctionHeader(self$returnType,
-                                                   self$name,
-                                                   argsListToUse,
-                                                   scopes,
-                                                   self$template,
-                                                   static = FALSE,
-                                                   ...),
-                            if(self$const)
-                                ' const '
-                            else
-                                character(0),
-                            '{'
+                        paste0(
+                          generateFunctionHeader(self$returnType,
+                                                 self$name,
+                                                 argsListToUse,
+                                                 scopes,
+                                                 self$template,
+                                                 static = FALSE,
+                                                 ...), ' ',
+                          if(self$const)
+                            ' const '
+                          else
+                            character(),
+                          ' ',
+                          
+                          if(!is.null(self$initializerList))
+                            generatorinitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
+                          else
+                            character(0),
+                          '{'
                         ), ## end paste
                         self$code$generate(...),
                         list('}')
-                        )## end c()
+                      )## end c()
                   }
                   )
 )
+
+generatorinitializerList <- function(initializerList) { 
+  ## initializerList should be a list of exprClass objects
+  if(length(initializerList) == 0) return(character(0))
+  ## When no symbolTable is provided to compile_generateCpp, it just outputs
+  ## code$name entries.
+  initializers <- lapply(initializerList, compile_generateCpp)
+  result <- paste0(':\n',
+                   paste(initializers, collapse = ",\n"))
+  result
+}
 
 generateFunctionHeader <- function(returnType,
                                    name,

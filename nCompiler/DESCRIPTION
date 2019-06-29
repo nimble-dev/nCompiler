@@ -9,7 +9,7 @@ Description: Provides nFunction and nClass for function and class definitions fo
 Depends: R (>= 3.3.0)
 Imports:
     methods,R6,Rcpp,pkgKitten
-LinkingTo: Rcpp,Rcereal,RcppEigen,RcppEigenAD
+LinkingTo: Rcpp,Rcereal,RcppEigen,RcppParallel,RcppEigenAD
 License: BSD_3_clause + file LICENSE | GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
@@ -30,10 +30,12 @@ Collate:
     compile_liftMaps.R
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
+    compile_finalTransformations.R
     cppDefs_ADutils.R
     cppDefs_core.R
     cppDefs_nFunction.R
     cppDefs_nClass.R
+    cppDefs_TBB.R
     cppDefs_utils.R
     cppDefs_variables.R
     developerTools.R
@@ -46,7 +48,6 @@ Collate:
     NC_LoadedObjectEnv.R
     NC_Serialize.R
     NC_SimpleInterface.R
-    NC_TBBclass.R
     NC_Utils.R
     NF.R
     NF_Compile.R
@@ -58,11 +59,13 @@ Collate:
     NF_ProcessCompilerStages.R
     NF_Utils.R
     nCompile.R
+    nConstructor.R
     nTry.R
     packaging.R
     RcppExports.R
     Rcpp_nCompiler.R
     Rcpp_nCompiler_plugin.R
+    Rexecution.R
     Rhooks.R
     symbolTable.R
     symbolTableClass.R

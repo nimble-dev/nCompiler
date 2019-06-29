@@ -90,9 +90,9 @@ writePackage <- function(...,
   DESCRIPTION <- read.dcf(DESCfile)
   ## TO-DO: Make choice of what to include be smart about what is really needed.
   ## A nFunction might only need:
-  ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "nCompiler", sep = ",")
+  ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
   ## A nClass might need:
-    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "nCompiler", "Rcereal", sep = ",")
+    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.
   write.dcf(DESCRIPTION, DESCfile)
