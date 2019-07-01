@@ -132,8 +132,8 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       ## TODO: compile all nFunctions to ensure each one fails to compile?
       nC_error <- gen_nClass(list(Cpublic = nFuns_error))
       test_that(paste0(test_name, " knownFailures fail to compile"),
-        expect_error(nCompile_nClass(nC_error, control = control))
-      )
+                expect_error(nCompile_nClass(nC_error, control = control))
+                )
     }
   }
 
@@ -155,8 +155,6 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       isTRUE(param$enableDerivs)
     })
 
-    if (sum(enableDerivs_filter) > 0) set_nOption('automaticDerivatives', TRUE)
-
     nC <- gen_nClass(list(
       Cpublic = nFuns,
       enableDerivs = names(nFuns)[enableDerivs_filter]
@@ -165,7 +163,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
     ## if gold_test is TRUE, go directly to nCompiler stages without any
     ## checking for knownFailures and without proceeding to C++ compilation
     if (isTRUE(gold_test)) {
-      control$endStage <- 15 ## makeRcppPacket
+      control$endStage <- 'makeRcppPacket'
       ## make sure generated class / function names are the same every time
       return(
         test_gold_file(
@@ -251,8 +249,8 @@ test_batch <- function(test_fun, batch,
 ##   param$argTypes - A list of the input types.
 ##   param$returnType - The output type character string.
 test_param <- function(test_fun, param_list, test_name = '', size = 3,
-                      dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                      control = list(), verbose = nOptions('verbose'), ...) {
+                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                       control = list(), verbose = nOptions('verbose'), ...) {
   if (!is.list(param_list)) stop('param must be a list', call.=FALSE)
 
   ## in some cases, expect_error does not suppress error messages (I believe
@@ -283,8 +281,8 @@ names(inverseCallReplacements) <- unlist(
   nCompiler:::specificCallReplacements
 )
 inverseReplace <- function(x) {
-    replacement <- inverseCallReplacements[[x]]
-    if(is.null(replacement)) x else replacement
+  replacement <- inverseCallReplacements[[x]]
+  if(is.null(replacement)) x else replacement
 }
 
 modifyOnMatch <- function(x, pattern, key, value, env = parent.frame(), ...) {
@@ -354,12 +352,12 @@ return_type_string <- function(op, argTypes) {
 
   returnTypeCode <- nCompiler:::getOperatorDef(op, 'labelAbstractTypes',
                                                'returnTypeCode')
-  recycling_rule_op <- nCompiler:::getOperatorDef(op, 'testthat',
+  recycling_rule_op <- nCompiler:::getOperatorDef(op, 'testing',
                                                   'recyclingRuleOp')
 
   if (is.null(returnTypeCode))
     if (!isTRUE(recycling_rule_op)) return(argTypes[1])
-    else returnTypeCode <- 1
+  else returnTypeCode <- 1
 
   scalarTypeString <- switch(
     returnTypeCode,
@@ -377,29 +375,29 @@ return_type_string <- function(op, argTypes) {
     scalarTypeString <-
       if (length(argTypes) == 1)
         if (returnTypeCode == 5 && args[[1]]$type == 'logical') 'integer'
-        else args[[1]]$type
-      else if (length(argTypes) == 2) {
-        aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type)
-        if (returnTypeCode == 5 && aot == 'logical') 'integer'
-        else aot
-      } else {
-        stop(
-          paste0(
-            'Testing does not currently know how to handle ops with more than 2',
-            ' args and returnTypeCode not equal to 1, 2, or 3.',
-          call. = FALSE
-          )
-        )
-      }
+  else args[[1]]$type
+  else if (length(argTypes) == 2) {
+    aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type)
+    if (returnTypeCode == 5 && aot == 'logical') 'integer'
+    else aot
+  } else {
+    stop(
+      paste0(
+        'Testing does not currently know how to handle ops with more than 2',
+        ' args and returnTypeCode not equal to 1, 2, or 3.',
+        call. = FALSE
+      )
+    )
+  }
 
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
-  reduction_op <- nCompiler:::getOperatorDef(op, 'testthat', 'reductionOp')
+  reduction_op <- nCompiler:::getOperatorDef(op, 'testing', 'reductionOp')
 
   # TODO: other labelAbstractTypes handlers for reductions?
   nDim <- if (isTRUE(reduction_op)) 0
-          else max(sapply(args, `[[`, 'nDim'))
+  else max(sapply(args, `[[`, 'nDim'))
 
   if (nDim > 3)
     stop(
@@ -407,31 +405,31 @@ return_type_string <- function(op, argTypes) {
       call. = FALSE
     )
 
-  matrix_mult_op <- nCompiler:::getOperatorDef(op, 'testthat', 'matrixMultOp')
+  matrix_mult_op <- nCompiler:::getOperatorDef(op, 'testing', 'matrixMultOp')
 
   # if arg sizes weren't provided this will just be NULL
   sizes <- if (nDim == 0) NULL
-           else if (length(argTypes) == 1) args[[1]]$size
-           else if (isTRUE(matrix_mult_op))  {
-             if (!length(argTypes) == 2)
-               stop(
-                 paste0(
-                   'matrixMultOps should only have 2 args but got ',
-                   length(argTypes)
-                 ), call. = FALSE
-               )
-             if (is.null(args[[1]]$size)) NULL
-             else c(args[[1]]$size[1], args[[2]]$size[2])
-           } else if (nDim == 2) {
-             # one arg is a matrix but this is not matrix multiplication so
-             # assume that output size is same as the first arg with nDim == 2
-             has_right_nDim <- sapply(args, function(arg) arg$nDim == nDim)
-             args[has_right_nDim][[1]]$size
-           } else {
-             # nDim is 1 so either recycling rule or simple vector operator
-             if (is.null(args[[1]]$size)) NULL
-             else max((sapply(args, `[[`, 'size')))
-           }
+  else if (length(argTypes) == 1) args[[1]]$size
+  else if (isTRUE(matrix_mult_op))  {
+    if (!length(argTypes) == 2)
+      stop(
+        paste0(
+          'matrixMultOps should only have 2 args but got ',
+          length(argTypes)
+        ), call. = FALSE
+      )
+    if (is.null(args[[1]]$size)) NULL
+    else c(args[[1]]$size[1], args[[2]]$size[2])
+  } else if (nDim == 2) {
+    # one arg is a matrix but this is not matrix multiplication so
+    # assume that output size is same as the first arg with nDim == 2
+    has_right_nDim <- sapply(args, function(arg) arg$nDim == nDim)
+    args[has_right_nDim][[1]]$size
+  } else {
+    # nDim is 1 so either recycling rule or simple vector operator
+    if (is.null(args[[1]]$size)) NULL
+    else max((sapply(args, `[[`, 'size')))
+  }
 
   size_string <- if (is.null(sizes)) 'NA' else paste0(
     'c(', paste(sizes, collapse = ', '), ')'
@@ -476,23 +474,23 @@ returnTypeString <- function(op, argTypes) {
     scalarTypeString <-
       if (length(argTypes) == 1)
         nCompiler:::arithmeticOutputType(
-                      arg1$type, returnTypeCode = returnTypeCode
-                    )
-      else
-        nCompiler:::arithmeticOutputType(
-                      arg1$type, arg2$type, returnTypeCode
-                    )
+          arg1$type, returnTypeCode = returnTypeCode
+        )
+  else
+    nCompiler:::arithmeticOutputType(
+      arg1$type, arg2$type, returnTypeCode
+    )
 
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
   nDim <- if (length(argTypes) == 1) {
-            handler <- nCompiler:::getOperatorDef(
-                                     op, 'labelAbstractTypes', 'handler'
-                                   )
-            if (!is.null(handler) && handler == 'UnaryReduction') 0
-            else arg1$nDim
-          } else max(arg1$nDim, arg2$nDim)
+    handler <- nCompiler:::getOperatorDef(
+      op, 'labelAbstractTypes', 'handler'
+    )
+    if (!is.null(handler) && handler == 'UnaryReduction') 0
+    else arg1$nDim
+  } else max(arg1$nDim, arg2$nDim)
 
   dimString <- switch(
     nDim + 1,
@@ -601,7 +599,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   filename <- paste0(gsub(' ', '_', filename), '.gold')
   ## replace operators that can't be used in filenames with an alphabetic name
   ## greedily replace by ordering according to decreasing number of characters
-  replacements <- get_ops_values('testthat', 'alpha_name')
+  replacements <- get_ops_values('testing', 'alpha_name')
   replacements <- replacements[
     order(nchar(names(replacements)), decreasing = TRUE)
   ]

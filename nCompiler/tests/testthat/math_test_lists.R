@@ -19,8 +19,8 @@ argTypes <- c(
 ###############
 
 unaryOps <- intersect(
-  getMatchingOps('testthat', 'testMath', TRUE),
-  getMatchingOps('testthat', 'isUnary', TRUE)
+  getMatchingOps('testing', 'testMath', TRUE),
+  getMatchingOps('testing', 'isUnary', TRUE)
 )
 
 makeUnaryOpTestBatch <- function(op, argTypes) {
@@ -63,8 +63,8 @@ makeBinaryOpTestBatch <- function(op, argTypes) {
 }
 
 binaryOps <- intersect(
-  getMatchingOps('testthat', 'testMath', TRUE),
-  getMatchingOps('testthat', 'isBinary', TRUE)
+  getMatchingOps('testing', 'testMath', TRUE),
+  getMatchingOps('testing', 'isBinary', TRUE)
 )
 
 binaryArgTypes <- as.list(

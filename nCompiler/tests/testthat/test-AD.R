@@ -15,12 +15,12 @@ for (util_file in utils) source(util_file)
 ###################################
 
 unaryOpsAD <- intersect(
-  getMatchingOps('testthat', 'testAD', TRUE),
-  getMatchingOps('testthat', 'isUnary', TRUE)
+  getMatchingOps('testing', 'testAD', TRUE),
+  getMatchingOps('testing', 'isUnary', TRUE)
 )
 binaryOpsAD <- intersect(
-  getMatchingOps('testthat', 'testAD', TRUE),
-  getMatchingOps('testthat', 'isBinary', TRUE)
+  getMatchingOps('testing', 'testAD', TRUE),
+  getMatchingOps('testing', 'isBinary', TRUE)
 )
 
 ## derivatives currently only available for scalar and vector inputs
@@ -62,6 +62,9 @@ if (WRITE_GOLD_FILES) {
   )
 }
 
+derivs_option <- nOptions('automaticDerivatives')
+set_nOption('automaticDerivatives', TRUE)
+
 ## run_test_suite handles granularity levels 2-4 and does nothing if
 ## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by
 ## putting all of the tests in one long list and calling test_math directly.
@@ -84,6 +87,9 @@ if (FULL_TESTING && isTRUE(FULL_TESTING_GRANULARITY == 1)) {
     c(unlist(unaryOpTestsAD), unlist(binaryOpTestsAD)), 'testing AD', test_AD
   )
 }
+
+## reset the automaticDerivatives option
+set_nOption('automaticDerivatives', derivs_option)
 
 # TODO: move knownFailures to separate file
 ## tests with numericVector fail to compile for an unknown reason
