@@ -29,17 +29,9 @@
 #' @return a \code{nimbleList} with elements \code{value}, \code{jacobian},
 #' and \code{hessian}.
 #' 
-#' @examples 
-#' 
-#' \dontrun{
-#' model <- nimbleModel(code = ...)
-#' calcDerivs <- nimDerivs(model$calculate(model$getDependencies('x')),
-#'  wrt = 'x')
-#' }
-#' 
 #' @export
 nDerivs <- function(nFxn = NA,
-                    order = c(0,1,2), # TODO: this was nimC(0,1,2)
+                    order = c(0,1,2),
                     dropArgs = NA,
                     wrt = NULL){
   fxnEnv <- parent.frame()
@@ -52,7 +44,7 @@ nDerivs <- function(nFxn = NA,
     if(length(removeArgs) > 0)
       wrt <- wrt[-removeArgs]
   }
-  nDerivs_nf( order = order, wrt = wrt, derivFxnCall = derivFxnCall, fxnEnv = fxnEnv )
+  nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
 }
 
 calcDerivs_internal <- function(func, X, order, resultIndices ) {
@@ -95,7 +87,7 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
       if(valueFlag)
         outVal <- func(X)
   
-  outList <- list() # TODO: this was ADNimbleList$new()
+  outList <- list()
   if(!missing(resultIndices)) {
     if(jacobianFlag) outGrad <- outGrad[, resultIndices, drop=FALSE]
     if(hessianFlag) outHess <- outHess[resultIndices, resultIndices, , drop=FALSE]
@@ -106,21 +98,11 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
   return(outList)
 }
 
-# TODO: not actually using the nFxn argument
-nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
-                       wrt = NULL, derivFxnCall = NULL, fxnEnv = parent.frame()){
-  fxnCall <- match.call()
-  ## This may be called directly (for testing) or from nDerivs (typically).
-  ## In the former case, we get derivFxnCall from the nFxn argument.
-  ## In the latter case, it is already match.call()ed and is passed here via derivFxnCall
-  if(is.null(derivFxnCall))
-    derivFxnCall <- fxnCall[['nFxn']] ## either calculate(model, nodes) or model$calculate(nodes)
-  else
-    if(is.null(fxnCall[['order']]))
-      fxnCall[['order']] <- order
+nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
+                       wrt = NULL, fxnEnv = parent.frame()) {
 
-  nf <- eval(derivFxnCall[[1]], envir = fxnEnv)
-  derivFxnCall <- match.call(nf, derivFxnCall)
+  nf <- eval(fxnCall[[1]], envir = fxnEnv)
+  fxnCall <- match.call(nf, fxnCall)
   fA <- formals(nf)
   
   if(is.null(wrt)) {
@@ -148,10 +130,10 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
   wrt_unique_name_strings <- as.character(wrt_unique_names)
 
   # get the user-supplied arguments to the nFunction
-  derivFxnCall_args <- as.list(derivFxnCall)[-1]
+  fxnCall_args <- as.list(fxnCall)[-1]
 
   ## Get the value of the args
-  fxnArgs <- lapply(derivFxnCall_args,
+  fxnArgs <- lapply(fxnCall_args,
                     function(x) 
                       eval(x, envir = fxnEnv))
 
@@ -163,7 +145,7 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
                    as.integer(nDim(fxnArgs[[arg_name]]))))
       stop(paste0(
         "Error:  the '", arg_name, "' argument you provided to the nFunction '",
-        deparse(derivFxnCall[[1]]), "' in nDerivs() does not have",
+        deparse(fxnCall[[1]]), "' in nDerivs() does not have",
         ' the right sizes. Expected (',
         paste(arg_symbols[[arg_name]]$size, collapse = ', '), ') but got (',
         nDim(fxnArgs[[arg_name]]), ').'
@@ -243,14 +225,14 @@ nDerivs_nf <- function(nFxn = NA, order = c(0,1,2), # TODO: this was nimC(0,1,2)
   ##      eval(get_init_values_code[[i]])
   ##  }
 
-  derivFxnName <- as.character(derivFxnCall[[1]])
+  fxnName <- as.character(fxnCall[[1]])
   func <- function(x) {
     do.call("{", fxnArgs_assign_code)
     ## for(i in 1:length_x) {
     ##     ## Each line is like fxnArgs[[ 2 ]][23] <- x[5]
     ##     eval(fxnArgs_assign_code[[i]])
     ## }
-    c(do.call(derivFxnName, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
+    c(do.call(fxnName, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
   }
 
   ans <- calcDerivs_internal(func, currentX, order, result_x_indices_all)

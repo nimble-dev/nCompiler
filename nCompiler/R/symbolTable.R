@@ -104,6 +104,38 @@ symbolBasic <-
         )
     )
 
+symbolBlank <- R6::R6Class(
+  classname = "symbolBlank",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    initialize = function(){},
+    print = function() {
+      writeLines(paste0('symbolBlank'))
+    },
+    genCppVar = function() {
+      cppBlank()
+    }
+  )
+)
+
+symbolNF <- R6::R6Class(
+  classname = "symbolNF",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    initialize = function(name) {
+      self$name <- name
+    },
+    print = function() {
+      writeLines(paste0(self$name, ': nFunction'))
+    },
+    genCppVar = function() {
+      stop("Attempting to create a cppVar for a symbolNF")
+    }
+  )
+)
+    
 symbolNC <- R6::R6Class(
   classname = "symbolNC",
   inherit = symbolBase,

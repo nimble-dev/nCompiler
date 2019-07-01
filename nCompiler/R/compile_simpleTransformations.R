@@ -5,49 +5,38 @@
 ## System to processSpecificCalls ##
 ####################################
 
-compile_simpleTransformations <- function(code, symTab, auxEnv) {
-    nErrorEnv$stateInfo <- paste0("handling simpleTransformations for ", code$name, ".")
-    if(code$isName) return(invisible())
-    if(code$isCall) {
-        for(i in seq_along(code$args)) {
-            if(inherits(code$args[[i]], 'exprClass')) {
-                compile_simpleTransformations(code$args[[i]], symTab, auxEnv)
-            }
-        }
-        
-        opInfo <- operatorDefEnv[[code$name]]
-        ## TO-DO: Check for methods or nFunctions.
-        if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
-          obj <- get(code$name, envir = auxEnv$closure)
-          if(isNF(obj)) {
-            uniqueName <- NFinternals(obj)$uniqueName
-            if(length(uniqueName)==0)
-              stop(
-                exprClassProcessingErrorMsg(
-                  code,
-                  paste0('nFunction ', code$name, 'is being called, but it is malformed because it has no internal name.')),
-                call. = FALSE)
-            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-              ## Avoid many references to R6 objects in a blind attempt to 
-              ## facilitate garbage collection.
-              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
-            }
-            opInfo <- operatorDefEnv[['nFunction']]
-          }
-        }
-        
-        if(!is.null(opInfo)) {
-            handlingInfo <- opInfo[["simpleTransformations"]]
-            if(!is.null(handlingInfo)) {
-                handler <- handlingInfo[['handler']]
-                if(!is.null(handler))
-                    eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                         envir = simpleTransformationsEnv)
-            }
-        }
+
+compile_simpleTransformations <- function(code,
+                                          symTab,
+                                          auxEnv,
+                                          opInfoName = "simpleTransformations",
+                                          handlerEnv = simpleTransformationsEnv) {
+  nErrorEnv$stateInfo <- paste0("handling ", opInfoName, " for ", code$name, ".")
+  if(code$isName) return(invisible())
+  if(code$isCall) {
+    for(i in seq_along(code$args)) {
+      if(inherits(code$args[[i]], 'exprClass')) {
+        compile_simpleTransformations(code$args[[i]],
+                                      symTab,
+                                      auxEnv,
+                                      opInfoName,
+                                      handlerEnv)
+      }
     }
-    nErrorEnv$stateInfo <- character()
-    invisible(NULL)
+    
+    opInfo <- operatorDefEnv[[code$name]]        
+    if(!is.null(opInfo)) {
+      handlingInfo <- opInfo[[opInfoName]]
+      if(!is.null(handlingInfo)) {
+        handler <- handlingInfo[['handler']]
+        if(!is.null(handler))
+          eval(call(handler, code, symTab, auxEnv, handlingInfo),
+               envir = handlerEnv)
+      }
+    }
+  }
+  nErrorEnv$stateInfo <- character()
+  invisible(NULL)
 }
 
 simpleTransformationsEnv <- new.env()
@@ -71,16 +60,16 @@ simpleTransformationsEnv$Generic_nFunction <-
 
 ## for min(V), no change.  for min(v1, v2), change to pairmin(v1, v2)
 simpleTransformationsEnv$minMax <-
-    function(code, symTab, auxEnv, info) {
-        if(length(code$args) == 2) code$name <- paste0('pair',code$name)
-    }
+  function(code, symTab, auxEnv, info) {
+    if(length(code$args) == 2) code$name <- paste0('pair',code$name)
+  }
 
 simpleTransformationsEnv$replace <-
-    function(code, symTab, auxEnv, info) {
-        repl <- info$replacement
-        if(is.null(repl))
-            stop(paste0("No valid replacement for ",
-                        code$name),
-                 call. = FALSE)
-        code$name <- repl
-    }
+  function(code, symTab, auxEnv, info) {
+    repl <- info$replacement
+    if(is.null(repl))
+      stop(paste0("No valid replacement for ",
+                  code$name),
+           call. = FALSE)
+    code$name <- repl
+  }

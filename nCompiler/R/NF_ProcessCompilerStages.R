@@ -56,6 +56,27 @@ compilerStage_simpleTransformations <-
                                       NFcompiler$auxEnv)
     }
 
+compilerStage_finalTransformations <-
+  function(NFcompiler,
+           debug) {
+    if(debug) {
+      browser()
+      simpleTransformationsEnv$.debug <- TRUE
+      nimDebug(compile_simpleTransformations)
+      nimDebugHandlerEnv(simpleTransformationsEnv)
+      on.exit({
+        simpleTransformationsEnv$.debug <- FALSE
+        nimUndebug(compile_simpleTransformations)
+        nimUndebugHandlerEnv(simpleTransformationsEnv)
+      })
+    }
+    compile_simpleTransformations(NFcompiler$code,
+                                  NFcompiler$symbolTable,
+                                  NFcompiler$auxEnv,
+                                  opInfoName = "finalTransformations",
+                                  handlerEnv = finalTransformationsEnv)
+  }
+
 compilerStage_simpleIntermediates <-
     function(NFcompiler,
              debug) {
@@ -66,9 +87,11 @@ compilerStage_simpleIntermediates <-
     }
 
 compilerStage_initializeAuxEnv <- function(NFcompiler,
+                                           sourceObj = NULL, ## This will be a derived nClass object if the nFunction is an nClass method 
                                            debug = FALSE) {
     nameSubList <- NFcompiler$nameSubList
     NFcompiler$auxEnv[['needed_nFunctions']] <- list()
+    NFcompiler$auxEnv[["parallelContent"]] <- list()
     NFcompiler$auxEnv[['.AllowUnknowns']] <- TRUE ## will be FALSE for RHS recursion in setSizes
     NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.
     ##NFcompiler$auxEnv[['.nCompilerProject']] <- nimbleProject
@@ -77,7 +100,10 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                                 names = passedArgNames)
     NFcompiler$auxEnv[['passedArgumentNames']] <- passedArgNames ## only the names are used.
     NFcompiler$auxEnv[['nameSubList']] <- nameSubList
-    NFcompiler$auxEnv[['closure']] <- NFcompiler$NFinternals$where
+    NFcompiler$auxEnv[['closure']] <- if(is.null(sourceObj))
+                                          NFcompiler$NFinternals$where
+                                      else
+                                          sourceObj
     invisible(NULL)
 }
 

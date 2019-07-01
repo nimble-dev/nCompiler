@@ -59,19 +59,6 @@ compile_labelAbstractTypes <- function(code,
                                 call.=FALSE) 
                     }
             }
-
-            ## TO DO:
-            if(FALSE) {
-                ## Add RCfunctions to neededRCfuns.
-                if(exists(code$name) && is.rcf(get(code$name))) {
-                    nfmObj <- environment(get(code$name))$nfMethodRCobject
-                    uniqueName <- nfmObj$uniqueName
-                    if (is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-                        auxEnv$needed_nFunctions[[uniqueName]] <- nfmObj
-                    }
-                }
-            }
-            ## Note that generation of a symbol for LHS of an assignment is done in the sizeAssign function, which is the handler for assignments
             return(NULL)
         }
     }
@@ -89,18 +76,62 @@ compile_labelAbstractTypes <- function(code,
         }
 
         opInfo <- operatorDefEnv[[code$name]]
-        ## TO-DO: Check for methods or nFunctions.
-        if(is.null(opInfo) && exists(code$name, envir = auxEnv$closure)) {
-          ## An nFunction should already have been transformed to
-          ## have code$name nFunction in stage simpleTransformatnions.
-          ## But if not (if a custom handler was provided that avoided that change),
-          ## it will still be caught here.
-          obj <- get(code$name, envir = auxEnv$closure)
-          if(isNF(obj)) {
-            opInfo <- operatorDefEnv[['nFunction']]
+
+        ## Check for nFunctions or nClass methods (also nFunctions)
+        if(is.null(opInfo)) {
+          ## First we check if we are in an nClass and code$name is a method.
+          obj <- NULL
+          if(isNCgenerator(auxEnv$closure)) {## We are in a class method
+            obj <- auxEnv$closure$public_methods[[code$name]]
+            if(!is.null(obj)) {
+              if(isNF(obj)) {
+                opInfo <- operatorDefEnv[['nClass_method']]
+              } else {
+                stop(exprClassProcessingErrorMsg(code,
+                  paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
+                call. = FALSE)
+              }
+            }
           }
-        }
-        
+          ## Next we check if code$name exists in the closure.
+          ## Note that if we are in a method, auxEnv$closure will be the 
+          ## generator, which is an environment.  Hence the exists() and get()
+          ## calls work for a nClass method or a stand-alone nFunction.
+          if(is.null(obj)) {
+            ## We don't use auxEnv$closure[[code$name]] because
+            ## we need inherits = TRUE behavior.
+            if(exists(code$name, envir = auxEnv$closure))
+              obj <- get(code$name, envir = auxEnv$closure)
+            ## An nFunction should already have been transformed to
+            ## have code$name nFunction in stage simpleTransformatnions.
+            ## But if not (if a custom handler was provided that avoided that change),
+            ## it will still be caught here.
+            if(!is.null(obj)) {
+              if(isNF(obj)) {
+                opInfo <- operatorDefEnv[['nFunction']]
+                uniqueName <- NFinternals(obj)$uniqueName
+                if(length(uniqueName)==0)
+                  stop(
+                    exprClassProcessingErrorMsg(
+                      code,
+                      paste0('nFunction ', code$name, 'is being called, ',
+                             'but it is malformed because it has no internal name.')),
+                    call. = FALSE)
+                if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
+                  ## We could put the nFunction itself in the needed_nFunctions list,
+                  ## but we do not as a way to avoid having many references to R6 objects
+                  ## in a blind attempt to facilitate garbage collection based on past experience.
+                  ## Instead, we provide what is needed to look up the nFunction again later.
+                  auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
+                }
+              } else
+                stop(exprClassProcessingErrorMsg(
+                  code,
+                  paste0(code$name, 'is being used as a function, but it is not a nFunction.')),
+                  call. = FALSE)
+            }
+          }
+        }        
         if(!is.null(opInfo)) {
             handlingInfo <- opInfo[["labelAbstractTypes"]]
             if(!is.null(handlingInfo)) {
@@ -143,28 +174,108 @@ inLabelAbstractTypesEnv(
     }
 )
 
+
+## Called by Generic_nFunction and Generic_nFunction_method
+inLabelAbstractTypesEnv(
+  convert_nFunction_or_method_AST <-
+    function(code, obj) {
+      nFunctionName <- code$name
+      ## Note that the string `nFunction` matches the operatorDef entry.
+      ## Therefore the change-of-name here will automatically trigger use of
+      ## the 'nFunction' operatorDef in later stages.
+      code$name <- 'nFunction'
+      cpp_code_name <- NFinternals(obj)$cpp_code_name
+      fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
+                                   isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      ## We may need to add content to this symbol if
+      ## necessary for later processing steps.
+      fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
+      insertArg(code, 1, fxnNameExpr)
+      ## TO-DO: Add error-trapping of argument types
+      returnSym <- NFinternals(obj)$returnSym
+      if(is.null(returnSym))
+        stop(
+          exprClassProcessingErrorMsg(
+            code, paste('In convert_nFunction_or_method_AST: the nFunction (or method) ',
+                        code$name, 
+                        ' does not have a valid returnType.')
+          ), call. = FALSE
+        )
+      code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      invisible(NULL)
+    }
+)
+
 inLabelAbstractTypesEnv(
   Generic_nFunction <-
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
-        obj <- get(code$aux$nFunctionInfo$nFunctionName,
-                   envir = code$aux$nFunctionInfo$where)
-        ## code$aux$nFunctionInfo$where should be same as auxEnv$closure
-        
-        ## TO-DO: Add error-trapping of argument types 
-        returnSym <- NFinternals(obj)$returnSym
-        if(is.null(returnSym))
-          stop(
-            exprClassProcessingErrorMsg(
-              code, paste('In Generic_nFunction: the nFunction ', code$name, 
-                          ' does not have a valid returnType.')
-            ), call. = FALSE
-          )
-        code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
-        if(length(inserts) == 0) NULL else inserts
+      obj <- get(code$name, envir = auxEnv$closure)
+      convert_nFunction_or_method_AST(code, obj)
+      
+      ## nFunctionName <- code$name
+      ## ## Note that the string `nFunction` matches the operatorDef entry.
+      ## ## Therefore the change-of-name here will automatically trigger use of
+      ## ## the 'nFunction' operatorDef in later stages.
+      ## code$name <- 'nFunction'
+      ## obj <- get(nFunctionName, envir = auxEnv$closure)
+      ## cpp_code_name <- NFinternals(obj)$cpp_code_name
+      ## inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+      ##                                       handlingInfo)
+      ## fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
+      ##                          isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      ## ## We may need to add content to this symbol if
+      ## ## necessary for later processing steps.
+      ## fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
+      ## insertArg(code, 1, fxnNameExpr)
+      ## ## TO-DO: Add error-trapping of argument types
+      ## returnSym <- NFinternals(obj)$returnSym
+      ## if(is.null(returnSym))
+      ##   stop(
+      ##     exprClassProcessingErrorMsg(
+      ##       code, paste('In Generic_nFunction: the nFunction ', code$name, 
+      ##                   ' does not have a valid returnType.')
+      ##     ), call. = FALSE
+      ##   )
+      ## code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      if(length(inserts) == 0) NULL else inserts
     }
 )
+
+inLabelAbstractTypesEnv(
+  Generic_nClass_method <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo)
+      obj <-  auxEnv$closure$public_methods[[code$name]]
+      convert_nFunction_or_method_AST(code, obj)
+
+      ## nFunctionName <- code$name
+      ## code$name <- 'nFunction'
+      ## obj <-  auxEnv$closure$public_methods[[nFunctionName]]
+      ## ## Set up nFunctionInfo for use in later stages
+      ## cpp_code_name <- NFinternals(obj)$cpp_code_name
+      ## inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+      ##                                       handlingInfo)
+      ## fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
+      ##                              isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      ## fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
+      ## insertArg(code, 1, fxnNameExpr)
+      ## ## TO-DO: Add error-trapping of argument types
+      ## returnSym <- NFinternals(obj)$returnSym
+      ## if(is.null(returnSym))
+      ##   stop(
+      ##     exprClassProcessingErrorMsg(
+      ##       code, paste('In Generic_nFunction: the nFunction ', code$name, 
+      ##                   ' does not have a valid returnType.')
+      ##     ), call. = FALSE
+      ##   )
+      ## code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      if(length(inserts) == 0) NULL else inserts
+    }
+)
+
 
 inLabelAbstractTypesEnv(
     Assign <- 
@@ -214,13 +325,15 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   For <- function(code, symTab, auxEnv, handlingInfo) {
     if(length(code$args) != 3)
-      stop(paste('Error in labelAbstractTypes handler For:',
-                 'expected 3 arguments to a for-loop'), call. = FALSE)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler For:',
+              'expected 3 arguments to a for-loop')), call. = FALSE)
     ## first handle type of the indexing variable
     if(!inherits(code$args[[2]], 'exprClass'))
       stop(
         exprClassProcessingErrorMsg(
-          code, paste('In sizeFor: expected the index',
+          code, paste('In labelAbstractTypes handler For: expected the index',
                       'range to be an expression (exprClass).')
         ), call. = FALSE
       )
@@ -231,14 +344,43 @@ inLabelAbstractTypesEnv(
       symbolBasic$new(name = code$args[[1]]$name,
                       nDim = 0, type = code$args[[2]]$type$type)
 
-    ## code$args[[1]]$sizeExprs <- list()
-    ## code$args[[1]]$toEigenize <- 'no'
+    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
+      if (TRUE) 
+        symTab$addSymbol(code$args[[1]]$type)
 
+    ## Now the 3rd arg, the body of the loop, can be processed
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+    return(if (length(inserts) == 0) invisible(NULL) else inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 5) 
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelFor:',
+              'expected 5 arguments to a parallel_for-loop')), call. = FALSE)
+    ## first handle type of the indexing variable
+    if(!inherits(code$args[[2]], 'exprClass'))
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste('In labelAbstractTypes handler ParallelFor: expected the index',
+                      'range to be an expression (exprClass).')
+        ), call. = FALSE
+      )
+    
+    inserts <- compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv)
+    
+    code$args[[1]]$type <-
+      symbolBasic$new(name = code$args[[1]]$name,
+                      nDim = 0, type = code$args[[2]]$type$type)
+    
     ## If index is unknown, create it in typeEnv and in the symTab (old nimble comment)
     if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
-      if (TRUE) ##!auxEnv$.AllowUnknowns)
+      if (TRUE) 
         symTab$addSymbol(code$args[[1]]$type)
-    ## auxEnv[[code$args[[1]]$name]]$sizeExprs <- list()
 
     ## Now the 3rd arg, the body of the loop, can be processed
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
@@ -258,39 +400,14 @@ inLabelAbstractTypesEnv(
       stop(
         exprClassProcessingErrorMsg(
           code, paste(
-                  'In sizeColonOperator: Problem determining',
-                  'size for : without two arguments.'
+                  "In sizeColonOperator: Problem determining ",
+                  "size for ':' without two arguments."
                 )
         ), call. = FALSE
       )
 
-    for (i in 1:2) {
-        if (inherits(code$args[[i]], 'exprClass')) {
-            if (!code$args[[i]]$isName) {
-              if (!(code$args[[i]]$name == '[' &&
-                    (code$args[[i]]$args[[1]]$name == 'dim' &&
-                     code$args[[i]]$args[[1]]$args[[1]]$name == 'nfVar'))) {
-                inserts <- c(
-                  inserts ##, sizeInsertIntermediate(code, i, symTab, typeEnv)
-                )
-              }
-            }
-        }
-    }
+    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
 
-    code$type <- symbolBasic$new(nDim = 1, type = 'double')
-
-    ## could generate an assertion that second arg is >= first arg
-    if(is.numeric(code$args[[1]]) & is.numeric(code$args[[2]])) {
-      ## do we need to annotate code$type$size here?
-      ## code$sizeExprs <- list(code$args[[2]] - code$args[[1]] + 1)
-    } else { ## at least one part is an expression
-        ## This is an awkward case:
-        ## sizeExprs are R parse trees, not exprClasses
-        ## But in this case, we want the expression from an exprClass.
-        ## so we need to nimDeparse and then parse them
-        ## code$sizeExprs <- list(substitute( A - B + 1, list(A = parse(text = nimDeparse(code$args[[2]]), keep.source = FALSE)[[1]], B = parse(text = nimDeparse(code$args[[1]]), keep.source = FALSE)[[1]] ) ) )
-    }
     invisible(inserts)
   }
 )

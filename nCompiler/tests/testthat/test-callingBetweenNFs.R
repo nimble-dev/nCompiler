@@ -21,6 +21,7 @@ test_that("One nFunction can call another and be compiled.",
               }
             )
             ## debug(nCompiler:::compile_labelAbstractTypes)
+            set_nOption("showCompilerOutput", TRUE)
             test <- nCompile(f2, f1)
             expect_equal(test$f1(2, 3), 5)
             expect_equal(test$f2(2, 3), 5)
