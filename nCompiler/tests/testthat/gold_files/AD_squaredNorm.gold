@@ -31,18 +31,18 @@ using namespace Rcpp;
 
 double  nClass_1::nFun_1_NFID_1 ( double arg1 )  {
 double ans;
-ans = -(arg1);
+ans = (arg1).squaredNorm();
 return(ans);
 }
-Eigen::Tensor<double, 1>  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 )  {
-Eigen::Tensor<double, 1> ans;
-ans = -(arg1);
+double  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 )  {
+double ans;
+ans = (arg1).squaredNorm();
 return(ans);
 }
 template<class TYPE_>  
 TYPE_  nClass_1::nFun1_AD_ ( TYPE_ & arg1 )  {
 TYPE_ ans;
-ans = -(arg1);
+ans = (arg1).squaredNorm();
 return(ans);
 }
 CppAD::ADFun<double> *  nClass_1::nFun1_callForADtaping_ (  )  {
@@ -82,23 +82,22 @@ return(ADtapeSetup);
 }
 DERIVS_METHOD_DEF(nClass_1,nFun1,nFun1_derivs_,(arg1),double arg1);
 template<class TYPE_>  
-Eigen::Tensor<TYPE_, 1>  nClass_1::nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 )  {
-Eigen::Tensor<TYPE_, 1> ans;
-ans = -(arg1);
+TYPE_  nClass_1::nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 )  {
+TYPE_ ans;
+ans = (arg1).squaredNorm();
 return(ans);
 }
 CppAD::ADFun<double> *  nClass_1::nFun2_callForADtaping_ (  )  {
 Eigen::Tensor<CppAD::AD<double> , 1> arg1;
-Eigen::Tensor<CppAD::AD<double> , 1> ANS_;
+CppAD::AD<double> ANS_;
 std::vector<CppAD::AD<double> > ADindependentVars;
 std::vector<CppAD::AD<double> > ADresponseVars;
 CppAD::ADFun<double> * RETURN_TAPE_;
 int netIncrement_;
 int i_;
 (arg1).resize(7);
-(ANS_).resize(7);
 (ADindependentVars).resize(7);
-(ADresponseVars).resize(7);
+(ADresponseVars).resize(1);
 RETURN_TAPE_ = new CppAD::ADFun<double>;
 for(i_=1; i_<= static_cast<int>(7); ++i_) {
  ADindependentVars[(i_) - 1] = 1;
@@ -111,10 +110,8 @@ for(i_=1; i_<= static_cast<int>(7); ++i_) {
 }
 ANS_ = nFun2_AD_(arg1);
 netIncrement_ = 1;
-for(i_=1; i_<= static_cast<int>(7); ++i_) {
- ADresponseVars[(netIncrement_) - 1] = ANS_[(i_) - 1];
- netIncrement_ = netIncrement_+1;
-}
+ADresponseVars[(netIncrement_) - 1] = ANS_;
+netIncrement_ = netIncrement_+1;
 RETURN_TAPE_->Dependent(ADindependentVars, ADresponseVars);
 RETURN_TAPE_->optimize();
 return(RETURN_TAPE_);
@@ -188,14 +185,14 @@ public:
   static std::vector<CppAD::ADFun<double> * > allADtapePtrs_;
   nCompilerCppADinfoClass ADtapeSetup;
 double  nFun_1_NFID_1 ( double arg1 );
-Eigen::Tensor<double, 1>  nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 );
+double  nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 );
 template<class TYPE_>  
 static TYPE_  nFun1_AD_ ( TYPE_ & arg1 );
 static CppAD::ADFun<double> *  nFun1_callForADtaping_ (  );
 nCompilerCppADinfoClass &  nFun1_ADargumentTransfer_ ( double arg1 );
 DERIVS_METHOD_DECL(nFun1_derivs_,double arg1);
 template<class TYPE_>  
-static Eigen::Tensor<TYPE_, 1>  nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 );
+static TYPE_  nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 );
 static CppAD::ADFun<double> *  nFun2_callForADtaping_ (  );
 nCompilerCppADinfoClass &  nFun2_ADargumentTransfer_ ( Eigen::Tensor<double, 1> arg1 );
 DERIVS_METHOD_DECL(nFun2_derivs_,Eigen::Tensor<double, 1> arg1);

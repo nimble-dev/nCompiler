@@ -3,37 +3,18 @@ context("Testing Automatic Differentiation")
 utils <- system.file(
   file.path(
     'tests', 'testthat',
-    c('testing_utils.R', 'AD_utils.R')
+    c('testing_utils.R', 'testing_operatorLists.R', 'AD_utils.R')
   ),
   package = 'nCompiler'
 )
 for (util_file in utils) source(util_file)
 
-###################################
-# construct AD test lists
-# TODO: move this into another file
-###################################
+#####################################
+# construct AD test parameterizations
+#####################################
 
-unaryOpsAD <- intersect(
-  getMatchingOps('testing', 'testAD', TRUE),
-  getMatchingOps('testing', 'isUnary', TRUE)
-)
-binaryOpsAD <- intersect(
-  getMatchingOps('testing', 'testAD', TRUE),
-  getMatchingOps('testing', 'isBinary', TRUE)
-)
-
-## derivatives currently only available for scalar and vector inputs
-unaryArgTypes <- c('numericScalar', 'numericVector(7)')
-unaryOpTestsAD <- make_AD_test_batch(unaryOpsAD, unaryArgTypes)
-
-binaryArgTypes <- list(
-  c('numericScalar', 'numericScalar'),
-  c('numericScalar', 'numericVector(7)'),
-  c('numericVector(7)', 'numericVector(7)'),
-  c('numericVector(7)', 'numericScalar')
-)
-binaryOpTestsAD <- make_AD_test_batch(binaryOpsAD, binaryArgTypes)
+ops_AD <- get_matching_ops('testing', 'AD_argTypes', function(x) !is.null(x))
+params_AD <- sapply(ops_AD, make_AD_test_param_batch, simplify = FALSE)
 
 #############
 # run testing
@@ -45,9 +26,8 @@ FULL_TESTING <- FALSE
 
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass
-##   2 = group operators by type in one nClass
-##   3 = one nClass per operator (this is also what gold testing does)
-##   4 = one nClass with one nFunction per operator/input combo
+##   2 = one nClass per operator (this is also what gold testing does)
+##   3 = one nClass with one nFunction per operator/input combo
 FULL_TESTING_GRANULARITY <- NA
 
 if (WRITE_GOLD_FILES) {
@@ -65,28 +45,11 @@ if (WRITE_GOLD_FILES) {
 derivs_option <- nOptions('automaticDerivatives')
 set_nOption('automaticDerivatives', TRUE)
 
-## run_test_suite handles granularity levels 2-4 and does nothing if
-## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by
-## putting all of the tests in one long list and calling test_math directly.
 run_test_suite(
-  unaryOpTestsAD, 'AD_unaryOpTests', test_AD, FULL_TESTING,
+  params_AD, 'AD', test_AD, FULL_TESTING,
   FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
   gold_file_dir
 )
-
-run_test_suite(
-  binaryOpTestsAD, 'AD_binaryOpTests', test_AD, FULL_TESTING,
-  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
-  gold_file_dir
-)
-
-## handle granularity level 1
-if (FULL_TESTING && isTRUE(FULL_TESTING_GRANULARITY == 1)) {
-  ## put everything in one giant nClass
-  test_base(
-    c(unlist(unaryOpTestsAD), unlist(binaryOpTestsAD)), 'testing AD', test_AD
-  )
-}
 
 ## reset the automaticDerivatives option
 set_nOption('automaticDerivatives', derivs_option)

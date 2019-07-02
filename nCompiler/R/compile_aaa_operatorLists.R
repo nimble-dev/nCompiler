@@ -17,15 +17,20 @@ assignOperatorDef <- function(ops, def) {
         operatorDefEnv[[op]] <- def
 }
 
-updateOperatorDef <- function(op, field, key, val) {
-  operatorDefEnv[[op]][[field]][[key]] <- val
+updateOperatorDef <- function(ops, field, subfield = NULL, val) {
+  for (op in ops) {
+    if (is.null(subfield))
+      operatorDefEnv[[op]][[field]] <- val
+    else
+      operatorDefEnv[[op]][[field]][[subfield]] <- val
+  }
 }
 
-getOperatorDef <- function(op, field = NULL, key = NULL) {
+getOperatorDef <- function(op, field = NULL, subfield = NULL) {
   opInfo <- operatorDefEnv[[op]]
   if (is.null(opInfo) || is.null(field)) return(opInfo)
-  if (is.null(key)) return(opInfo[[field]])
-  return(opInfo[[field]][[key]])
+  if (is.null(opInfo[[field]]) || is.null(subfield)) return(opInfo[[field]])
+  return(opInfo[[field]][[subfield]])
 }
 
 assignOperatorDef(
@@ -175,17 +180,9 @@ assignOperatorDef(
         eigenImpl = list(
           handler = 'cWiseAddSub'),
         cppOutput = list(
-          handler = 'BinaryOrUnary'),
-        testing = list(
-          isBinary = TRUE,
-          testMath = TRUE,
-          testAD = TRUE)
+          handler = 'BinaryOrUnary')
     )
 )
-updateOperatorDef('-', 'testing', 'isUnary', TRUE)
-## add descriptive name for filenaming gold files
-updateOperatorDef('-', 'testing', 'alpha_name', 'minus')
-updateOperatorDef('+', 'testing', 'alpha_name', 'plus')
 
 assignOperatorDef(
   c('min', 'max'),
@@ -198,11 +195,7 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'Reduction',
       method = TRUE),
-    cppOutput = list(),
-    testing = list(
-      reductionOp = TRUE,
-      isUnary = TRUE,
-      testMath = TRUE)
+    cppOutput = list()
   )
 )
 updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
@@ -217,10 +210,7 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseBinary',
       method = TRUE),
-    cppOutput = list(),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE)
+    cppOutput = list()
   )
 )
 updateOperatorDef('pmax', 'cppOutput', 'cppString', 'cwiseMax')
@@ -279,11 +269,7 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = 'TensorReduction'
-    ),
-    testing = list(
-      reductionOp = TRUE,
-      isUnary = TRUE,
-      testMath = TRUE)
+    )
   )
 )
 
@@ -300,11 +286,7 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    ),
-    testing = list(
-      reductionOp = TRUE,
-      isUnary = TRUE,
-      testMath = TRUE)
+    )
   )
 )
 
@@ -321,11 +303,7 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    ),
-    testing = list(
-      isUnary = TRUE,
-      testMath = TRUE,
-      testAD = TRUE)
+    )
   )
 )
 
@@ -342,11 +320,7 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    ),
-    testing = list(
-      isUnary = TRUE,
-      testMath = TRUE,
-      testAD = TRUE)
+    )
   )
 )
 
@@ -363,11 +337,7 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = ''
-    ),
-    testing = list(
-      isUnary = TRUE,
-      testMath = TRUE,
-      testAD = TRUE)
+    )
   )
 )
 
@@ -381,10 +351,7 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
-      handler = 'MidOperator'),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE)
+      handler = 'MidOperator')
   )
 )
 updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
@@ -393,14 +360,6 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
-updateOperatorDef('==', 'testing', 'alpha_name', 'eq')
-updateOperatorDef('!=', 'testing', 'alpha_name', 'neq')
-updateOperatorDef('<=', 'testing', 'alpha_name', 'le')
-updateOperatorDef('>=', 'testing', 'alpha_name', 'ge')
-updateOperatorDef('<', 'testing', 'alpha_name', 'lt')
-updateOperatorDef('>', 'testing', 'alpha_name', 'gt')
-updateOperatorDef('&', 'testing', 'alpha_name', 'and')
-updateOperatorDef('|', 'testing', 'alpha_name', 'or')
 
 assignOperatorDef(
   c('/'),
@@ -411,14 +370,9 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator'),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE,
-      testAD = TRUE)
+      handler = 'MidOperator')
   )
 )
-updateOperatorDef('/', 'testing', 'alpha_name', 'div')
 
 assignOperatorDef(
   c('*'),
@@ -431,14 +385,9 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseMultDiv'),
     cppOutput = list(
-      handler = 'MidOperator'),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE,
-      testAD = TRUE)
+      handler = 'MidOperator')
   )
 )
-updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
 
 assignOperatorDef(
   c('^'),
@@ -451,14 +400,9 @@ assignOperatorDef(
       method = TRUE),
     cppOutput = list(
       cppString = 'pow',
-      handler = ''),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE,
-      testAD = FALSE)
+      handler = '')
   )
 )
-updateOperatorDef('^', 'testing', 'alpha_name', 'pow')
 
 assignOperatorDef(
   c('%%'),
@@ -470,21 +414,13 @@ assignOperatorDef(
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
-      cppString = ' % '),
-    testing = list(
-      isBinary = TRUE,
-      testMath = TRUE)
+      cppString = ' % ')
   )
 )
-updateOperatorDef('%%', 'testing', 'alpha_name', 'mod')
 
 assignOperatorDef(
   c('%*%'),
-  list(
-    testing = list(
-      matrixMultOp = TRUE,
-      isBinary = TRUE)
-  )
+  list()
 )
 
 assignOperatorDef(
@@ -500,9 +436,6 @@ assignOperatorDef(
     ),
     cppOutput = list(
       handler = 'RR_Distribution'
-    ),
-    testing = list(
-      recyclingRuleOp = TRUE
     )
   )
 )

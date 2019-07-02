@@ -1,6 +1,30 @@
 require(nCompiler)
 require(testthat)
 
+## ...: Any number of character strings representing valid argTypes, e.g.
+##      make_arg_tuples('numericScalar', 'logicalVector(7)', 'integerMatrix')
+##      gives the same result as:
+##      list(c("numericScalar", "numericScalar"),
+##        c("logicalVector(7)", "numericScalar"),
+##        c("integerMatrix", "numericScalar"),
+##        c("numericScalar", "logicalVector(7)"),
+##        c("logicalVector(7)", "logicalVector(7)"),
+##        c("integerMatrix", "logicalVector(7)"),
+##        c("numericScalar", "integerMatrix"),
+##        c("logicalVector(7)", "integerMatrix"),
+##        c("integerMatrix", "integerMatrix"))
+## rhs: An optional character vector of argTypes to restrict the right hand
+##      side of the tuple, in case we don't want to reuse ... on the right.
+make_argType_tuples <- function(..., rhs = NULL) {
+  argTypes <- c(...)
+  if (is.null(rhs)) rhs <- argTypes
+  ans <- as.list(
+    data.frame(t(expand.grid(argTypes, rhs)), stringsAsFactors=FALSE)
+  )
+  names(ans) <- NULL
+  ans
+}
+
 make_input <- function(argType, argCheck = NULL, size = 3) {
   arg <- switch(
     argType,
@@ -73,7 +97,6 @@ arg_type_2_input <- function(argType, input_gen_fun = NULL) {
     stop('Something went wrong while making test input.', call.=FALSE)
   return(arg)
 }
-
 
 gen_nFunction <- function(param) {
   fun <- function() {}
@@ -180,7 +203,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
     }
     if (is.function(test_fun))
       test_fun( # run remainder of test
-        list(param_list = compiles, nC = nC),
+        list(param_list = compiles, nC = nC, test_name = test_name),
         control = control, verbose = verbose
       )
   }
@@ -319,27 +342,26 @@ modifyBatchOnMatch <-
     }
   }
 
-
-getMatchingOps <- function(field, key, value) {
-  ## Returns vector of operator names where a given field has
-  ## a key with a given value, or an empty vector if no matches.
+## field:    An operator def field, such as 'testing'.
+## subfield: An optional subfield of the 'field', e.g. 'argTypes'.
+## test:     A function which returns TRUE or FALSE based on a single
+##           value.
+get_matching_ops <- function(field, subfield = NULL, test) {
+  ## Returns vector of operator names where the value in a given field (or its
+  ## subfield) returns TRUE when the test function is applied to it.
   ops <- ls(nCompiler:::operatorDefEnv)
-  values <- unlist(
-    sapply(ops, nCompiler:::getOperatorDef, field, key)
-  )
+  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield)
   if (is.null(values)) return(character(0))
-  names(values)[values == value]
+  names(values)[sapply(values, test)]
 }
 
-get_ops_values <- function(field, key) {
-  ## Returns vector of operator names where a given field has
-  ## a key with a given value, or an empty vector if no matches.
+get_ops_values <- function(field, subfield = NULL) {
+  ## Return a named (by operator) list of the values found in field/subfield.
   ops <- ls(nCompiler:::operatorDefEnv)
-  values <- unlist(
-    sapply(ops, nCompiler:::getOperatorDef, field, key)
-  )
-  if (is.null(values)) return(character(0))
-  return(values)
+  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield,
+                   simplify = FALSE)
+  non_null <- sapply(values, function(x) !is.null(x))
+  return(values[non_null])
 }
 
 ## Takes an operator and its input types as a character vector and
@@ -504,7 +526,7 @@ returnTypeString <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
-make_op_param <- function(op, argTypes, more_args = NULL) {
+make_test_param <- function(op, argTypes, more_args = NULL) {
   arg_names <- names(argTypes)
 
   if (is.null(arg_names)) {
@@ -541,7 +563,7 @@ make_op_param <- function(op, argTypes, more_args = NULL) {
   )
 }
 
-# TODO: replace usage of makeOperatorParam with make_op_param and remove.
+# TODO: replace usage of makeOperatorParam with make_test_param and remove.
 makeOperatorParam <- function(op, argTypes) {
   if (length(argTypes) == 1) {
     name <- paste(op, argTypes)
@@ -599,7 +621,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   filename <- paste0(gsub(' ', '_', filename), '.gold')
   ## replace operators that can't be used in filenames with an alphabetic name
   ## greedily replace by ordering according to decreasing number of characters
-  replacements <- get_ops_values('testing', 'alpha_name')
+  replacements <- unlist(get_ops_values('testing', 'alpha_name'))
   replacements <- replacements[
     order(nchar(names(replacements)), decreasing = TRUE)
   ]
@@ -695,27 +717,25 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
     ## Don't pass test_fun to test_base so that only gold testing runs.
     for (op in names(batch_of_ops)) {
       test_base(
-        batch_of_ops[[op]], paste0(c(test_name, op), collapse = '_'),
+        batch_of_ops[[op]], paste(c(test_name, op), collapse = '_'),
         gold_test = TRUE, write_gold_file = write_gold_file,
         gold_file_dir = gold_file_dir
       )
     }
 
-  } else if (isTRUE(granularity == 4)) {
+  } else if (isTRUE(granularity == 3)) {
 
     for (test_param in unlist(batch_of_ops, recursive = FALSE))
       ## TODO: avoid having to wrap test_param in list()?
       test_base(list(test_param), test_param$name, test_fun)
 
-  } else if (isTRUE(granularity == 3)) {
+  } else if (isTRUE(granularity == 2)) {
 
     for (op in names(batch_of_ops))
       test_base(batch_of_ops[[op]], op, test_fun)
 
-  } else if (isTRUE(granularity == 2)) {
+  } else if (isTRUE(granularity == 1)) {
 
-    test_base(
-      unlist(batch_of_ops, recursive = FALSE), deparse(substitute(batch_of_ops)), test_fun
-    )
+    test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun)
   }
 }

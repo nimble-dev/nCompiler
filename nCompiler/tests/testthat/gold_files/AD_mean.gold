@@ -1,0 +1,212 @@
+#ifndef __nClass_1_CPP
+#define __nClass_1_CPP
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <iostream>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
+#include <Rmath.h>
+#include <math.h>
+#include "..h"
+using namespace Rcpp;
+// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+// [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::depends(nCompiler)]]
+// [[Rcpp::depends(Rcereal)]]
+
+double  nClass_1::nFun_1_NFID_1 ( double arg1 )  {
+double ans;
+ans = (arg1).mean();
+return(ans);
+}
+double  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 )  {
+double ans;
+ans = (arg1).mean();
+return(ans);
+}
+template<class TYPE_>  
+TYPE_  nClass_1::nFun1_AD_ ( TYPE_ & arg1 )  {
+TYPE_ ans;
+ans = (arg1).mean();
+return(ans);
+}
+CppAD::ADFun<double> *  nClass_1::nFun1_callForADtaping_ (  )  {
+CppAD::AD<double> arg1;
+CppAD::AD<double> ANS_;
+std::vector<CppAD::AD<double> > ADindependentVars;
+std::vector<CppAD::AD<double> > ADresponseVars;
+CppAD::ADFun<double> * RETURN_TAPE_;
+int netIncrement_;
+int i_;
+(ADindependentVars).resize(1);
+(ADresponseVars).resize(1);
+RETURN_TAPE_ = new CppAD::ADFun<double>;
+for(i_=1; i_<= static_cast<int>(1); ++i_) {
+ ADindependentVars[(i_) - 1] = 1;
+}
+CppAD::Independent(ADindependentVars);
+netIncrement_ = 1;
+arg1 = ADindependentVars[(netIncrement_) - 1];
+netIncrement_ = netIncrement_+1;
+ANS_ = nFun1_AD_(arg1);
+netIncrement_ = 1;
+ADresponseVars[(netIncrement_) - 1] = ANS_;
+netIncrement_ = netIncrement_+1;
+RETURN_TAPE_->Dependent(ADindependentVars, ADresponseVars);
+RETURN_TAPE_->optimize();
+return(RETURN_TAPE_);
+}
+nCompilerCppADinfoClass &  nClass_1::nFun1_ADargumentTransfer_ ( double arg1 )  {
+int netIncrement_;
+((ADtapeSetup).independentVars).resize(1);
+(ADtapeSetup).ADtape = allADtapePtrs_[0];
+netIncrement_ = 1;
+(ADtapeSetup).independentVars[(netIncrement_) - 1] = arg1;
+netIncrement_ = netIncrement_+1;
+return(ADtapeSetup);
+}
+DERIVS_METHOD_DEF(nClass_1,nFun1,nFun1_derivs_,(arg1),double arg1);
+template<class TYPE_>  
+TYPE_  nClass_1::nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 )  {
+TYPE_ ans;
+ans = (arg1).mean();
+return(ans);
+}
+CppAD::ADFun<double> *  nClass_1::nFun2_callForADtaping_ (  )  {
+Eigen::Tensor<CppAD::AD<double> , 1> arg1;
+CppAD::AD<double> ANS_;
+std::vector<CppAD::AD<double> > ADindependentVars;
+std::vector<CppAD::AD<double> > ADresponseVars;
+CppAD::ADFun<double> * RETURN_TAPE_;
+int netIncrement_;
+int i_;
+(arg1).resize(7);
+(ADindependentVars).resize(7);
+(ADresponseVars).resize(1);
+RETURN_TAPE_ = new CppAD::ADFun<double>;
+for(i_=1; i_<= static_cast<int>(7); ++i_) {
+ ADindependentVars[(i_) - 1] = 1;
+}
+CppAD::Independent(ADindependentVars);
+netIncrement_ = 1;
+for(i_=1; i_<= static_cast<int>(7); ++i_) {
+ arg1[(i_) - 1] = ADindependentVars[(netIncrement_) - 1];
+ netIncrement_ = netIncrement_+1;
+}
+ANS_ = nFun2_AD_(arg1);
+netIncrement_ = 1;
+ADresponseVars[(netIncrement_) - 1] = ANS_;
+netIncrement_ = netIncrement_+1;
+RETURN_TAPE_->Dependent(ADindependentVars, ADresponseVars);
+RETURN_TAPE_->optimize();
+return(RETURN_TAPE_);
+}
+nCompilerCppADinfoClass &  nClass_1::nFun2_ADargumentTransfer_ ( Eigen::Tensor<double, 1> arg1 )  {
+int netIncrement_;
+int i_;
+((ADtapeSetup).independentVars).resize(7);
+(ADtapeSetup).ADtape = allADtapePtrs_[1];
+netIncrement_ = 1;
+for(i_=1; i_<= static_cast<int>(7); ++i_) {
+ (ADtapeSetup).independentVars[(netIncrement_) - 1] = arg1[(i_) - 1];
+ netIncrement_ = netIncrement_+1;
+}
+return(ADtapeSetup);
+}
+DERIVS_METHOD_DEF(nClass_1,nFun2,nFun2_derivs_,(arg1),Eigen::Tensor<double, 1> arg1);
+
+// [[Rcpp::export]]
+SEXP  new_nClass_1 (  )  {
+return(loadedObjectEnv(new_nCompiler_object<nClass_1>()));
+}
+
+std::vector<CppAD::ADFun<double> * > nClass_1::allADtapePtrs_;
+
+ initTape_nClass_1::initTape_nClass_1 (  )  {
+nClass_1::allADtapePtrs_.push_back(nClass_1::nFun1_callForADtaping_() );
+nClass_1::allADtapePtrs_.push_back(nClass_1::nFun2_callForADtaping_() );
+}
+
+initTape_nClass_1 initTape_nClass_1_Object_;
+
+NCOMPILER_INTERFACE(
+nClass_1,
+NCOMPILER_FIELDS(),
+NCOMPILER_METHODS(
+method("nFun1", &nClass_1::nFun_1_NFID_1),
+method("nFun2", &nClass_1::nFun_2_NFID_2),
+method("nFun1_derivs_", &nClass_1::nFun1_derivs_),
+method("nFun2_derivs_", &nClass_1::nFun2_derivs_)
+)
+)
+#endif
+#ifndef __nClass_1_H
+#define __nClass_1_H
+#include <RcppEigen.h>
+#include <Rcpp.h>
+
+
+#ifndef BEGIN_RCPP
+#define BEGIN_RCPP
+#endif
+
+#ifndef END_RCPP
+#define END_RCPP
+#endif
+
+using namespace Rcpp;
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <nCompiler/nCompiler_CppAD.h>
+#include <Rinternals.h>
+#include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
+#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_class_interface.h>
+
+class nClass_1 : public genericInterfaceC<nClass_1> {
+public:
+  static std::vector<CppAD::ADFun<double> * > allADtapePtrs_;
+  nCompilerCppADinfoClass ADtapeSetup;
+double  nFun_1_NFID_1 ( double arg1 );
+double  nFun_2_NFID_2 ( Eigen::Tensor<double, 1> arg1 );
+template<class TYPE_>  
+static TYPE_  nFun1_AD_ ( TYPE_ & arg1 );
+static CppAD::ADFun<double> *  nFun1_callForADtaping_ (  );
+nCompilerCppADinfoClass &  nFun1_ADargumentTransfer_ ( double arg1 );
+DERIVS_METHOD_DECL(nFun1_derivs_,double arg1);
+template<class TYPE_>  
+static TYPE_  nFun2_AD_ ( Eigen::Tensor<TYPE_, 1> arg1 );
+static CppAD::ADFun<double> *  nFun2_callForADtaping_ (  );
+nCompilerCppADinfoClass &  nFun2_ADargumentTransfer_ ( Eigen::Tensor<double, 1> arg1 );
+DERIVS_METHOD_DECL(nFun2_derivs_,Eigen::Tensor<double, 1> arg1);
+};
+
+SEXP  new_nClass_1 (  );
+
+
+class initTape_nClass_1  {
+public:
+ initTape_nClass_1 (  );
+};
+
+extern  initTape_nClass_1 initTape_nClass_1_Object_;
+
+
+#endif

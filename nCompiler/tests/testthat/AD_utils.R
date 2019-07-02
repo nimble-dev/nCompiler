@@ -2,14 +2,14 @@
 ## Main AD testing utils
 ########################
 
-## Take a test parameterization created by make_AD_test_batch() or
-## make_distribution_fun_AD_test(), generate a random input, and test for
+## Take a test parameterization created by make_param_batch() or
+## make_distribution_fun_AD_param(), generate a random input, and test for
 ## matching nDerivs outputs from uncompiled and compiled versions of an
 ## nFunction.
 ##
 ## base_list:          a list with entries:
 ##                     'param_list': list of test parameterizations as created
-##                                   by make_AD_test_batch()
+##                                   by make_param_batch()
 ##                     'nC': an nClass with one 'Cpublic' method per test
 ##                           parameterization in 'param_list'
 ## verbose:            if TRUE, print messages to console while testing
@@ -52,7 +52,7 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
   ## TODO: use an expect_* here instead?
   if (inherits(nC_compiled, 'try-error')) {
     msg <- paste0(
-      'The test of ', param$name, ' failed to compile.\n', CnfInst[1]
+      'The test of ', base_list$test_name, ' failed to compile.\n', nC_compiled[1]
     )
 
     if (isTRUE(catch_failures)) {
@@ -458,8 +458,8 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
   wrts
 }
 
-## Make a test parameterization to be used by test_AD. This method is primarily
-## used by make_AD_test_batch() and make_distribution_fun_AD_test().
+## Make an operator parameterization to be used by test_AD. This method can be
+## used with make_test_param_batch() and is used by make_distribution_fun_AD_param().
 ##
 ## op:             Character string, the operator that will be the focus of the
 ##                 test.
@@ -474,37 +474,37 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 ##                 arg_type_2_input()), length 1 (use same input gen mechanism for each
 ##                 argType, or a named list with names from among the argType names
 ##                 (possibly the sequentially generated names). This will be NULL
-##                 when bulk generating the test params using make_AD_test_batch and
+##                 when bulk generating the test params using make_test_param_batch() and
 ##                 added later via modify_on_match(). Used in the call to
-##                 make_AD_test() in make_distribution_fun_AD_test(). 
+##                 make_AD_test_param() in make_distribution_fun_AD_test(). 
 ## more_args:      A named list of additional fixed arguments to use in the
 ##                 generated operator call. E.g., if op = 'dnorm',
 ##                 argTypes = c('double(1, 5)', 'double(0)'), and
-##                 more_args = list(log = 1), the call to make_op_param will include
+##                 more_args = list(log = 1), the call to make_test_param will include
 ##                 the expression dnorm(arg1, arg2, log = 1).
 ## seed:           A seed to use in set.seed().
 ##
 ## returns: A list with the following elements:
-##          name:           from make_op_param
-##          expr:           from make_op_param
-##          argTypes:       from make_op_param
-##          returnType:     from make_op_param
+##          name:           from make_test_param
+##          expr:           from make_test_param
+##          argTypes:       from make_test_param
+##          returnType:     from make_test_param
 ##          wrts:           a list of character vectors, each of which is the wrt
 ##                          argument for the corresponding method in methods
 ##          input_gen_funs: A list of random input generation functions to be
 ##                          used by arg_type_2_input(). 
-make_AD_test <- function(op, argTypes, wrt_args = NULL,
-                         input_gen_funs = NULL, more_args = NULL, seed = 0) {
+make_AD_test_param <- function(op, argTypes, wrt_args = NULL,
+                             input_gen_funs = NULL, more_args = NULL, seed = 0) {
   ## set the seed for make_wrt
   if (is.numeric(seed)) set.seed(seed)
-  opParam <- make_op_param(op, argTypes, more_args)
+  test_param <- make_test_param(op, argTypes, more_args)
 
   if (is.null(wrt_args)) wrt_args_filter <- rep(TRUE, length(argTypes))
   else wrt_args_filter <- wrt_args
-  wrts <- make_wrt(opParam$argTypes[wrt_args_filter])
+  wrts <- make_wrt(test_param$argTypes[wrt_args_filter])
 
   invisible(
-    c(opParam,
+    c(test_param,
       list(
         wrts = wrts,
         input_gen_funs = input_gen_funs,
@@ -512,29 +512,20 @@ make_AD_test <- function(op, argTypes, wrt_args = NULL,
   )
 }
 
-## ops: character vector of operator names
-## argTypes: list of character vectors of argTypes
-##           e.g. for a binary operator:
-##             list(
-##               c('double(1, 4)', 'double(0)'),
-##               c('double(1, 4)', 'double(1, 4)')
-##             )
-make_AD_test_batch <- function(ops, argTypes, seed = 0) {
-  batch_of_ops <- sapply(
-    ops,
-    function(x) {
-      op_tests <- mapply(
-        make_AD_test,
-        argTypes = argTypes,
-        MoreArgs = list(op = x, seed = seed),
-        SIMPLIFY = FALSE
-      )
-      names(op_tests) <- sapply(op_tests, `[[`, 'name')
-      op_tests
-    },
-    simplify = FALSE
-  )
-  invisible(batch_of_ops)
+## op:   operator name
+## seed: a random seed
+##
+make_AD_test_param_batch <- function(op, seed = 0) {
+  opInfo <- nCompiler:::getOperatorDef(op, 'testing')
+  if (is.null(opInfo) || is.null(opInfo[['AD_argTypes']])) return(NULL)
+  argTypes <- opInfo[['AD_argTypes']]
+  ans <- lapply(argTypes, function(argTypes_) {
+    make_AD_test_param(op, argTypes_, wrt_args = opInfo[['wrt_args']],
+                     input_gen_funs = opInfo[['input_gen_funs']],
+                     more_args = opInfo[['more_args']], seed = seed)
+  })
+  names(ans) <- sapply(ans, `[[`, 'name')
+  invisible(ans)
 }
 
 ## Takes an element of distn_params list and returns a list of AD test
@@ -548,7 +539,6 @@ make_AD_test_batch <- function(ops, argTypes, seed = 0) {
 ##                - rand_variate
 ##                  - type
 ##              Additional args must also have type field.
-## more_args:   Passed to make_op_param().
 ##
 make_distribution_fun_AD_test <- function(distn_param) {
   distn_name <- distn_param$name
@@ -593,7 +583,7 @@ make_distribution_fun_AD_test <- function(distn_param) {
     )
     c(arg1_input_gen_fun, input_gen_funs)
   }, simplify = FALSE)
-  op_params <- unlist(
+  test_params <- unlist(
     lapply(
       distn_param$variants, function(variant) {
         lapply(
@@ -602,7 +592,7 @@ make_distribution_fun_AD_test <- function(distn_param) {
             wrt_args = intersect(
               distn_param$wrt, names(these_argTypes)
             )
-            make_AD_test(
+            make_AD_test_param(
               ops[[variant]], these_argTypes,
               wrt_args = wrt_args,
               input_gen_funs = input_gen_funs_list[[variant]],
@@ -613,8 +603,8 @@ make_distribution_fun_AD_test <- function(distn_param) {
       }
     ), recursive = FALSE
   )
-  names(op_params) <- sapply(op_params, `[[`, 'name')
-  return(op_params)
+  names(test_params) <- sapply(test_params, `[[`, 'name')
+  return(test_params)
 }
 
 #############################
