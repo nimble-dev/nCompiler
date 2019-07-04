@@ -254,17 +254,12 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   ans
 }
 
-nDerivs_full <- function(fxnCall = NULL, order = c(0,1,2),
+nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
                          wrt = NULL, fxnEnv = parent.frame()) {
   derivsFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
   fxnCall[[1]] <- derivsFxnCall
   fxnCall$order <- order
   ## TODO: handle wrt argument
   fxnCall$wrt <- wrt
-  deriv_obj <- eval(fxnCall, fxnEnv)
-  derivs <- list()
-  if (0 %in% order) derivs_obj$value <- value(obj_env, 'value')
-  if (1 %in% order) derivs_obj$gradient <- value(obj_env, 'gradient')
-  if (2 %in% order) derivs_obj$hessian <- value(obj_env, 'hessian')
-  derivs
+  eval(fxnCall, fxnEnv)
 }
