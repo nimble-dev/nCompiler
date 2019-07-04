@@ -255,7 +255,7 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
 }
 
 nDerivs_full <- function(fxnCall = NULL, order = c(0,1,2),
-                       wrt = NULL, fxnEnv = parent.frame()) {
+                         wrt = NULL, fxnEnv = parent.frame()) {
   derivsFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
   fxnCall[[1]] <- derivsFxnCall
   fxnCall$order <- order
