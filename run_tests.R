@@ -51,12 +51,14 @@ for(test in allTests) {
     script <- paste0('library(methods);',
                      'library(testthat);',
                      'library(nCompiler);',
-                     'test_package("nCompiler", "^', name, '$",',
-                     '                      reporter = ', reporter, ')'
-                     # tryCatch seems to be masking errors
-#                     'tryCatch(test_package("nCompiler", "^', name, '$",',
-#                     '                      reporter = ', reporter, '),',
-                                        #                     '  error = function(e) quit(status = 1))'
+                     'tryCatch(test_package("nCompiler", "^', name, '$",',
+                     '                      reporter = ', reporter, '),',
+                     '  error = function(e) quit(status = 1))'
                      )
-    system2("Rscript", c("-e", shQuote(script)))
+    if (system2("Rscript", c("-e", shQuote(script)))) {
+      stop(paste('\x1b[31mFAILED\x1b[0m', test))
+    } else {
+      cat('\x1b[32mPASSED\x1b[0m', test, '\n')
+    }
 }
+cat('\x1b[32mALL TESTS PASSED\x1b[0m', '\n')

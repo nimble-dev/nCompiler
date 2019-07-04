@@ -4,6 +4,7 @@ requirements <- c(
     'testthat',
     'Rcpp',
     'RcppEigen',
+    'RcppParallel',
     'RcppEigenAD',
     'inline',
     'R6',

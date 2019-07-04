@@ -20,3 +20,10 @@ NFinternals <- function(NF) {
     NF@internals <- value
     NF
 }
+
+isConstructor <- function(NF) {
+  if(!isNF(NF)) return(FALSE)
+  if(is.null(NFinternals(NF)$aux)) return(FALSE)
+  if(is.null(NFinternals(NF)$aux$initializerList)) return(FALSE)
+  TRUE
+}

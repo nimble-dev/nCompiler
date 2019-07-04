@@ -9,12 +9,14 @@ NF_InternalsClass <- R6::R6Class(
         argSymTab = list(),
         returnSym = NULL,
         where = NULL,
+        isMethod = FALSE,
         uniqueName = character(),
         cpp_code_name = character(),
         template = NULL,
         code = NULL,
         RcppPacket = NULL,
         Rwrapper = NULL,
+        aux = NULL, ## Used for constructor initializers.
         needed_nFunctions = list(), ## formerly neededRCfuns
         ## Next two "includes" were only needed for making external calls:
         ## If needed, these will be populated by.nCompilerExternalCall.

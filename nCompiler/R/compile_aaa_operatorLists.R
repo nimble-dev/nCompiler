@@ -31,12 +31,18 @@ getOperatorDef <- function(op, field = NULL, key = NULL) {
 assignOperatorDef(
   'nFunction',
   list(
-    simpleTransformations = list(
-      handler = 'Generic_nFunction'),
     labelAbstractTypes = list(
       handler = 'Generic_nFunction'),
     cppOutput = list(
       handler = 'Generic_nFunction')
+  )
+)
+
+assignOperatorDef(
+  'nClass_method',
+  list(
+    labelAbstractTypes = list(
+      handler = 'Generic_nClass_method') ## will convert to nFunction
   )
 )
 
@@ -57,6 +63,24 @@ assignOperatorDef(
       handler = 'For'),
     cppOutput = list(
       handler = 'For')
+  )
+)
+
+assignOperatorDef(
+  c('parallel_for'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelFor'),
+    finalTransformations = list(
+      handler = "ParallelFor") ## Creates GeneralFor in the parallel_loop_body class
+  )
+)
+
+assignOperatorDef(
+  c('GeneralFor'),
+  list(
+    cppOutput = list(
+      handler = 'GeneralFor')
   )
 )
 
@@ -83,11 +107,9 @@ assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'Bracket'
-    ),
+      handler = 'Bracket'),
     eigenImpl = list(
-      handler = 'Bracket' ## converts `[` to `index[`
-    ),
+      handler = 'Bracket'), ## converts `[` to `index[`
     cppOutput = list(
       handler = 'IndexingBracket') ## needed for generated code such as for AD.
   )

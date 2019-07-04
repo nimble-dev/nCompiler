@@ -31,7 +31,7 @@ exprClass <- R6::R6Class(
         callerArgID =  NULL, ## index in the calling object's args list for this object.
         insertions =  list(), 
         cppADCode = FALSE, ## is expr in code generated for cppad?
-        aux = list(), ## auxiliary list of additional info to be used as needed 
+   ##     aux = list(), ## auxiliary list of additional info to be used as needed 
         initialize = function(...) {
             dotsList <- list(...)
             for(v in names(dotsList))
@@ -218,6 +218,29 @@ setCaller <- function(value, expr, ID) {
     value$caller <- expr
     value$callerArgID <- ID
     invisible(value)
+}
+
+insertArg <- function(expr, ID, value, name = NULL) {
+  origNumArgs <- length(expr$args)
+  if(ID > origNumArgs + 1)
+    stop(exprClassProcessingErrorMsg(
+      expr,
+      paste0(
+        "Attempted to insert an argument with ID = ", ID, " but that is too large. ",
+        "There are only ", origNumArgs, " arguments.")),
+      call. = FALSE)
+
+  argsToShift <- origNumArgs - ID + 1
+  if(argsToShift) {
+    for(i in (origNumArgs):(ID)) { ## a singleton or downward sequence
+      setArg(expr, i+1, expr$args[[i]])
+      names(expr$args)[i+1] <- names(expr$args)[i]
+    }
+  }
+  setArg(expr, ID, value)
+  if(!is.null(name))
+    names(expr$args)[ID] <- name
+  invisible(value)
 }
 
 setArg <- function(expr, ID, value, add = FALSE) {

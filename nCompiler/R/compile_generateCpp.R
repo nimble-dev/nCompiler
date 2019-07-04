@@ -140,9 +140,9 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  Generic_nFunction <- function(code, symTab) {
-    paste0(code$aux$nFunctionInfo$cpp_code_name,
-           '(', paste0(unlist(lapply(code$args,
+    Generic_nFunction <- function(code, symTab) {
+    paste0(compile_generateCpp(code$args[[1]], symTab),
+           '(', paste0(unlist(lapply(code$args[-1],
                                      compile_generateCpp,
                                      symTab,
                                      asArg = TRUE) ),
@@ -235,6 +235,25 @@ inGenCppEnv(
         return(part2)
     }
     stop('Error in IfOrWhile')
+  }
+)
+
+inGenCppEnv(
+  GeneralFor <- function(code, symTab) {
+    init <- compile_generateCpp(code$args[[1]], symTab)
+    cond <- compile_generateCpp(code$args[[2]], symTab)
+    incr <- compile_generateCpp(code$args[[3]], symTab)
+    body <- compile_generateCpp(code$args[[4]], symTab)
+    opener <- paste0('for(',
+                     init,'; ',
+                     cond,'; ',
+                     incr,')')
+    if(is.list(body)) {
+      body[[1]] <- paste(opener, body[[1]])
+      return(body)
+    } else {
+      return(paste(opener, body))
+    }
   }
 )
 

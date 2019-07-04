@@ -18,12 +18,14 @@ using namespace Rcpp;
 #endif
 #include <iostream>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <Rmath.h>
 #include <math.h>
 #include "..h"
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(RcppParallel)]]
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]
 
@@ -132,6 +134,7 @@ using namespace Rcpp;
 #endif
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_class_factory.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
