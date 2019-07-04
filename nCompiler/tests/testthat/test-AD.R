@@ -13,8 +13,10 @@ for (util_file in utils) source(util_file)
 # construct AD test parameterizations
 #####################################
 
-ops_AD <- get_matching_ops('testing', 'AD_argTypes', function(x) !is.null(x))
-params_AD <- sapply(ops_AD, make_AD_test_param_batch, simplify = FALSE)
+seed <- 0
+AD_ops <- get_matching_ops('testing', 'AD_argTypes', function(x) !is.null(x))
+AD_test_params <- sapply(AD_ops, make_AD_test_param_batch, seed = seed,
+                         simplify = FALSE)
 
 #############
 # run testing
@@ -46,7 +48,7 @@ derivs_option <- nOptions('automaticDerivatives')
 set_nOption('automaticDerivatives', TRUE)
 
 run_test_suite(
-  params_AD, 'AD', test_AD, FULL_TESTING,
+  AD_test_params, 'AD', test_AD, FULL_TESTING,
   FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
   gold_file_dir
 )

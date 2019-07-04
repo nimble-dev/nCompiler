@@ -25,53 +25,52 @@ make_argType_tuples <- function(..., rhs = NULL) {
   ans
 }
 
-make_input <- function(argType, argCheck = NULL, size = 3) {
-  arg <- switch(
-    argType,
-    "numericScalar" = rnorm(1),
-    "integerScalar" = rgeom(1, 0.5),
-    "logicalScalar" = sample(c(TRUE, FALSE), size = 1),
-    "numericVector" = rnorm(size),
-    "integerVector" = rgeom(size, 0.5),
-    "logicalVector" = sample(c(TRUE, FALSE), size = size, replace = TRUE),
-    ## Make different sized dimensions to avoid bugs that might be hidden by
-    ## symmetry.
-    "numericMatrix" = matrix(rnorm(size*(size+1)), nrow = size, ncol = size+1),
-    "integerMatrix" = matrix(
-      rgeom(size*(size+1), 0.5), nrow = size, ncol = size+1
-    ),
-    "logicalMatrix" = matrix(
-      sample(c(TRUE, FALSE), size*(size+1), replace = TRUE),
-      nrow = size, ncol = size+1
-    ),
-    "numericArray(nDim=3)" = array(rnorm(size*(size+1)*(size+2)), dim = size + 0:2),
-    "integerArray(nDim=3)" = array(
-      rgeom(size*(size+1)*(size+2), 0.5), dim = size + 0:2
-    ),
-    "logicalArray(nDim=3)" = array(
-      sample(c(TRUE, FALSE), size*(size+1)*(size+2), replace = TRUE),
-      dim = size + 0:2
-    )
-  )
-  ## try again if argCheck returns FALSE
-  if (!is.null(argCheck) && !argCheck(arg))
-    return(make_input(argType, argCheck, size))
+make_input <- function(argTypes, input_gen_funs = NULL) {
+  if (is.null(input_gen_funs) || is.null(names(input_gen_funs)))
+    if (length(input_gen_funs) <= 1)
+      input <- lapply(argTypes, argType_2_input, input_gen_funs)
   else
-    return(arg)
+    stop(
+      'input_gen_funs of length greater than 1 must have names',
+      call. = FALSE
+    )
+  else {
+    input <- sapply(
+      names(argTypes),
+      function(name)
+        argType_2_input(argTypes[[name]], input_gen_funs[[name]]),
+      simplify = FALSE
+    )
+  }
+  ##
+  ## generate inputs that depend on the other inputs
+  ##
+  is_fun <- sapply(input, is.function)
+  input[is_fun] <- lapply(
+    input[is_fun], function(fun) {
+      eval(as.call(c(fun, input[names(formals(fun))])))
+    }
+  )
+  input
 }
 
 ## Takes an argSymbol and if argSymbol$size is NA adds default sizes.
-add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4)) {
-  if (any(is.na(argSymbol$size))) {
-    if (argSymbol$nDim == 1)
-      argSymbol$size <- vector_size
-    else if (argSymbol$nDim == 2)
-      argSymbol$size <- matrix_size
-  }
+add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4),
+                             array_size = c(3, 4, 5)) {
+  if (argSymbol$nDim > 3)
+    stop(
+      'Testing does not currently support args with nDim > 3',
+      call. = FALSE
+    )
+  if (any(is.na(argSymbol$size)))
+    argSymbol$size <- switch(argSymbol$nDim,
+                             vector_size,
+                             matrix_size,
+                             array_size)
   invisible(argSymbol)
 }
 
-arg_type_2_input <- function(argType, input_gen_fun = NULL) {
+argType_2_input <- function(argType, input_gen_fun = NULL) {
   argSymbol <- add_missing_size(
     nCompiler:::argType2symbol(argType)
   )
@@ -139,7 +138,8 @@ gen_nClass <- function(param) {
 test_base <- function(param_list, test_name = '', test_fun = NULL,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose'),
-                      compile_all_funs = FALSE, gold_test = FALSE, ...) {
+                      compile_all_funs = FALSE, gold_test = FALSE,
+                      suppress_err_msgs = TRUE, ...) {
   # TODO: port over the nimble AD testing knownFailure setup
   compile_error <- sapply(
     param_list, function(param)
@@ -149,14 +149,24 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
   ## only test knownFailures in full testing
   if (isFALSE(gold_test)) {
     ## these tests should fail during compilation
-    nFuns_error <- lapply(param_list[compile_error], gen_nFunction)
-    if (length(nFuns_error) > 0) {
+    error_params <- param_list[compile_error]
+    if (length(error_params) > 0) {
+      nFuns_error <- lapply(error_params, gen_nFunction)
       names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
-      ## TODO: compile all nFunctions to ensure each one fails to compile?
-      nC_error <- gen_nClass(list(Cpublic = nFuns_error))
-      test_that(paste0(test_name, " knownFailures fail to compile"),
-                expect_error(nCompile_nClass(nC_error, control = control))
-                )
+      for (i in seq_along(nFuns_error)) {
+        if (verbose)
+          cat(paste('### Known compilation failure: ',
+                    error_params[[i]]$name, '###\n'))
+        test_that(paste0(test_name, " knownFailures fail to compile"), {
+          if (suppress_err_msgs)
+            expect_error(capture.output(
+              nCompile_nFunction(nFuns_error[[i]],
+                                 control = control)))
+          else
+            expect_error(nCompile_nFunction(nFuns_error[[i]],
+                                            control = control))
+        })
+      }
     }
   }
 
@@ -198,13 +208,13 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       for (i in seq_along(nFuns)) {
         if (verbose)
           cat(paste('### Compiling function for test of:', nFun_names[i], '###\n'))
-        nCompile_nFunction(nFuns[[i]], control)
+        nCompile_nFunction(nFuns[[i]], control = control)
       }
     }
     if (is.function(test_fun))
       test_fun( # run remainder of test
         list(param_list = compiles, nC = nC, test_name = test_name),
-        control = control, verbose = verbose
+        control = control, verbose = verbose, ...
       )
   }
 }
@@ -399,7 +409,8 @@ return_type_string <- function(op, argTypes) {
         if (returnTypeCode == 5 && args[[1]]$type == 'logical') 'integer'
   else args[[1]]$type
   else if (length(argTypes) == 2) {
-    aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type)
+    aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type,
+                                            returnTypeCode)
     if (returnTypeCode == 5 && aot == 'logical') 'integer'
     else aot
   } else {
@@ -453,16 +464,18 @@ return_type_string <- function(op, argTypes) {
     else max((sapply(args, `[[`, 'size')))
   }
 
-  size_string <- if (is.null(sizes)) 'NA' else paste0(
-    'c(', paste(sizes, collapse = ', '), ')'
-  )
+  size_string <- if (is.null(sizes) || is.na(sizes)) '' else {
+    size_str <- paste0('sizes = c(', paste(sizes, collapse = ', '), ')')
+    if (nDim == 3) size_str <- paste0(', ', size_str)
+    size_str
+  }
 
   dimString <- switch(
     nDim + 1,
     'Scalar()', # nDim is 0
     paste0('Vector(', size_string, ')'), # nDim is 1
-    paste0('Matrix(sizes = ', size_string, ')'), # nDim is 2
-    paste0('Array(nDim = 3, sizes = ', size_string, ')') # nDim is 3
+    paste0('Matrix(', size_string, ')'), # nDim is 2
+    paste0('Array(nDim = 3', size_string, ')') # nDim is 3
   )
 
   return(paste0(scalarTypeString, dimString))
@@ -526,7 +539,7 @@ returnTypeString <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
-make_test_param <- function(op, argTypes, more_args = NULL) {
+make_test_param <- function(op, argTypes, input_gen_funs = NULL, more_args = NULL) {
   arg_names <- names(argTypes)
 
   if (is.null(arg_names)) {
@@ -559,6 +572,7 @@ make_test_param <- function(op, argTypes, more_args = NULL) {
     name = name,
     expr = expr,
     argTypes = argTypesList,
+    input_gen_funs = input_gen_funs,
     returnType = return_type_string(op, argTypes)
   )
 }
@@ -617,7 +631,8 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
                            gold_file_dir = system.file(
                              file.path('tests', 'testthat', 'gold_files'),
                              package = 'nCompiler'
-                           ), write_gold_file = FALSE, batch_mode = FALSE) {
+                           ), write_gold_file = FALSE, batch_mode = FALSE,
+                           ...) {
   filename <- paste0(gsub(' ', '_', filename), '.gold')
   ## replace operators that can't be used in filenames with an alphabetic name
   ## greedily replace by ordering according to decreasing number of characters
@@ -703,6 +718,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
 ## write_gold_file: When TRUE, test_gold_file() saves gold files to
 ##                  gold_file_dir. Has no effect when 'full' is TRUE.
 ## gold_file_dir:   Where test_gold_file() should look for and save gold files.
+## ...:             Additional arguments to pass to test_base
 ##
 ## TODO: improve the way this works / is used to include granularity = 1
 run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
@@ -710,7 +726,7 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
                            write_gold_file = FALSE, gold_file_dir = system.file(
                              file.path('tests', 'testthat', 'gold_files'),
                              package = 'nCompiler'
-                           )) {
+                           ), ...) {
   if (!full) {
 
     ## Run gold file testing with one file per op in batch_of_ops.
@@ -719,7 +735,7 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
       test_base(
         batch_of_ops[[op]], paste(c(test_name, op), collapse = '_'),
         gold_test = TRUE, write_gold_file = write_gold_file,
-        gold_file_dir = gold_file_dir
+        gold_file_dir = gold_file_dir, ...
       )
     }
 
@@ -727,15 +743,15 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
 
     for (test_param in unlist(batch_of_ops, recursive = FALSE))
       ## TODO: avoid having to wrap test_param in list()?
-      test_base(list(test_param), test_param$name, test_fun)
+      test_base(list(test_param), test_param$name, test_fun, ...)
 
   } else if (isTRUE(granularity == 2)) {
 
     for (op in names(batch_of_ops))
-      test_base(batch_of_ops[[op]], op, test_fun)
+      test_base(batch_of_ops[[op]], op, test_fun, ...)
 
   } else if (isTRUE(granularity == 1)) {
 
-    test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun)
+    test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun, ...)
   }
 }

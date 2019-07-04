@@ -1,80 +1,31 @@
-## TODO: improve test creation (e.g. how AD testing in nimble does it)
+########################################
+## construct math test parameterizations
+########################################
 
-## every operator needs an R version of the same name in order to call
-## the uncompiled nFunctions
-square <- function(x) x*x
-cube <- function(x) x*x*x
-logit <- function(x) log(x/(1-x))
-rsqrt <- function(x) 1/sqrt(x)
+math_ops <- get_matching_ops('testing', 'math_argTypes',
+                             function(x) !is.null(x))
+math_test_params <- sapply(math_ops, make_math_test_param_batch,
+                           simplify = FALSE)
 
-argTypes <- c(
-  'numericScalar', 'integerScalar', 'logicalScalar',
-  'numericVector', 'integerVector', 'logicalVector',
-  'numericMatrix', 'integerMatrix', 'logicalMatrix',
-  'numericArray(nDim=3)',  'integerArray(nDim=3)',  'logicalArray(nDim=3)'
-)
-
-###############
-## unaryOpTests
-###############
-
-unaryOps <- intersect(
-  getMatchingOps('testing', 'testMath', TRUE),
-  getMatchingOps('testing', 'isUnary', TRUE)
-)
-
-makeUnaryOpTestBatch <- function(op, argTypes) {
-  o <- lapply(argTypes, function(argType) makeOperatorParam(op, argType))
-  names(o) <- sapply(o, `[[`, 'name')
-  return(o)
-}
-
-unaryOpTests <- lapply(
-  unaryOps, makeUnaryOpTestBatch, argTypes = argTypes
-)
-names(unaryOpTests) <- unaryOps
+#################
+## known failures
+#################
 
 ## cannot yet handle scalar input with .method or unaryExpr operators
 modifyBatchOnMatch(
-  unaryOpTests, paste0(
+  math_test_params, paste0(
   '^(abs|all|any|cube|exp|log|prod|rsqrt|sqrt|square|tanh',
-  '|atan|inverse|logit|min|max|mean|squaredNorm)'), '.+Scalar',
+  '|atan|inverse|logit|min|max|mean|squaredNorm)'),
+  'arg1 = .+Scalar',
   'knownFailure', '.*compiles'
 )
 
 ## not implemented yet
 modifyBatchOnMatch(
-  unaryOpTests,
+  math_test_params,
   'squaredNorm', ' .+',
   'knownFailure', '.*compiles'
 )
-
-################
-## binaryOpTests
-################
-
-## TODO: 
-
-makeBinaryOpTestBatch <- function(op, argTypes) {
-  o <- mapply(function(argTuple) makeOperatorParam(op, argTuple),
-              argTypes, SIMPLIFY = FALSE)
-  names(o) <- sapply(o, `[[`, 'name')
-  return(o)
-}
-
-binaryOps <- intersect(
-  getMatchingOps('testing', 'testMath', TRUE),
-  getMatchingOps('testing', 'isBinary', TRUE)
-)
-
-binaryArgTypes <- as.list(
-  data.frame(t(expand.grid(argTypes, argTypes)), stringsAsFactors=FALSE)
-)
-
-binaryOpTests <- lapply(
-    binaryOps, makeBinaryOpTestBatch, argTypes = binaryArgTypes
-)
-names(binaryOpTests) <- binaryOps
 
 ##                 ##
 ## run-time errors ##
@@ -82,37 +33,43 @@ names(binaryOpTests) <- binaryOps
 
 ## vector is not recycled in Eigen as in R
 modifyBatchOnMatch(
-  binaryOpTests, '(\\+|-|pmin|pmax|/|\\*)', '.+(Matrix|Array.+) numericVector',
+  math_test_params, '(\\+|-|pmin|pmax|/|\\*)',
+  'arg1 = .+(Matrix|Array.+) arg2 = numericVector',
   'knownFailure', '.*runs'
 )
 
 ## difference in the way pmin/pmax works in R and cwiseMin/cwiseMax works in Eigen
 modifyBatchOnMatch(
-  binaryOpTests, '(pmin|pmax)', '(integer|logical)Vector .+Matrix',
+  math_test_params, '(pmin|pmax)',
+  'arg1 = (integer|logical)Vector arg2 = .+Matrix',
   'knownFailure', '.*runs'
 )
 modifyBatchOnMatch(
-  binaryOpTests, '(pmin|pmax)', '.+Vector .+Array',
+  math_test_params, '(pmin|pmax)',
+  'arg1 = .+Vector arg2 = .+Array',
   'knownFailure', '.*runs'
 )
 
 ## Eigen's seems to pad the matrix with 0's to make an array of the same shape,
 ## whereas R uses recycling
 modifyBatchOnMatch(
-  binaryOpTests, '(pmin|pmax)', '.+Array.+ numericMatrix',
+  math_test_params, '(pmin|pmax)',
+  'arg1 = .+Array.+ arg2 = numericMatrix',
   'knownFailure', '.*runs'
 )
 
 ## std:bad_alloc error ... R would return a matrix but in Eigen we're calling the vector's +/- method
 ## similar issue for pmin/pmax, although the R output would be different
 modifyBatchOnMatch(
-  binaryOpTests,
-  '(\\+|-|pmin|pmax|==|!=|<=|>=|<|>|&|\\||/|\\*)', '.+Vector .+(Matrix|Array)',
+  math_test_params,
+  '(\\+|-|pmin|pmax|==|!=|<=|>=|<|>|&|\\||/|\\*)',
+  'arg1 = .+Vector arg2 = .+(Matrix|Array)',
   'knownFailure', '.*runs'
 )
 ## pmin/pmax also lead to std:bad_alloc in these cases
 modifyBatchOnMatch(
-  binaryOpTests, '(pmin|pmax)', '.+Matrix .+Array',
+  math_test_params, '(pmin|pmax)',
+  'arg1 = .+Matrix arg2 = .+Array',
   'knownFailure', '.*runs'
 )
 
@@ -122,57 +79,63 @@ modifyBatchOnMatch(
 
 ## no cwiseMin/cwiseMax method for primitive types
 modifyBatchOnMatch(
-  binaryOpTests,
-  '(pmin|pmax)', '.+Scalar .+Scalar',
+  math_test_params,
+  '(pmin|pmax)', 'arg1 = .+Scalar arg2 = .+Scalar',
   'knownFailure', '.*compiles'
 )
 
 ## swapping args won't work for scalar and matrix/array combos
 modifyBatchOnMatch(
-  binaryOpTests,
-  '(pmin|pmax)', '.+Scalar .+(Matrix|Array)',
+  math_test_params,
+  '(pmin|pmax)', 'arg1 = .+Scalar arg2 = .+(Matrix|Array)',
   'knownFailure', '.*compiles'
 )
 
 ## Eigen doesn't seem to have implementations for && and || when one arg is a scalar
 modifyBatchOnMatch(
-  binaryOpTests, '(&|\\|)', '.+(Vector|Matrix|Array.+) .+Scalar',
+  math_test_params, '(&|\\|)',
+  'arg1 = .+(Vector|Matrix|Array.+) arg2 = .+Scalar',
   'knownFailure', '.*compiles'
 )
 modifyBatchOnMatch(
-  binaryOpTests, '(&|\\|)',
-  '.+Scalar .+(Vector|Matrix|Array.+)',
+  math_test_params, '(&|\\|)',
+  'arg1 = .+Scalar arg2 = .+(Vector|Matrix|Array.+)',
   'knownFailure', '.*compiles'
 )
 
 ## no pow method for scalars in C++
 modifyBatchOnMatch(
-  binaryOpTests, '(\\^)', '.+Scalar .+.+',
+  math_test_params, '(\\^)', 'arg1 = .+Scalar arg2 = .+',
   'knownFailure', '.*compiles'
 )
 ## Eigen pow and % don't know how to handle non-scalar exponents
 modifyBatchOnMatch(
-  binaryOpTests, '(\\^|%%)', '.+ .+(Vector|Matrix|Array)',
+  math_test_params, '(\\^|%%)',
+  'arg1 = .+ arg2 = .+(Vector|Matrix|Array)',
   'knownFailure', '.*compiles'
 )
 
-## % only works for integerScalar integerScalar input
+## with scalars, %% only works for combos of integerScalar and logicalScalar
 modifyBatchOnMatch(
-  binaryOpTests, '%%', '.+Scalar (numeric|logical)Scalar',
+  math_test_params, '%%',
+  'arg1 = .+Scalar arg2 = numericScalar',
   'knownFailure', '.*compiles'
 )
 modifyBatchOnMatch(
-  binaryOpTests, '%%', '(numeric|logical)Scalar integerScalar',
+  math_test_params, '%%',
+  'arg1 = numericScalar arg2 = .+Scalar',
   'knownFailure', '.*compiles'
 )
 
 ## Eigen % seems to need an integer or logical scalar rhs
 modifyBatchOnMatch(
-  binaryOpTests, '%%', '.+(Vector|Matrix|Array.+) numericScalar',
+  math_test_params, '%%',
+  'arg1 = .+(Vector|Matrix|Array.+) arg2 = numericScalar',
   'knownFailure', '.*compiles'
 )
 modifyBatchOnMatch(
-  binaryOpTests, '%%', 'numeric(Vector|Matrix|Array.+) logicalScalar',
+  math_test_params, '%%',
+  'arg1 = numeric(Vector|Matrix|Array.+) arg2 = logicalScalar',
   'knownFailure', '.*compiles'
 )
 
@@ -182,30 +145,36 @@ modifyBatchOnMatch(
 
 ## vector is not recycled properly, but test doesn't always fail
 modifyBatchOnMatch(
-  binaryOpTests, '(==|!=|<=|>=|<|>|&|\\||/)', '.+(Matrix|Array.+) .+Vector',
+  math_test_params, '(==|!=|<=|>=|<|>|&|\\||/)',
+  'arg1 = .+(Matrix|Array.+) arg2 = .+Vector',
   'skip', TRUE
 )
 modifyBatchOnMatch(
-  binaryOpTests,
-  '(\\+|-|pmin|pmax|/|\\*)', 'numeric(Matrix|Array.+) (integer|logical)Vector',
+  math_test_params,
+  '(\\+|-|pmin|pmax|/|\\*)',
+  'arg1 = numeric(Matrix|Array.+) arg2 = (integer|logical)Vector',
   'skip', TRUE
 )
 modifyBatchOnMatch(
-  binaryOpTests,
-  '(\\+|-|pmin|pmax|/|\\*)', '(integer|logical)(Matrix|Array.+) .+Vector',
+  math_test_params,
+  '(\\+|-|pmin|pmax|/|\\*)',
+  'arg1 = (integer|logical)(Matrix|Array.+) arg2 = .+Vector',
   'skip', TRUE
 )
 modifyBatchOnMatch(
-  binaryOpTests, '(pmin|pmax)', '.+Array.+ (integer|logical)Matrix',
+  math_test_params, '(pmin|pmax)',
+  'arg1 = .+Array.+ arg2 = (integer|logical)Matrix',
   'skip', TRUE
 )
 
 ## scalar division/moldulo by 0 in C++ leads to R floating point exception
 modifyBatchOnMatch(
-  binaryOpTests, '/', '.+Scalar (integer|logical)Scalar',
+  math_test_params, '/',
+  'arg1 = .+Scalar arg2 = (integer|logical)Scalar',
   'skip', TRUE
 )
 modifyBatchOnMatch(
-  binaryOpTests, '%%', '.+ (integer|logical)Scalar',
+  math_test_params, '%%',
+  'arg1 = .+ arg2 = (integer|logical)Scalar',
   'skip', TRUE
 )

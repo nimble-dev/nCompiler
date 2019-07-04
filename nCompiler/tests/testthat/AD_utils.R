@@ -80,31 +80,7 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
     ##
     ## generate inputs for the Cpublic methods
     ##
-    if (is.null(param$input_gen_funs) || is.null(names(param$input_gen_funs)))
-      if (length(param$input_gen_funs) <= 1)
-        input <- lapply(param$argTypes, arg_type_2_input, param$input_gen_funs)
-    else
-      stop(
-        'input_gen_funs of length greater than 1 must have names',
-        call. = FALSE
-      )
-    else {
-      input <- sapply(
-        names(param$argTypes),
-        function(name)
-          arg_type_2_input(param$argTypes[[name]], param$input_gen_funs[[name]]),
-        simplify = FALSE
-      )
-    }
-    ##
-    ## generate inputs that depend on the other inputs
-    ##
-    is_fun <- sapply(input, is.function)
-    input[is_fun] <- lapply(
-      input[is_fun], function(fun) {
-        eval(as.call(c(fun, input[names(formals(fun))])))
-      }
-    )
+    input <- make_input(param$argTypes, param$input_gen_funs)
 
     ##
     ## call R versions of nimbleFunction methods with generated input
@@ -471,7 +447,7 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 ##                 assumes that all the arguments should be used.
 ## input_gen_funs: A list of input generation functions which is simply passed to
 ##                 the output list. Should be NULL (use defaults found in
-##                 arg_type_2_input()), length 1 (use same input gen mechanism for each
+##                 argType_2_input()), length 1 (use same input gen mechanism for each
 ##                 argType, or a named list with names from among the argType names
 ##                 (possibly the sequentially generated names). This will be NULL
 ##                 when bulk generating the test params using make_test_param_batch() and
@@ -492,12 +468,12 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 ##          wrts:           a list of character vectors, each of which is the wrt
 ##                          argument for the corresponding method in methods
 ##          input_gen_funs: A list of random input generation functions to be
-##                          used by arg_type_2_input(). 
+##                          used by argType_2_input(). 
 make_AD_test_param <- function(op, argTypes, wrt_args = NULL,
-                             input_gen_funs = NULL, more_args = NULL, seed = 0) {
+                               input_gen_funs = NULL, more_args = NULL, seed = 0) {
   ## set the seed for make_wrt
   if (is.numeric(seed)) set.seed(seed)
-  test_param <- make_test_param(op, argTypes, more_args)
+  test_param <- make_test_param(op, argTypes, input_gen_funs, more_args)
 
   if (is.null(wrt_args)) wrt_args_filter <- rep(TRUE, length(argTypes))
   else wrt_args_filter <- wrt_args
@@ -507,7 +483,6 @@ make_AD_test_param <- function(op, argTypes, wrt_args = NULL,
     c(test_param,
       list(
         wrts = wrts,
-        input_gen_funs = input_gen_funs,
         enableDerivs = TRUE))
   )
 }

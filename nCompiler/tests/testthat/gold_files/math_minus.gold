@@ -749,6 +749,66 @@ Eigen::Tensor<int, 3> ans;
 ans = (arg1).cast<int>()-(arg2).cast<int>();
 return(ans);
 }
+double  nClass_1::nFun_145_NFID_145 ( double arg1 )  {
+double ans;
+flex_(ans) = -(arg1);
+return(ans);
+}
+int  nClass_1::nFun_146_NFID_146 ( int arg1 )  {
+int ans;
+flex_(ans) = -(arg1);
+return(ans);
+}
+int  nClass_1::nFun_147_NFID_147 ( bool arg1 )  {
+int ans;
+flex_(ans) = -(static_cast<int>(arg1));
+return(ans);
+}
+Eigen::Tensor<double, 1>  nClass_1::nFun_148_NFID_148 ( Eigen::Tensor<double, 1> arg1 )  {
+Eigen::Tensor<double, 1> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 1>  nClass_1::nFun_149_NFID_149 ( Eigen::Tensor<int, 1> arg1 )  {
+Eigen::Tensor<int, 1> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 1>  nClass_1::nFun_150_NFID_150 ( Eigen::Tensor<bool, 1> arg1 )  {
+Eigen::Tensor<int, 1> ans;
+ans = -((arg1).cast<int>());
+return(ans);
+}
+Eigen::Tensor<double, 2>  nClass_1::nFun_151_NFID_151 ( Eigen::Tensor<double, 2> arg1 )  {
+Eigen::Tensor<double, 2> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 2>  nClass_1::nFun_152_NFID_152 ( Eigen::Tensor<int, 2> arg1 )  {
+Eigen::Tensor<int, 2> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 2>  nClass_1::nFun_153_NFID_153 ( Eigen::Tensor<bool, 2> arg1 )  {
+Eigen::Tensor<int, 2> ans;
+ans = -((arg1).cast<int>());
+return(ans);
+}
+Eigen::Tensor<double, 3>  nClass_1::nFun_154_NFID_154 ( Eigen::Tensor<double, 3> arg1 )  {
+Eigen::Tensor<double, 3> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 3>  nClass_1::nFun_155_NFID_155 ( Eigen::Tensor<int, 3> arg1 )  {
+Eigen::Tensor<int, 3> ans;
+ans = -(arg1);
+return(ans);
+}
+Eigen::Tensor<int, 3>  nClass_1::nFun_156_NFID_156 ( Eigen::Tensor<bool, 3> arg1 )  {
+Eigen::Tensor<int, 3> ans;
+ans = -((arg1).cast<int>());
+return(ans);
+}
 
 // [[Rcpp::export]]
 SEXP  new_nClass_1 (  )  {
@@ -902,7 +962,19 @@ method("nFun140", &nClass_1::nFun_140_NFID_140),
 method("nFun141", &nClass_1::nFun_141_NFID_141),
 method("nFun142", &nClass_1::nFun_142_NFID_142),
 method("nFun143", &nClass_1::nFun_143_NFID_143),
-method("nFun144", &nClass_1::nFun_144_NFID_144)
+method("nFun144", &nClass_1::nFun_144_NFID_144),
+method("nFun145", &nClass_1::nFun_145_NFID_145),
+method("nFun146", &nClass_1::nFun_146_NFID_146),
+method("nFun147", &nClass_1::nFun_147_NFID_147),
+method("nFun148", &nClass_1::nFun_148_NFID_148),
+method("nFun149", &nClass_1::nFun_149_NFID_149),
+method("nFun150", &nClass_1::nFun_150_NFID_150),
+method("nFun151", &nClass_1::nFun_151_NFID_151),
+method("nFun152", &nClass_1::nFun_152_NFID_152),
+method("nFun153", &nClass_1::nFun_153_NFID_153),
+method("nFun154", &nClass_1::nFun_154_NFID_154),
+method("nFun155", &nClass_1::nFun_155_NFID_155),
+method("nFun156", &nClass_1::nFun_156_NFID_156)
 )
 )
 #endif
@@ -1076,6 +1148,18 @@ Eigen::Tensor<int, 3>  nFun_141_NFID_141 ( Eigen::Tensor<bool, 2> arg1, Eigen::T
 Eigen::Tensor<double, 3>  nFun_142_NFID_142 ( Eigen::Tensor<double, 3> arg1, Eigen::Tensor<bool, 3> arg2 );
 Eigen::Tensor<int, 3>  nFun_143_NFID_143 ( Eigen::Tensor<int, 3> arg1, Eigen::Tensor<bool, 3> arg2 );
 Eigen::Tensor<int, 3>  nFun_144_NFID_144 ( Eigen::Tensor<bool, 3> arg1, Eigen::Tensor<bool, 3> arg2 );
+double  nFun_145_NFID_145 ( double arg1 );
+int  nFun_146_NFID_146 ( int arg1 );
+int  nFun_147_NFID_147 ( bool arg1 );
+Eigen::Tensor<double, 1>  nFun_148_NFID_148 ( Eigen::Tensor<double, 1> arg1 );
+Eigen::Tensor<int, 1>  nFun_149_NFID_149 ( Eigen::Tensor<int, 1> arg1 );
+Eigen::Tensor<int, 1>  nFun_150_NFID_150 ( Eigen::Tensor<bool, 1> arg1 );
+Eigen::Tensor<double, 2>  nFun_151_NFID_151 ( Eigen::Tensor<double, 2> arg1 );
+Eigen::Tensor<int, 2>  nFun_152_NFID_152 ( Eigen::Tensor<int, 2> arg1 );
+Eigen::Tensor<int, 2>  nFun_153_NFID_153 ( Eigen::Tensor<bool, 2> arg1 );
+Eigen::Tensor<double, 3>  nFun_154_NFID_154 ( Eigen::Tensor<double, 3> arg1 );
+Eigen::Tensor<int, 3>  nFun_155_NFID_155 ( Eigen::Tensor<int, 3> arg1 );
+Eigen::Tensor<int, 3>  nFun_156_NFID_156 ( Eigen::Tensor<bool, 3> arg1 );
 };
 
 SEXP  new_nClass_1 (  );

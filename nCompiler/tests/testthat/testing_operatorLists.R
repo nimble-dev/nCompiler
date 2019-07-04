@@ -150,15 +150,3 @@ nCompiler:::updateOperatorDef(
   'testing',
   val = list(recyclingRuleOp = TRUE)
 )
-
-
-
-
-
-
-
-
-
-
-
-
