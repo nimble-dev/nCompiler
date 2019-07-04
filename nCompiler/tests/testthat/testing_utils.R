@@ -429,8 +429,7 @@ return_type_string <- function(op, argTypes) {
   reduction_op <- nCompiler:::getOperatorDef(op, 'testing', 'reductionOp')
 
   # TODO: other labelAbstractTypes handlers for reductions?
-  nDim <- if (isTRUE(reduction_op)) 0
-  else max(sapply(args, `[[`, 'nDim'))
+  nDim <- if (isTRUE(reduction_op)) 0 else max(sapply(args, `[[`, 'nDim'))
 
   if (nDim > 3)
     stop(
@@ -453,20 +452,24 @@ return_type_string <- function(op, argTypes) {
       )
     if (is.null(args[[1]]$size)) NULL
     else c(args[[1]]$size[1], args[[2]]$size[2])
-  } else if (nDim == 2) {
-    # one arg is a matrix but this is not matrix multiplication so
-    # assume that output size is same as the first arg with nDim == 2
+  } else if (nDim %in% c(2, 3)) {
+    # one arg is a matrix (but this is not matrix multiplication) or an array,
+    # so assume that output size is same as the first arg with this nDim
     has_right_nDim <- sapply(args, function(arg) arg$nDim == nDim)
     args[has_right_nDim][[1]]$size
   } else {
     # nDim is 1 so either recycling rule or simple vector operator
     if (is.null(args[[1]]$size)) NULL
-    else max((sapply(args, `[[`, 'size')))
+    else max(sapply(args, `[[`, 'size'))
   }
 
   size_string <- if (is.null(sizes) || is.na(sizes)) '' else {
-    size_str <- paste0('sizes = c(', paste(sizes, collapse = ', '), ')')
-    if (nDim == 3) size_str <- paste0(', ', size_str)
+    if (nDim == 1) size_str <- sizes
+    else {
+      size_str <- paste0('size = c(', paste(sizes, collapse = ', '), ')')
+      if (nDim == 3) size_str <- paste0(', ', size_str)
+    }
+
     size_str
   }
 
