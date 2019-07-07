@@ -3,31 +3,27 @@
 #' EXPERIMENTAL Computes the value, Jacobian, and Hessian of a given  
 #' \code{nFunction} method.  
 #' 
-#' @param nFxn a call to a \code{nFunction} method with arguments 
-#' included.  Can also be a call to  \code{model$calculate(nodes)}, or to 
-#' \code{calculate(model, nodes)}.
-#' @param order an integer vector with values within the set {0, 1, 2}, 
-#' corresponding to whether the function value, Jacobian, and Hessian should be
-#'  returned respectively.  Defaults to \code{c(0, 1, 2)}.
-#' @param dropArgs a vector of integers specifying any arguments to 
-#' \code{nFxn} that derivatives should not be taken with respect to.  For 
-#' example, \code{dropArgs = 2} means that the second argument to \code{nFxn}
-#' will not have derivatives taken with respect to it.  Defaults to an empty
-#' vector. 
-#' @param wrt a character vector of either: names of function arguments 
-#' (if taking derivatives of a \code{nFunction} method), or node names 
-#' (if taking derivatives of \code{model$calculate(nodes)}) to take derivatives 
-#' with respect to.  If left empty, derivatives will be taken with respect to 
-#' all arguments to \code{nFxn}.
+#' @param nFxn a call to a compiled or uncompiled \code{nFunction} method with
+#'   arguments included.
+#' @param order an integer vector with values within the set {0, 1, 2},
+#'   corresponding to whether the function value, Jacobian, and Hessian should
+#'   be returned respectively.  Defaults to \code{c(0, 1, 2)}.
+#' @param dropArgs a vector of integers specifying any arguments to \code{nFxn}
+#'   that derivatives should not be taken with respect to.  For example,
+#'   \code{dropArgs = 2} means that the second argument to \code{nFxn} will not
+#'   have derivatives taken with respect to it.  Defaults to an empty vector.
+#' @param wrt a character vector of either: names of function arguments to take
+#'   derivatives with respect to.  If left empty, derivatives will be taken
+#'   with respect to all arguments to \code{nFxn}.
 #' @param silent a logical argument that determines whether warnings will be
-#' displayed.
+#'   displayed.
 #' @details Derivatives for uncompiled nFunctions are calculated using the
-#' \code{numDeriv} package.  If this package is not installed, an error will
-#' be issued.  Derivatives for matrix valued arguments will be returned in 
-#' column-major order.
+#'   \code{numDeriv} package.  If this package is not installed, an error will
+#'   be issued.  Derivatives for matrix valued arguments will be returned in
+#'   column-major order.
 #' 
-#' @return a \code{nimbleList} with elements \code{value}, \code{jacobian},
-#' and \code{hessian}.
+#' @return a \code{nimbleList} with elements \code{value}, \code{jacobian}, and
+#'   \code{hessian}.
 #' 
 #' @export
 nDerivs <- function(nFxn = NA,
@@ -44,7 +40,22 @@ nDerivs <- function(nFxn = NA,
     if(length(removeArgs) > 0)
       wrt <- wrt[-removeArgs]
   }
-  nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
+
+  if (length(derivFxnCall[[1]]) == 3 &&
+        deparse(derivFxnCall[[1]][[1]]) == '$') {
+
+    nClass_obj <- eval(derivFxnCall[[1]][[2]], envir = fxnEnv)
+
+    if (!isNC(nClass_obj))
+      stop(paste0(
+        "Do not know what type of object ",
+        deparse(fxnCall[[2]][[1]][[2]]), "is."
+      ))
+
+    nDerivs_full(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
+  } else if (FALSE) { ## TODO: add nDerivs_generic
+  } else ## nFxn is a nimble function
+    nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
 }
 
 calcDerivs_internal <- function(func, X, order, resultIndices ) {
@@ -102,12 +113,15 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
                        wrt = NULL, fxnEnv = parent.frame()) {
 
   nf <- eval(fxnCall[[1]], envir = fxnEnv)
+
+  ## standardize the fxnCall arguments
   fxnCall <- match.call(nf, fxnCall)
   fA <- formals(nf)
-  
+
   if(is.null(wrt)) {
     wrt <- names(fA)
   }
+
   ## convert 'x[2]' to quote(x[2]).
   wrt_code <- lapply(wrt,
                      function(x) parse(text = x, keep.source = FALSE)[[1]])
@@ -238,4 +252,14 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   ans <- calcDerivs_internal(func, currentX, order, result_x_indices_all)
   ##  jacobian(func, currentX)
   ans
+}
+
+nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
+                         wrt = NULL, fxnEnv = parent.frame()) {
+  derivsFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
+  fxnCall[[1]] <- derivsFxnCall
+  fxnCall$order <- order
+  ## TODO: handle wrt argument
+  fxnCall$wrt <- wrt
+  eval(fxnCall, fxnEnv)
 }
