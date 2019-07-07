@@ -7,48 +7,48 @@ nCompiler_pluginEnv <- new.env()
 ## to be the case.
 
 make_nCompiler_plugin <- function(nCompiler_pluginEnv) {
-    RcppDefaultPlugin <- Rcpp:::Rcpp.plugin.maker()
-    force(nCompiler_pluginEnv)
-    ans <- function(...) {
-        result <- RcppDefaultPlugin(...)
-        result$env$PKG_CPPFLAGS <- c(result$env$PKG_CPPFLAGS,
-                                     if(length(nCompiler_pluginEnv$includePaths) > 0)
-                                         paste0(
-                                             "-I",
-                                             nCompiler_pluginEnv$includePaths)
-                                     else
-                                         "")
-        result$env$PKG_CXXFLAGS <- "-std=c++11"
-        result$env$PKG_LIBS <- get_nCompLocal_PGK_LIBS_entry()
-        ## Makevars doesn't work
-        ## result$Makevars <- "CXX_STD=CXX11" does not seem to work
-        result
-    }
-    ans
+  RcppDefaultPlugin <- Rcpp:::Rcpp.plugin.maker()
+  force(nCompiler_pluginEnv)
+  ans <- function(...) {
+    result <- RcppDefaultPlugin(...)
+    result$env$PKG_CPPFLAGS <- c(result$env$PKG_CPPFLAGS,
+                                 if(length(nCompiler_pluginEnv$includePaths) > 0)
+                                   paste0(
+                                     "-I",
+                                     nCompiler_pluginEnv$includePaths)
+                                 else
+                                   "")
+    result$env$PKG_CXXFLAGS <- "-std=c++11"
+    result$env$PKG_LIBS <- get_nCompLocal_PGK_LIBS_entry()
+    ## Makevars doesn't work
+    ## result$Makevars <- "CXX_STD=CXX11" does not seem to work
+    result
+  }
+  ans
 }
 
 nCompiler_plugin <- make_nCompiler_plugin(nCompiler_pluginEnv)
 
 make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
-    force(nCompiler_pluginEnv)
-    ans <- function(...) {
-        result <- inline::getPlugin("RcppEigen", ...)
-        ## The -Wno-invalid-partial-specialization is OS-specific
-        ## and we hope it will be unnecessary once Eigen updates and RcppEigen updates.
-        result$env$PKG_CPPFLAGS <- paste(result$env$PKG_CPPFLAGS,
-                                         "-Wno-invalid-partial-specialization",
-                                         "-Wno-unknown-pragmas",
-                                         if(length(nCompiler_pluginEnv$includePaths) > 0)
-                                             paste0(
-                                                 "-I",
-                                                 nCompiler_pluginEnv$includePaths)
-                                         else
-                                             "")
-        result$env$PKG_CXXFLAGS <- "-std=c++11"
-        result$env$PKG_LIBS <- get_nCompLocal_PGK_LIBS_entry()
-        result
-    }
-    ans
+  force(nCompiler_pluginEnv)
+  ans <- function(...) {
+    result <- inline::getPlugin("RcppEigen", ...)
+    ## The -Wno-invalid-partial-specialization is OS-specific
+    ## and we hope it will be unnecessary once Eigen updates and RcppEigen updates.
+    result$env$PKG_CPPFLAGS <- paste(result$env$PKG_CPPFLAGS,
+                                     "-Wno-invalid-partial-specialization",
+                                     "-Wno-unknown-pragmas",
+                                     if(length(nCompiler_pluginEnv$includePaths) > 0)
+                                       paste0(
+                                         "-I",
+                                         nCompiler_pluginEnv$includePaths)
+                                     else
+                                       "")
+    result$env$PKG_CXXFLAGS <- "-std=c++11"
+    result$env$PKG_LIBS <- get_nCompLocal_PGK_LIBS_entry()
+    result
+  }
+  ans
 }
 
 nCompiler_Eigen_plugin <- make_nCompiler_Eigen_plugin(nCompiler_pluginEnv)

@@ -1,8 +1,8 @@
 nClassLabelMaker <- labelFunctionCreator('nClass')
 
 nClassClass <- R6::R6Class(
-    classname = "nClass",
-    portable = FALSE
+  classname = "nClass",
+  portable = FALSE
 )
 
 #' Create a nClass definition

@@ -19,10 +19,10 @@ isNC <- function(x) inherits(x, 'nClass')
 #' 
 #' @export
 isNCgenerator <- function(x) {
-    if(inherits(x, "R6ClassGenerator"))
-        exists(".nCompiler", x)
-    else
-        FALSE
+  if(inherits(x, "R6ClassGenerator"))
+    exists(".nCompiler", x)
+  else
+    FALSE
 }
 
 #' Determine if an object is a compiled nClass generator
@@ -35,10 +35,10 @@ isNCgenerator <- function(x) {
 #' 
 #' @export
 isCompiledNCgenerator <- function(x) {
-    if(inherits(x, "R6ClassGenerator"))
-        exists(".newCobjFun", x)
-    else
-        FALSE
+  if(inherits(x, "R6ClassGenerator"))
+    exists(".newCobjFun", x)
+  else
+    FALSE
 }
 
 #' Access internal information of a nClass object
@@ -49,14 +49,14 @@ isCompiledNCgenerator <- function(x) {
 #' 
 #' @export
 NCinternals <- function(x) {
-    if(isNC(x))
-        parent.env(x)$.NCinternals
-    else if(isNCgenerator(x))
-        x$.nCompiler
-    else
-        stop(paste('Invalid input to NCinternals.  Argument x is of invalid class',
-                   paste(class(x), collapse = ',')),
-             call. = FALSE)
+  if(isNC(x))
+    parent.env(x)$.NCinternals
+  else if(isNCgenerator(x))
+    x$.nCompiler
+  else
+    stop(paste('Invalid input to NCinternals.  Argument x is of invalid class',
+               paste(class(x), collapse = ',')),
+         call. = FALSE)
 }
 
 #' Set internal information of a nClass object
@@ -67,13 +67,13 @@ NCinternals <- function(x) {
 #' 
 #' @export
 `NCinternals<-` <- function(x, value) {
-    if(isNC(x))
-        parent.env(x)$.NCinternals <- value
-    else if(isNCgenerator(x))
-        x$.nCompiler <- value
-    else
-        stop(paste('Invalid input to NCinternals<-.  Argument x is of invalid class',
-                   paste(class(x), collapse = ',')),
-             call. = FALSE)
-    x
+  if(isNC(x))
+    parent.env(x)$.NCinternals <- value
+  else if(isNCgenerator(x))
+    x$.nCompiler <- value
+  else
+    stop(paste('Invalid input to NCinternals<-.  Argument x is of invalid class',
+               paste(class(x), collapse = ',')),
+         call. = FALSE)
+  x
 }
