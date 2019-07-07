@@ -4,8 +4,9 @@
 \alias{buildLocalDLLpackage}
 \title{Create and install nCompLocal package}
 \usage{
-buildLocalDLLpackage(dir = get_nOption("localDLLdir"),
-  create.dir = TRUE, installInR = FALSE, cleanup = TRUE)
+buildLocalDLLpackage(dir = file.path(tempdir(),
+  get_nOption("localDLLdir")), create.dir = TRUE, installInR = FALSE,
+  cleanup = TRUE)
 }
 \arguments{
 \item{dir}{directory where nCompLocal package will be created and possibly installed.  The default value 

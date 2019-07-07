@@ -54,7 +54,7 @@ Collate:
     NF_CompilerClass.R
     NF_CompilerStages.R
     NF_CompilerUtils.R
-    NF_Rderivs.R
+    NF_derivs.R
     NF_InternalsClass.R
     NF_PassByReference.R
     NF_ProcessCompilerStages.R
