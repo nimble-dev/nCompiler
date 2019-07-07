@@ -26,6 +26,19 @@ nCompile_nClass <- function(NC,
                             control = list(),
                             interface = c("full", "generic", "both"),
                             ...) {
+  ## ... is used for internal arguments that are not necessarily documents or 
+  ## promised to stay stable.
+  dotArgs <- list(...)
+
+  if(!isNCgenerator(NC))
+    stop(paste0("Argument NC must be an nClass generator."))
+
+  ## When called from nCompile, stopAfterRcppPacket will be TRUE.
+  ## While this could also be done from the control() list, 
+  ## we leave that to the user.  E.g. That might set endStage even
+  ## earlier.
+  stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
+
   controlFull <- updateDefaults(
     get_nOption('compilerOptions'),
     control
@@ -53,6 +66,10 @@ nCompile_nClass <- function(NC,
   RcppPacket <- cppDefs_2_RcppPacket(cppDef,
                                      filebase = filebase)
   NCinternals(NC)$RcppPacket <- RcppPacket
+
+  if(stopAfterRcppPacket) 
+    return(NC)
+  
   newCobjFun <- cpp_nCompiler(RcppPacket,
                               dir = dir,
                               cacheDir = cacheDir,

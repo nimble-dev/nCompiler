@@ -38,7 +38,7 @@ nCompile_nFunction <- function(NF,
   ## we leave that to the user.  E.g. That might set endStage even
   ## earlier.
   stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
-    ## See options.R for defaults
+  ## See options.R for defaults
   controlFull <- updateDefaults(
     get_nOption('compilerOptions'),
     control

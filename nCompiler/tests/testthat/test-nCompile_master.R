@@ -17,7 +17,7 @@ test_that("Compile one nFunction via nCompile, returning a list.",
           }
 )
 
-test_that("Compile one nFunction via nCompile, returning a list.",
+test_that("Compile one nFunction via nCompile, not returning a list.",
           { 
             addScalars <- nFunction(
               fun = function(x = double(0),
@@ -78,3 +78,22 @@ test_that("Compile two nFunctions via nCompile provided as a list, returning a l
             expect_equal(test$f2(2, 3), 6)
           })
 
+test_that("Compile one nClass via nCompile provided as a list, returning not as list.",
+          {
+            nc <- nClass(
+              classname = "nc",
+              Cpublic = list(
+                v = 'numericVector',
+                go = nFunction(
+                  fun = function(c = 'numericScalar') {
+                    return(c * v)
+                  },
+                  returnType = 'numericVector'
+                )
+              )
+            )
+            Cnc <- nCompile(nc)
+            Cnc1 <- Cnc$new()
+            Cnc1$v <- 1:3
+            expect_equal(Cnc1$go(2), array(2*(1:3)))
+          })
