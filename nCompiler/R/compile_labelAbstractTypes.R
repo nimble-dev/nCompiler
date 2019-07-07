@@ -5,173 +5,173 @@ labelAbstractTypesEnv$.debug <- FALSE
 compile_labelAbstractTypes <- function(code,
                                        symTab,
                                        auxEnv) { 
-    nErrorEnv$stateInfo <- paste0("handling labelAbstractTypes for ",
-                                       code$name,
-                                       ".")
+  nErrorEnv$stateInfo <- paste0("handling labelAbstractTypes for ",
+                                code$name,
+                                ".")
 
-    logging <- get_nOption('compilerOptions')[['logging']]
-    if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
-    
-    if(code$isLiteral) {
-      if(is.numeric(code$name)) {
-        if(is.integer(code$name)) {
-          code$type <- symbolBasic$new(name = 'NONAME',
-                                       type = 'integer',
-                                       nDim = 0)
-        } else {
-          code$type <- symbolBasic$new(name = 'NONAME',
-                                       type = 'double',
-                                       nDim = 0)
-        } 
-      } else if(is.logical(code$name)) {
+  logging <- get_nOption('compilerOptions')[['logging']]
+  if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
+  
+  if(code$isLiteral) {
+    if(is.numeric(code$name)) {
+      if(is.integer(code$name)) {
         code$type <- symbolBasic$new(name = 'NONAME',
-                                     type = 'logical',
+                                     type = 'integer',
                                      nDim = 0)
-      } else if(is.character(code$name)) {
-        warnings("Type labeling of a literal string is not handled yet in labelAbstractTypes.")
+      } else {
+        code$type <- symbolBasic$new(name = 'NONAME',
+                                     type = 'double',
+                                     nDim = 0)
+      } 
+    } else if(is.logical(code$name)) {
+      code$type <- symbolBasic$new(name = 'NONAME',
+                                   type = 'logical',
+                                   nDim = 0)
+    } else if(is.character(code$name)) {
+      warnings("Type labeling of a literal string is not handled yet in labelAbstractTypes.")
+    }
+  }
+  
+  if(code$isName) {
+    ## If it doesn't exist and must exist, stop
+    if(code$name != "") { ## e.g. In A[i,], second index gives name==""
+      if(symTab$symbolExists(code$name, TRUE)) {
+        thisSymbolObject <- symTab$getSymbol(code$name, TRUE)
+        ##code$typeName <- class(thisSymbolObject)[1]
+        code$type <- thisSymbolObject
+      } else {
+        if(!auxEnv$.AllowUnknowns)
+          if(identical(code$name, 'pi')) {
+            ## unique because it may be encountered anew on a RHS
+            ## and be valid as a new variable name, or on the LHS
+            ## and be a constant if it's not yet a variable
+            newSymbol <- symbolBasic$new(name = 'pi',
+                                         type = 'double',
+                                         nDim = 0)
+            symTab$addSymbol(newSymbol)
+            code$type <- newSymbol
+            code$nDim <- 0
+            ##code$typeName <- 'double'
+          } else {
+            stop(paste0("variable '",
+                        code$name,
+                        "' has not been created yet."),
+                 call.=FALSE) 
+          }
+      }
+      return(NULL)
+    }
+  }
+
+  if(code$isCall) {
+    if(code$name == '{') {
+      ## recurse over lines
+      for(i in seq_along(code$args)) {
+        newInsertions <-
+          compile_labelAbstractTypes(code$args[[i]], symTab, auxEnv)
+        code$args[[i]]$insertions <-
+          if(is.null(newInsertions)) list() else newInsertions
+      }
+      return(invisible(NULL))
+    }
+
+    opInfo <- operatorDefEnv[[code$name]]
+
+    ## Check for nFunctions or nClass methods (also nFunctions)
+    if(is.null(opInfo)) {
+      ## First we check if we are in an nClass and code$name is a method.
+      obj <- NULL
+      if(isNCgenerator(auxEnv$closure)) {## We are in a class method
+        obj <- auxEnv$closure$public_methods[[code$name]]
+        if(!is.null(obj)) {
+          if(isNF(obj)) {
+            opInfo <- operatorDefEnv[['nClass_method']]
+          } else {
+            stop(exprClassProcessingErrorMsg(code,
+                                             paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
+                 call. = FALSE)
+          }
+        }
+      }
+      ## Next we check if code$name exists in the closure.
+      ## Note that if we are in a method, auxEnv$closure will be the 
+      ## generator, which is an environment.  Hence the exists() and get()
+      ## calls work for a nClass method or a stand-alone nFunction.
+      if(is.null(obj)) {
+        ## We don't use auxEnv$closure[[code$name]] because
+        ## we need inherits = TRUE behavior.
+        if(exists(code$name, envir = auxEnv$closure))
+          obj <- get(code$name, envir = auxEnv$closure)
+        ## An nFunction should already have been transformed to
+        ## have code$name nFunction in stage simpleTransformatnions.
+        ## But if not (if a custom handler was provided that avoided that change),
+        ## it will still be caught here.
+        if(!is.null(obj)) {
+          if(isNF(obj)) {
+            opInfo <- operatorDefEnv[['nFunction']]
+            uniqueName <- NFinternals(obj)$uniqueName
+            if(length(uniqueName)==0)
+              stop(
+                exprClassProcessingErrorMsg(
+                  code,
+                  paste0('nFunction ', code$name, 'is being called, ',
+                         'but it is malformed because it has no internal name.')),
+                call. = FALSE)
+            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
+              ## We could put the nFunction itself in the needed_nFunctions list,
+              ## but we do not as a way to avoid having many references to R6 objects
+              ## in a blind attempt to facilitate garbage collection based on past experience.
+              ## Instead, we provide what is needed to look up the nFunction again later.
+              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
+            }
+          } else
+            stop(exprClassProcessingErrorMsg(
+              code,
+              paste0(code$name, 'is being used as a function, but it is not a nFunction.')),
+              call. = FALSE)
+        }
+      }
+    }        
+    if(!is.null(opInfo)) {
+      handlingInfo <- opInfo[["labelAbstractTypes"]]
+      if(!is.null(handlingInfo)) {
+        handler <- handlingInfo[['handler']]
+        if(!is.null(handler)) {
+          if (logging)
+            appendToLog(paste('Calling handler', handler, 'for', code$name))
+          ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
+                      envir = labelAbstractTypesEnv)
+          nErrorEnv$stateInfo <- character()
+          if (logging) {
+            appendToLog(paste('Finished handling', handler, 'for', code$name))
+            logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
+          }
+          return(ans)
+        }
       }
     }
-    
-    if(code$isName) {
-        ## If it doesn't exist and must exist, stop
-        if(code$name != "") { ## e.g. In A[i,], second index gives name==""
-            if(symTab$symbolExists(code$name, TRUE)) {
-                thisSymbolObject <- symTab$getSymbol(code$name, TRUE)
-                ##code$typeName <- class(thisSymbolObject)[1]
-                code$type <- thisSymbolObject
-            } else {
-                if(!auxEnv$.AllowUnknowns)
-                    if(identical(code$name, 'pi')) {
-                        ## unique because it may be encountered anew on a RHS
-                        ## and be valid as a new variable name, or on the LHS
-                        ## and be a constant if it's not yet a variable
-                        newSymbol <- symbolBasic$new(name = 'pi',
-                                                     type = 'double',
-                                                     nDim = 0)
-                        symTab$addSymbol(newSymbol)
-                        code$type <- newSymbol
-                        code$nDim <- 0
-                        ##code$typeName <- 'double'
-                    } else {
-                        stop(paste0("variable '",
-                                       code$name,
-                                       "' has not been created yet."),
-                                call.=FALSE) 
-                    }
-            }
-            return(NULL)
-        }
-    }
-
-    if(code$isCall) {
-        if(code$name == '{') {
-            ## recurse over lines
-            for(i in seq_along(code$args)) {
-                newInsertions <-
-                    compile_labelAbstractTypes(code$args[[i]], symTab, auxEnv)
-                code$args[[i]]$insertions <-
-                    if(is.null(newInsertions)) list() else newInsertions
-            }
-            return(invisible(NULL))
-        }
-
-        opInfo <- operatorDefEnv[[code$name]]
-
-        ## Check for nFunctions or nClass methods (also nFunctions)
-        if(is.null(opInfo)) {
-          ## First we check if we are in an nClass and code$name is a method.
-          obj <- NULL
-          if(isNCgenerator(auxEnv$closure)) {## We are in a class method
-            obj <- auxEnv$closure$public_methods[[code$name]]
-            if(!is.null(obj)) {
-              if(isNF(obj)) {
-                opInfo <- operatorDefEnv[['nClass_method']]
-              } else {
-                stop(exprClassProcessingErrorMsg(code,
-                  paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
-                call. = FALSE)
-              }
-            }
-          }
-          ## Next we check if code$name exists in the closure.
-          ## Note that if we are in a method, auxEnv$closure will be the 
-          ## generator, which is an environment.  Hence the exists() and get()
-          ## calls work for a nClass method or a stand-alone nFunction.
-          if(is.null(obj)) {
-            ## We don't use auxEnv$closure[[code$name]] because
-            ## we need inherits = TRUE behavior.
-            if(exists(code$name, envir = auxEnv$closure))
-              obj <- get(code$name, envir = auxEnv$closure)
-            ## An nFunction should already have been transformed to
-            ## have code$name nFunction in stage simpleTransformatnions.
-            ## But if not (if a custom handler was provided that avoided that change),
-            ## it will still be caught here.
-            if(!is.null(obj)) {
-              if(isNF(obj)) {
-                opInfo <- operatorDefEnv[['nFunction']]
-                uniqueName <- NFinternals(obj)$uniqueName
-                if(length(uniqueName)==0)
-                  stop(
-                    exprClassProcessingErrorMsg(
-                      code,
-                      paste0('nFunction ', code$name, 'is being called, ',
-                             'but it is malformed because it has no internal name.')),
-                    call. = FALSE)
-                if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-                  ## We could put the nFunction itself in the needed_nFunctions list,
-                  ## but we do not as a way to avoid having many references to R6 objects
-                  ## in a blind attempt to facilitate garbage collection based on past experience.
-                  ## Instead, we provide what is needed to look up the nFunction again later.
-                  auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
-                }
-              } else
-                stop(exprClassProcessingErrorMsg(
-                  code,
-                  paste0(code$name, 'is being used as a function, but it is not a nFunction.')),
-                  call. = FALSE)
-            }
-          }
-        }        
-        if(!is.null(opInfo)) {
-            handlingInfo <- opInfo[["labelAbstractTypes"]]
-            if(!is.null(handlingInfo)) {
-                handler <- handlingInfo[['handler']]
-                if(!is.null(handler)) {
-                    if (logging)
-                      appendToLog(paste('Calling handler', handler, 'for', code$name))
-                    ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                                envir = labelAbstractTypesEnv)
-                    nErrorEnv$stateInfo <- character()
-                    if (logging) {
-                      appendToLog(paste('Finished handling', handler, 'for', code$name))
-                      logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-                    }
-                    return(ans)
-                }
-            }
-        }
-    }
-    nErrorEnv$stateInfo <- character()
-    invisible(NULL)
+  }
+  nErrorEnv$stateInfo <- character()
+  invisible(NULL)
 }
 
 inLabelAbstractTypesEnv <- function(expr) {
-    expr <- substitute(expr)
-    eval(expr, envir = labelAbstractTypesEnv)
+  expr <- substitute(expr)
+  eval(expr, envir = labelAbstractTypesEnv)
 }
 
 inLabelAbstractTypesEnv(
-    setReturnType <- function(handlingInfo, argType) {
-        returnTypeCode <- handlingInfo[['returnTypeCode']]
-        if(is.null(returnTypeCode)) return('double')
-        switch(returnTypeCode,
-               'double', ##1
-               'integer', ##2
-               'logical', ##3
-               argType, ##4
-               if(argType == 'logical') 'integer' else argType ##5
-               )
-    }
+  setReturnType <- function(handlingInfo, argType) {
+    returnTypeCode <- handlingInfo[['returnTypeCode']]
+    if(is.null(returnTypeCode)) return('double')
+    switch(returnTypeCode,
+           'double', ##1
+           'integer', ##2
+           'logical', ##3
+           argType, ##4
+           if(argType == 'logical') 'integer' else argType ##5
+           )
+  }
 )
 
 
@@ -278,48 +278,48 @@ inLabelAbstractTypesEnv(
 
 
 inLabelAbstractTypesEnv(
-    Assign <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            auxEnv$.AllowUnknowns <- FALSE
-            inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                                  handlingInfo,
-                                                  useArgs = c(FALSE, TRUE))
-            auxEnv$.AllowUnknowns <- TRUE
-            if(length(code$args) > 2) {
-                inserts <- c(inserts,
-                             compile_labelAbstractTypes(code, symTab, auxEnv))
-            }
-            else{
-                inserts <- c(inserts,
-                             recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                                        handlingInfo, useArgs = c(TRUE, FALSE)))
-                auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
-                inserts <- c(inserts,
-                             AssignAfterRecursing(code, symTab, auxEnv,
-                                                  handlingInfo))
-            }
-            if(length(inserts) == 0) NULL else inserts
-        }
+  Assign <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      auxEnv$.AllowUnknowns <- FALSE
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo,
+                                            useArgs = c(FALSE, TRUE))
+      auxEnv$.AllowUnknowns <- TRUE
+      if(length(code$args) > 2) {
+        inserts <- c(inserts,
+                     compile_labelAbstractTypes(code, symTab, auxEnv))
+      }
+      else{
+        inserts <- c(inserts,
+                     recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                                handlingInfo, useArgs = c(TRUE, FALSE)))
+        auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
+        inserts <- c(inserts,
+                     AssignAfterRecursing(code, symTab, auxEnv,
+                                          handlingInfo))
+      }
+      if(length(inserts) == 0) NULL else inserts
+    }
 )
 
 inLabelAbstractTypesEnv(
-    AssignAfterRecursing <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            LHS <- code$args[[1]]
-            RHS <- code$args[[2]]
-            RHStype <- RHS$type
-            if(LHS$isName) {
-                if(!symTab$symbolExists(LHS$name, TRUE)) {
-                    newSym <- RHStype$clone()
-                    newSym$isArg <- FALSE
-                    newSym$name <- LHS$name
-                    symTab$addSymbol(newSym)
-                    LHS$type <- newSym
-                    code$type <- newSym
-                }
-            }
-            NULL
+  AssignAfterRecursing <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      LHS <- code$args[[1]]
+      RHS <- code$args[[2]]
+      RHStype <- RHS$type
+      if(LHS$isName) {
+        if(!symTab$symbolExists(LHS$name, TRUE)) {
+          newSym <- RHStype$clone()
+          newSym$isArg <- FALSE
+          newSym$name <- LHS$name
+          symTab$addSymbol(newSym)
+          LHS$type <- newSym
+          code$type <- newSym
         }
+      }
+      NULL
+    }
 )
 
 inLabelAbstractTypesEnv(
@@ -394,15 +394,15 @@ inLabelAbstractTypesEnv(
     inserts <-
       if (recurse)
         recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-      else list()
+    else list()
 
     if (length(code$args) != 2)
       stop(
         exprClassProcessingErrorMsg(
           code, paste(
-                  "In sizeColonOperator: Problem determining ",
-                  "size for ':' without two arguments."
-                )
+            "In sizeColonOperator: Problem determining ",
+            "size for ':' without two arguments."
+          )
         ), call. = FALSE
       )
 
@@ -413,139 +413,139 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    recurse_labelAbstractTypes <- 
-        function(code, symTab, auxEnv, handlingInfo,
-                 useArgs = rep(TRUE, length(code$args))) {
-            ## won't be here unless code is a call.  It will not be a {
-            inserts <- list()
-            for(i in seq_along(code$args)) {
-                if(useArgs[i]) {
-                    if(inherits(code$args[[i]], 'exprClass')) {
-                        inserts <- c(inserts,
-                                     compile_labelAbstractTypes(code$args[[i]],
-                                                                symTab,
-                                                                auxEnv))
-                    }
-                }
-            }
-            if(length(inserts)==0) NULL else inserts
+  recurse_labelAbstractTypes <- 
+    function(code, symTab, auxEnv, handlingInfo,
+             useArgs = rep(TRUE, length(code$args))) {
+      ## won't be here unless code is a call.  It will not be a {
+      inserts <- list()
+      for(i in seq_along(code$args)) {
+        if(useArgs[i]) {
+          if(inherits(code$args[[i]], 'exprClass')) {
+            inserts <- c(inserts,
+                         compile_labelAbstractTypes(code$args[[i]],
+                                                    symTab,
+                                                    auxEnv))
+          }
         }
+      }
+      if(length(inserts)==0) NULL else inserts
+    }
 )
 
 inLabelAbstractTypesEnv(
-    BinaryUnaryCwise <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            if(length(code$args) == 1)
-                return(UnaryCwise(code, symTab, auxEnv, handlingInfo))
-            if(length(code$args) == 2)
-                return(BinaryCwise(code, symTab, auxEnv, handlingInfo))
-            stop(exprClassProcessingErrorMsg(
-                code,
-                paste0('In sizeBinaryUnarycWise: Length of arguments is not 1 or 2.')),
-                call. = FALSE)
-        }
+  BinaryUnaryCwise <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) == 1)
+        return(UnaryCwise(code, symTab, auxEnv, handlingInfo))
+      if(length(code$args) == 2)
+        return(BinaryCwise(code, symTab, auxEnv, handlingInfo))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In sizeBinaryUnarycWise: Length of arguments is not 1 or 2.')),
+        call. = FALSE)
+    }
 )
 
 ## Handler for unary component-wise operators
 inLabelAbstractTypesEnv(
-    UnaryCwise <-
-        function(code, symTab, auxEnv, handlingInfo) {
-            if(length(code$args) != 1)
-                stop(exprClassProcessingErrorMsg(
-                    code,
-                    'sizeUnaryCwise called with argument length != 1.'
-                ),
-                call. = FALSE)
+  UnaryCwise <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'sizeUnaryCwise called with argument length != 1.'
+        ),
+        call. = FALSE)
 
-            inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
-            ## pull out the argument
-            arg <- code$args[[1]]
+      ## pull out the argument
+      arg <- code$args[[1]]
 
-            argType <- arg$type
-            resultScalarType <- arithmeticOutputType(
-              argType$type, returnTypeCode = handlingInfo$returnTypeCode
-            )
-            resultType <- symbolBasic$new(nDim = argType$nDim,
-                                          type = resultScalarType)
-            code$type <- resultType
-            invisible(NULL)
+      argType <- arg$type
+      resultScalarType <- arithmeticOutputType(
+        argType$type, returnTypeCode = handlingInfo$returnTypeCode
+      )
+      resultType <- symbolBasic$new(nDim = argType$nDim,
+                                    type = resultScalarType)
+      code$type <- resultType
+      invisible(NULL)
 
-        }
+    }
 )
 
 ## Handler for binary component-wise operators
 inLabelAbstractTypesEnv(
-    BinaryCwise <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            if(length(code$args) != 2)
-                stop(exprClassProcessingErrorMsg(
-                    code,
-                    'sizeBinaryCwise called with argument length != 2.'
-                ),
-                call. = FALSE)
+  BinaryCwise <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 2)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'sizeBinaryCwise called with argument length != 2.'
+        ),
+        call. = FALSE)
 
-            inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-            ## sizes of arguments must have already been set
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      ## sizes of arguments must have already been set
 
-            ## pull out the two arguments
-            a1 <- code$args[[1]]
-            a2 <- code$args[[2]]
+      ## pull out the two arguments
+      a1 <- code$args[[1]]
+      a2 <- code$args[[2]]
 
-            a1Type <- a1$type
-            a2Type <- a2$type
+      a1Type <- a1$type
+      a2Type <- a2$type
 
-            nDim <- max(a1Type$nDim, a2Type$nDim)
-            resultScalarType <- arithmeticOutputType(
-              a1Type$type, a2Type$type, handlingInfo$returnTypeCode
-            )
-            resultType <- symbolBasic$new(nDim = nDim,
-                                          type = resultScalarType)
-            code$type <- resultType
-            ##code$typeName <- class(resultType)[1]
-            invisible(NULL)
-            ## 
-        }
+      nDim <- max(a1Type$nDim, a2Type$nDim)
+      resultScalarType <- arithmeticOutputType(
+        a1Type$type, a2Type$type, handlingInfo$returnTypeCode
+      )
+      resultType <- symbolBasic$new(nDim = nDim,
+                                    type = resultScalarType)
+      code$type <- resultType
+      ##code$typeName <- class(resultType)[1]
+      invisible(NULL)
+      ## 
+    }
 )
 
 inLabelAbstractTypesEnv(
-    BinaryCwiseLogical <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            ans <- BinaryCwise(code, symTab, auxEnv, handlingInfo)
-            code$type$type <- 'logical'
-            ans
-        }
+  BinaryCwiseLogical <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      ans <- BinaryCwise(code, symTab, auxEnv, handlingInfo)
+      code$type$type <- 'logical'
+      ans
+    }
 )
 
 inLabelAbstractTypesEnv(
-    UnaryReduction <-
-        function(code, symTab, auxEnv, handlingInfo) {
-            if(length(code$args) != 1)
-                stop(exprClassProcessingErrorMsg(
-                    code,
-                    'unaryReduction called with argument length != 1.'
-                ),
-                call. = FALSE)
-            
-            inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-            
-            ## Kludgy catch of var case here.
-            ## Can't do var(matrix) because in R that is interpreted as cov(data.frame)
-            if(!(code$args[[1]]$isLiteral)) {
-                if(code$args[[1]]$type$nDim >= 2) {
-                    if(code$name == 'var') {
-                        stop(exprClassProcessingErrorMsg(
-                            code,
-                            'nCompiler compiler does not support var with a matrix (or higher dimensional) argument.'),
-                            call. = FALSE) 
-                    }
-                }
-            }
-            argType <- code$args[[1]]$type
-            code$type <- symbolBasic$new(nDim = 0,
-                                         type = setReturnType(handlingInfo, argType$type))
-            inserts
+  UnaryReduction <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'unaryReduction called with argument length != 1.'
+        ),
+        call. = FALSE)
+      
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      
+      ## Kludgy catch of var case here.
+      ## Can't do var(matrix) because in R that is interpreted as cov(data.frame)
+      if(!(code$args[[1]]$isLiteral)) {
+        if(code$args[[1]]$type$nDim >= 2) {
+          if(code$name == 'var') {
+            stop(exprClassProcessingErrorMsg(
+              code,
+              'nCompiler compiler does not support var with a matrix (or higher dimensional) argument.'),
+              call. = FALSE) 
+          }
         }
+      }
+      argType <- code$args[[1]]$type
+      code$type <- symbolBasic$new(nDim = 0,
+                                   type = setReturnType(handlingInfo, argType$type))
+      inserts
+    }
 )
 
 inLabelAbstractTypesEnv(
@@ -633,7 +633,7 @@ inLabelAbstractTypesEnv(
       if (index_args[[i]]$name != '') {
         ## not a call resulting in non-scalar other than ':'
         if (is.null(index_args[[i]]$type) || ## missing index nDim info
-            is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
+              is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
           stop(
             exprClassProcessingErrorMsg(
               code,
@@ -738,35 +738,35 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    Return <- 
-        function(code, symTab, auxEnv, handlingInfo) {
-            if(length(code$args) > 1)
-                stop(exprClassProcessingErrorMsg(
-                    code,
-                    'return has argument length > 1.'
-                ),
-                call. = FALSE)
-            if(!exists('return', envir = auxEnv))
-                stop(exprClassProcessingErrorMsg(
-                    code,
-                    'There was no returnType declaration and the default is missing.'
-                ),
-                call. = FALSE)
-            insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-            code$type <- code$args[[1]]$type
-            invisible(insertions)
-        }
+  Return <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) > 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'return has argument length > 1.'
+        ),
+        call. = FALSE)
+      if(!exists('return', envir = auxEnv))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'There was no returnType declaration and the default is missing.'
+        ),
+        call. = FALSE)
+      insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      code$type <- code$args[[1]]$type
+      invisible(insertions)
+    }
 )
 
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
-    browser()
-    origValue <- nOptions$debugSizeProcessing
-    message('Entering into size processing debugging. You may need to donOptions(debugSizeProcessing = FALSE) if this exits in any non-standard way.')
-    set_nOption('debugSizeProcessing', TRUE)
-    ans <- recurseSetSizes(code, symTab, auxEnv)
-    removeExprClassLayer(code$caller, 1)
-    set_nOption('debugSizeProcessing', origValue)
-    return(ans)
+  browser()
+  origValue <- nOptions$debugSizeProcessing
+  message('Entering into size processing debugging. You may need to donOptions(debugSizeProcessing = FALSE) if this exits in any non-standard way.')
+  set_nOption('debugSizeProcessing', TRUE)
+  ans <- recurseSetSizes(code, symTab, auxEnv)
+  removeExprClassLayer(code$caller, 1)
+  set_nOption('debugSizeProcessing', origValue)
+  return(ans)
 }
 
 ## promote numeric output to most information-rich type, double > integer > logical

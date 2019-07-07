@@ -69,62 +69,60 @@ nCompile_nFunction <- function(NF,
     return(NF_Compiler)
   
   cppDef <- NF_Compiler$cppDef
-    ## We append "_c_" so that the filename does not match the function name.
-    ## That prevents Rcpp's "context" system from making a mistake
-    ## when we combine multiple RcppPacket contents into a single file.
-    ## It seems to check if there are any .cpp files with names that
-    ## match names of exported functions, and to think they should
-    ## be compiled if so.  If one has compiled a nFunction individually
-    ## and the in combination with other files, this could cause a problem.
-    filebase <- make_cpp_filebase(cppDef$name) ## append _c_
-    RcppPacket <- cppDefs_2_RcppPacket(cppDef,
-                                       filebase = filebase)
-    NFinternals(NF)$RcppPacket <- RcppPacket
+  ## We append "_c_" so that the filename does not match the function name.
+  ## That prevents Rcpp's "context" system from making a mistake
+  ## when we combine multiple RcppPacket contents into a single file.
+  ## It seems to check if there are any .cpp files with names that
+  ## match names of exported functions, and to think they should
+  ## be compiled if so.  If one has compiled a nFunction individually
+  ## and the in combination with other files, this could cause a problem.
+  filebase <- make_cpp_filebase(cppDef$name) ## append _c_
+  RcppPacket <- cppDefs_2_RcppPacket(cppDef,
+                                     filebase = filebase)
+  NFinternals(NF)$RcppPacket <- RcppPacket
+  NF_Compiler$stageCompleted <- stageName
+  
+  if (logging) {
+    nDebugEnv$compilerLog <- c(
+      nDebugEnv$compilerLog,
+      'RcppPacket C++ content', '--------',
+      paste(RcppPacket$cppContent, collapse = '\n'),
+      '--------\n',
+      'RcppPacket header content', '--------',
+      paste(RcppPacket$hContent, collapse = '\n'),
+      '--------\n'
+    )
+    logAfterStage(stageName)
+    nameMsg <- paste0("(for method or nFunction ", NF_Compiler$origName, ")")
+    appendToLog(paste("---- End compilation log", nameMsg, " ----\n"))
+  }
+  
+  if(stopAfterRcppPacket) 
+    return(NF)
+  ## Next two steps should be replaced with single call to cpp_nCompiler.
+  ## See nCompile_nClass
+  stageName <- 'writeCpp'
+  if(NFcompilerMaybeStop(stageName, controlFull)) 
+    return(NF)
+  if(isTRUE(controlFull$writeCpp)) {
+    writeCpp_nCompiler(RcppPacket,
+                       dir = dir)
+    if(isTRUE(get_nOption('pause_after_writing_files')))
+      browser()
+  }
+  NF_Compiler$stageCompleted <- stageName
+  
+  stageName = 'compileCpp'    
+  if(NFcompilerMaybeStop(stageName, controlFull)) 
+    return(NF)
+  
+  if(isTRUE(controlFull$compileCpp)) {
+    ans <- compileCpp_nCompiler(RcppPacket,
+                                dir = dir,
+                                cacheDir = cacheDir,
+                                env = env)
     NF_Compiler$stageCompleted <- stageName
-
-    if (logging) {
-        nDebugEnv$compilerLog <- c(
-          nDebugEnv$compilerLog,
-          'RcppPacket C++ content', '--------',
-          paste(RcppPacket$cppContent, collapse = '\n'),
-          '--------\n',
-          'RcppPacket header content', '--------',
-          paste(RcppPacket$hContent, collapse = '\n'),
-          '--------\n'
-        )
-        logAfterStage(stageName)
-        nameMsg <- paste0("(for method or nFunction ", NF_Compiler$origName, ")")
-        appendToLog(paste("---- End compilation log", nameMsg, " ----\n"))
-    }
-    
-    if(stopAfterRcppPacket) 
-      return(NF)
-    ## Next two steps should be replaced with single call to cpp_nCompiler.
-    ## See nCompile_nClass
-    stageName <- 'writeCpp'
-    if(NFcompilerMaybeStop(stageName, controlFull)) 
-      return(NF)
-    if(isTRUE(controlFull$writeCpp)) {
-      writeCpp_nCompiler(RcppPacket,
-                         dir = dir)
-      if(isTRUE(get_nOption('pause_after_writing_files')))
-        browser()
-    }
-    NF_Compiler$stageCompleted <- stageName
-    
-    stageName = 'compileCpp'    
-    if(NFcompilerMaybeStop(stageName, controlFull)) 
-      return(NF)
-    
-    if(isTRUE(controlFull$compileCpp)) {
-      ans <- compileCpp_nCompiler(RcppPacket,
-                                  dir = dir,
-                                  cacheDir = cacheDir,
-                                  env = env)
-      NF_Compiler$stageCompleted <- stageName
-      return(ans)
-    }
-    NF
+    return(ans)
+  }
+  NF
 }
-
-
