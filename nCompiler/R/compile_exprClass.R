@@ -285,6 +285,28 @@ setArg <- function(expr, ID, value, add = FALSE) {
   invisible(value)
 }
 
+removeArg <- function(expr, ID) {
+  value <- expr$args[[ID]]
+  origNumArgs <- length(expr$args)
+  if(ID > origNumArgs + 1)
+    stop(exprClassProcessingErrorMsg(
+      expr,
+      paste0(
+        "Attempted to remove an argument with ID = ", ID, " but that is too large. ",
+        "There are only ", origNumArgs, " arguments.")),
+      call. = FALSE)
+  argsToShift <- origNumArgs - ID
+  if(argsToShift) {
+    for(i in (ID + 1):origNumArgs) {
+      setArg(expr, i-1, expr$args[[i]])
+      names(expr$args)[i-1] <- names(expr$args)[i]
+    }
+    ## remove the last arg which now appears twice in the AST
+    expr$args[[origNumArgs]] <- NULL
+  }
+  invisible(value)
+}
+
 checkArgDims <- function(expr, ID, nDimRange) {
   if (expr$args[[ID]]$type$nDim < nDimRange[1] ||
       expr$args[[ID]]$type$nDim > nDimRange[2])
