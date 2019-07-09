@@ -21,7 +21,7 @@ These work fine.  We and others have used them together.
 
 ##### Eigen + Cereal
 
-We need to serialize Eigen objects in cereal.  This should be straighforward. There is at least some code on the internet for doing so.
+We need to serialize Eigen objects in cereal.  This should be straightforward. There is at least some code on the internet for doing so.
 
 ##### Eigen + TBB
 
@@ -37,11 +37,11 @@ We create CppAD tapes upon DLL loading.  Hence we should not need to explicitly 
 
 ##### CppAD + TBB
 
-This is a serious issue.  CppAD provides an interface for multi-threaded use.  It requires that the user be in charge of their own threads.  TBB takes charge of threads, so it doesn't work naturally with CppAD.  I have a system drafted [here](https://github.com/perrydv/TBB4CppAD).   Summary: I think I have this solved, but there are still some questions to be resolved.
+This is an issue.  CppAD provides an interface for multi-threaded use.  It requires that the user be in charge of their own threads.  TBB takes charge of threads, so it doesn't work naturally with CppAD.  I have a system drafted [here](https://github.com/perrydv/TBB4CppAD), which can be generalized.   Summary: I think I have this solved, but there are still some questions to be resolved.
 
 ##### Cereal + R
 
-As mentioned in the serializiation page, we need to keep track of these two systems together.
+As mentioned in the serialization page, we need to keep track of these two systems together.
 
 ##### TBB + R
 

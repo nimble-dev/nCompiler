@@ -9,33 +9,55 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Using nCompiler code in packages
 
-It will be useful to include R and generated C++ from nCompiler in new packages.
+nCompiler has partially-built support for generating code into packages.  This includes:
+
+- generating C++ code into src directory and using Rcpp to compile it into the package.
+- generating C++ code into inst directory so that it can be included from other packages.
+- generating R code into R directory with `nClass` definitions to interface with compiled `nClass` objects.
+
+Note that these features work for simple cases but are not fully developed yet.
 
 Following is an example of how to do so for an `nClass`.
-
 ```{r}
 library(nCompiler)
 nc1 <- nClass(
   classname = "nc1",
+  Rpublic = list(
+    p1 = function(x) x+1
+  ),
   Cpublic = list(
     x = 'numericScalar',
     cp1 = nFunction(
-      fun = function(x = double()) {
+      fun = function(x = numericScalar()) {
         ans <- x+1
         return(ans)
-        returnType(double())
+        returnType(numericScalar())
       }
     )
   )
 )
-writePackage(nc1, package.name = "nc1Package", clean = TRUE)
-buildPackage("nc1Package")
-obj <- nc1Package::new_nc1()
-method(obj, 'cp1')(2) # It works.
+package_dir <- tempdir() # Normally one would choose a local directory
+# A variety of output from pkgKitten and Rcpp is generated
+writePackage(
+  nc1,
+  dir = package_dir,
+  package.name = "nc1Package",
+  clean = TRUE
+)
+buildPackage("nc1Package",
+             dir = package_dir)
 ```
+
+## Load and use nc1Package
+
+```{r}
+library("nc1Package")
+my_nc1 <- nc1Package::nc1$new()
+my_nc1$cp1(1)
+```
+
+
 
 # Future plans
 
-- Also embed "full" `nClass` interface R code in packages.
-- Improve naming.
-- Support multiple objects, exporting, and other basic package choices.
+- Support multiple objects, exporting, finding needed libraries during package building, and other basic package controls.

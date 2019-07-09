@@ -72,9 +72,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -99,6 +97,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -113,7 +114,6 @@ body {
   padding-top: 56px;
   margin-top: -56px;
 }
-
 .section h2 {
   padding-top: 56px;
   margin-top: -56px;
@@ -133,6 +133,43 @@ body {
 .section h6 {
   padding-top: 56px;
   margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
 }
 </style>
 
@@ -154,18 +191,75 @@ $(document).ready(function () {
 });
 </script>
 
-
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -243,8 +337,6 @@ div.tocify {
 
 .tocify-subheader .tocify-item {
   font-size: 0.90em;
-  padding-left: 25px;
-  text-indent: 0;
 }
 
 .tocify .list-group-item {
@@ -259,6 +351,16 @@ div.tocify {
 }
 
 </style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
 
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row-fluid">
@@ -304,10 +406,44 @@ div.tocify {
 </div>
 
 
-<p>The current plan is to adopt Threading Building Blocks (TBB), a library from Intel. This is the same library adopted by <code>RcppParallel</code>. As with the Eigen, CppAD, and cereal packages, <code>nCompiler</code> will code-generate C++ that uses TBB.</p>
+<p>nCompiler uses Threading Building Blocks (TBB), a parallel computing C++ library from Intel. This is the same library adopted by <code>RcppParallel</code>. Similarly to the way nCompiler uses the Eigen, CppAD, and cereal packages, nCompiler uses TBB by generating C++ for it from simple <code>nFunction</code> code.</p>
 <p>TBB manages thread creation, saving the programmer a lot of hassle.</p>
-<p>Everything in TBB is class (functor) based. The goal is to generate <code>nClass</code> classes in this role.</p>
-<p>This will require some additional control from R of fine-scale C++, such as class constructors with member data initializers.</p>
+<p>Everything in TBB is class (functor) based. nCompiler generates appropriate classes from <code>nClass</code> definitions.</p>
+<p>This system has a working prototype. More complete support for nCompiler types and TBB tools remains for future work.</p>
+<div id="example" class="section level2">
+<h2>Example</h2>
+<p>Here is a working example. The name <code>parallel_for</code> matches the name of the TBB function. In the <code>nFunction</code> method of the <code>nClass</code> below, the first three arguments to <code>parallel_for</code> are like <code>for(i in 1:10) {y[i] &lt;- 2 * x[i]}</code>. The next two arguments gives variable(s) that should be copied for each thread (<code>x</code>) and variables that can be shared across threads (<code>y</code>). In this example, <code>x</code> does not really need to be copied for each thread, but I wanted to put some variable in this role for the example.</p>
+<p>The name and syntax of <code>parallel_for</code> are up for discussion and may change.</p>
+<pre class="r"><code>library(nCompiler)
+nc &lt;- nClass(
+  Cpublic = list(
+    go = nFunction(
+      fun = function(x = &#39;numericVector&#39;) {
+        y &lt;- x
+        parallel_for(i, 1:10,
+                     {y[i] &lt;- 2 * x[i]},
+                     &quot;x&quot;, ## copy for each thread
+                     &quot;y&quot;) ## share across threads
+        return(y)
+      },
+      returnType = &#39;numericVector&#39;
+    )))
+
+Cnc &lt;- nCompile(nc)
+Cnc1 &lt;- Cnc$new()
+## This runs in parallel:
+Cnc1$go(101:110)</code></pre>
+<pre><code>##  [1] 202 204 206 208 210 212 214 216 218 220</code></pre>
+</div>
+<div id="future-plans" class="section level1">
+<h1>Future plans</h1>
+<ul>
+<li>Support more TBB idioms, such as <code>parallel_reduce</code> (drafted).</li>
+<li>Allow more fine-grained creation of TBB functor classes for advanced users.</li>
+<li>Ensure that all types supported by nCompiler work as either copied or shared variables.</li>
+<li>Support fine-grained control of TBB’s thread management (perhaps via RcppParallel).</li>
+</ul>
+</div>
 
 
 

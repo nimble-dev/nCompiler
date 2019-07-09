@@ -4,12 +4,12 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
 ```
 
 # Types
 
-Types in `nCompiler` must be static.  These include `nClass` fields and  `nFunction` variables that will be compiled.  (A compileable `nClass` method is an `nFunction`.)  To accomplish static typing, the programmer must declare types of arguments, return objects, and compiled fields (in an `nClass`).  The same variable cannot be used for more than one type.
+Types in `nCompiler` must be static.  These include `nClass` fields and  `nFunction` variables.  To accomplish static typing, the programmer must declare types of arguments, return objects, and Cpublic (compilable) fields in an `nClass`.  The same variable cannot be used for more than one type.
 
 ## Numeric, integer and logical types
 
@@ -33,6 +33,7 @@ In these formats, the "`numeric`" prefix can be replaced with "`integer`" or "`l
 
 Say we want to do compiled vector addition:
 ```{r}
+library(nCompiler)
 addVectors <- nFunction(
   fun <- function(x, y) {
     ans <- x + y
@@ -43,8 +44,10 @@ addVectors <- nFunction(
   returnType = 'numericVector()'
 )
 # We could compile like this:
-# test <- nCompile_nFunction(addVectors)
+# test <- nCompile(addVectors)
 ```
+
+When using character-string type declarations, the `()` is optional if no arguments are needed.  Simply `'numericVector'` would work above.
 
 As an alternative, types can be declared directly in code.  The following is an equivalent way to write `addVectors`:
 ```{r}
@@ -55,17 +58,17 @@ addVectors <- nFunction(
     return(ans)
     returnType(numericVector())
   })
-# We could compile like this:
-# test <- nCompile_nFunction(addVectors)
 ```
+
+nCompiler also provides backward-compatibility support for nimble-style type declarations such as `double(1)` for a numeric vector.
 
 ## Future plans
 
 - Allow type declarations to establish default argument values.
-- Allow type declarations to evaluate to new variables in a function body (similar to `nimble`).
+- Allow type declaration code to work as a regular function (similar to `nimble`).
 - Additional fine-grained control over initialization of values (similar to `nimble`).
 - Support access to R objects using Rcpp.
-- Support pass-by-copy and pass-by-reference semantics.
+- Finish support for pass-by-copy and pass-by-reference semantics.
 - Support sparse matrices.
 
 # Argument passing: pass-by-copy and pass-by-reference
@@ -76,29 +79,54 @@ In `nCompiler`, we aim to support consistent type behavior and let the user decl
 
 1. Pass by value.
 2. Pass by reference, with the entire object mutable, including size.  This would work for passing an entire object such as a matrix `X`.  `X` could be resized in the called function.
-3. Pass by reference, with values but not sizes mutable.  This would work for passing an indexed subset of an object, like `X[2:5, 3:6]`.
+3. Pass by block reference, which means values but not sizes are mutable.  This would work for passing an indexed subset (block) of an object, like `X[2:5, 3:6]`.
 
-Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency.  However, it is very un-R-like.  To achieve consistent uncompiled and compiled behavior for debugging purposes, we can impose non-standard evaluation in R via modification of the function body.
+Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency.  However, it is very un-R-like.  To achieve consistent uncompiled and compiled behavior for debugging purposes, we programmatically modify the R function body.
 
-Currently, a system for passing entire objects by reference in R has been implemented.  There are two ways to declare pass-by-reference: the `refArgs` argument, and wrapping the type declaration in `ref()`.
+Currently, a system for passing entire objects by reference in both uncompiled (R) and compiled (C++) code has been implemented.  (It remains to implement pass-by-reference semantics when calling C++ from R.)
+
+There are two ways to declare pass-by-reference: the `refArgs` argument, and wrapping the type declaration in `ref()`.
+
+## Pass-by-reference in uncompiled code
+
+Note that this represents un-R-like behavior and has been implemented to support matching uncompiled and compiled behavior.
 
 ```{r eval=TRUE}
 library(nCompiler)
-foo <- nFunction(
-  fun = function(a = numericScalar()) {
-    a <- a + 1
-    a
+f1 <- nFunction(
+  fun = function(x = 'numericVector',
+                 y = 'numericVector') {
+    x <- x + 1
+    ans <- x + y
+    return(ans)
   },
-  refArgs = 'a', # Make a pass-by-reference
-  returnType = quote(numericScalar())
+  refArgs = 'x',
+  returnType = 'numericVector'
 )
-a <- 10
-foo(a)
-a # a was modified by foo, becuase it was passed by reference
+x <- 1:3
+f1(x, 11:13)
+x # x was modified by f1, because it was passed by reference
 ```
 
-Achieving pass-by-reference semantics across the R-C++ boundary will be an issue.  For example, when calling a compiled function from R rather than from another compiled function.
+## Pass-by-reference in compiled code
+
+To see pass-by-reference work in compiled code, we need a second function to call the first.
+
+```{r}
+f2 <- nFunction(
+  fun = function(x = 'numericVector',
+                 y = 'numericVector') {
+    f1(x, y)  # We are not interested in the returned value.
+    return(x) # We are interested in seeing that x was modified.
+  },
+  returnType = 'numericVector'
+)
+compiled <- nCompile(f2, f1)
+x <- 1:3
+compiled$f2(x, 11:3) # We see the modified x returned.
+```
 
 ## Future plans
 
-- Implement these approachs in R and code-generated C++.
+- Finish support for pass-by-reference.
+- Add support for passing by block references.

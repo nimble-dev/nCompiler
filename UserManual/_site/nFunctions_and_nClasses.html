@@ -72,9 +72,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -99,6 +97,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -113,7 +114,6 @@ body {
   padding-top: 56px;
   margin-top: -56px;
 }
-
 .section h2 {
   padding-top: 56px;
   margin-top: -56px;
@@ -133,6 +133,43 @@ body {
 .section h6 {
   padding-top: 56px;
   margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
 }
 </style>
 
@@ -154,18 +191,75 @@ $(document).ready(function () {
 });
 </script>
 
-
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -243,8 +337,6 @@ div.tocify {
 
 .tocify-subheader .tocify-item {
   font-size: 0.90em;
-  padding-left: 25px;
-  text-indent: 0;
 }
 
 .tocify .list-group-item {
@@ -259,6 +351,16 @@ div.tocify {
 }
 
 </style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
 
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row-fluid">
@@ -309,59 +411,64 @@ div.tocify {
 <h1><code>nFunction</code></h1>
 <p>An <code>nFunction</code> is created from an R function and information about argument types and the return type.</p>
 <pre class="r"><code>library(nCompiler)</code></pre>
-<pre class="r"><code>add2p1 &lt;- function(x) {
-  ans &lt;- x+2.1
+<pre class="r"><code>mult2 &lt;- function(x) {
+  ans &lt;- 2 * x
   return(ans)
 }
 
-nf_add2p1 &lt;- nFunction(
-  fun = add2p1,
-  argTypes = list(x = &#39;numericVector()&#39;),
-  returnType = &#39;numericVector()&#39;
+nf_mult2 &lt;- nFunction(
+  fun = mult2,
+  argTypes = list(x = &#39;numericVector&#39;),
+  returnType = &#39;numericVector&#39;
 )
-nf_add2p1(1:3)</code></pre>
-<pre><code>## [1] 3.1 4.1 5.1</code></pre>
+nf_mult2(1:3)</code></pre>
+<pre><code>## [1] 2 4 6</code></pre>
 <p>This can be compiled by:</p>
-<pre class="r"><code># One may first see ouput from building a local library called nCompLocal.
-Cnf_add2p1 &lt;- nCompile_nFunction(nf_add2p1)
-Cnf_add2p1(1:3) # The compiled version works.</code></pre>
-<pre><code>## [1] 3.1 4.1 5.1</code></pre>
-<p>The vector addition is accomplished using the Eigen library in the code-generated C++.</p>
+<pre class="r"><code># With a new installation, one might first see ouput from building a local library called nCompLocal.
+Cnf_mult2 &lt;- nCompile(nf_mult2)
+Cnf_mult2(1:3) # The compiled version works.</code></pre>
+<pre><code>## [1] 2 4 6</code></pre>
+<p>The vector component-wise multiplication is accomplished using the Eigen library in the code-generated C++.</p>
 <p>An <code>nFunction</code> can also be created by writing type information in the format of default arguments and providing an explicit <code>returnType</code> statement anywhere in the function body. For example:</p>
-<pre class="r"><code>nf_add2p1 &lt;- nFunction(
+<pre class="r"><code>nf_mult2 &lt;- nFunction(
   fun = function(x = numericVector()) {
     returnType(numericVector())
-    ans &lt;- x + 2.1
+    ans &lt;- 2 * x
     return(ans)
   }
 )</code></pre>
 </div>
 <div id="nclass" class="section level1">
 <h1><code>nClass</code></h1>
-<p><code>nClass</code>es are similar to reference classes and R6 classes, but they can have two categories of fields and methods: those to be handled via C++ compilation and those that will remain pure R. A <code>nClass</code> is implemented as an R6 class and so follows it most closely.</p>
+<p><code>nClass</code>es are similar to reference classes and R6 classes, but they can have two categories of fields and methods: those to be handled via C++ compilation and those that will remain pure R. A <code>nClass</code> is implemented as an R6 class, so its syntax follows R6’s syntax.</p>
 <pre class="r"><code>add_class &lt;- nClass(
   classname = &quot;add_class&quot;,
-  Rpublic = list( ## only available in R
+  Rpublic = list(               # only available in R
      Rnumber = NULL,
      add_Rnumber = function(v) {
        v + Rnumber
      }
-     # initialize not supported yet b/c it needs special handling for full interface.
+     # initialize method not supported through compilation yet.
   ),
-  Cpublic = list( ## available in R or compiled version
-    Cnumber = &#39;numericScalar()&#39;, #member data -- must have a type declaration
-    # member function -- written as an nFunction
+  Cpublic = list(                # available in R or compiled version
+    # field (aka member data) -- must have a type declaration
+    Cnumber = &#39;numericScalar&#39;, 
+    # method (aka member function) -- written as an nFunction
     add_Cnumber = nFunction(
       fun = function(v = numericVector()) {
-        returnType(double(1))
         ans &lt;- v + Cnumber
         return(ans)
-      })
+      },
+      returnType = &#39;numericVector&#39;)
   )
-)
-# This can be used uncompiled.</code></pre>
-<p>This can be used uncompiled for debugging purposes. Then it can be compiled. For objects of the compiled class, there are two kinds of interfaces, generic and full. In a generic interface, there isn’t an R6 object for every compiled object. This saves a lot of R processing and memory in large collections of compiled objects. In a full interface, there is an R6 object for every compiled object. The full interface is better for nice use of a small number of objects.</p>
-<pre class="r"><code>Cadd_class &lt;- nCompile_nClass(add_class)
+)</code></pre>
+<p>This can be used uncompiled for debugging purposes. Then it can be compiled.</p>
+<p>For objects of the compiled class, there are two kinds of interfaces, generic and full. In a generic interface, there isn’t an R6 object for every compiled object. This saves a lot of R processing and memory in large collections of compiled objects. In a full interface, there is an R6 object for every compiled object. The full interface is better for nice use of a small number of objects.</p>
+<p>Let’s compile <code>add_class</code>:</p>
+<pre class="r"><code># Something about the non-standard evaluation of knitr seems
+# to cause a problem with nCompile in this context.  The slightly
+# lower-level nCompile_nClass works.
+Cadd_class &lt;- nCompile_nClass(add_class)
 # By default we get a full interface, which
 # behaves as one would expect for a class generator.
 obj &lt;- Cadd_class$new()
