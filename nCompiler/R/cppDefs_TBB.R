@@ -148,3 +148,65 @@ cppParallelBodyClass_init_impl <- function(cppDef,
   cppDef$symbolTable <- newSymTab
   invisible(NULL)
 }
+
+cppParallelReduceBodyClass <- R6::R6Class(
+  'cppParallelReduceBodyClass',
+  inherit = cppClassClass,
+  portable = FALSE,
+  public = list(
+    initialize = function(loop_body,
+                          loop_var,
+                          symbolTable,
+                          copyVars = character(),
+                          noncopyVars = character()) {
+      cppParallelReduceBodyClass_init_impl(self,
+                                           loop_body = loop_body,
+                                           loop_var = loop_var,
+                                           symbolTable = symbolTable,
+                                           copyVars = copyVars,
+                                           noncopyVars = noncopyVars)
+    },
+    generate = function(declaration = FALSE, ...) {
+      ## This version of generate creates a fully inlined version
+      ## when declaration is TRUE and returns an empty string
+      ## when declaration is FALSE.
+      if(declaration) {
+        symbolsToUse <- if(inherits(symbolTable, 'symbolTableClass'))
+          symbolTable$getSymbols()
+        else
+          list()
+
+        output <- c(generateClassHeader(name, inheritance),
+                    list('public:'), ## In the future we can separate public and private
+                    lapply(generateObjectDefs(symbolsToUse),
+                           function(x)
+                             if(length(x)==0)
+                               ''
+                           else
+                             pasteSemicolon(x, indent = '  ')),
+                    generateAll(cppFunctionDefs),
+                    '};'
+        )
+        unlist(output)
+      } else
+        ""
+      ## TODO: C++ generation of the original nFunction where parallel_reduce appears gets
+      ## 'int i__;' and 'double value__;', seemingly because of symbol table sharing.
+    }
+  )
+)
+
+cppParallelReduceBodyClass_init_impl <- function(cppDef,
+                                                 name = "parallel_reduce_body",
+                                                 orig_loop_code = orig_loop_code,
+                                                 loop_body = orig_loop_code$args[[3]],
+                                                 loop_var = orig_loop_code$args[[1]],
+                                                 symbolTable,
+                                                 copyVars,
+                                                 noncopyVars) {
+  cppParallelBodyClass_init_impl(cppDef, name, orig_loop_code, loop_body,
+                                 loop_var, symbolTable, copyVars, noncopyVars)
+  ## TODO:
+  ## 1. Create split constructor
+  ## 2. Create join()
+}

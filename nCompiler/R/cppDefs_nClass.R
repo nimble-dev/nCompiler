@@ -182,6 +182,26 @@ cpp_nClassClass <- R6::R6Class(
             self$cppFunctionDefs[["parallel_loop_body"]] <<- cppDef_TBB
           }
         }
+        parallelReduceContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelReduceContent
+        ## TODO: if there are multiple nFunctions in a class, they share the
+        ## auxEnv and as a result we'll find the parallelReduceContent even for
+        ## the wrong NFcompiler (and thus pass the wrong symbolTable to
+        ## cppParallelReduceBodyClass$new
+        if(!is.null(parallelReduceContent)) {
+          for(j in seq_along(parallelReduceContent)) {
+            cppDef_TBB <- cppParallelReduceBodyClass$new(
+              loop_body = parallelReduceContent[[j]]$args[[3]],
+              loop_var = parallelReduceContent[[j]]$args[[1]],
+              symbolTable = cppFunctionDefs[[i]]$code$symbolTable,
+              copyVars = list(),
+              noncopyVars = list(parallelReduceContent[[j]]$args[[4]],
+                                 parallelReduceContent[[j]]$args[[5]])
+            )
+            ## The name is hard-wired expecting only a single case of parallel content.
+            ## TO-DO: generalize the name with unique identifier.
+            self$cppFunctionDefs[["parallel_reduce_body"]] <<- cppDef_TBB
+          }
+        }
       }
     },
     addTypeTemplateFunction = function( funName ) {

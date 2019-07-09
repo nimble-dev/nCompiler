@@ -406,7 +406,12 @@ inLabelAbstractTypesEnv(
               'initial value for a parallel_reduce should be scalar but got',
               ' nDim = ', code$args[[3]]$type$nDim)),
         call. = FALSE)
-    ## give reduction operator the same return type as the initial value
+    ## process the reduce operator
+    if (code$args[[1]]$isLiteral) {
+      code$args[[1]]$isLiteral <- FALSE
+      code$args[[1]]$isCall <- TRUE
+    }
+    ## give reduce operator the same return type as the initial value
     ## TODO: Maybe symbolNF is the right type for the reduction op.
     code$args[[1]]$type <-
       symbolBasic$new(name = code$args[[1]]$name,
