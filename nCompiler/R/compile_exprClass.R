@@ -10,40 +10,40 @@
 ## In places it is still convenient to use R parse trees, or to generate
 ## code in an R parse tree and then call nParse to convert it
 exprClass <- R6::R6Class(
-    'exprClass',
-    portable = FALSE,
-    public = list(
-        Rexpr = NULL, ## optional: original R expr. 
-        isName = NULL, ## is it a name
-        isCall = NULL, ## is it a call
-        isAssign =  NULL, ## is it an assignment (all assignments are also calls)
-        isLiteral = FALSE, ## is it a literal (like 2 or "hello")
-        name =  NULL, ## name of call or variable, or contents of literal
-        ##nDim =  NULL,
-        ##sizeExprs =  list(),
-        ##typeName =  NULL, ## type label
-        type = NULL, ## symbol object
-        args =  list(),	## list of exprClass objects for the arguments
-        implementation = list(),
-        ##eigMatrix =  logical(),
-        ##toEigenize =  'unknown',
-        caller = NULL, ## exprClass object to which this is an argument(or NULL)
-        callerArgID =  NULL, ## index in the calling object's args list for this object.
-        insertions =  list(), 
-        cppADCode = FALSE, ## is expr in code generated for cppad?
-   ##     aux = list(), ## auxiliary list of additional info to be used as needed 
-        initialize = function(...) {
-            dotsList <- list(...)
-            for(v in names(dotsList))
-                self[[v]] <- dotsList[[v]]
-            self
-        },
-        ## This displays the parse tree using indentation on multiple rows of output
-        ## It also checks that the caller and callerArgID fields are all correct
-        ## For deparsing, call nDeparse
-        print = function(...) {
-            exprClass_print(self, ...)
-        })
+  'exprClass',
+  portable = FALSE,
+  public = list(
+    Rexpr = NULL, ## optional: original R expr. 
+    isName = NULL, ## is it a name
+    isCall = NULL, ## is it a call
+    isAssign =  NULL, ## is it an assignment (all assignments are also calls)
+    isLiteral = FALSE, ## is it a literal (like 2 or "hello")
+    name =  NULL, ## name of call or variable, or contents of literal
+    ##nDim =  NULL,
+    ##sizeExprs =  list(),
+    ##typeName =  NULL, ## type label
+    type = NULL, ## symbol object
+    args =  list(),	## list of exprClass objects for the arguments
+    implementation = list(),
+    ##eigMatrix =  logical(),
+    ##toEigenize =  'unknown',
+    caller = NULL, ## exprClass object to which this is an argument(or NULL)
+    callerArgID =  NULL, ## index in the calling object's args list for this object.
+    insertions =  list(), 
+    cppADCode = FALSE, ## is expr in code generated for cppad?
+    ##     aux = list(), ## auxiliary list of additional info to be used as needed 
+    initialize = function(...) {
+      dotsList <- list(...)
+      for(v in names(dotsList))
+        self[[v]] <- dotsList[[v]]
+      self
+    },
+    ## This displays the parse tree using indentation on multiple rows of output
+    ## It also checks that the caller and callerArgID fields are all correct
+    ## For deparsing, call nDeparse
+    print = function(...) {
+      exprClass_print(self, ...)
+    })
 )
 
 exprClass_print <- function(AST,
@@ -51,93 +51,93 @@ exprClass_print <- function(AST,
                             showType = FALSE,
                             showImpl = FALSE,
                             argName = "") {
-    ## output separator for annontations
-    sepDisp <- character()
-    if(showType | showImpl)
-        sepDisp <- " | "
+  ## output separator for annontations
+  sepDisp <- character()
+  if(showType | showImpl)
+    sepDisp <- " | "
 
-    ## output string for type
-    typeDisp <- character()
-    if(showType)
-        if(!is.null(AST$type))
-            typeDisp <- paste0(if(is.character(AST$type))
-                                   AST$type
-                               else
-                                   AST$type$shortPrint())
+  ## output string for type
+  typeDisp <- character()
+  if(showType)
+    if(!is.null(AST$type))
+      typeDisp <- paste0(if(is.character(AST$type))
+        AST$type
+        else
+          AST$type$shortPrint())
 
-    ## output string for implementation
-    implDisp <- character()
-    assertDisp <- character()
-    writeLines(paste0(indent,
-                      if(argName=="")
-                          argName
-                      else
-                          paste0(argName,"="),
-                      AST$name,
-                      sepDisp,
-                      typeDisp,
-                      implDisp,
-                      assertDisp)
-               )
-    ## Iterate through arguments and show them with more indenting
-    args <- AST$args
-    for(i in seq_along(args)) {
-        if(inherits(args[[i]], 'exprClass')) {
-            argNames <- names(args)
-            if(is.null(argNames))
-                argNames <- rep("", length(args))
-            exprClass_print(args[[i]],
-                            indent = paste0(indent, '  '),
-                            showType,
-                            showImpl,
-                            argName = argNames[i]
-                            )
-            ## check caller and callerArgID validity
-            if(!identical(args[[i]]$caller, AST) |
-               args[[i]]$callerArgID != i)
-                writeLines(
-                    paste0(indent,
-                           '****',
-                           'Warning: caller and/or callerID ',
-                           'are not set correctly.')
-                )
-        } else {
-            writeLines(
-                paste0(
-                    indent,
-                    '  ',
-                    if(is.null(args[[i]]))
-                        'NULL'
+  ## output string for implementation
+  implDisp <- character()
+  assertDisp <- character()
+  writeLines(paste0(indent,
+                    if(argName=="")
+                      argName
                     else
-                        args[[i]])
-            )
-        }
+                      paste0(argName,"="),
+                    AST$name,
+                    sepDisp,
+                    typeDisp,
+                    implDisp,
+                    assertDisp)
+             )
+  ## Iterate through arguments and show them with more indenting
+  args <- AST$args
+  for(i in seq_along(args)) {
+    if(inherits(args[[i]], 'exprClass')) {
+      argNames <- names(args)
+      if(is.null(argNames))
+        argNames <- rep("", length(args))
+      exprClass_print(args[[i]],
+                      indent = paste0(indent, '  '),
+                      showType,
+                      showImpl,
+                      argName = argNames[i]
+                      )
+      ## check caller and callerArgID validity
+      if(!identical(args[[i]]$caller, AST) |
+           args[[i]]$callerArgID != i)
+        writeLines(
+          paste0(indent,
+                 '****',
+                 'Warning: caller and/or callerID ',
+                 'are not set correctly.')
+        )
+    } else {
+      writeLines(
+        paste0(
+          indent,
+          '  ',
+          if(is.null(args[[i]]))
+            'NULL'
+          else
+            args[[i]])
+      )
     }
-    ## close brackets
-    if(AST$name=='{')
-        writeLines(paste0(indent,'}'))
+  }
+  ## close brackets
+  if(AST$name=='{')
+    writeLines(paste0(indent,'}'))
 }
 
 
 copyExprClass <- function(original) {
-    result <- original$clone(deep = FALSE)
-    ## shallow=FALSE does not deep-copy on list elements, so it is
-    ## useless for args list.  Another reason for shallow = TRUE
-    ## is we do not want to deep copy 'caller' here.  Instead it is
-    ## re-assigned below.
-    for(i in seq_along(result$args)) {
-        if(inherits(result$args[[i]], 'exprClass')) {
-            result$args[[i]] <- copyExprClass(result$args[[i]])
-            result$args[[i]]$caller <- result
-        }
+  result <- original$clone(deep = FALSE)
+  ## shallow=FALSE does not deep-copy on list elements, so it is
+  ## useless for args list.  Another reason for shallow = TRUE
+  ## is we do not want to deep copy 'caller' here.  Instead it is
+  ## re-assigned below.
+  for(i in seq_along(result$args)) {
+    if(inherits(result$args[[i]], 'exprClass')) {
+      result$args[[i]] <- copyExprClass(result$args[[i]])
+      result$args[[i]]$caller <- result
     }
-    result
+  }
+  result
 }
 
 ## Add indendation to every character() element in a list, doing so recursively for any nested list()
 addIndentToList <- function(x, indent) {
-    if(is.list(x)) return(lapply(x, addIndentToList, indent))
-    paste0(indent, x)
+  if(is.list(x)) return(lapply(x, addIndentToList, indent))
+  paste0(indent, x)
 }
 
 ## error trapping utilities to be used from the various processing steps
@@ -175,12 +175,12 @@ exprClassProcessingErrorMsg <- function(code, msg) {
 ## This would be useful for determining e.g. if (dim(B)[1], 2) and (dim(A)[1], 1, 2) can be added as like types
 ## For now, the only case we use it for is determining is something can be treated like a scalar, e.g. with sizes of 1 in every dimension
 dropSingleSizes <- function(sizeList) {
-    drop <- logical(length(sizeList))
-    for(i in seq_along(sizeList)) {
-        drop[i] <- if(is.numeric(sizeList[[i]])) sizeList[[i]] == 1 else FALSE 
-    }
-    sizeList[drop] <- NULL
-    list(sizeExprs = sizeList, drop = drop)
+  drop <- logical(length(sizeList))
+  for(i in seq_along(sizeList)) {
+    drop[i] <- if(is.numeric(sizeList[[i]])) sizeList[[i]] == 1 else FALSE 
+  }
+  sizeList[drop] <- NULL
+  list(sizeExprs = sizeList, drop = drop)
 }
 
 ## Often we have an expr foo(a, b) and we want to make it foo(a, g(b))
@@ -188,36 +188,36 @@ dropSingleSizes <- function(sizeList) {
 ## It could be convenient to make it easier to insert additional arguments to g.
 ## One can always do so with setArg after using insertExpressionClasLayer
 insertExprClassLayer <- function(code, argID, funName, isName = FALSE, isCall = TRUE, isAssign = FALSE, ... ) {
-    newExpr <- exprClass$new(name = funName, isName = isName, isCall = isCall, isAssign = isAssign,
-                             args = list(code$args[[argID]]), ...)
-    setCaller(code$args[[argID]], newExpr, 1)
-    setArg(code, argID, newExpr)
-    newExpr
+  newExpr <- exprClass$new(name = funName, isName = isName, isCall = isCall, isAssign = isAssign,
+                           args = list(code$args[[argID]]), ...)
+  setCaller(code$args[[argID]], newExpr, 1)
+  setArg(code, argID, newExpr)
+  newExpr
 }
 
 insertIndexingBracket <- function(code, argID, index) {
-    insertExprClassLayer(code, argID, 'index[')
-    setArg(code$args[[argID]], 2, index)
+  insertExprClassLayer(code, argID, 'index[')
+  setArg(code$args[[argID]], 2, index)
 }
 
 ## make a new bracket { expression in exprClass objects
 newBracketExpr <- function(args = list()) {
-    ans <- exprClass$new(isCall = TRUE, isName = FALSE, isAssign = FALSE,
-                  name = '{', args = args)
-    for(i in seq_along(args)) {
-        setCaller(ans$args[[i]], ans, i)
-    }
-    ans
+  ans <- exprClass$new(isCall = TRUE, isName = FALSE, isAssign = FALSE,
+                       name = '{', args = args)
+  for(i in seq_along(args)) {
+    setCaller(ans$args[[i]], ans, i)
+  }
+  ans
 }
 
 removeExprClassLayer <- function(code, argID = 1) {
-    setArg(code$caller, code$callerArgID, if(length(code$args) >= argID) code$args[[argID]] else NULL)
+  setArg(code$caller, code$callerArgID, if(length(code$args) >= argID) code$args[[argID]] else NULL)
 }
 
 setCaller <- function(value, expr, ID) {
-    value$caller <- expr
-    value$callerArgID <- ID
-    invisible(value)
+  value$caller <- expr
+  value$callerArgID <- ID
+  invisible(value)
 }
 
 insertArg <- function(expr, ID, value, name = NULL) {
@@ -310,7 +310,7 @@ removeArg <- function(expr, ID) {
 
 checkArgDims <- function(expr, ID, nDimRange) {
   if (expr$args[[ID]]$type$nDim < nDimRange[1] ||
-      expr$args[[ID]]$type$nDim > nDimRange[2])
+        expr$args[[ID]]$type$nDim > nDimRange[2])
     stop(
       exprClassProcessingErrorMsg(
         expr, 'An argument does not have the appropriate dimensions.'
@@ -324,7 +324,7 @@ isEigScalar <- function(code) {
 }
 
 newAssignmentExpression <- function() {
-    exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
+  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = '<-')
 }
 
 literalDoubleExpr <- function(value) {
@@ -363,44 +363,44 @@ literalLogicalExpr <- function(value = TRUE) {
 ## This modifies the code$caller in place
 ## and generates the temp expr
 buildSimpleIntermCall <- function(code) {
-    if(code$caller$isAssign) return(NULL)
-    newName <- IntermLabelMaker()
+  if(code$caller$isAssign) return(NULL)
+  newName <- IntermLabelMaker()
 
-    ## change my argument from the caller to the new temp
-    setArg(code$caller, code$callerArgID, nParse(as.name(newName)))
-    
-    newExpr <- newAssignmentExpression()
-    setArg(newExpr, 1, nParse(as.name(newName))) 
-    setArg(newExpr, 2, code) ## The setArg function should set code$caller (to newExpr) and code$callerArgID (to 3)
+  ## change my argument from the caller to the new temp
+  setArg(code$caller, code$callerArgID, nParse(as.name(newName)))
+  
+  newExpr <- newAssignmentExpression()
+  setArg(newExpr, 1, nParse(as.name(newName))) 
+  setArg(newExpr, 2, code) ## The setArg function should set code$caller (to newExpr) and code$callerArgID (to 3)
 
-    return(newExpr)
+  return(newExpr)
 }
 
 isCodeScalar <- function(code) {
-    for(i in seq_along(code$sizeExprs))
-        if(!identical(code$sizeExprs[[i]], 1)) return(FALSE)
-    TRUE
+  for(i in seq_along(code$sizeExprs))
+    if(!identical(code$sizeExprs[[i]], 1)) return(FALSE)
+  TRUE
 }
 
 anyNonScalar <- function(code) {
-    if(!inherits(code, 'exprClass')) return(FALSE)
-    if(code$name == 'map') return(TRUE)
-    if(is.character(code$type))
-        if(code$type[1] == 'nCompilerList') return(FALSE)
-    if(code$isName) {
-        return(!isCodeScalar(code))
+  if(!inherits(code, 'exprClass')) return(FALSE)
+  if(code$name == 'map') return(TRUE)
+  if(is.character(code$type))
+    if(code$type[1] == 'nCompilerList') return(FALSE)
+  if(code$isName) {
+    return(!isCodeScalar(code))
+  }
+  if(code$isCall) {
+    if(code$name == 'nfVar') ## don't recurse just for nested member access
+      return(!isCodeScalar(code))
+    skipFirst <- FALSE
+    if(code$name == '[') skipFirst <- TRUE
+    if(code$name == 'size') skipFirst <- TRUE
+    for(i in seq_along(code$args)) {
+      if(!(skipFirst & i == 1)) {
+        if(anyNonScalar(code$args[[i]])) return(TRUE)
+      }
     }
-    if(code$isCall) {
-        if(code$name == 'nfVar') ## don't recurse just for nested member access
-            return(!isCodeScalar(code))
-        skipFirst <- FALSE
-        if(code$name == '[') skipFirst <- TRUE
-        if(code$name == 'size') skipFirst <- TRUE
-        for(i in seq_along(code$args)) {
-            if(!(skipFirst & i == 1)) {
-                if(anyNonScalar(code$args[[i]])) return(TRUE)
-            }
-        }
-    }
-    FALSE
+  }
+  FALSE
 }

@@ -72,9 +72,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -99,6 +97,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -113,7 +114,6 @@ body {
   padding-top: 56px;
   margin-top: -56px;
 }
-
 .section h2 {
   padding-top: 56px;
   margin-top: -56px;
@@ -133,6 +133,43 @@ body {
 .section h6 {
   padding-top: 56px;
   margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
 }
 </style>
 
@@ -154,18 +191,75 @@ $(document).ready(function () {
 });
 </script>
 
-
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -243,8 +337,6 @@ div.tocify {
 
 .tocify-subheader .tocify-item {
   font-size: 0.90em;
-  padding-left: 25px;
-  text-indent: 0;
 }
 
 .tocify .list-group-item {
@@ -259,6 +351,16 @@ div.tocify {
 }
 
 </style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
 
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row-fluid">
@@ -304,8 +406,9 @@ div.tocify {
 </div>
 
 
-<p>Inability to save and load compiled work has been a limitation of <code>nimble</code>. It isn’t trivial to solve because of heavily intertwined use of R to manage contents of C++ objects. Rather than tackle this, we have designed <code>nCompiler</code> with serialization and copying between R and C++ more clearly in mind from the outset. Serialization refers to stringing the contents of an object together in some standard way for a purpose such as writing it to disk and later reading it. R’s <code>save</code> and <code>load</code> use serialization.</p>
-<p><code>nCompiler</code> uses the deliciously named <code>cereal</code> C++ package for serialization. <code>nClass</code> definitions can have <code>cereal</code> code automatically included. The system is not fully developed, but the core idea of code-generating <code>cereal</code> code into <code>nClass</code> definitions works.</p>
+<p>Saving and loading C++ objects used from R is a challenge because those objects are not handled by R’s simple <code>save</code> function. <code>nCompiler</code> uses the deliciously named <code>cereal</code> C++ package to accomplish serialization to support saving and loading C++ objects.</p>
+<p>Serialization refers to stringing the contents of an object together in some standard way for a purpose such as writing it to disk and later reading it. R’s <code>save</code> and <code>load</code> use serialization of R objects.</p>
+<p><code>nClass</code> definitions can have <code>cereal</code> code automatically included. The system is not fully developed, but the core idea of code-generating <code>cereal</code> code into <code>nClass</code> definitions works.</p>
 <p>Saving and loading compiled objects needs to go hand in hand with re-using generated-and-compiled C++ code. The latter is done by making use of R’s packaging system. See <a href="use_in_packages.html">“Using nCompiler code in packages”</a>. With both of these features, one can load a package with the compiled <code>nClass</code> definitions and then load saved objects of those classes.</p>
 <div id="example" class="section level3">
 <h3>Example:</h3>
@@ -323,16 +426,24 @@ nc1 &lt;- nClass(
       returnType = &#39;numericScalar&#39;)
   )
 )
-set_nOption(&#39;serialize&#39;, TRUE)
-nc1_generator &lt;- nCompile_nClass(nc1, interface = &quot;generic&quot;)
+set_nOption(&#39;serialize&#39;, TRUE)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>nc1_generator &lt;- nCompile_nClass(nc1, interface = &quot;generic&quot;)
 nc1_obj &lt;- nc1_generator[[1]]()
 method(nc1_obj, &quot;Cfoo&quot;)(1.2) # The method works.</code></pre>
 <pre><code>## [1] 2.2</code></pre>
 <pre class="r"><code>value(nc1_obj, &quot;Cv&quot;) &lt;- 1.23 # Access to fields works.
 value(nc1_obj, &quot;Cv&quot;) </code></pre>
 <pre><code>## [1] 1.23</code></pre>
-<pre class="r"><code>serialized &lt;- nCompiler:::serialize_nComp_object(nc1_obj) #serialize! 
-nc1_restored_obj &lt;- nCompiler:::deserialize_nComp_object(serialized) #deserialize!
+<pre class="r"><code>serialized &lt;- serialize_nComp_object(nc1_obj) #serialize! 
+# look at the gooey internals to see that they are a binary
+## representation of nc1_obj.
+serialized$serialized</code></pre>
+<pre><code>##  [1] 01 00 00 80 08 00 00 00 00 00 00 00 6e 43 6c 61 73 73 5f 31 01 ae 47
+## [24] e1 7a 14 ae f3 3f 03 00 7a a7</code></pre>
+<pre class="r"><code>## One could save and load the serialized content and then
+## reconstitute the object by deserialization:
+nc1_restored_obj &lt;- deserialize_nComp_object(serialized) #deserialize!
 value(nc1_restored_obj, &quot;Cv&quot;) # The value was restored.</code></pre>
 <pre><code>## [1] 1.23</code></pre>
 <pre class="r"><code>method(nc1_restored_obj, &quot;Cfoo&quot;)(1.2) # The method works</code></pre>
@@ -341,9 +452,10 @@ value(nc1_restored_obj, &quot;Cv&quot;) # The value was restored.</code></pre>
 <div id="future-plans" class="section level3">
 <h3>Future plans:</h3>
 <ul>
-<li>The R external pointer to an <code>nClass</code> object is held in an environment. R’s serialization manages environments in a natural way. <code>cereal</code> will handle C++ objects that point to one another with C++ shared pointers. We will need to ensure that these two systems are coordinated.</li>
-<li>Our use of <code>cereal</code> will need to be generalized for more types of objects.</li>
-<li>Reasonable behavior will have to be designed for saving and loading from either full or generic interfaces.</li>
+<li>support for use of <code>cereal</code> with more kinds of C++ member data.</li>
+<li>create some coordination of R’s serialization of environments that hold external pointers to nCompiler’s C++ objects and <code>cereal</code> serialization of the C++ objects.</li>
+<li>create reasonable behavior for saving and loading from either full or generic interfaces.</li>
+<li>manage serialization/deserialization from multiple DLLs.</li>
 </ul>
 </div>
 

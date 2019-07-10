@@ -11,7 +11,7 @@
 
 
 
-<title>Overview</title>
+<title>Extensibility and developer tools</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -401,45 +401,67 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Overview</h1>
+<h1 class="title toc-ignore">Extensibility and developer tools</h1>
 
 </div>
 
 
-<div id="welcome" class="section level2">
-<h2>Welcome</h2>
-<p>Welcome to nCompiler. This package grew out of <code>nimble</code>, which includes a C++ code-generation system called the “nimble compiler”.</p>
-<p>This manual includes an overview of nCompiler’s design, what works, and future plans.</p>
-<p>For many features, the effort so far has been to create a skeleton of core functionality. The goal is to see how the pieces fit together before fleshing them all out.</p>
-<div id="nfunctions-and-nclasses" class="section level3">
-<h3><a href="nFunctions_and_nClasses.html">nFunctions and nClasses</a></h3>
+<div id="developer-tools" class="section level1">
+<h1>Developer tools</h1>
+<p>Developer tools for nCompiler include the following:</p>
+<ul>
+<li>A clearly defined set of compiler stages for turning an <code>nClass</code> or <code>nFunction</code> to generated C++.</li>
+<li>Ability to control the starting and stopping stage of compilation.</li>
+<li>Ability to generate a log of output of each step taken in compilation. This is helpful because often an error is generated downstream of where the actual mistake occurs.</li>
+<li>A custom error handler that provides information on the line of source code involved in the error and the specific step of processing where it occurred, with more information than what R would otherwise report.</li>
+</ul>
+<p>These tools currently provide different degrees of coverage and control for different compiler stages.</p>
+<p>At some point we will add examples of these tools to this page.</p>
 </div>
-<div id="types-and-argument-passing" class="section level3">
-<h3><a href="types.html">Types and argument passing</a></h3>
-</div>
-<div id="what-can-be-compiled" class="section level3">
-<h3><a href="what_can_be_compiled.html">What can be compiled</a></h3>
-</div>
-<div id="managing-c-compilation" class="section level3">
-<h3><a href="managing_compilation.html">Managing C++ compilation</a></h3>
-</div>
-<div id="saving-and-loading" class="section level3">
-<h3><a href="saving_loading.html">Saving and loading</a></h3>
-</div>
-<div id="using-ncompiler-code-in-packages" class="section level3">
-<h3><a href="use_in_packages.html">Using nCompiler code in packages</a></h3>
-</div>
-<div id="automatic-differentiation" class="section level3">
-<h3><a href="automatic_differentiation.html">Automatic differentiation</a></h3>
-</div>
-<div id="parallelization" class="section level3">
-<h3><a href="parallelization.html">Parallelization</a></h3>
-</div>
-<div id="component-interactions" class="section level3">
-<h3><a href="component_interactions.html">Component interactions</a></h3>
-</div>
-<div id="extensibility-and-developer-tools" class="section level3">
-<h3><a href="extensibility_developer_tools.html">Extensibility and developer tools</a></h3>
+<div id="extensibility" class="section level1">
+<h1>Extensibility</h1>
+<p>Each compiler stage recurses through the code tree and can call a <em>handler</em> function for each function in the code. Each handler for each stage has a clearly defined task to accomplish. The set of handlers (and possibly associated control parameters) are looked up from a master list, which has potential to be extended by a user who wants to add support for a new function to be compiled to C++.</p>
+<p>An example of the entry defining how “+” will be handled is the following:</p>
+<pre class="r"><code>library(nCompiler)
+nCompiler:::operatorDefEnv[[&#39;+&#39;]]</code></pre>
+<pre><code>## $labelAbstractTypes
+## $labelAbstractTypes$handler
+## [1] &quot;BinaryUnaryCwise&quot;
+## 
+## $labelAbstractTypes$returnTypeCode
+## [1] 5
+## 
+## 
+## $eigenImpl
+## $eigenImpl$handler
+## [1] &quot;cWiseAddSub&quot;
+## 
+## 
+## $cppOutput
+## $cppOutput$handler
+## [1] &quot;BinaryOrUnary&quot;
+## 
+## 
+## $testthat
+## $testthat$isBinary
+## [1] TRUE
+## 
+## $testthat$testMath
+## [1] TRUE
+## 
+## $testthat$testAD
+## [1] TRUE
+## 
+## $testthat$alpha_name
+## [1] &quot;plus&quot;</code></pre>
+<p>Of course, extending what nCompiler supports will necessitate more knowledge of its internals.</p>
+<div id="future-steps" class="section level2">
+<h2>Future steps</h2>
+<ul>
+<li>Support for debugging-mode messages in generated C++.</li>
+<li>Support for a <code>browser()</code>-like function from generated C++ to copy local variables into R objects and call R for user inspection.</li>
+<li>Support for providing new compilation handlers.</li>
+</ul>
 </div>
 </div>
 

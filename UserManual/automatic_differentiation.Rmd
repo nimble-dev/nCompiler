@@ -1,5 +1,5 @@
 ---
-title: "Automatic Differentiation"
+title: "Algorithmic (or Automatic) Differentiation"
 output: html_document
 ---
 
@@ -7,59 +7,41 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Automatic differentiation works by code-generating C++ that uses the CppAD library.
+Automatic differentiation is implemented in `nCompiler` by code-generating C++ that uses the `CppAD` library.
 
-Here is an scalar example:
+Here is an example, using the simple function `a * exp(v)`.  Note that type declarations need to include fixed lengths.
 
-```{r eval=TRUE}
-library(nCompiler)
-nc1 <- nClass(
-  Cpublic = list(
-    Cv = 'numericScalar',
-    Cfoo = nFunction(
-      fun = function(x) {
-        return(1.5*x+1)
-      },
-      argTypes = list(x = 'numericScalar'),
-      returnType = 'numericScalar')
-  ),
-  enableDerivs = 'Cfoo'
-)
-set_nOption('automaticDerivatives', TRUE)
-nc1_generator <- nCompile_nClass(nc1, interface = "generic")
-nc1_obj <- nc1_generator()
-method(nc1_obj, "Cfoo")(1.32)## 1.5*1.32 + 1 = 2.98
-derivs <- method(nc1_obj, "Cfoo_derivs_")(1.32, c(0, 1)) # 0-th order and 1st-order derivatives
-value(derivs, "gradient") # gradient is 1.5
-```
-
-Here is a vector example:
+The system currently needs to be turned on via an option.
 
 ```{r}
-nc2 <- nClass(
-  Cpublic = list(
-    Cv = 'numericScalar',
-    Cfoo = nFunction(
-      fun = function(x) {
-        ans <- 1.5 *x
-        return(ans)
-      },
-      argTypes = list(x = 'numericVector(length = 2)'),
-      returnType = 'numericVector(length = 2)')
-  ),
-  enableDerivs = 'Cfoo'
-)
+library(nCompiler)
 set_nOption('automaticDerivatives', TRUE)
-nc2_generator <- nCompile_nClass(nc2, interface = "generic")
-nc2_obj <- nc2_generator()
-method(nc2_obj, "Cfoo")(c(1.48, 1.52)) ## 1.5*c(1.48, 1.52)
-derivs <- method(nc2_obj, "Cfoo_derivs_")(c(1.48, 1.52), c(0, 1))
-value(derivs, "gradient") ## The gradient is 1.5, 1.5
+a_exp_v <- nClass(
+  classname = "a_exp_v",
+  Rpublic = list(),
+  Cpublic = list(
+    go = nFunction(
+      fun = function(a = 'numericScalar',
+                     v = 'numericVector(length = 3)') {
+        return(a*exp(v))
+      },
+      returnType = 'numericVector(length = 3)')
+  ),
+  enableDerivs = 'go',
+)
+
+C_a_exp_v <- nCompile(a_exp_v)
+my_C_a_exp_v <- C_a_exp_v$new()
+## Here is the Jacobian
+nDerivs(my_C_a_exp_v$go(2, 1:3))$gradient
 ```
+
+The result shows the Jacobian, the matrix of derivatives of each output (column) with respect to each input (row).  The inputs are given in a concatenated order, in this case `a`, `x[1]`, `x[2]`, `x[3]`.
 
 # Future plans
 
+- Support control over which arguments one wants derivatives with respect to.
 - Use CppAD features to obtain 2nd-order (similar to `nimble`) and higher-order derivatives.
-- Test derivatives as we port more math functions from `nimble` to `nCompiler`.  Currently what it can do is limited.
+- Test derivatives as we port more math functions from `nimble` to `nCompiler`.
 - Ensure that derivatives work across multiple functions.
 - Support derivatives for `nFunction` as well as for `nClass` methods.
