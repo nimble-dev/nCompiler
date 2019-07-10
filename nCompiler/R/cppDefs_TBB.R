@@ -204,9 +204,89 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                                  symbolTable,
                                                  copyVars,
                                                  noncopyVars) {
+  ## 1. call cppParallelBodyClass_init_impl which creates GeneralFor
+  ## 2. make some minor alterations to the body of `operator()`
+  ## 3. Create split constructor
+  ## 4. Create join method
+
+  ## need to save this here because cppParallelBodyClass_init_impl will change
+  ## loop_body's caller
+  orig_caller <- loop_body$caller
+
   cppParallelBodyClass_init_impl(cppDef, name, orig_loop_code, loop_body,
                                  loop_var, symbolTable, copyVars, noncopyVars)
-  ## TODO:
-  ## 1. Create split constructor
-  ## 2. Create join()
+
+  ## make a new exprClass instance for the aggregation variable
+  value_name <- orig_caller$args[[5]] ## should be a string
+  value_expr <- exprClass$new(name = value_name, isCall = FALSE, isName = TRUE,
+                              isAssign = FALSE, isLiteral = FALSE)
+  ## get the local aggregation var copy variable and create the assignment expr
+  val_expr <- copyExprClass(loop_body$args[[1]])
+  val_assign <- newAssignmentExpression()
+  setArg(val_assign, 1, val_expr)
+  setArg(val_assign, 2, value_expr)
+  ## edit `operator()`'s body (loop_body$caller)
+  cppDef$cppFunctionDefs[['operator()']]$code$code <- newBracketExpr(
+    list(val_assign, loop_body$caller))
+  ## add val__ to `operator()`'s symbolTable
+  cppDef$cppFunctionDefs[['operator()']]$code$symbolTable$addSymbol(
+    cppVarClass$new(name = val_expr$name, baseType = val_expr$type$type))
+
+  ## get the reduce op's identity element which is guaranteed to be a literal
+  ## by the labelAbstractTypes ParallelReduce handler
+  init_arg <- copyExprClass(orig_caller$caller$caller$args[[1]]$args[[2]])
+
+  split_ctor_symTab <- symbolTableClass$new()
+  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'parent', baseType = name,
+                                              ref = TRUE))
+  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'split'))
+  ## Get the name of the vector we're working with, which together with the
+  ## aggregation var is used in the initializerList of the split constructor.
+  vector_name <- orig_caller$args[[4]] ## should be a string
+  initializerList <- list()
+  initializerList[[1]] <- nParse(
+    substitute(X(X_), list(X = as.name(value_name),
+                           X_ = as.name(init_arg$name))))
+  initializerList[[2]] <- nParse(
+    substitute(X(X_), list(X = as.name(vector_name),
+                           X_ = as.name(paste0('parent.', vector_name)))))
+
+  split_constructor <- cppFunctionClass$new(name = name,
+                                            args = split_ctor_symTab,
+                                            code = cppCodeBlockClass$new(
+                                              code = nParse(quote({})),
+                                              symbolTable = symbolTableClass$new()
+                                            ),
+                                            initializerList = initializerList,
+                                            returnType = cppBlank())
+
+  ## join_symTab is the symbolTable for the arguments to join
+  join_symTab <- symbolTableClass$new()
+  join_symTab$addSymbol(cppVarFullClass$new(name = 'target',
+                                            baseType = name,
+                                            ref = TRUE,
+                                            const = TRUE))
+  ## make the reduce code
+  reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, isCall = TRUE,
+                             isName = FALSE, isAssign = FALSE,
+                             isLiteral = FALSE)
+  setArg(reduce_op, 1, copyExprClass(value_expr))
+  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, '")')))
+  join_code <- newAssignmentExpression()
+  setArg(join_code, 1, copyExprClass(value_expr))
+  setArg(join_code, 2, reduce_op)
+  ## create the join cppFunctionClass definition
+  join_body <- cppCodeBlockClass$new(code = join_code,
+                                     ## TODO: any symbols ever needed?
+                                     symbolTable = symbolTableClass$new())
+  join <- cppFunctionClass$new(name = "join",
+                               args = join_symTab,
+                               code = join_body,
+                               const = FALSE,
+                               returnType = cppVoid())
+
+  cppDef$cppFunctionDefs <- c(cppDef$cppFunctionDefs,
+                              list(split_constructor = split_constructor,
+                                   join = join))
+  invisible(NULL)
 }

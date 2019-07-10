@@ -107,6 +107,7 @@ inFinalTransformationsEnv(
 
     ## remove the vector and initial value arg and save for later
     vector_arg <- removeArg(code, 2)
+    ## TODO: don't remove the init arg unless isTRUE(code$caller$isAssign)
     init_arg <- removeArg(code, 2)
     ## add an index var
     index_arg <- exprClass$new(name = 'i__', isName = TRUE, isCall = FALSE,
@@ -126,6 +127,8 @@ inFinalTransformationsEnv(
                                               isAssign = FALSE))
     setArg(colon, 1, exprClass$new(name = 1, isLiteral = TRUE, isCall = FALSE,
                                    isName = FALSE, isAssign = FALSE))
+    ## TODO: was hoping there was a generateCpp handler for this... use .size()
+    ## directly instead?
     length_call <- setArg(colon, 2, exprClass$new(name = 'length',
                                                   isLiteral = FALSE,
                                                   isCall = TRUE,
@@ -154,12 +157,13 @@ inFinalTransformationsEnv(
     ## AST as literals. These will be noncopyVars in the cppParallelReduceBodyClass.
     setArg(code, 4, exprClass$new(name = vector_arg$name, isName = FALSE, isCall = FALSE,
                                   isLiteral = TRUE, isAssign = FALSE))
-    setArg(code, 5, exprClass$new(name = 'value__',
+    value_name <- 'value__'
+    setArg(code, 5, exprClass$new(name = value_name,
                                   isName = FALSE, isCall = FALSE,
                                   isLiteral = TRUE, isAssign = FALSE))
     ## add value__ to the symbolTable
-    if (!symTab$symbolExists('value__', inherits = TRUE)) {
-      value_type <- symbolBasic$new(name = 'value__', nDim = 0,
+    if (!symTab$symbolExists(value_name, inherits = TRUE)) {
+      value_type <- symbolBasic$new(name = value_name, nDim = 0,
                                     type = init_arg$type$type)
       symTab$addSymbol(value_type)
     }

@@ -403,11 +403,24 @@ inLabelAbstractTypesEnv(
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
-              'initial value for a parallel_reduce should be scalar but got',
+              'initial value for parallel_reduce should be scalar but got',
               ' nDim = ', code$args[[3]]$type$nDim)),
         call. = FALSE)
+    if (isFALSE(code$args[[3]]$isLiteral))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'initial value for parallel_reduce must be a literal')),
+        call. = FALSE)
     ## process the reduce operator
-    if (code$args[[1]]$isLiteral) {
+    if (isTRUE(code$args[[1]]$isLiteral)) {
+      if (!is.character(code$args[[1]]$name))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'do not know how to use a reduce operator of type',
+                typeof(code$args[[1]]$name))),
+          call. = FALSE)
       code$args[[1]]$isLiteral <- FALSE
       code$args[[1]]$isCall <- TRUE
     }
