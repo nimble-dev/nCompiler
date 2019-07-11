@@ -40,7 +40,7 @@ test_that("Parallel reduction example works", {
   ##     ),
   ##     parallel_fun = nFunction(
   ##       fun = function(x = 'numericVector') {
-  ##         y <- parallel_reduce(reduction_fun, x, 0) ## could default to 0 if missing
+  ##         y <- parallel_reduce(reduction_fun, x, 0)
   ##         return(y)
   ##       },
   ##       returnType = 'numericVector'
@@ -50,18 +50,26 @@ test_that("Parallel reduction example works", {
 
   nc <- nClass(
     Cpublic = list(
-      parallel_fun = nFunction(
+      go = nFunction(
         fun = function(x = 'numericVector') {
-          y <- parallel_reduce('+', x, 0) ## could default to 0 if missing
+          y <- parallel_reduce('+', x, 0)
           return(y)
         },
-        returnType = 'numericVector'
+        returnType = 'numericScalar'
       )
     )
   )
 
-  Cnc <- nCompile_nClass(nc, control = list(endStage = "makeCppDef"))
-  expect_true(inherits(Cnc, 'cpp_nClassClass'))
+  # Cnc <- nCompile_nClass(nc, control = list(endStage = "makeCppDef"))
   # writeCode(Cnc$generate())
   # writeCode(Cnc$generate(TRUE))
-1})
+  Cnc <- nCompile(nc)
+  nc1 <- nc$new()
+  Cnc1 <- Cnc$new()
+  expect_true(isCompiledNCgenerator(Cnc))
+  expect_true(isNC(nc1))
+  expect_true(isNC(Cnc1))
+  ## output not yet working
+  ## expect_equal(nc1$go(101:110), sum(101:110))
+  ## expect_equal(Cnc1$go(101:110), sum(101:110))
+})

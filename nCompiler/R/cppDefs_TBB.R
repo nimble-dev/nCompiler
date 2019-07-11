@@ -216,13 +216,18 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   cppParallelBodyClass_init_impl(cppDef, name, orig_loop_code, loop_body,
                                  loop_var, symbolTable, copyVars, noncopyVars)
 
+  ## get the local aggregation var copy variable
+  val_expr <- copyExprClass(loop_body$args[[1]])
+  val_assign <- newAssignmentExpression()
   ## make a new exprClass instance for the aggregation variable
   value_name <- orig_caller$args[[5]] ## should be a string
   value_expr <- exprClass$new(name = value_name, isCall = FALSE, isName = TRUE,
                               isAssign = FALSE, isLiteral = FALSE)
-  ## get the local aggregation var copy variable and create the assignment expr
-  val_expr <- copyExprClass(loop_body$args[[1]])
-  val_assign <- newAssignmentExpression()
+  ## remove '&' from the aggregation value member of parallel_reduce_body
+  cppDef$symbolTable$symbols[[value_name]]$ref <- FALSE
+  cppDef$cppFunctionDefs[['constructor']]$args$symbols[[
+    value_name]]$ref <- FALSE
+  ## create the assignment expr
   setArg(val_assign, 1, val_expr)
   setArg(val_assign, 2, value_expr)
   ## edit `operator()`'s body (loop_body$caller)
@@ -231,6 +236,8 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   ## add val__ to `operator()`'s symbolTable
   cppDef$cppFunctionDefs[['operator()']]$code$symbolTable$addSymbol(
     cppVarClass$new(name = val_expr$name, baseType = val_expr$type$type))
+  ## remove 'const' from the `operator()` declaration
+  cppDef$cppFunctionDefs[['operator()']]$const <- FALSE
 
   ## get the reduce op's identity element which is guaranteed to be a literal
   ## by the labelAbstractTypes ParallelReduce handler
@@ -239,7 +246,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   split_ctor_symTab <- symbolTableClass$new()
   split_ctor_symTab$addSymbol(cppVarClass$new(name = 'parent', baseType = name,
                                               ref = TRUE))
-  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'split'))
+  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'tbb::split'))
   ## Get the name of the vector we're working with, which together with the
   ## aggregation var is used in the initializerList of the split constructor.
   vector_name <- orig_caller$args[[4]] ## should be a string
@@ -271,7 +278,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                              isName = FALSE, isAssign = FALSE,
                              isLiteral = FALSE)
   setArg(reduce_op, 1, copyExprClass(value_expr))
-  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, '")')))
+  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, ';")')))
   join_code <- newAssignmentExpression()
   setArg(join_code, 1, copyExprClass(value_expr))
   setArg(join_code, 2, reduce_op)

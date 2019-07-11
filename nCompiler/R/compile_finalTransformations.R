@@ -127,14 +127,8 @@ inFinalTransformationsEnv(
                                               isAssign = FALSE))
     setArg(colon, 1, exprClass$new(name = 1, isLiteral = TRUE, isCall = FALSE,
                                    isName = FALSE, isAssign = FALSE))
-    ## TODO: was hoping there was a generateCpp handler for this... use .size()
-    ## directly instead?
-    length_call <- setArg(colon, 2, exprClass$new(name = 'length',
-                                                  isLiteral = FALSE,
-                                                  isCall = TRUE,
-                                                  isName = FALSE,
-                                                  isAssign = FALSE))
-    setArg(length_call, 1, vector_arg)
+    size_expr <- setArg(
+      colon, 2, nParse(paste0('cppLiteral("', vector_arg$name, '.size()")')))
     ## make the vector an argument of the reduce op and index it
     reduce_op <- code$args[[3]]
     setArg(reduce_op, 1, copyExprClass(vector_arg))
