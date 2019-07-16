@@ -66,10 +66,6 @@ test_that("Parallel reduction example works", {
   Cnc <- nCompile(nc)
   nc1 <- nc$new()
   Cnc1 <- Cnc$new()
-  expect_true(isCompiledNCgenerator(Cnc))
-  expect_true(isNC(nc1))
-  expect_true(isNC(Cnc1))
-  ## output not yet working
-  ## expect_equal(nc1$go(101:110), sum(101:110))
-  ## expect_equal(Cnc1$go(101:110), sum(101:110))
+  expect_equal(nc1$go(101:110), sum(101:110))
+  expect_equal(Cnc1$go(101:110), sum(101:110))
 })

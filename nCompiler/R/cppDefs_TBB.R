@@ -218,7 +218,6 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
 
   ## get the local aggregation var copy variable
   val_expr <- copyExprClass(loop_body$args[[1]])
-  val_assign <- newAssignmentExpression()
   ## make a new exprClass instance for the aggregation variable
   value_name <- orig_caller$args[[5]] ## should be a string
   value_expr <- exprClass$new(name = value_name, isCall = FALSE, isName = TRUE,
@@ -227,12 +226,17 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   cppDef$symbolTable$symbols[[value_name]]$ref <- FALSE
   cppDef$cppFunctionDefs[['constructor']]$args$symbols[[
     value_name]]$ref <- FALSE
-  ## create the assignment expr
+  ## create the assignment expr `val__ = value`
+  val_assign <- newAssignmentExpression()
   setArg(val_assign, 1, val_expr)
   setArg(val_assign, 2, value_expr)
+  ## create the assignment back to the aggregation value member
+  value_assign <- newAssignmentExpression()
+  setArg(value_assign, 1, copyExprClass(value_expr))
+  setArg(value_assign, 2, copyExprClass(val_expr))
   ## edit `operator()`'s body (loop_body$caller)
   cppDef$cppFunctionDefs[['operator()']]$code$code <- newBracketExpr(
-    list(val_assign, loop_body$caller))
+    list(val_assign, loop_body$caller, value_assign))
   ## add val__ to `operator()`'s symbolTable
   cppDef$cppFunctionDefs[['operator()']]$code$symbolTable$addSymbol(
     cppVarClass$new(name = val_expr$name, baseType = val_expr$type$type))
