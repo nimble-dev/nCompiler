@@ -175,3 +175,8 @@ nDim <- function(obj) {
   if(is.null(dim(obj))) return(length(obj))
   return(dim(obj))
 }
+
+is.blank <- function(arg) {
+  if(is.null(arg)) return(FALSE)
+  return(identical(arg, quote(x[])[[3]]))
+}

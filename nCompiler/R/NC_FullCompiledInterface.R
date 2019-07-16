@@ -189,8 +189,8 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
 buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
   if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
   ans <- fun
-  ## add the 'order' arg to the function's formals
-  formals(ans) <- c(formals(ans), list(order = c(0, 1)))
+  ## add the 'order' and 'wrt' args to the function's formals
+  formals(ans) <- c(formals(ans), list(order = c(0, 1), wrt = NULL))
   argNames <- names(formals(ans))
   environment(ans) <- new.env()
   listcode <- quote(list())
