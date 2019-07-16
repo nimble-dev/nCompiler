@@ -72,7 +72,7 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
                      fxnName = deparse(fxnCall[[1]]))
 }
 
-setup_wrt_compiled <- function(wrt, fxnArgs, fxnName) {
+setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
   if(all(is.na(wrt))){
     return(-1)
   }
@@ -213,8 +213,59 @@ setup_wrt_compiled <- function(wrt, fxnArgs, fxnName) {
   return(unname(wrtArgsIndexVector))
 }
 
-setup_wrt_uncompiled <- function(fxnCall, wrt = NULL,
-                                 fxnEnv = parent.frame()) {
+calcDerivs_internal <- function(func, X, order, resultIndices ) {
+  if(!require('numDeriv'))
+    stop("The 'numDeriv' package must be installed to use derivatives in
+         uncompiled nFunctions.")
+
+  hessianFlag <- 2 %in% order
+  jacobianFlag <- 1 %in% order
+  ## When called for a model$calculate, valueFlag will always be 0 here
+  ## because value will be obtained later (if requested) after restoring
+  ## model variables.
+  valueFlag <- 0 %in% order
+  if(hessianFlag) {
+    ## If hessians are requested, derivatives taken using numDeriv's genD() 
+    ## function.  After that, we extract the various derivative elements and 
+    ## arrange them properly.
+    derivList <- genD(func, X)
+    if(valueFlag) outVal <- derivList$f0 
+    if(jacobianFlag) outGrad <- derivList$D[,1:derivList$p, drop = FALSE]
+    outHessVals <- derivList$D[,(derivList$p + 1):dim(derivList$D)[2],
+                               drop = FALSE]
+    outHess <- array(NA, dim = c(derivList$p, derivList$p, length(derivList$f0)))
+    singleDimMat <- matrix(NA, nrow = derivList$p, ncol = derivList$p)
+    singleDimMatUpperTriDiag <- upper.tri(singleDimMat, diag = TRUE)
+    singleDimMatLowerTriDiag <- lower.tri(singleDimMat)
+    for(outDim in seq_along(derivList$f0)){
+      singleDimMat[singleDimMatUpperTriDiag] <- outHessVals[outDim,]
+      singleDimMat[singleDimMatLowerTriDiag] <- t(singleDimMat)[singleDimMatLowerTriDiag]
+      outHess[,,outDim] <- singleDimMat
+    }
+  } else
+    if(jacobianFlag){
+      ## If jacobians are requested, derivatives taken using numDeriv's jacobian() 
+      ## function.  After that, we extract the various derivative elements and 
+      ## arrange them properly.
+      outVal <- func(X) 
+      outGrad <- jacobian(func, X)
+    } else 
+      if(valueFlag)
+        outVal <- func(X)
+  
+  outList <- list()
+  if(!missing(resultIndices)) {
+    if(jacobianFlag) outGrad <- outGrad[, resultIndices, drop=FALSE]
+    if(hessianFlag) outHess <- outHess[resultIndices, resultIndices, , drop=FALSE]
+  }
+  if(valueFlag) outList$value <- outVal
+  if(jacobianFlag) outList$jacobian <- outGrad
+  if(hessianFlag) outList$hessian <- outHess
+  return(outList)
+}
+
+nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
+                       wrt = NULL, fxnEnv = parent.frame()) {
   fxn <- eval(fxnCall[[1]], envir = fxnEnv)
 
   ## standardize the fxnCall arguments
@@ -330,89 +381,29 @@ setup_wrt_uncompiled <- function(fxnCall, wrt = NULL,
     
     current_x_index <- current_x_index + length(unique_flat_indices)
   }
-  list(
-    length_x = current_x_index - 1,
-    fxnArgs = fxnArgs,
-    fxnArgs_assign_code = unlist(fxnArgs_assign_code, recursive = FALSE),
-    get_init_values_code = unlist(get_init_values_code, recursive = FALSE),
-    result_x_indices_all = unlist(result_x_indices_by_wrt)
-  )
-}
+  length_x = current_x_index - 1
+  fxnArgs_assign_code <- unlist(fxnArgs_assign_code, recursive = FALSE)
+  get_init_values_code <- unlist(get_init_values_code, recursive = FALSE)
+  result_x_indices_all <- unlist(result_x_indices_by_wrt)
 
-calcDerivs_internal <- function(func, X, order, resultIndices ) {
-  if(!require('numDeriv'))
-    stop("The 'numDeriv' package must be installed to use derivatives in
-         uncompiled nFunctions.")
-
-  hessianFlag <- 2 %in% order
-  jacobianFlag <- 1 %in% order
-  ## When called for a model$calculate, valueFlag will always be 0 here
-  ## because value will be obtained later (if requested) after restoring
-  ## model variables.
-  valueFlag <- 0 %in% order
-  if(hessianFlag) {
-    ## If hessians are requested, derivatives taken using numDeriv's genD() 
-    ## function.  After that, we extract the various derivative elements and 
-    ## arrange them properly.
-    derivList <- genD(func, X)
-    if(valueFlag) outVal <- derivList$f0 
-    if(jacobianFlag) outGrad <- derivList$D[,1:derivList$p, drop = FALSE]
-    outHessVals <- derivList$D[,(derivList$p + 1):dim(derivList$D)[2],
-                               drop = FALSE]
-    outHess <- array(NA, dim = c(derivList$p, derivList$p, length(derivList$f0)))
-    singleDimMat <- matrix(NA, nrow = derivList$p, ncol = derivList$p)
-    singleDimMatUpperTriDiag <- upper.tri(singleDimMat, diag = TRUE)
-    singleDimMatLowerTriDiag <- lower.tri(singleDimMat)
-    for(outDim in seq_along(derivList$f0)){
-      singleDimMat[singleDimMatUpperTriDiag] <- outHessVals[outDim,]
-      singleDimMat[singleDimMatLowerTriDiag] <- t(singleDimMat)[singleDimMatLowerTriDiag]
-      outHess[,,outDim] <- singleDimMat
-    }
-  } else
-    if(jacobianFlag){
-      ## If jacobians are requested, derivatives taken using numDeriv's jacobian() 
-      ## function.  After that, we extract the various derivative elements and 
-      ## arrange them properly.
-      outVal <- func(X) 
-      outGrad <- jacobian(func, X)
-    } else 
-      if(valueFlag)
-        outVal <- func(X)
-  
-  outList <- list()
-  if(!missing(resultIndices)) {
-    if(jacobianFlag) outGrad <- outGrad[, resultIndices, drop=FALSE]
-    if(hessianFlag) outHess <- outHess[resultIndices, resultIndices, , drop=FALSE]
-  }
-  if(valueFlag) outList$value <- outVal
-  if(jacobianFlag) outList$jacobian <- outGrad
-  if(hessianFlag) outList$hessian <- outHess
-  return(outList)
-}
-
-nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
-                       wrt = NULL, fxnEnv = parent.frame()) {
-
-  o <- setup_wrt_uncompiled(fxnCall, wrt = wrt, fxnEnv = fxnEnv)
-  currentX <- numeric(o$length_x)
-  fxnArgs <- o$fxnArgs
-  do.call("{", o$get_init_values_code)
+  currentX <- numeric(length_x)
+  do.call("{", get_init_values_code)
   ## equivalent to:
   ##  for(i in 1:length_x) {
-  ##      eval(o$get_init_values_code[[i]])
+  ##      eval(get_init_values_code[[i]])
   ##  }
 
   fxnName <- as.character(fxnCall[[1]])
   func <- function(x) {
-    do.call("{", o$fxnArgs_assign_code)
-    ## for(i in 1:o$length_x) {
+    do.call("{", fxnArgs_assign_code)
+    ## for(i in 1:length_x) {
     ##     ## Each line is like fxnArgs[[ 2 ]][23] <- x[5]
-    ##     eval(o$fxnArgs_assign_code[[i]])
+    ##     eval(fxnArgs_assign_code[[i]])
     ## }
     c(do.call(fxnName, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
   }
 
-  ans <- calcDerivs_internal(func, currentX, order, o$result_x_indices_all)
+  ans <- calcDerivs_internal(func, currentX, order, result_x_indices_all)
   ##  jacobian(func, currentX)
   ans
 }
