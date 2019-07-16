@@ -68,7 +68,7 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
   }
   fxn <- eval(fxnCall[[1]], envir = parent.frame())
   fxnArgs <- formals(fxn)
-  setup_wrt_compiled(wrt = wrt, fxnArgs = fxnArgs,
+  setup_wrt_internal(wrt = wrt, fxnArgs = fxnArgs,
                      fxnName = deparse(fxnCall[[1]]))
 }
 
@@ -415,7 +415,7 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
   fxn <- eval(fxnCall[[1]], envir = fxnEnv)
   fxnArgs <- formals(fxn)
   fxnName = deparse(fxnCall[[1]])
-  wrt_indices <- setup_wrt_compiled(wrt, fxnArgs, fxnName)
+  wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
   
   fxnCall[[1]] <- derivsFxnCall
   fxnCall$order <- order

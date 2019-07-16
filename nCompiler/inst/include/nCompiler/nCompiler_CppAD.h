@@ -58,22 +58,66 @@ std::shared_ptr<nC_derivClass> getDerivs_(nCompilerCppADinfoClass &ADinfo,
   Index q = value_ans.size();
   Index n = ADinfo.independentVars.size();
   Index wrt_n = wrtVector.size();
-  Eigen::array< Index, 1> sizeValue = {{q}};
-  ans->value.resize(sizeValue);
-  Eigen::array< Index, 2> sizeGrad = {{wrt_n, q}};
-  ans->gradient.resize(sizeGrad);
-  std::copy(value_ans.begin(), value_ans.end(), ans->value.data());
-  std::vector<double> w(q, 0);
-  std::vector<double> cppad_derivOut;
-  std::size_t maxOrder = 1; // TO-DO generalize from derivOrders
-  for(Index dy_ind = 0; dy_ind < q; dy_ind++){
-    w[dy_ind] = 1;
-    cppad_derivOut = ADinfo.ADtape->Reverse(1, w);
-    for(Index i = 0; i < wrt_n; i++){
-      // the indices passed in by nDerivs_full aren't right
-      ans->gradient(i, dy_ind) = cppad_derivOut[(wrtVector[i] - 1)*maxOrder + 0];
+  // have to assign to evaluate the Tensor op
+  Eigen::Tensor<int, 0> maxTensor = derivOrders.maximum();
+  int maxOrder = maxTensor(0);
+  Index orderSize = derivOrders.size();
+  bool ordersFound[3] = {false};
+  for (int i = 0; i < derivOrders.size(); ++i) {
+    if ((derivOrders[i] > 2) | (derivOrders[i] < 0)) {
+      printf("Error: Derivative orders must be between 0 and 2.\n");
     }
-    w[dy_ind] = 0;
+    ordersFound[derivOrders[i]] = true;
+  }
+  if (ordersFound[0]) {
+    Eigen::array< Index, 1> sizeValue = {{q}};
+    ans->value.resize(sizeValue);
+    std::copy(value_ans.begin(), value_ans.end(), ans->value.data());
+  }
+  if (maxOrder > 0) {
+
+    // TODO: check value_ans for infs
+
+    if (ordersFound[2]) {
+      Eigen::array< Index, 3> sizeHess = {{wrt_n, wrt_n, q}};
+      ans->hessian.resize(sizeHess);
+    }
+
+    std::vector<double> cppad_derivOut;
+    std::vector<double> w(q, 0);
+    for (Index dy_ind = 0; dy_ind < q; ++dy_ind) {
+      w[dy_ind] = 1;
+
+      if (maxOrder == 1) { // TODO: add inf check
+
+	cppad_derivOut = ADinfo.ADtape->Reverse(1, w);
+
+      } else {
+	for (size_t vec_ind = 0; vec_ind < wrt_n; vec_ind++) {
+	  int dx1_ind = wrtVector[vec_ind] - 1;
+	  std::vector<double> x1(n, 0);  // vector specifying first derivatives.
+	  // first specify coeffs for first dim
+	  // of s across all directions r, then
+	  // second dim, ...
+	  x1[dx1_ind] = 1;
+	  ADinfo.ADtape->Forward(1, x1);
+	  cppad_derivOut = ADinfo.ADtape->Reverse(2, w);
+	  for (size_t vec_ind2 = 0; vec_ind2 < wrt_n; vec_ind2++) { // TODO: add inf check
+	    int dx2_ind = wrtVector[vec_ind2] - 1;
+	    ans->hessian(vec_ind, vec_ind2, dy_ind) =
+	      cppad_derivOut[dx2_ind * 2 + 1];
+	  }
+	}
+      }
+      if (ordersFound[1]) {
+	Eigen::array< Index, 2> sizeGrad = {{wrt_n, q}};
+	ans->gradient.resize(sizeGrad);
+	for(Index i = 0; i < wrt_n; i++) { // TODO: add inf check
+	  ans->gradient(i, dy_ind) = cppad_derivOut[(wrtVector[i] - 1)*maxOrder];
+	}
+      }
+      w[dy_ind] = 0;
+    }
   }
   return(ans);
 }
