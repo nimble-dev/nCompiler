@@ -44,16 +44,28 @@ nDerivs <- function(nFxn = NA,
   if (length(derivFxnCall[[1]]) == 3 &&
         deparse(derivFxnCall[[1]][[1]]) == '$') {
 
-    nClass_obj <- eval(derivFxnCall[[1]][[2]], envir = fxnEnv)
+    nClass_obj <- try(eval(derivFxnCall[[1]][[2]], envir = fxnEnv))
 
     if (!isNC(nClass_obj))
       stop(paste0(
-        "Do not know what type of object ",
-        deparse(fxnCall[[2]][[1]][[2]]), "is."
+        "nDerivs does not know how to use the object ",
+        deparse(fxnCall[[2]][[1]][[2]]), "."
       ))
 
-    nDerivs_full(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
-  } else if (FALSE) { ## TODO: add nDerivs_generic
+    nDerivs_full(fxnCall = derivFxnCall, order = order, wrt = wrt,
+                 fxnEnv = fxnEnv)
+  } else if (derivFxnCall[[1]][[1]] == 'method') {
+
+    loadedObjEnv <- try(eval(derivFxnCall[[1]][[2]], envir = fxnEnv))
+
+    if (!is.loadedObjectEnv(loadedObjEnv))
+      stop(paste0(
+        "nDerivs does not know how to use the object ",
+        deparse(derivFxnCall[[1]][[2]]), "."
+      ))
+
+    nDerivs_generic(fxnCall = derivFxnCall, order = order, wrt = wrt,
+                    fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv)
   } else ## nFxn is a nimble function
     nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
 }
@@ -73,13 +85,13 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
 }
 
 setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
-  if(all(is.na(wrt))){
-    return(-1)
-  }
-  else if(is.null(wrt[[1]])){
+  ## TODO: why return -1?
+  ## if(all(is.na(wrt))){
+  ##   return(-1) 
+  ## }
+  if (is.null(wrt)) {
     wrt <- names(fxnArgs)
-  }
-  else if(!is.character(wrt)){
+  } else if (!is.character(wrt)) {
     wrt <- deparse(wrt)
   }
   ## convert 'x[2]' to quote(x[2]).
@@ -99,24 +111,24 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
   ## TODO: sometimes called by nDerivs(), but sometimes by setup_wrt()
   if (!all(argNameCheck)) stop('Incorrect names passed to wrt argument of
                                      nDerivs: ', fxnName, 
-                              ' does not have arguments named: ',
-                              paste(wrt_name_strings[!argNameCheck], 
-                                    collapse = ', ' ), '.')
+                               ' does not have arguments named: ',
+                               paste(wrt_name_strings[!argNameCheck], 
+                                     collapse = ', ' ), '.')
   ## Make sure all wrt args have type declarations (i.e., are not just names without types)
   arg_symbols <- lapply(fxnArgs, argType2symbol)
   nameCheck <- sapply(wrtMatchArgs, function(i) class(arg_symbols[[i]]))
-  if(any(nameCheck == 'name')) stop('Derivatives of ', fxnName, ' being taken 
+  if (any(nameCheck == 'name')) stop('Derivatives of ', fxnName, ' being taken 
                                     WRT an argument that does not have a valid type.')
   ## Make sure all wrt args have type double.
   doubleCheck <- sapply(wrtMatchArgs, function(i)
     arg_symbols[[i]]$type == 'double')
-  if(!all(doubleCheck)) stop('Derivatives of ', fxnName, 
-                             ' being taken WRT an argument that does not
+  if (!all(doubleCheck)) stop('Derivatives of ', fxnName, 
+                              ' being taken WRT an argument that does not
                                     have type double().')
   ## Make sure that all wrt arg dims are < 2.
   fxnArgsDims <- sapply(wrtMatchArgs, function(i) arg_symbols[[i]]$nDim)
   names(fxnArgsDims) <- names(fxnArgs)[wrtMatchArgs]
-  if(any(fxnArgsDims > 2)) stop('Derivatives cannot be taken WRT an argument
+  if (any(fxnArgsDims > 2)) stop('Derivatives cannot be taken WRT an argument
                                 with dimension > 2')
   ## Determine sizes of each function arg.
   fxnArgsDimSizes <- lapply(arg_symbols, function(x) {
@@ -142,11 +154,11 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
   fxnArgsIndexVector <- fxnArgsIndexVector[-length(fxnArgsIndexVector)]
   wrtArgsIndexVector <- c()
   for (i in seq_along(wrt_name_strings)) {
+    hasIndex <- is.call(wrt_code[[i]]) && wrt_code[[i]][[1]] == '['
     if (fxnArgsDims[wrt_name_strings[i]] == 0) ## scalar case
       wrtArgsIndexVector <- c(wrtArgsIndexVector, 
                               fxnArgsIndexVector[wrt_name_strings[i]])
     else if (fxnArgsDims[wrt_name_strings[i]] == 1) { ## vector case
-      hasIndex <- wrt_code[[i]][[1]] == '['
       if (hasIndex) {
         if (length(tail(wrt_code[[i]], -2)) != 1)
           stop(paste0('Incorrect indexing provided for wrt ',
@@ -170,7 +182,6 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
       }
     }
     else if(fxnArgsDims[wrt_name_strings[i]] == 2) { ## matrix case
-      hasIndex <- wrt_code[[i]][[1]] == '['
       if (hasIndex){
         if (length(tail(wrt_code[[i]], -2)) != 2)
           stop(paste0('Incorrect indexing provided for wrt ',
@@ -417,6 +428,26 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
   fxnName = deparse(fxnCall[[1]])
   wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
   
+  fxnCall[[1]] <- derivsFxnCall
+  fxnCall$order <- order
+  fxnCall$wrt <- wrt_indices
+  eval(fxnCall, fxnEnv)
+}
+
+nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), wrt = NULL,
+                            fxnEnv = parent.frame(), loadedObjEnv = NULL) {
+  fxnName <- fxnCall[[1]][[3]]
+  derivsFxnCall <- fxnCall[[1]]
+  derivsFxnCall[[3]] <- paste0(fxnName, '_derivs_')
+
+  if (is.null(loadedObjEnv))
+    loadedObjEnv <- eval(fxnCall[[1]][[2]], envir = fxnEnv)
+
+  ## fxn <- eval(fxnCall[[1]], envir = fxnEnv)
+  fxnArgs <- formals(loadedObjEnv$.NC$public_methods[[fxnName]])
+
+  wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
+
   fxnCall[[1]] <- derivsFxnCall
   fxnCall$order <- order
   fxnCall$wrt <- wrt_indices
