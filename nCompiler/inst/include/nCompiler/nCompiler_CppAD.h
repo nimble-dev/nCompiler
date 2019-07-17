@@ -110,10 +110,10 @@ std::shared_ptr<nC_derivClass> getDerivs_(nCompilerCppADinfoClass &ADinfo,
 	}
       }
       if (ordersFound[1]) {
-	Eigen::array< Index, 2> sizeGrad = {{wrt_n, q}};
+	Eigen::array< Index, 2> sizeGrad = {{q, wrt_n}};
 	ans->gradient.resize(sizeGrad);
 	for(Index i = 0; i < wrt_n; i++) { // TODO: add inf check
-	  ans->gradient(i, dy_ind) = cppad_derivOut[(wrtVector[i] - 1)*maxOrder];
+	  ans->gradient(dy_ind, i) = cppad_derivOut[(wrtVector[i] - 1)*maxOrder];
 	}
       }
       w[dy_ind] = 0;

@@ -41,9 +41,18 @@ nDerivs <- function(nFxn = NA,
       wrt <- wrt[-removeArgs]
   }
 
-  if (length(derivFxnCall[[1]]) == 3 &&
-        deparse(derivFxnCall[[1]][[1]]) == '$') {
+  if (!is.call(derivFxnCall))
+    stop("'nFxn' argument should be a call to an nFunction or compiled nClass method.")
 
+  fxn <- try(eval(derivFxnCall[[1]], fxnEnv))
+
+  if (isNF(fxn))
+    nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt,
+               fxnEnv = fxnEnv)
+  else if (length(derivFxnCall[[1]]) == 3 &&
+        deparse(derivFxnCall[[1]][[1]]) %in% c('$', '[[')) {
+
+    ## this could be an nClass or a compiled nClass with full interface
     nClass_obj <- try(eval(derivFxnCall[[1]][[2]], envir = fxnEnv))
 
     if (!isNC(nClass_obj))
@@ -54,7 +63,9 @@ nDerivs <- function(nFxn = NA,
 
     nDerivs_full(fxnCall = derivFxnCall, order = order, wrt = wrt,
                  fxnEnv = fxnEnv)
-  } else if (derivFxnCall[[1]][[1]] == 'method') {
+
+  } else if (is.call(derivFxnCall[[1]]) &&
+               derivFxnCall[[1]][[1]] == 'method') {
 
     loadedObjEnv <- try(eval(derivFxnCall[[1]][[2]], envir = fxnEnv))
 
@@ -66,22 +77,67 @@ nDerivs <- function(nFxn = NA,
 
     nDerivs_generic(fxnCall = derivFxnCall, order = order, wrt = wrt,
                     fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv)
-  } else ## nFxn is a nimble function
-    nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt, fxnEnv = fxnEnv)
+  } else
+    stop(paste0(
+        "nDerivs does not know how to use the object ",
+        deparse(derivFxnCall[[1]]), "."
+    ))
 }
 
 #' @export
 setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
   fxnCall <- match.call()$nFxn
-  if(!is.na(dropArgs)){
+  if (!is.na(dropArgs)) {
     removeArgs <- which(wrt == dropArgs)
-    if(length(removeArgs) > 0)
+    if (length(removeArgs) > 0)
       wrt <- wrt[-removeArgs]
   }
-  fxn <- eval(fxnCall[[1]], envir = parent.frame())
-  fxnArgs <- formals(fxn)
-  setup_wrt_internal(wrt = wrt, fxnArgs = fxnArgs,
-                     fxnName = deparse(fxnCall[[1]]))
+
+  if (is.call(fxnCall) && length(fxnCall) == 3 &&
+        deparse(fxnCall[[1]]) %in% c('$', '[[')) {
+
+    nClass_obj <- try(eval(fxnCall[[2]], envir = parent.frame()))
+
+    if (!isNC(nClass_obj))
+      stop(paste0(
+        "setup_wrt does not know how to use the object ",
+        deparse(fxnCall[[2]]), "."
+      ))
+
+    fxn <- eval(fxnCall, envir = parent.frame())
+    fxnName <- fxnCall[[3]]
+    if (!is.character(fxnName)) fxnName <- deparse(fxnName)
+    ## depends on the full interface's method having the type declarations as
+    ## the default args, e.g. x = numericVector(7), y = numericScalar()
+    fxnArgs <- formals(fxn)
+
+  } else if (is.call(fxnCall) && fxnCall[[1]] == 'method') {
+
+    loadedObjEnv <- try(eval(fxnCall[[2]], envir = parent.frame()))
+
+    if (!is.loadedObjectEnv(loadedObjEnv))
+      stop(paste0(
+        "setup_wrt does not know how to use the object ",
+        deparse(fxnCall[[2]]), "."
+      ))
+
+    fxnName <- fxnCall[[3]]
+    fxnArgs <- NFinternals(
+      loadedObjEnv$.NC$public_methods[[fxnName]])$argSymTab$symbols
+    
+  } else {
+    if (is.call(fxnCall))
+      stop(paste0("setup_wrt expected the 'nFxn' arg to be either an ",
+                  "nFunction or a compiled nClass method but instead got the ",
+                  "the call ", deparse(fxnCall), "."))
+    if (!isNF(nFxn))
+      stop(paste0("setup_wrt does not know how to use the object ",
+                  deparse(fxnCall, ".")))
+    fxnName <- deparse(nFxn)
+    fxnArgs <- NFinternals(nFxn)$argSymTab$symbols
+  }
+  
+  setup_wrt_internal(wrt = wrt, fxnArgs = fxnArgs, fxnName = fxnName)
 }
 
 setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
@@ -115,7 +171,11 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
                                paste(wrt_name_strings[!argNameCheck], 
                                      collapse = ', ' ), '.')
   ## Make sure all wrt args have type declarations (i.e., are not just names without types)
-  arg_symbols <- lapply(fxnArgs, argType2symbol)
+  if (inherits(fxnArgs[[1]], 'symbolBase'))
+    arg_symbols <- fxnArgs
+  else {
+    arg_symbols <- lapply(fxnArgs, argType2symbol)
+  }
   nameCheck <- sapply(wrtMatchArgs, function(i) class(arg_symbols[[i]]))
   if (any(nameCheck == 'name')) stop('Derivatives of ', fxnName, ' being taken 
                                     WRT an argument that does not have a valid type.')
@@ -230,7 +290,7 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
          uncompiled nFunctions.")
 
   hessianFlag <- 2 %in% order
-  jacobianFlag <- 1 %in% order
+  gradientFlag <- 1 %in% order
   ## When called for a model$calculate, valueFlag will always be 0 here
   ## because value will be obtained later (if requested) after restoring
   ## model variables.
@@ -241,7 +301,7 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
     ## arrange them properly.
     derivList <- genD(func, X)
     if(valueFlag) outVal <- derivList$f0 
-    if(jacobianFlag) outGrad <- derivList$D[,1:derivList$p, drop = FALSE]
+    if(gradientFlag) outGrad <- derivList$D[,1:derivList$p, drop = FALSE]
     outHessVals <- derivList$D[,(derivList$p + 1):dim(derivList$D)[2],
                                drop = FALSE]
     outHess <- array(NA, dim = c(derivList$p, derivList$p, length(derivList$f0)))
@@ -254,8 +314,8 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
       outHess[,,outDim] <- singleDimMat
     }
   } else
-    if(jacobianFlag){
-      ## If jacobians are requested, derivatives taken using numDeriv's jacobian() 
+    if(gradientFlag){
+      ## If gradients are requested, derivatives taken using numDeriv's jacobian() 
       ## function.  After that, we extract the various derivative elements and 
       ## arrange them properly.
       outVal <- func(X) 
@@ -266,11 +326,11 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
   
   outList <- list()
   if(!missing(resultIndices)) {
-    if(jacobianFlag) outGrad <- outGrad[, resultIndices, drop=FALSE]
+    if(gradientFlag) outGrad <- outGrad[, resultIndices, drop=FALSE]
     if(hessianFlag) outHess <- outHess[resultIndices, resultIndices, , drop=FALSE]
   }
   if(valueFlag) outList$value <- outVal
-  if(jacobianFlag) outList$jacobian <- outGrad
+  if(gradientFlag) outList$gradient <- outGrad
   if(hessianFlag) outList$hessian <- outHess
   return(outList)
 }
@@ -392,11 +452,11 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
     
     current_x_index <- current_x_index + length(unique_flat_indices)
   }
-  length_x = current_x_index - 1
   fxnArgs_assign_code <- unlist(fxnArgs_assign_code, recursive = FALSE)
   get_init_values_code <- unlist(get_init_values_code, recursive = FALSE)
   result_x_indices_all <- unlist(result_x_indices_by_wrt)
 
+  length_x <- current_x_index - 1
   currentX <- numeric(length_x)
   do.call("{", get_init_values_code)
   ## equivalent to:
@@ -404,31 +464,29 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   ##      eval(get_init_values_code[[i]])
   ##  }
 
-  fxnName <- as.character(fxnCall[[1]])
   func <- function(x) {
     do.call("{", fxnArgs_assign_code)
     ## for(i in 1:length_x) {
     ##     ## Each line is like fxnArgs[[ 2 ]][23] <- x[5]
     ##     eval(fxnArgs_assign_code[[i]])
     ## }
-    c(do.call(fxnName, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
+    c(do.call(fxn, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
   }
 
   ans <- calcDerivs_internal(func, currentX, order, result_x_indices_all)
-  ##  jacobian(func, currentX)
   ans
 }
 
 nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
                          wrt = NULL, fxnEnv = parent.frame()) {
-  derivsFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
+  derivFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
 
   fxn <- eval(fxnCall[[1]], envir = fxnEnv)
   fxnArgs <- formals(fxn)
   fxnName = deparse(fxnCall[[1]])
   wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
   
-  fxnCall[[1]] <- derivsFxnCall
+  fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
   fxnCall$wrt <- wrt_indices
   eval(fxnCall, fxnEnv)
@@ -437,18 +495,18 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
 nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), wrt = NULL,
                             fxnEnv = parent.frame(), loadedObjEnv = NULL) {
   fxnName <- fxnCall[[1]][[3]]
-  derivsFxnCall <- fxnCall[[1]]
-  derivsFxnCall[[3]] <- paste0(fxnName, '_derivs_')
+  derivFxnCall <- fxnCall[[1]]
+  derivFxnCall[[3]] <- paste0(fxnName, '_derivs_')
 
   if (is.null(loadedObjEnv))
     loadedObjEnv <- eval(fxnCall[[1]][[2]], envir = fxnEnv)
 
-  ## fxn <- eval(fxnCall[[1]], envir = fxnEnv)
-  fxnArgs <- formals(loadedObjEnv$.NC$public_methods[[fxnName]])
+  fxnArgs <- NFinternals(
+    loadedObjEnv$.NC$public_methods[[fxnName]])$argSymTab$symbols
 
   wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
 
-  fxnCall[[1]] <- derivsFxnCall
+  fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
   fxnCall$wrt <- wrt_indices
   eval(fxnCall, fxnEnv)
