@@ -198,6 +198,10 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_METHODS
       std::cout<<"in derived call"<<std::endl;
 #endif
+      if(LENGTH(Sargs) != sizeof...(ARGS)) {
+	std::cout<<"Incorrect number of arguments"<<std::endl;
+	return R_NilValue;
+      }
       return(
 	     Rcpp::wrap(
 			expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs)

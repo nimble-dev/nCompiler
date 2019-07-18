@@ -184,3 +184,43 @@ test_that("nCompile_nClass works with integerMatrix and logicalMatrix",
             value(obj, "CLM") <- matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2)
             expect_identical(value(obj, "CLM"), matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2))
           })
+
+test_that("nCompile_nClass works when number of method arguments is wrong",
+          {
+            nc1 <- nClass(
+              Rpublic = list(
+                Rv = NULL,
+                Rfoo = function(x) x+1
+              ),
+              Cpublic = list(
+                Cv = 'numericScalar'
+                , Cfoo = nFunction(
+                  fun = function(x, y) {
+                    return(x+y)
+                  },
+                  argTypes = list(x = 'numericScalar',
+                                  y = 'numericScalar'),
+                  returnType = 'numericScalar')
+                , Cnullary = nFunction(
+                  fun = function() {
+                    return(1.2)
+                  },
+                  returnType = 'numericScalar'
+                )
+              )
+            )
+            # set_nOption('showCompilerOutput', TRUE)
+            ans <- try(nCompile_nClass(nc1, interface = "generic"))
+            expect_true(is.function(ans)) ## compilation succeeded
+            obj <- ans()
+            expect_true(class(obj) == "loadedObjectEnv")
+            
+            expect_equal(method(obj, "Cfoo")(1.2, 2.3), 3.5)
+            expect_equal(method(obj, "Cnullary")(), 1.2)
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cfoo")(1.2, 2.3, 3.4))
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cfoo")(1.2))
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cnullary")(1.2))
+          })
