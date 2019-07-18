@@ -45,14 +45,14 @@ class genericInterfaceBaseC {
   // Derived classes should provide valid implementations.
   virtual SEXP get_value(const std::string &name) const {
     std::cout<<"Error: you should be in a derived genericInterfaceC class for get_value"<<std::endl;
-    return(R_NilValue);
+    return R_NilValue;
   }
   virtual void set_value(const std::string &name, SEXP Svalue) {
     std::cout<<"Error: you should be in a derived genericInterfaceC class for set_value"<<std::endl;
   }
   virtual SEXP call_method(const std::string &name, SEXP Sargs) {
     std::cout<<"Error: you should be in a derived genericInterfaceC class for call_method"<<std::endl;
-    return(R_NilValue);
+    return R_NilValue;
   }
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {}
@@ -71,9 +71,9 @@ class accessor_base {
  public:
   // return the member from the interface object, converted to SEXP.
   // Derived classes should provide valid implementation.
-  virtual SEXP get(const genericInterfaceBaseC *) {
+  virtual SEXP get(const genericInterfaceBaseC *) const {
     std::cout<<"Error: you should be in get for a derived accessor class"<<std::endl;
-    return(R_NilValue);
+    return R_NilValue;
   };
   virtual void set(genericInterfaceBaseC *, SEXP Svalue) {
     std::cout<<"Error: you should be in set for a derived accessor class"<<std::endl;
@@ -87,7 +87,7 @@ class method_base {
  public:
   virtual SEXP call(genericInterfaceBaseC *, SEXP Sargs) {
     std::cout<<"Error: you should be in a derived method class"<<std::endl;
-    return(R_NilValue);
+    return R_NilValue;
   };
   virtual ~method_base(){}
 };
@@ -110,13 +110,11 @@ class genericInterfaceC : public genericInterfaceBaseC {
     ptrtype ptr;
  accessor_class(ptrtype ptr) : ptr(ptr) {};
     
-    SEXP get(const genericInterfaceBaseC *intBasePtr) {
+    SEXP get(const genericInterfaceBaseC *intBasePtr) const {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived get"<<std::endl;
 #endif
-      return(
-	     Rcpp::wrap(
-			reinterpret_cast<const T*>(intBasePtr)->*ptr));
+      return Rcpp::wrap(reinterpret_cast<const T*>(intBasePtr)->*ptr);
     }
     void set(genericInterfaceBaseC *intBasePtr, SEXP Svalue) {
 #ifdef SHOW_FIELDS
@@ -147,13 +145,11 @@ class genericInterfaceC : public genericInterfaceBaseC {
     std::cout<<"adding "<<name<<std::endl;
 #endif
     name2index[name] = name_count++;
-    return(
-	   name_access_pair(
+    return name_access_pair(
 			    name,
 			    std::shared_ptr<accessor_base>(new accessor_class<P>(ptr))
-			    )
-	   );
-  }
+			    );
+      }
 
   // hello world to see if static maps were populated.
   void hw() {
@@ -168,23 +164,35 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_FIELDS
     std::cout<<"in derived get_value"<<std::endl;
 #endif
-    return(name2access[name]->get(this));
+    name2access_type::const_iterator access = name2access.find(name);
+    if(access == name2access.end())
+      return R_NilValue;
+    return (access->second->get(this));
   }
 
   void set_value(const std::string &name, SEXP Svalue ) {
 #ifdef SHOW_FIELDS
     std::cout<<"in derived set_value"<<std::endl;
 #endif
-    name2access[name]->set(this, Svalue);
+    name2access_type::iterator access = name2access.find(name);
+    if(access == name2access.end()) {
+      std::cout<<"Problem: \""<<name<<"\" is not a field in this nClass."<<std::endl;
+      return;
+    }
+    access->second->set(this, Svalue);
   }
-
 
   /****** METHODS ******/
   SEXP call_method(const std::string &name, SEXP Sargs) {
 #ifdef SHOW_METHODS
     std::cout<<"in derived call_method"<<std::endl;
 #endif
-    return(name2method[name]->call(this, Sargs));
+    name2method_type::iterator method = name2method.find(name);
+    if(method == name2method.end()) {
+      std::cout<<"Problem: \""<<name<<"\" is not a method in this nClass."<<std::endl;
+      return R_NilValue;
+    }
+    return (method->second->call(this, Sargs));
   }
 
   template<typename P, typename ...ARGS>
@@ -198,11 +206,9 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_METHODS
       std::cout<<"in derived call"<<std::endl;
 #endif
-      return(
-	     Rcpp::wrap(
+      return Rcpp::wrap(
 			expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs)
-			)
-	     );
+			);
     }
   };
   
@@ -216,10 +222,9 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_METHODS
     std::cout<<"adding method "<<name<<std::endl;
 #endif
-    return(name_method_pair(name,
+    return name_method_pair(name,
 			    std::shared_ptr<method_base>(new method_class<P, ARGS...>(fun))
-			    )
-	   );
+			    );
   }
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {

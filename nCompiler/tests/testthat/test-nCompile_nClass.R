@@ -23,8 +23,14 @@ test_that("nCompile_nClass works",
     obj <- ans()
     expect_true(class(obj) == "loadedObjectEnv")
     expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+    message("Expecting a message that method \"not_here\" doesn't exist next:\n")
+    expect_null(method(obj, "not_here")(1.2))
+    
     value(obj, "Cv") <- 1.23
     expect_equal(value(obj, "Cv"), 1.23)
+    expect_null(value(obj, "junk"))
+    message("Expecting a message that field \"junk\" doesn't exist next:\n")
+    expect_silent({value(obj, "junk") <- 5})
 })
 
 test_that("nCompile_nClass works when there are no methods",
@@ -184,3 +190,5 @@ test_that("nCompile_nClass works with integerMatrix and logicalMatrix",
             value(obj, "CLM") <- matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2)
             expect_identical(value(obj, "CLM"), matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2))
           })
+
+
