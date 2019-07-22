@@ -1,5 +1,6 @@
 ## This file contains R versions of functions supported in nFunction compilation.
 
+#' @export
 parallel_for <- function(index, range, body, ...) {
   index <- substitute(index)
   range <- substitute(range)

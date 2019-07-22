@@ -31,3 +31,5 @@ For many features, the effort so far has been to create a skeleton of core funct
 ### [Parallelization](parallelization.html)
 
 ### [Component interactions](component_interactions.html)
+
+### [Extensibility and developer tools](extensibility_developer_tools.html)

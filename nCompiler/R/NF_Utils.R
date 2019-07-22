@@ -11,14 +11,14 @@ isNF <- function(x) inherits(x, 'nFunction')
 #' @param value Object of class \code{NF_InternalsClass}.
 #' @export
 NFinternals <- function(NF) {
-    NF@internals
+  NF@internals
 }
 
 #' @rdname NFinternals
 #' @export
 `NFinternals<-` <- function(NF, value) {
-    NF@internals <- value
-    NF
+  NF@internals <- value
+  NF
 }
 
 isConstructor <- function(NF) {
