@@ -1,7 +1,7 @@
 #' nFunction Derivatives
 #' 
-#' EXPERIMENTAL Computes the value, Jacobian, and Hessian of a given  
-#' \code{nFunction} method.  
+#' Computes the value, Jacobian, and Hessian of a given  
+#' \code{nFunction} or compiled \code{nClass} method.  
 #' 
 #' @param nFxn a call to a compiled or uncompiled \code{nFunction} method with
 #'   arguments included.
@@ -15,21 +15,21 @@
 #' @param wrt a character vector of either: names of function arguments to take
 #'   derivatives with respect to.  If left empty, derivatives will be taken
 #'   with respect to all arguments to \code{nFxn}.
-#' @param silent a logical argument that determines whether warnings will be
-#'   displayed.
+#' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
+#'   which has a method corresponding to the one found in \code{nFxn}. Only
+#'   required when \code{nFxn} is a compiled method call from a generic
+#'   interface.
 #' @details Derivatives for uncompiled nFunctions are calculated using the
 #'   \code{numDeriv} package.  If this package is not installed, an error will
 #'   be issued.  Derivatives for matrix valued arguments will be returned in
 #'   column-major order.
 #' 
-#' @return a \code{nimbleList} with elements \code{value}, \code{jacobian}, and
+#' @return a \code{list} with elements \code{value}, \code{gradient}, and
 #'   \code{hessian}.
 #' 
 #' @export
-nDerivs <- function(nFxn = NA,
-                    order = c(0,1,2),
-                    dropArgs = NA,
-                    wrt = NULL){
+nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
+                    NC = NULL) {
   fxnEnv <- parent.frame()
   fxnCall <- match.call()
   if(is.null(fxnCall[['order']])) fxnCall[['order']] <- order
@@ -50,7 +50,7 @@ nDerivs <- function(nFxn = NA,
     nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt,
                fxnEnv = fxnEnv)
   else if (length(derivFxnCall[[1]]) == 3 &&
-        deparse(derivFxnCall[[1]][[1]]) %in% c('$', '[[')) {
+             deparse(derivFxnCall[[1]][[1]]) %in% c('$', '[[')) {
 
     ## this could be an nClass or a compiled nClass with full interface
     nClass_obj <- try(eval(derivFxnCall[[1]][[2]], envir = fxnEnv))
@@ -76,16 +76,36 @@ nDerivs <- function(nFxn = NA,
       ))
 
     nDerivs_generic(fxnCall = derivFxnCall, order = order, wrt = wrt,
-                    fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv)
+                    fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv, NC = NC)
   } else
     stop(paste0(
-        "nDerivs does not know how to use the object ",
-        deparse(derivFxnCall[[1]]), "."
+      "nDerivs does not know how to use the object ",
+      deparse(derivFxnCall[[1]]), "."
     ))
 }
 
+#' Computes the value, Jacobian, and Hessian of a given  
+#' \code{nFunction} method.
+#' 
+#' @param nFxn a call to a compiled or uncompiled \code{nFunction} method with
+#'   arguments included.
+#' @param dropArgs a vector of integers specifying any arguments to \code{nFxn}
+#'   that derivatives should not be taken with respect to.  For example,
+#'   \code{dropArgs = 2} means that the second argument to \code{nFxn} will not
+#'   have derivatives taken with respect to it.  Defaults to an empty vector.
+#' @param wrt a character vector of either: names of function arguments to take
+#'   derivatives with respect to.  If left empty, derivatives will be taken
+#'   with respect to all arguments to \code{nFxn}.
+#' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
+#'   which has a method corresponding to the one found in \code{nFxn}. Only
+#'   required when \code{nFxn} is a compiled method call from a generic
+#'   interface.
+#'
+#' @return an integer vector of the positions in the flattened input of the
+#'   elements with respect to which to differentiate \code{nFxn}.
+#' 
 #' @export
-setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
+setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
   fxnCall <- match.call()$nFxn
   if (!is.na(dropArgs)) {
     removeArgs <- which(wrt == dropArgs)
@@ -121,10 +141,26 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL) {
         deparse(fxnCall[[2]]), "."
       ))
 
+    if (is.null(NC))
+      stop(paste(
+        "'setup_wrt' was called for a method from a generic nClass interface but",
+        "the 'NC' argument is NULL."
+      ))
+    if (!isNCgenerator(NC))
+      stop(paste(
+        "The 'NC' argument to 'setup_wrt' must be an nClass generator (returned",
+        "from a call to 'nClass')."))
+
     fxnName <- fxnCall[[3]]
-    fxnArgs <- NFinternals(
-      loadedObjEnv$.NC$public_methods[[fxnName]])$argSymTab$symbols
-    
+
+    nf <- NC$public_methods[[fxnName]]
+    if (is.null(nf))
+      stop(paste0(
+        "The 'NC' argument provided to 'setup_wrt' has no public method named ",
+        fxnName, "."))
+
+    fxnArgs <- NFinternals(nf)$argSymTab$symbols
+
   } else {
     if (is.call(fxnCall))
       stop(paste0("setup_wrt expected the 'nFxn' arg to be either an ",
@@ -493,16 +529,30 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
 }
 
 nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), wrt = NULL,
-                            fxnEnv = parent.frame(), loadedObjEnv = NULL) {
+                            fxnEnv = parent.frame(), loadedObjEnv = NULL, NC = NULL) {
   fxnName <- fxnCall[[1]][[3]]
   derivFxnCall <- fxnCall[[1]]
   derivFxnCall[[3]] <- paste0(fxnName, '_derivs_')
 
   if (is.null(loadedObjEnv))
     loadedObjEnv <- eval(fxnCall[[1]][[2]], envir = fxnEnv)
+  if (is.null(NC))
+    stop(paste(
+      "'nDerivs' was called for a method from a generic nClass interface but",
+      "the 'NC' argument is NULL."
+    ))
+  if (!isNCgenerator(NC))
+    stop(paste(
+      "The 'NC' argument to 'nDerivs' must be an nClass generator (returned",
+      "from a call to 'nClass')."))
 
-  fxnArgs <- NFinternals(
-    loadedObjEnv$.NC$public_methods[[fxnName]])$argSymTab$symbols
+  nf <- NC$public_methods[[fxnName]]
+  if (is.null(nf))
+    stop(paste0(
+      "The 'NC' argument provided to 'nDerivs' has no public method named ",
+      fxnName, "."))
+
+  fxnArgs <- NFinternals(nf)$argSymTab$symbols
 
   wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
 
