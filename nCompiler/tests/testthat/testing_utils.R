@@ -219,103 +219,12 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
   }
 }
 
-## Runs test_fun on a list of params.
-## ... additional args to pass to test_gold_file
-test_batch <- function(test_fun, batch,
-                       test_name = deparse(substitute(batch)), size = 3,
-                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                       control = list(), verbose = nOptions('verbose'),
-                       skip = c(), gold_test = FALSE, ...) {
-  indices <- seq_along(batch)
-  if (is.numeric(skip) && all(skip > 0 & skip %% 1 == 0))
-    indices <- indices[-skip] ## skip is indices in batch to skip
-  if (is.character(skip))
-    skip <- names(batch) %in% skip ## convert to logical
-  if (is.logical(skip) && length(skip) == length(indices))
-    indices <- indices[!skip] ## skip[i] is TRUE if we should skip the corresponding test
-
-  if (isFALSE(gold_test)) {
-    for (i in indices) {
-      param <- batch[[i]]
-      name <- names(batch)[i]
-      msg <- paste0(test_name, ' #', i, ' (', name, ')')
-      if (is.null(param$skip) || !param$skip) {
-        if (verbose) {
-          cat("### -------------------------------------------- ###\n")
-          cat(paste0("### Testing ", msg, " ###\n"))
-        }
-        test_param(
-          test_fun, batch[[i]], msg, size, dir, control, verbose, ...
-        )
-        if (verbose) cat("### -------------------------------------------- ###\n")
-      } else if (verbose) {
-        cat("### -------------------------------------------- ###\n")
-        cat(paste0('### Skipping ', msg, ' ###\n'))
-        cat("### -------------------------------------------- ###\n")
-      }
-    }
-
-  } else {
-    RcppPackets <- lapply(
-      batch, test_fun,
-      test_name, size, dir, control, verbose,
-      gold_test = TRUE, batch_mode = TRUE
-    )
-    hContent <- unlist(sapply(RcppPackets, `[[`, 'hContent'))
-    cppContent <- unlist(sapply(RcppPackets, `[[`, 'cppContent'))
-    RcppPacket <- list(
-      hContent = hContent,
-      cppContent = cppContent
-      ## filebase not needed
-    )
-    ## construct an RcppPacket for test_gold_file
-    ## If ... contains write_gold_file = TRUE, then it is just written.
-    ## Otherwise, read gold_file and check that current generated code matches.
-    test_gold_file(RcppPacket, ...)
-  }
-}
-
-## TODO: this function needs to be refactored or removed
-## This is a parametrized test, where `param_list` is a list of lists with names:
-##   param$name - An op name
-##   param$expr - A quoted expression `quote(out <- some_function_of(arg1, arg2, ...))`.
-##   param$argTypes - A list of the input types.
-##   param$returnType - The output type character string.
-test_param <- function(test_fun, param_list, test_name = '', size = 3,
-                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                       control = list(), verbose = nOptions('verbose'), ...) {
-  if (!is.list(param_list)) stop('param must be a list', call.=FALSE)
-
-  ## in some cases, expect_error does not suppress error messages (I believe
-  ## this has to do with how we trap errors in compilation), so make sure user
-  ## realizes expectation
-  if('knownFailureReport' %in% names(param_list) && param_list$knownFailureReport)
-    cat("\nBegin expected error message:\n")
-
-  test_that(test_name, {
-    test_fun(param_list, test_name, size, dir, control, verbose, ...)
-  })
-
-  invisible(NULL)
-}
-
 wrap_if_matches <- function(pattern, string, wrapper, expr) {
   if (!is.null(pattern) && any(grepl(paste0('^', pattern, '$'), string))) {
     wrapper(expr)
   } else {
     expr
   }
-}
-
-inverseCallReplacements <- as.list(
-  names(nCompiler:::specificCallReplacements)
-)
-names(inverseCallReplacements) <- unlist(
-  nCompiler:::specificCallReplacements
-)
-inverseReplace <- function(x) {
-  replacement <- inverseCallReplacements[[x]]
-  if(is.null(replacement)) x else replacement
 }
 
 modifyOnMatch <- function(x, pattern, key, value, env = parent.frame(), ...) {
@@ -428,7 +337,6 @@ return_type_string <- function(op, argTypes) {
 
   reduction_op <- nCompiler:::getOperatorDef(op, 'testing', 'reductionOp')
 
-  # TODO: other labelAbstractTypes handlers for reductions?
   nDim <- if (isTRUE(reduction_op)) 0 else max(sapply(args, `[[`, 'nDim'))
 
   if (nDim > 3)
@@ -484,64 +392,6 @@ return_type_string <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
-# TODO: replace usage of returnTypeString with return_type_string and remove.
-returnTypeString <- function(op, argTypes) {
-  ## Takes an operator and its input types as a character vector and
-  ## creates a string representing the returnType for the operation.
-  if (!is.character(argTypes))
-    stop('Argument `argTypes` must be a character vector.', call.=FALSE)
-  if (!length(argTypes) %in% c(1L, 2L))
-    stop('Can only `argTypes` of length 1 or 2.', call.=FALSE)
-
-  returnTypeCode <-
-    nCompiler:::getOperatorDef(op, 'labelAbstractTypes', 'returnTypeCode')
-  if (is.null(returnTypeCode)) return(argTypes[1])
-  
-  arg1 <- nCompiler:::argType2symbol(argTypes[1])
-  if (length(argTypes) == 2)
-    arg2 <- nCompiler:::argType2symbol(argTypes[2])
-  
-  scalarTypeString <- switch(
-    returnTypeCode,
-    'numeric', ## 1
-    'integer', ## 2
-    'logical'  ## 3
-  )
-
-  if (is.null(scalarTypeString)) ## returnTypeCode is 4 or 5
-    scalarTypeString <-
-      if (length(argTypes) == 1)
-        nCompiler:::arithmeticOutputType(
-          arg1$type, returnTypeCode = returnTypeCode
-        )
-  else
-    nCompiler:::arithmeticOutputType(
-      arg1$type, arg2$type, returnTypeCode
-    )
-
-  ## arithmeticOutputType might return 'double'
-  if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
-
-  nDim <- if (length(argTypes) == 1) {
-    handler <- nCompiler:::getOperatorDef(
-      op, 'labelAbstractTypes', 'handler'
-    )
-    if (!is.null(handler) && handler == 'UnaryReduction') 0
-    else arg1$nDim
-  } else max(arg1$nDim, arg2$nDim)
-
-  dimString <- switch(
-    nDim + 1,
-    'Scalar', ## nDim is 0
-    'Vector', ## nDim is 1
-    'Matrix', ## nDim is 2
-    'Array(nDim=3)', ## nDim is 3
-    stop('Cannot handle argTypes with nDim > 3.')
-  )
-
-  return(paste0(scalarTypeString, dimString))
-}
-
 make_test_param <- function(op, argTypes, input_gen_funs = NULL, more_args = NULL) {
   arg_names <- names(argTypes)
 
@@ -577,46 +427,6 @@ make_test_param <- function(op, argTypes, input_gen_funs = NULL, more_args = NUL
     argTypes = argTypesList,
     input_gen_funs = input_gen_funs,
     returnType = return_type_string(op, argTypes)
-  )
-}
-
-# TODO: replace usage of makeOperatorParam with make_test_param and remove.
-makeOperatorParam <- function(op, argTypes) {
-  if (length(argTypes) == 1) {
-    name <- paste(op, argTypes)
-    expr <- substitute(
-      ans <- FOO(arg1), list(FOO = as.name(inverseReplace(op)))
-    )
-  } else if (length(argTypes) == 2) {
-    name <- paste(op, argTypes[1], argTypes[2])
-    expr <- substitute(
-      ans <- FOO(arg1, arg2), list(FOO = as.name(inverseReplace(op)))
-    )
-  }  else {
-    stop("Cannot currently handle testing with more than 2 arguments.",
-         call. = FALSE)
-  }
-
-  argTypesList <- as.list(argTypes)
-  names(argTypesList) <- paste0('arg', 1:length(argTypes))
-
-  list(
-    name = name,
-    expr = expr,
-    argTypes = argTypesList,
-    returnType = returnTypeString(op, argTypes)
-  )
-}
-
-getBinaryArgChecks <- function(op) {
-  ## not implemented
-  switch(
-    op,
-    #'/' = list(NULL, function(x) {
-    #  if (length(x) == 1) x != 0
-    #  else TRUE
-    #},
-    list(NULL, NULL)
   )
 }
 
@@ -723,7 +533,6 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
 ## gold_file_dir:   Where test_gold_file() should look for and save gold files.
 ## ...:             Additional arguments to pass to test_base
 ##
-## TODO: improve the way this works / is used to include granularity = 1
 run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
                            full = FALSE, granularity = NA,
                            write_gold_file = FALSE, gold_file_dir = system.file(
@@ -757,4 +566,16 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
 
     test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun, ...)
   }
+}
+
+#############################
+## input generation functions
+#############################
+
+## arg_size comes from arg$size where arg is a symbolBasic object
+gen_pos_def_matrix <- function(arg_size) {
+  m <- arg_size[1] ## assumes matrix argType is square
+  mat <- diag(1:m)
+  mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
+  mat %*% t(mat)
 }

@@ -29,8 +29,6 @@
 test_AD <- function(base_list, verbose = nOptions('verbose'),
                     catch_failures = FALSE, control = list(), seed = 0,
                     return_compiled_nf = FALSE, knownFailures = list()) {
-  # TODO: use debug flag from somewhere?
-  # if (!is.null(param$debug) && param$debug) browser()
 
   param_list <- base_list$param_list
   nC <- base_list$nC
@@ -490,7 +488,7 @@ make_AD_test_param <- function(op, argTypes, wrt_args = NULL,
 ## op:   operator name
 ## seed: a random seed
 ##
-make_AD_test_param_batch <- function(op, seed = 0) {
+make_AD_test_params_one_op <- function(op, seed = 0) {
   opInfo <- nCompiler:::getOperatorDef(op, 'testing')
   if (is.null(opInfo) || is.null(opInfo[['AD_argTypes']])) return(NULL)
   argTypes <- opInfo[['AD_argTypes']]
@@ -501,6 +499,14 @@ make_AD_test_param_batch <- function(op, seed = 0) {
   })
   names(ans) <- sapply(ans, `[[`, 'name')
   invisible(ans)
+}
+
+make_AD_test_params <- function(ops, seed = 0) {
+  sapply(ops, make_AD_test_params_one_op, seed = seed, simplify = FALSE)
+}
+
+get_AD_ops <- function() {
+  get_matching_ops('testing', 'AD_argTypes', function(x) !is.null(x))
 }
 
 ## Takes an element of distn_params list and returns a list of AD test
@@ -580,16 +586,4 @@ make_distribution_fun_AD_test <- function(distn_param) {
   )
   names(test_params) <- sapply(test_params, `[[`, 'name')
   return(test_params)
-}
-
-#############################
-## input generation functions
-#############################
-
-## arg_size comes from arg$size where arg is a symbolBasic object
-gen_pos_def_matrix <- function(arg_size) {
-  m <- arg_size[1] ## assumes matrix argType is square
-  mat <- diag(1:m)
-  mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
-  mat %*% t(mat)
 }

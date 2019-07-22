@@ -2,10 +2,7 @@
 ## construct math test parameterizations
 ########################################
 
-math_ops <- get_matching_ops('testing', 'math_argTypes',
-                             function(x) !is.null(x))
-math_test_params <- sapply(math_ops, make_math_test_param_batch,
-                           simplify = FALSE)
+math_test_params <- make_math_test_params(get_math_ops())
 
 #################
 ## known failures

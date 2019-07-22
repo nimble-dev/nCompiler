@@ -1,12 +1,27 @@
-## see test-math.R
-# TODO: use catch_failures
-# TODO: give test_math and test_AD similar or same arguments
-test_math <- function(test_base_list, size = 3, catch_failures = FALSE,
-                      control = list(), seed = 0,
-                      verbose = nOptions('verbose'), ...) {
-  param_list <- test_base_list$param_list
-  nC <- test_base_list$nC
-  nC_compiled <- nCompile_nClass(nC, control = control)
+## This function should be passed to test_base() in testing_utils.R.
+test_math <- function(base_list, verbose = nOptions('verbose'),
+                      catch_failures = FALSE, control = list(), seed = 0,
+                      ...) {
+  param_list <- base_list$param_list
+  nC <- base_list$nC
+  if (verbose)
+    cat(paste('#### Compiling test of', base_list$test_name, '\n'))
+  nC_compiled <- try(nCompile_nClass(nC, control = control), silent = TRUE)
+
+  ## TODO: use an expect_* here instead?
+  if (inherits(nC_compiled, 'try-error')) {
+    msg <- paste0(
+      'The test of ', base_list$test_name, ' failed to compile.\n', nC_compiled[1]
+    )
+
+    if (isTRUE(catch_failures)) {
+      warning(msg, call. = FALSE, immediate. = TRUE)
+      return(invisible(NULL))
+    } else {
+      stop(msg, call = FALSE)
+    }
+  }
+
   nC_compiled_obj <- nC_compiled$new()
 
   for (i in seq_along(param_list)) {
@@ -16,13 +31,13 @@ test_math <- function(test_base_list, size = 3, catch_failures = FALSE,
     set.seed(seed)
 
     if (!is.null(param$skip) && param$skip) {
-      if (verbose) cat(paste('### Skipping test of', param$name, '###\n'))
+      if (verbose) cat(paste('### Skipping test of', param$name, '\n'))
     } else {
-      if (verbose) cat(paste('### Testing', param$name, '###\n'))
+      if (verbose) cat(paste('### Testing', param$name, '\n'))
 
       input <- make_input(param$argTypes, param$input_gen_funs)
 
-      if (verbose) cat("## Calling R version of nFunction ##\n")
+      if (verbose) cat("## Calling R version of nFunction \n")
       ansR <- try(
         do.call(nC$public_methods[[nFun_i]], input),
         silent = TRUE
@@ -36,15 +51,16 @@ test_math <- function(test_base_list, size = 3, catch_failures = FALSE,
           ),
           immediate. = TRUE
         )
-        if (verbose) cat('## Skipping to next test ##\n')
+        if (verbose) cat('## Skipping to next test \n')
         next
       }
 
-      if (verbose) cat("## Calling compiled nFunction ##\n")
+      if (verbose) cat("### Calling compiled nFunction \n")
       test_that("uncompiled and compiled math outputs match", {
         wrap_if_matches(param$knownFailure, 'runs', expect_error, {
           ansC <- do.call(nC_compiled_obj[[nFun_i]], input)
-          if (verbose) cat("## Testing equality ##\n")
+          if (verbose)
+            cat("## Testing equality of compiled and uncompiled output\n")
           if (is.array(ansC)) {
             expect_equal(as.array(ansR),
                          ansC,
@@ -70,7 +86,7 @@ rsqrt <- function(x) 1/sqrt(x)
 
 ## op:   operator name
 ##
-make_math_test_param_batch <- function(op) {
+make_math_test_params_one_op <- function(op) {
   opInfo <- nCompiler:::getOperatorDef(op, 'testing')
   if (is.null(opInfo) || is.null(opInfo[['math_argTypes']])) return(NULL)
   argTypes <- opInfo[['math_argTypes']]
@@ -80,4 +96,12 @@ make_math_test_param_batch <- function(op) {
   })
   names(ans) <- sapply(ans, `[[`, 'name')
   invisible(ans)
+}
+
+make_math_test_params <- function(ops) {
+  sapply(ops, make_math_test_params_one_op, simplify = FALSE)
+}
+
+get_math_ops <- function() {
+  get_matching_ops('testing', 'math_argTypes', function(x) !is.null(x))
 }

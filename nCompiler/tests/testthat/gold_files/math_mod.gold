@@ -54,54 +54,54 @@ Eigen::Tensor<int, 1> ans;
 ans = (arg1).cast<int>() % arg2;
 return(ans);
 }
-Eigen::Tensor<double, 2>  nClass_1::nFun_6_NFID_6 ( Eigen::Tensor<double, 2> arg1, int arg2 )  {
-Eigen::Tensor<double, 2> ans;
-ans = arg1 % static_cast<double>(arg2);
-return(ans);
-}
-Eigen::Tensor<int, 2>  nClass_1::nFun_7_NFID_7 ( Eigen::Tensor<int, 2> arg1, int arg2 )  {
-Eigen::Tensor<int, 2> ans;
-ans = arg1 % arg2;
-return(ans);
-}
-Eigen::Tensor<int, 2>  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<bool, 2> arg1, int arg2 )  {
-Eigen::Tensor<int, 2> ans;
-ans = (arg1).cast<int>() % arg2;
-return(ans);
-}
-Eigen::Tensor<double, 3>  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<double, 3> arg1, int arg2 )  {
-Eigen::Tensor<double, 3> ans;
-ans = arg1 % static_cast<double>(arg2);
-return(ans);
-}
-Eigen::Tensor<int, 3>  nClass_1::nFun_10_NFID_10 ( Eigen::Tensor<int, 3> arg1, int arg2 )  {
-Eigen::Tensor<int, 3> ans;
-ans = arg1 % arg2;
-return(ans);
-}
-Eigen::Tensor<int, 3>  nClass_1::nFun_11_NFID_11 ( Eigen::Tensor<bool, 3> arg1, int arg2 )  {
-Eigen::Tensor<int, 3> ans;
-ans = (arg1).cast<int>() % arg2;
-return(ans);
-}
-int  nClass_1::nFun_12_NFID_12 ( int arg1, bool arg2 )  {
+int  nClass_1::nFun_6_NFID_6 ( int arg1, bool arg2 )  {
 int ans;
 flex_(ans) = arg1 % static_cast<int>(arg2);
 return(ans);
 }
-int  nClass_1::nFun_13_NFID_13 ( bool arg1, bool arg2 )  {
+int  nClass_1::nFun_7_NFID_7 ( bool arg1, bool arg2 )  {
 int ans;
 flex_(ans) = static_cast<int>(arg1) % static_cast<int>(arg2);
 return(ans);
 }
-Eigen::Tensor<int, 1>  nClass_1::nFun_14_NFID_14 ( Eigen::Tensor<int, 1> arg1, bool arg2 )  {
+Eigen::Tensor<int, 1>  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<int, 1> arg1, bool arg2 )  {
 Eigen::Tensor<int, 1> ans;
 ans = arg1 % static_cast<int>(arg2);
 return(ans);
 }
-Eigen::Tensor<int, 1>  nClass_1::nFun_15_NFID_15 ( Eigen::Tensor<bool, 1> arg1, bool arg2 )  {
+Eigen::Tensor<int, 1>  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<bool, 1> arg1, bool arg2 )  {
 Eigen::Tensor<int, 1> ans;
 ans = (arg1).cast<int>() % static_cast<int>(arg2);
+return(ans);
+}
+Eigen::Tensor<double, 2>  nClass_1::nFun_10_NFID_10 ( Eigen::Tensor<double, 2> arg1, int arg2 )  {
+Eigen::Tensor<double, 2> ans;
+ans = arg1 % static_cast<double>(arg2);
+return(ans);
+}
+Eigen::Tensor<int, 2>  nClass_1::nFun_11_NFID_11 ( Eigen::Tensor<int, 2> arg1, int arg2 )  {
+Eigen::Tensor<int, 2> ans;
+ans = arg1 % arg2;
+return(ans);
+}
+Eigen::Tensor<int, 2>  nClass_1::nFun_12_NFID_12 ( Eigen::Tensor<bool, 2> arg1, int arg2 )  {
+Eigen::Tensor<int, 2> ans;
+ans = (arg1).cast<int>() % arg2;
+return(ans);
+}
+Eigen::Tensor<double, 3>  nClass_1::nFun_13_NFID_13 ( Eigen::Tensor<double, 3> arg1, int arg2 )  {
+Eigen::Tensor<double, 3> ans;
+ans = arg1 % static_cast<double>(arg2);
+return(ans);
+}
+Eigen::Tensor<int, 3>  nClass_1::nFun_14_NFID_14 ( Eigen::Tensor<int, 3> arg1, int arg2 )  {
+Eigen::Tensor<int, 3> ans;
+ans = arg1 % arg2;
+return(ans);
+}
+Eigen::Tensor<int, 3>  nClass_1::nFun_15_NFID_15 ( Eigen::Tensor<bool, 3> arg1, int arg2 )  {
+Eigen::Tensor<int, 3> ans;
+ans = (arg1).cast<int>() % arg2;
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_16_NFID_16 ( Eigen::Tensor<int, 2> arg1, bool arg2 )  {
@@ -187,16 +187,16 @@ int  nFun_2_NFID_2 ( bool arg1, int arg2 );
 Eigen::Tensor<double, 1>  nFun_3_NFID_3 ( Eigen::Tensor<double, 1> arg1, int arg2 );
 Eigen::Tensor<int, 1>  nFun_4_NFID_4 ( Eigen::Tensor<int, 1> arg1, int arg2 );
 Eigen::Tensor<int, 1>  nFun_5_NFID_5 ( Eigen::Tensor<bool, 1> arg1, int arg2 );
-Eigen::Tensor<double, 2>  nFun_6_NFID_6 ( Eigen::Tensor<double, 2> arg1, int arg2 );
-Eigen::Tensor<int, 2>  nFun_7_NFID_7 ( Eigen::Tensor<int, 2> arg1, int arg2 );
-Eigen::Tensor<int, 2>  nFun_8_NFID_8 ( Eigen::Tensor<bool, 2> arg1, int arg2 );
-Eigen::Tensor<double, 3>  nFun_9_NFID_9 ( Eigen::Tensor<double, 3> arg1, int arg2 );
-Eigen::Tensor<int, 3>  nFun_10_NFID_10 ( Eigen::Tensor<int, 3> arg1, int arg2 );
-Eigen::Tensor<int, 3>  nFun_11_NFID_11 ( Eigen::Tensor<bool, 3> arg1, int arg2 );
-int  nFun_12_NFID_12 ( int arg1, bool arg2 );
-int  nFun_13_NFID_13 ( bool arg1, bool arg2 );
-Eigen::Tensor<int, 1>  nFun_14_NFID_14 ( Eigen::Tensor<int, 1> arg1, bool arg2 );
-Eigen::Tensor<int, 1>  nFun_15_NFID_15 ( Eigen::Tensor<bool, 1> arg1, bool arg2 );
+int  nFun_6_NFID_6 ( int arg1, bool arg2 );
+int  nFun_7_NFID_7 ( bool arg1, bool arg2 );
+Eigen::Tensor<int, 1>  nFun_8_NFID_8 ( Eigen::Tensor<int, 1> arg1, bool arg2 );
+Eigen::Tensor<int, 1>  nFun_9_NFID_9 ( Eigen::Tensor<bool, 1> arg1, bool arg2 );
+Eigen::Tensor<double, 2>  nFun_10_NFID_10 ( Eigen::Tensor<double, 2> arg1, int arg2 );
+Eigen::Tensor<int, 2>  nFun_11_NFID_11 ( Eigen::Tensor<int, 2> arg1, int arg2 );
+Eigen::Tensor<int, 2>  nFun_12_NFID_12 ( Eigen::Tensor<bool, 2> arg1, int arg2 );
+Eigen::Tensor<double, 3>  nFun_13_NFID_13 ( Eigen::Tensor<double, 3> arg1, int arg2 );
+Eigen::Tensor<int, 3>  nFun_14_NFID_14 ( Eigen::Tensor<int, 3> arg1, int arg2 );
+Eigen::Tensor<int, 3>  nFun_15_NFID_15 ( Eigen::Tensor<bool, 3> arg1, int arg2 );
 Eigen::Tensor<int, 2>  nFun_16_NFID_16 ( Eigen::Tensor<int, 2> arg1, bool arg2 );
 Eigen::Tensor<int, 2>  nFun_17_NFID_17 ( Eigen::Tensor<bool, 2> arg1, bool arg2 );
 Eigen::Tensor<int, 3>  nFun_18_NFID_18 ( Eigen::Tensor<int, 3> arg1, bool arg2 );

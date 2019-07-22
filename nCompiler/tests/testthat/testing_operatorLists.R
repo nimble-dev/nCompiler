@@ -1,3 +1,23 @@
+## To add an operator for math or AD testing:
+
+## * Use updateOperatorDef() to add the field 'testing' to the operator's
+##   def. All test-specific info will go in this field.
+## * In 'testing', add 'math_argTypes' and/or 'AD_argTypes', which should be a
+##   list where each entry is a character vector specifying the argTypes to
+##   test. For example, for math testing a binary operator:
+##     list(c('numericVector', 'logicalScalar'), c('logicalMatrix', 'numericMatrix'))
+##   would create two tests. Note that AD argTypes need sizes. The following would
+##   create three tests of a unary operator:
+##     list('numericVector(7)', 'numericScalar', 'numericMatrix(size = c(2, 3))')
+## * If the operator string is not filename safe, set 'alpha_name'. E.g., '*'
+##   becomes 'mult' in the gold file filename.
+## * Some special operators need additional info for return_type_string() to
+##   generate the correct output type based on the inputs. Set these to TRUE
+##   where appropriate. So far, they are:
+##   - 'matrixMultOp' (e.g. %*%)
+##   - 'recyclingRuleOp' (e.g. 'dnorm')
+##   - 'reductionOp' (e.g. 'mean')
+
 ##################
 ## unary operators
 ##################
@@ -40,16 +60,32 @@ nCompiler:::updateOperatorDef(
 ## binary operators
 ###################
 
+binaryOp_argTypes <- c(
+  ## combine scalars and vectors in every way
+  make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
+                      'numericVector', 'integerVector', 'logicalVector'),
+  ## matrices combine with matrices of same shape
+  make_argType_tuples('numericMatrix', 'integerMatrix', 'logicalMatrix'),
+  ## combine arrays with arrays of same shape
+  make_argType_tuples('numericArray(nDim=3)', 'integerArray(nDim=3)',
+                      'logicalArray(nDim=3)'),
+  ## combine scalars and matrices / arrays
+  make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
+                      rhs = c('numericMatrix', 'integerMatrix',
+                              'logicalMatrix', 'numericArray(nDim=3)',
+                              'integerArray(nDim=3)',
+                              'logicalArray(nDim=3)')),
+  make_argType_tuples('numericMatrix', 'integerMatrix', 'logicalMatrix',
+                      'numericArray(nDim=3)', 'integerArray(nDim=3)',
+                      'logicalArray(nDim=3)',
+                      rhs = c('numericScalar', 'integerScalar', 'logicalScalar'))
+)
+
 nCompiler:::updateOperatorDef(
   c('pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '+', '/', '*', '%%'),
   'testing',
   val = list(
-    math_argTypes = make_argType_tuples('numericScalar', 'integerScalar',
-                                        'logicalScalar', 'numericVector',
-                                        'integerVector', 'logicalVector',
-                                        'numericMatrix', 'integerMatrix',
-                                        'logicalMatrix', 'numericArray(nDim=3)',
-                                        'integerArray(nDim=3)',  'logicalArray(nDim=3)')
+    math_argTypes = binaryOp_argTypes
   )
 )
 
@@ -91,20 +127,16 @@ nCompiler:::updateOperatorDef(
                        c('numericScalar', 'numericVector(7)'),
                        c('numericVector(7)', 'numericVector(7)'),
                        c('numericVector(7)', 'numericScalar')),
-    math_argTypes = c(make_argType_tuples('numericScalar', 'integerScalar',
-                                          'logicalScalar', 'numericVector',
-                                          'integerVector', 'logicalVector',
-                                          'numericMatrix', 'integerMatrix',
-                                          'logicalMatrix', 'numericArray(nDim=3)',
-                                          'integerArray(nDim=3)',  'logicalArray(nDim=3)'),
-                      'numericScalar', 'integerScalar', 'logicalScalar',
-                      'numericVector', 'integerVector', 'logicalVector',
-                      'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                      'numericArray(nDim=3)',  'integerArray(nDim=3)',
-                      'logicalArray(nDim=3)'),
+    math_argTypes = c(binaryOp_argTypes, ## remaining argTypes for unary usage:
+                      'numericScalar', 'integerScalar',
+                      'logicalScalar', 'numericVector', 'integerVector',
+                      'logicalVector', 'numericMatrix', 'integerMatrix',
+                      'logicalMatrix', 'numericArray(nDim=3)',
+                      'integerArray(nDim=3)', 'logicalArray(nDim=3)'),
     alpha_name = 'minus'
   )
 )
+
 ###################
 ## pow (rhs scalar)
 ###################

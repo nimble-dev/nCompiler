@@ -1,5 +1,8 @@
 context("Testing Automatic Differentiation")
 
+## To add AD tests for a new operator, see instructions in
+## testing_operatorLists.R.
+
 utils <- system.file(
   file.path(
     'tests', 'testthat',
@@ -14,15 +17,12 @@ for (util_file in utils) source(util_file)
 #####################################
 
 seed <- 0
-AD_ops <- get_matching_ops('testing', 'AD_argTypes', function(x) !is.null(x))
-AD_test_params <- sapply(AD_ops, make_AD_test_param_batch, seed = seed,
-                         simplify = FALSE)
+AD_test_params <- make_AD_test_params(get_AD_ops(), seed)
 
 #############
 # run testing
 #############
 
-## TODO: clear comments of what to do at the top of files
 WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
 FULL_TESTING <- FALSE
 
@@ -56,13 +56,3 @@ run_test_suite(
 ## reset the automaticDerivatives option
 set_nOption('automaticDerivatives', derivs_option)
 
-# TODO: move knownFailures to separate file
-## tests with numericVector fail to compile for an unknown reason
-# modifyOnMatch(ADopTests, '.+ numericVector', 'knownFailure', '.* compiles')
-
-## .method operators don't work with scalar input
-## modifyOnMatch(
-##   ADopTests,
-##   '(\\^|abs|atan|cube|exp|inverse|lgamma|log|logit|rsqrt|sqrt|square|tanh) numericScalar',
-##   'knownFailure', '.* compiles'
-## )

@@ -1,5 +1,14 @@
 context("Testing of math functions in nCompiler code\n")
 
+## To add math tests for a new operator, see instructions in
+## testing_operatorLists.R.
+
+## Utility files:
+## * testing_utils.R: useful testing utility functions.
+## * testing_operatorLists.R: updates operator definitions with info needed for
+##                            testing.
+## * math_utils.R: utility functions that are specific to this test file.
+## * math_test_lists.R: creates math_test_params and adds knownFailures.
 utils <- system.file(
   file.path(
     'tests', 'testthat',
@@ -14,14 +23,13 @@ for (util_file in utils) source(util_file)
 # run testing
 #############
 
-## TODO: clear comments of what to do at the top of files
 WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
 FULL_TESTING <- FALSE
 
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass
 ##   2 = one nClass per operator
-##   3 = one nClass with one nFunction per operator/input combo
+##   3 = one nClass (with only one method) per operator/input combo
 FULL_TESTING_GRANULARITY <- NA
 
 if (WRITE_GOLD_FILES) {
@@ -36,6 +44,7 @@ if (WRITE_GOLD_FILES) {
   )
 }
 
+## the first argument to run_test_suite() is a list created by make_math_test_params()
 run_test_suite(
   math_test_params, 'math', test_math, FULL_TESTING,
   FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
