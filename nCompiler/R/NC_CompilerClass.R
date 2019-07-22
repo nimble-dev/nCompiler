@@ -102,7 +102,10 @@ NC_CompilerClass <- R6::R6Class(
     },
     makeSymbolTables = function() {
       if(is.null(symbolTable)) {
-        symbolTable <<- NCinternals(NCgenerator)$CsymTab$clone(deep = TRUE)
+        symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
+        ## Update any symbolTBD symbols by scoped lookup
+        resolveTBDsymbols(symbolTable,
+                          NCgenerator$parent_env)
         setupMethodSymbolTables()
       }
     }

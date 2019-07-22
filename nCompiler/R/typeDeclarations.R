@@ -173,11 +173,14 @@ argType2symbol <- function(argType,
   nErrorEnv$stateInfo <- paste0("handling argument ", name, ".")
   nErrorEnv$.isRef_has_been_set <- FALSE
   typeToUse <- if(!is.null(explicitType))
-                 explicitType
+    explicitType
   else
     argType
-  if(is.character(typeToUse))
+  inputAsCharacter <- FALSE
+  if(is.character(typeToUse)) {
     typeToUse <- parse(text = typeToUse, keep.source = FALSE)[[1]]
+    inputAsCharacter <- TRUE
+  }
   ## allow 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse))
     typeToUse <- as.call(list(typeToUse))
@@ -235,29 +238,24 @@ argType2symbol <- function(argType,
         }
       }
     } else {
-      ## Case 3: It is a nClass type
-      ## TO-DO: Make this work even if it appears with $new().
-      if(exists(funName, envir = evalEnv)) {
-        obj <- get(funName, envir = evalEnv)
-        if(isNCgenerator(obj)) {
-          symbol <- symbolNC$new(name = name, 
-                                 type = funName, 
-                                 isArg = isArg,
-                                 NCgenerator = obj)
-          
-        } else {
-          ## Case 4: Type can be determined by evaluating the default
-          demoObject <- eval(argType, envir = evalEnv)
-          symbol <-
-            typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
-          symbol$name <- name
-          symbol$isArg <- isArg
-          if(isTRUE(isRef)) {
-            nErrorEnv$.errorDetails <-
-              paste0("A reference variable must have its type set by explicit declaration,",
-                     " because it cannot have a default value.")
-            stop(call.=FALSE)
-          }
+      ## Case 3: It is a nClass type or possibly other "to-be-determined" type.
+      ## We defer type lookup until compiler stage labelAbstractTypes
+      if(inputAsCharacter) {
+        symbol <- symbolTBD$new(name = name, 
+                                type = funName, 
+                                isArg = isArg)
+      } else {
+        ## Case 4: Type can be determined by evaluating the default
+        demoObject <- eval(argType, envir = evalEnv)
+        symbol <-
+          typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
+        symbol$name <- name
+        symbol$isArg <- isArg
+        if(isTRUE(isRef)) {
+          nErrorEnv$.errorDetails <-
+            paste0("A reference variable must have its type set by explicit declaration,",
+                   " because it cannot have a default value.")
+          stop(call.=FALSE)
         }
       }
     }
@@ -391,4 +389,25 @@ argTypeList2symbolTable <- function(argTypeList,
     )
   }
   symTab
+}
+
+resolveTBDsymbols <- function(symTab, 
+                              env = parent.frame()) {
+  for(i in seq_along(symTab$symbols)) {
+    if(inherits(symTab$symbols[[i]], "symbolTBD")) {
+      candidate <- mget(symTab$symbols[[i]]$type,
+                        mode = "environment",
+                        envir = env,
+                        inherits = TRUE,
+                        ifnotfound = list(NULL))[[1]]
+      if(isNCgenerator(candidate)) {
+        newSym <- symbolNC$new(name = symTab$symbols[[i]]$name,
+                               type = symTab$symbols[[i]]$type,
+                               isArg = symTab$symbols[[i]]$isArg,
+                               NCgenerator = candidate)
+        symTab$symbols[[i]] <- newSym
+      }
+    }
+  }
+  invisible(NULL)
 }

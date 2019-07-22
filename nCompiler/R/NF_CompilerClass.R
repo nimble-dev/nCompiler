@@ -61,6 +61,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
       if(!is.null(parentSymbolTable)) {
         symbolTable$setParentST(parentSymbolTable)
       }
+      
       returnSymbol <<- NFinternals$returnSym$clone(deep = TRUE)
     },
     process = function(...) {
@@ -253,6 +254,8 @@ processNFstages <- function(NFcompiler,
     },
     stageName,
     use_nCompiler_error_handling)
+    resolveTBDsymbols(NFcompiler$symbolTable,
+                      env = NFcompiler$auxEnv[['closure']])
     NFcompiler$stageCompleted <- stageName
     if (logging) logAfterStage(stageName)
   }
