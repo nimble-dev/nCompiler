@@ -58,7 +58,17 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
       if (verbose) cat("### Calling compiled nFunction \n")
       test_that("uncompiled and compiled math outputs match", {
         wrap_if_matches(param$knownFailure, 'runs', expect_error, {
-          ansC <- do.call(nC_compiled_obj[[nFun_i]], input)
+          ansC <- try(do.call(nC_compiled_obj[[nFun_i]], input), silent = TRUE)
+          if (inherits(ansC, 'try-error')) {
+            msg  <- paste('Calling compiled version of test', param$name,
+                          'resulted in an error:', ansC[1])
+            if (isTRUE(catch_failures)) {
+              warning(msg, immediate. = TRUE)
+              return(invisible(NULL))
+            } else {
+              stop(msg, call = FALSE)
+            }
+          }
           if (verbose)
             cat("## Testing equality of compiled and uncompiled output\n")
           if (is.array(ansC)) {
