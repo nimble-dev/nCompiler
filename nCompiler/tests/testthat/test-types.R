@@ -254,12 +254,16 @@ test_that("list arguments handled correctly",
 
 test_that("symbolNC works",
 {
+  nCompiler:::resetLabelFunctionCreators()
   nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
   )
   sym_nc1 <- nCompiler:::argType2symbol('nc1', 'nc1obj')
-  expect_equal(sym_nc1$genCppVar()$generate(),
-               "std::shared_ptr<nc1> nc1obj")
+  symTab <- nCompiler:::symbolTableClass$new()
+  symTab$addSymbol(sym_nc1)
+  nCompiler:::resolveTBDsymbols(symTab)  
+  expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
+               "std::shared_ptr<nClass_1> nc1obj")
 })
 
 cat("\nSee test-types.R for notes on remaining issues to test.\n")

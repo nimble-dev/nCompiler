@@ -124,8 +124,11 @@ symbolNF <- R6::R6Class(
   inherit = symbolBase,
   portable = TRUE,
   public = list(
-    initialize = function(name) {
+    returnSym = NULL, ## Not always needed.
+    initialize = function(name,
+                          returnSym = NULL) {
       self$name <- name
+      self$returnSym <- returnSym
     },
     print = function() {
       writeLines(paste0(self$name, ': nFunction'))
@@ -136,6 +139,33 @@ symbolNF <- R6::R6Class(
   )
 )
 
+# Symbol for names that will be looked up via R scoping 
+# during compiler stage labelAbstractTypes.
+# This includes nClass types.
+symbolTBD <- R6::R6Class(
+  classname = "symbolTBD",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+    },
+    print = function() {
+      writeLines(paste0(self$name,
+                        ": symbolTBD of type '", 
+                        self$type, "'"))
+    },
+    genCppVar = function() {
+      stop("Trying to generate a C++ type from a TBD type ('", 
+           self$name,
+           "' of type '",
+           self$type, "'.")
+    }
+  )
+)
+
+## Possible TO-DO: do not store the NCgenerator in the symbol.
+## Instead, find it by scoping every time it is needed.
 symbolNC <- R6::R6Class(
   classname = "symbolNC",
   inherit = symbolBase,
@@ -151,15 +181,15 @@ symbolNC <- R6::R6Class(
       self$type <- type
       self$NCgenerator <- NCgenerator
       self$isArg <- isArg
-      self$isRef <- TRUE
+##      self$isRef <- TRUE
       self$implementation <- implementation
     },
     print = function() {
-      writeLines(paste0(name, ': symbolNC of type', type))
+      writeLines(paste0(self$name, ': symbolNC of type', self$type))
     },
     genCppVar = function() {
       cppSharedPtrToNC(name = self$name,
-                       NCtype = self$type)
+                       NCtype = self$NCgenerator$classname)
     }
   )
 )
