@@ -27,10 +27,13 @@ inFinalTransformationsEnv(
 
 inFinalTransformationsEnv(
   ParallelFor <- function(code, symTab, auxEnv, info) {
+    # This use of envir may not be sufficient.
+    # As we use this more flexibly we may need to be more careful
+    # on where the copyVars and shareVars names are found.
     copyVars <- eval(nDeparse(code$args[[4]], toR = TRUE), 
-                     envir = auxEnv$closure)
+                     envir = auxEnv$where)
     shareVars <- eval(nDeparse(code$args[[5]], toR = TRUE),
-                      envir = auxEnv$closure)
+                      envir = auxEnv$where)
     ## Look for a mangled argument name in nameSubList.
     ## It is unfortunate to have to do this here instead of earlier
     ## when other names are replaced, but here the names are given
