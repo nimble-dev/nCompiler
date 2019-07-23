@@ -11,12 +11,16 @@
 #' @param dropArgs a vector of integers specifying any arguments to \code{nFxn}
 #'   that derivatives should not be taken with respect to.  For example,
 #'   \code{dropArgs = 2} means that the second argument to \code{nFxn} will not
-#'   have derivatives taken with respect to it.  Defaults to an empty vector.
-#' @param wrt a character vector of either: names of function arguments to take
-#'   derivatives with respect to.  If left empty, derivatives will be taken
-#'   with respect to all arguments to \code{nFxn}.
+#'   have derivatives taken with respect to it.  Note that if \code{wrt} is an
+#'   integer vector, \code{dropArgs} is understood to correspond to indices in
+#'   the flattened input vector.  Defaults to an empty vector.
+#' @param wrt a vector of either: names of function arguments to take
+#'   derivatives with respect to or integers for the positions in the flattened
+#'   input vector of the elements with respect to which to differentiate.  If
+#'   left empty, derivatives will be taken with respect to all arguments to
+#'   \code{nFxn}.
 #' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
-#'   which has a method corresponding to the one found in \code{nFxn}. Only
+#'   which has a method corresponding to the one found in \code{nFxn}.  Only
 #'   required when \code{nFxn} is a compiled method call from a generic
 #'   interface.
 #' @details Derivatives for uncompiled nFunctions are calculated using the
@@ -35,9 +39,10 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
   if(is.null(fxnCall[['order']])) fxnCall[['order']] <- order
   derivFxnCall <- fxnCall[['nFxn']]
 
-  if(!is.na(dropArgs)){
+  ## TODO: flesh out dropArgs usage
+  if (!is.na(dropArgs)) {
     removeArgs <- which(wrt == dropArgs)
-    if(length(removeArgs) > 0)
+    if (length(removeArgs) > 0)
       wrt <- wrt[-removeArgs]
   }
 
@@ -379,7 +384,8 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   fxnCall <- match.call(fxn, fxnCall)
 
   fA <- formals(fxn)
-  if(is.null(wrt)) {
+  ## TODO: handle numeric vector wrt arg
+  if (is.null(wrt)) {
     wrt <- names(fA)
   }
 
@@ -520,11 +526,11 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
   fxn <- eval(fxnCall[[1]], envir = fxnEnv)
   fxnArgs <- formals(fxn)
   fxnName = deparse(fxnCall[[1]])
-  wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
   
   fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
-  fxnCall$wrt <- wrt_indices
+  fxnCall$wrt <- if (is.numeric(wrt)) wrt else setup_wrt_internal(
+    wrt, fxnArgs, fxnName)
   eval(fxnCall, fxnEnv)
 }
 
@@ -554,10 +560,9 @@ nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), wrt = NULL,
 
   fxnArgs <- NFinternals(nf)$argSymTab$symbols
 
-  wrt_indices <- setup_wrt_internal(wrt, fxnArgs, fxnName)
-
   fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
-  fxnCall$wrt <- wrt_indices
+  fxnCall$wrt <- if (is.numeric(wrt)) wrt else setup_wrt_internal(
+    wrt, fxnArgs, fxnName)
   eval(fxnCall, fxnEnv)
 }

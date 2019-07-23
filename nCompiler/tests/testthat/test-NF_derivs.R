@@ -62,11 +62,12 @@ test_that('nDerivs produces correct result for nFunction', {
   })
   a <- 1:2
   b <- 4
-  derivs <- nDerivs(nf(a, b)) ## uncompiled
-  expect_equal(derivs$value, c(nf(a, b)))
-  expect_equal(derivs$gradient, matrix(c(2, 0, 0, 2, 1, 1), nrow = 2))
+  derivs1 <- nDerivs(nf(a, b)) ## uncompiled
+  ## derivs2 <- nDerivs(nf(a, b), wrt = 1:3) ## wrt arg is numeric vector
+  expect_equal(derivs1$value, c(nf(a, b)))
+  expect_equal(derivs1$gradient, matrix(c(2, 0, 0, 2, 1, 1), nrow = 2))
   ## known issue: genD hessians are not very accurate
-  expect_equal(derivs$hessian, array(rep(0, 3*3*2), dim = c(3, 3, 2)),
+  expect_equal(derivs1$hessian, array(rep(0, 3*3*2), dim = c(3, 3, 2)),
                tolerance = 1e-07)
 })
 
@@ -108,10 +109,14 @@ test_that('nDerivs produces correct result for compiled nClass method from full 
   derivs <- nDerivs(nc$public_methods$nf(a, b)) ## uncompiled
   nc_full <- nCompile_nClass(nc)
   nc_full_obj <- nc_full$new()
-  Cderivs <- nDerivs(nc_full_obj$nf(a, b))
-  expect_equivalent(derivs$value, Cderivs$value)
-  expect_equal(derivs$gradient, Cderivs$gradient)
-  expect_equal(derivs$hessian, Cderivs$hessian, tolerance = 1e-07)
+  Cderivs1 <- nDerivs(nc_full_obj$nf(a, b))
+  Cderivs2 <- nDerivs(nc_full_obj$nf(a, b), wrt = 1:3) ## wrt is numeric vector
+  expect_equivalent(derivs$value, Cderivs1$value)
+  expect_equivalent(derivs$value, Cderivs2$value)
+  expect_equal(derivs$gradient, Cderivs1$gradient)
+  expect_equal(derivs$gradient, Cderivs2$gradient)
+  expect_equal(derivs$hessian, Cderivs1$hessian, tolerance = 1e-07)
+  expect_equal(derivs$hessian, Cderivs2$hessian, tolerance = 1e-07)
 })
 
 test_that('nDerivs produces correct result for compiled nClass method from generic interface', {
@@ -132,8 +137,12 @@ test_that('nDerivs produces correct result for compiled nClass method from gener
   derivs <- nDerivs(nc$public_methods$nf(a, b)) ## uncompiled
   nc_generic <- nCompile_nClass(nc, interface = 'generic')
   nc_generic_obj <- nc_generic()
-  Cderivs <- nDerivs(method(nc_generic_obj, 'nf')(a, b), NC = nc)
-  expect_equivalent(derivs$value, value(Cderivs, 'value'))
-  expect_equal(derivs$gradient, value(Cderivs, 'gradient'))
-  expect_equal(derivs$hessian, value(Cderivs, 'hessian'), tolerance = 1e-07)
+  Cderivs1 <- nDerivs(method(nc_generic_obj, 'nf')(a, b), NC = nc)
+  Cderivs2 <- nDerivs(method(nc_generic_obj, 'nf')(a, b), NC = nc, wrt = 1:3)
+  expect_equivalent(derivs$value, value(Cderivs1, 'value'))
+  expect_equivalent(derivs$value, value(Cderivs2, 'value'))
+  expect_equal(derivs$gradient, value(Cderivs1, 'gradient'))
+  expect_equal(derivs$gradient, value(Cderivs2, 'gradient'))
+  expect_equal(derivs$hessian, value(Cderivs1, 'hessian'), tolerance = 1e-07)
+  expect_equal(derivs$hessian, value(Cderivs2, 'hessian'), tolerance = 1e-07)
 })
