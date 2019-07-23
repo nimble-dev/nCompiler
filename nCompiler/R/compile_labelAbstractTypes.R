@@ -83,8 +83,8 @@ compile_labelAbstractTypes <- function(code,
     if(is.null(opInfo)) {
       ## First we check if we are in an nClass and code$name is a method.
       obj <- NULL
-      if(isNCgenerator(auxEnv$closure)) {## We are in a class method
-        obj <- auxEnv$closure$public_methods[[code$name]]
+      if(isNCgenerator(auxEnv$where)) {## We are in a class method
+        obj <- auxEnv$where$public_methods[[code$name]]
         if(!is.null(obj)) {
           if(isNF(obj)) {
             opInfo <- operatorDefEnv[['nClass_method']]
@@ -95,15 +95,12 @@ compile_labelAbstractTypes <- function(code,
           }
         }
       }
-      ## Next we check if code$name exists in the closure.
-      ## Note that if we are in a method, auxEnv$closure will be the 
-      ## generator, which is an environment.  Hence the exists() and get()
-      ## calls work for a nClass method or a stand-alone nFunction.
+      ## Next we check if code$name exists in the where.
+      ## Note that if we are in a method, auxEnv$where will be the 
+      ## generator, which is an environment.  However, we need
+      ## to use nGet instead of exists and get. 
       if(is.null(obj)) {
-        ## We don't use auxEnv$closure[[code$name]] because
-        ## we need inherits = TRUE behavior.
-        if(exists(code$name, envir = auxEnv$closure))
-          obj <- get(code$name, envir = auxEnv$closure)
+        obj <- nGet(code$name, where = auxEnv$where)
         ## An nFunction will be transformed to
         ## have code$name 'nFunction'.
         if(!is.null(obj)) {
@@ -122,7 +119,7 @@ compile_labelAbstractTypes <- function(code,
               ## but we do not as a way to avoid having many references to R6 objects
               ## in a blind attempt to facilitate garbage collection based on past experience.
               ## Instead, we provide what is needed to look up the nFunction again later.
-              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$closure)
+              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
             }
           } else
             stop(exprClassProcessingErrorMsg(
@@ -298,7 +295,11 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
-      obj <- get(code$name, envir = auxEnv$closure)
+      ## This is slightly wasteful because obj was already looked up
+      ## in compile_labelAbstractTypes (which recurses down the syntax tree).
+      ## If it becomes noticeably costly, we can arrange to save it from
+      ## the first look-up.
+      obj <- nGet(code$name, where = auxEnv$where)
       convert_nFunction_or_method_AST(code, obj)
       if(length(inserts) == 0) NULL else inserts
     }
@@ -309,7 +310,7 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
-      obj <-  auxEnv$closure$public_methods[[code$name]]
+      obj <-  auxEnv$where$public_methods[[code$name]]
       convert_nFunction_or_method_AST(code, obj)
       if(length(inserts) == 0) NULL else inserts
     }

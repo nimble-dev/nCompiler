@@ -255,7 +255,7 @@ processNFstages <- function(NFcompiler,
     stageName,
     use_nCompiler_error_handling)
     resolveTBDsymbols(NFcompiler$symbolTable,
-                      env = NFcompiler$auxEnv[['closure']])
+                      env = NFcompiler$auxEnv[['where']])
     NFcompiler$stageCompleted <- stageName
     if (logging) logAfterStage(stageName)
   }

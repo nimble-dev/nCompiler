@@ -258,7 +258,7 @@ test_that("compiling nClass works with nClass members and methods",{
                array(2*2*Rv))
 })
 
-test_that("compiling nClass works with nClass members and methods",{
+test_that("compiling nClass works with nClass members and methods and arguments",{
   nc1 <- nClass(
     Cpublic = list(
       v = 'numericVector',

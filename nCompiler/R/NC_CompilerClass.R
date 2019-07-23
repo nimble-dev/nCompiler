@@ -105,7 +105,7 @@ NC_CompilerClass <- R6::R6Class(
         symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
         ## Update any symbolTBD symbols by scoped lookup
         resolveTBDsymbols(symbolTable,
-                          NCgenerator$parent_env)
+                          NCgenerator)
         setupMethodSymbolTables()
       }
     }

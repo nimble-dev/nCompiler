@@ -395,11 +395,8 @@ resolveTBDsymbols <- function(symTab,
                               env = parent.frame()) {
   for(i in seq_along(symTab$symbols)) {
     if(inherits(symTab$symbols[[i]], "symbolTBD")) {
-      candidate <- mget(symTab$symbols[[i]]$type,
-                        mode = "environment",
-                        envir = env,
-                        inherits = TRUE,
-                        ifnotfound = list(NULL))[[1]]
+      candidate <- nGet(symTab$symbols[[i]]$type,
+                        where = env)
       if(isNCgenerator(candidate)) {
         newSym <- symbolNC$new(name = symTab$symbols[[i]]$name,
                                type = symTab$symbols[[i]]$type,
