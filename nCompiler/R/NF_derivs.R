@@ -11,9 +11,8 @@
 #' @param dropArgs a vector of integers specifying any arguments to \code{nFxn}
 #'   that derivatives should not be taken with respect to.  For example,
 #'   \code{dropArgs = 2} means that the second argument to \code{nFxn} will not
-#'   have derivatives taken with respect to it.  Note that if \code{wrt} is an
-#'   integer vector, \code{dropArgs} is understood to correspond to indices in
-#'   the flattened input vector.  Defaults to an empty vector.
+#'   have derivatives taken with respect to it.  Defaults to an empty vector
+#'   and is ignored if \code{wrt} is provided.
 #' @param wrt a vector of either: names of function arguments to take
 #'   derivatives with respect to or integers for the positions in the flattened
 #'   input vector of the elements with respect to which to differentiate.  If
@@ -39,21 +38,14 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
   if(is.null(fxnCall[['order']])) fxnCall[['order']] <- order
   derivFxnCall <- fxnCall[['nFxn']]
 
-  ## TODO: flesh out dropArgs usage
-  if (!is.na(dropArgs)) {
-    removeArgs <- which(wrt == dropArgs)
-    if (length(removeArgs) > 0)
-      wrt <- wrt[-removeArgs]
-  }
-
   if (!is.call(derivFxnCall))
     stop("'nFxn' argument should be a call to an nFunction or compiled nClass method.")
 
   fxn <- try(eval(derivFxnCall[[1]], fxnEnv))
 
   if (isNF(fxn))
-    nDerivs_nf(fxnCall = derivFxnCall, order = order, wrt = wrt,
-               fxnEnv = fxnEnv)
+    nDerivs_nf(fxnCall = derivFxnCall, order = order, dropArgs = dropArgs,
+               wrt = wrt, fxnEnv = fxnEnv)
   else if (length(derivFxnCall[[1]]) == 3 &&
              deparse(derivFxnCall[[1]][[1]]) %in% c('$', '[[')) {
 
@@ -66,8 +58,8 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
         deparse(fxnCall[[2]][[1]][[2]]), "."
       ))
 
-    nDerivs_full(fxnCall = derivFxnCall, order = order, wrt = wrt,
-                 fxnEnv = fxnEnv)
+    nDerivs_full(fxnCall = derivFxnCall, order = order, dropArgs = dropArgs,
+                 wrt = wrt, fxnEnv = fxnEnv)
 
   } else if (is.call(derivFxnCall[[1]]) &&
                derivFxnCall[[1]][[1]] == 'method') {
@@ -80,8 +72,9 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
         deparse(derivFxnCall[[1]][[2]]), "."
       ))
 
-    nDerivs_generic(fxnCall = derivFxnCall, order = order, wrt = wrt,
-                    fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv, NC = NC)
+    nDerivs_generic(fxnCall = derivFxnCall, order = order, dropArgs = dropArgs,
+                    wrt = wrt, fxnEnv = fxnEnv, loadedObjEnv = loadedObjEnv,
+                    NC = NC)
   } else
     stop(paste0(
       "nDerivs does not know how to use the object ",
@@ -112,11 +105,6 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
 #' @export
 setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
   fxnCall <- match.call()$nFxn
-  if (!is.na(dropArgs)) {
-    removeArgs <- which(wrt == dropArgs)
-    if (length(removeArgs) > 0)
-      wrt <- wrt[-removeArgs]
-  }
 
   if (is.call(fxnCall) && length(fxnCall) == 3 &&
         deparse(fxnCall[[1]]) %in% c('$', '[[')) {
@@ -178,16 +166,19 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
     fxnArgs <- NFinternals(nFxn)$argSymTab$symbols
   }
   
-  setup_wrt_internal(wrt = wrt, fxnArgs = fxnArgs, fxnName = fxnName)
+  setup_wrt_internal(wrt = wrt, fxnArgs = fxnArgs, fxnName = fxnName,
+                     dropArgs = dropArgs)
 }
 
-setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
+setup_wrt_internal <- function(wrt, fxnArgs, fxnName, dropArgs = NA) {
   ## TODO: why return -1?
   ## if(all(is.na(wrt))){
   ##   return(-1) 
   ## }
   if (is.null(wrt)) {
     wrt <- names(fxnArgs)
+    if (!is.na(dropArgs) && is.character(dropArgs))
+      wrt <- wrt[!wrt %in% dropArgs]
   } else if (!is.character(wrt)) {
     wrt <- deparse(wrt)
   }
@@ -376,7 +367,7 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
   return(outList)
 }
 
-nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
+nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2), dropArgs = NA,
                        wrt = NULL, fxnEnv = parent.frame()) {
   fxn <- eval(fxnCall[[1]], envir = fxnEnv)
 
@@ -418,9 +409,10 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
                                  function(x)
                                    array(1:prod(x), dim = x))
 
-  ## TODO: handle numeric vector wrt arg
   if (is.null(wrt)) {
     wrt <- names(fA)
+    if (!is.na(dropArgs) && is.character(dropArgs))
+      wrt <- wrt[!wrt %in% dropArgs]
   }
 
   if (is.character(wrt)) {
@@ -559,7 +551,7 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   ans
 }
 
-nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
+nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2), dropArgs = NA,
                          wrt = NULL, fxnEnv = parent.frame()) {
   derivFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
 
@@ -574,8 +566,9 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2),
   eval(fxnCall, fxnEnv)
 }
 
-nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), wrt = NULL,
-                            fxnEnv = parent.frame(), loadedObjEnv = NULL, NC = NULL) {
+nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), dropArgs = NA,
+                            wrt = NULL, fxnEnv = parent.frame(),
+                            loadedObjEnv = NULL, NC = NULL) {
   fxnName <- fxnCall[[1]][[3]]
   derivFxnCall <- fxnCall[[1]]
   derivFxnCall[[3]] <- paste0(fxnName, '_derivs_')
