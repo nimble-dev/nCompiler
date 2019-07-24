@@ -167,8 +167,21 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  '$',
+  list(
+    labelAbstractTypes = list(
+      handler = 'DollarSign')
+  )
+)
+
+assignOperatorDef(
   'chainedCall',
-  list(cppOutput = list(handler = 'chainedCall'))
+  list(
+    labelAbstractTypes = list(
+      handler = 'ChainedCall')
+    ## , cppOutput = list(
+    ##   handler = 'ChainedCall')
+  )
 )
 
 assignOperatorDef(
@@ -227,9 +240,29 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  '->method',
+  list(
+    help = '->method(A, foo, b) is for A->foo(b)',
+    cppOutput = list(
+      handler = 'PtrMethod'
+    )
+  )
+)
+
+assignOperatorDef(
+  '->member',
+  list(
+    help = '->member(A, b) is for A->b',
+    cppOutput = list(
+      handler = 'PtrMember'
+    )
+  )
+)
+
+assignOperatorDef(
   '.method',
   list(
-    help = '.method(A, foo, b) is for A.foo(b).',
+    help = '.method(A, foo, b) is for A.foo(b)',
     cppOutput = list(
       handler = 'Method'
     )
@@ -239,13 +272,12 @@ assignOperatorDef(
 assignOperatorDef(
   '.member',
   list(
-    help = '.member(A, b) is for A.b.',
+    help = '.member(A, b) is for A.b',
     cppOutput = list(
       handler = 'Member'
     )
   )
 )
-
 
 assignOperatorDef(
   'cppLiteral',

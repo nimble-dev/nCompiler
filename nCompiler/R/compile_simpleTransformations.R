@@ -42,22 +42,6 @@ compile_simpleTransformations <- function(code,
 simpleTransformationsEnv <- new.env()
 simpleTransformationsEnv$.debug <- FALSE
 
-simpleTransformationsEnv$Generic_nFunction <- 
-  function(code, symTab, auxEnv, info) {
-    nFunctionName <- code$name
-    ## Note that the string `nFunction` matches the operatorDef entry.
-    ## Therefore the change-of-name here will automatically trigger use of
-    ## the 'nFunction' operatorDef.  On the other hand, if there is an nFunction
-    ## that is not transformed here, it will also trigger `nFunction` operatorDef
-    ## after being found by scoping in later compiler stages.
-    code$name <- 'nFunction'
-    obj <- get(nFunctionName, envir = auxEnv$closure)
-    code$aux$nFunctionInfo <- list(nFunctionName = nFunctionName,
-                                   cpp_code_name = NFinternals(obj)$cpp_code_name,
-                                   where = auxEnv$closure)
-    invisible(NULL)
-  }
-
 ## for min(V), no change.  for min(v1, v2), change to pairmin(v1, v2)
 simpleTransformationsEnv$minMax <-
   function(code, symTab, auxEnv, info) {

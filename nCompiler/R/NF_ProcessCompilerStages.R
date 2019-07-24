@@ -100,7 +100,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                               names = passedArgNames)
   NFcompiler$auxEnv[['passedArgumentNames']] <- passedArgNames ## only the names are used.
   NFcompiler$auxEnv[['nameSubList']] <- nameSubList
-  NFcompiler$auxEnv[['closure']] <- if(is.null(sourceObj))
+  NFcompiler$auxEnv[['where']] <- if(is.null(sourceObj))
                                       NFcompiler$NFinternals$where
   else
     sourceObj
