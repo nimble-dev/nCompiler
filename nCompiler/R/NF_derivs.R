@@ -215,7 +215,7 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName) {
   if (inherits(fxnArgs[[1]], 'symbolBase'))
     arg_symbols <- fxnArgs
   else {
-    arg_symbols <- lapply(fxnArgs, argType2symbol)
+    arg_symbols <- lapply(fxnArgs, nCompiler:::argType2symbol)
   }
   nameCheck <- sapply(wrtMatchArgs, function(i) class(arg_symbols[[i]]))
   if (any(nameCheck == 'name')) stop('Derivatives of ', fxnName, ' being taken 
@@ -384,31 +384,6 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
   fxnCall <- match.call(fxn, fxnCall)
 
   fA <- formals(fxn)
-  ## TODO: handle numeric vector wrt arg
-  if (is.null(wrt)) {
-    wrt <- names(fA)
-  }
-
-  ## convert 'x[2]' to quote(x[2]).
-  wrt_code <- lapply(wrt,
-                     function(x) parse(text = x, keep.source = FALSE)[[1]])
-
-  ## convert quote(x[2]) to quote(x)
-  wrt_names <- lapply(wrt_code,
-                      function(x) if(is.name(x)) x else x[[2]])
-
-  wrt_name_strings <- as.character(wrt_names)
-  
-  ## Get unique names and track indices from wrt to unique names
-  wrt_unique_names <- unique(wrt_names)
-
-  if(!all(wrt_unique_names %in% names(fA))){
-    stop('Error:  the wrt argument to nDerivs() contains names that are not
-         arguments to the nFxn argument.')
-  }
-  
-  wrt_names_orig_indices <- match(wrt_names, wrt_unique_names)
-  wrt_unique_name_strings <- as.character(wrt_unique_names)
 
   # get the user-supplied arguments to the nFunction
   fxnCall_args <- as.list(fxnCall)[-1]
@@ -418,7 +393,7 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
                     function(x) 
                       eval(x, envir = fxnEnv))
 
-  arg_symbols <- lapply(fA, argType2symbol)
+  arg_symbols <- lapply(fA, nCompiler:::argType2symbol)
 
   ## check that supplied args have sizes we expect from the symbol table
   for (arg_name in names(fA)) {
@@ -443,69 +418,134 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2),
                                  function(x)
                                    array(1:prod(x), dim = x))
 
-  eval_env <- new.env()
-  ## iterate over names in any wrt.
-
-  current_x_index <- 1
-  fxnArgs_assign_code <- list()
-  get_init_values_code <- list()
-  result_x_indices_by_wrt <- list()
-  for(i in seq_along(wrt_unique_names)) {
-    ## Below, x represents the input argument to func
-    this_unique_wrt_string <- wrt_unique_name_strings[i]
-    ##
-    dims <- nDim(fxnArgs[[this_unique_wrt_string]])
-    ##
-    assign(this_unique_wrt_string, array(1:prod(dims), dim = dims), envir = eval_env)
-    
-    ## which wrt arguments use this wrt variable
-    i_wrt_orig <- which(this_unique_wrt_string == wrt_name_strings)     
-
-    flat_indices <- lapply(wrt_code[i_wrt_orig], ## quote(x[2]) and so on for any wrt using x
-                           function(wrt_code_) {
-                             eval(wrt_code_, envir = eval_env)
-                           })
-    unique_flat_indices <- unique(unlist(flat_indices))
-    ## I is this_unique_wrt_string
-    ## J is an element of unique_flat_indices
-    ## K is a running element of x
-
-    x_indices <- current_x_index - 1 + 1:length(unique_flat_indices)
-    
-    fxnArgs_assign_code[[i]] <- mapply(
-      function(jval, kval)
-        substitute(fxnArgs[[ I ]][J] <<- x[K], list(I = this_unique_wrt_string,
-                                                    J = jval,
-                                                    K = kval)),
-      unique_flat_indices,
-      x_indices)
-    get_init_values_code[[i]] <- mapply(
-      function(jval, kval)
-        substitute(currentX[K] <- fxnArgs[[ I ]][J], list(I = this_unique_wrt_string,
-                                                          J = jval,
-                                                          K = kval)),
-      unique_flat_indices,
-      x_indices)
-
-    result_x_indices <- lapply(flat_indices,
-                               function(fi) x_indices[match(fi, unique_flat_indices)]
-                               )
-    result_x_indices_by_wrt[i_wrt_orig] <- result_x_indices
-    
-    current_x_index <- current_x_index + length(unique_flat_indices)
+  ## TODO: handle numeric vector wrt arg
+  if (is.null(wrt)) {
+    wrt <- names(fA)
   }
-  fxnArgs_assign_code <- unlist(fxnArgs_assign_code, recursive = FALSE)
-  get_init_values_code <- unlist(get_init_values_code, recursive = FALSE)
-  result_x_indices_all <- unlist(result_x_indices_by_wrt)
 
-  length_x <- current_x_index - 1
-  currentX <- numeric(length_x)
-  do.call("{", get_init_values_code)
-  ## equivalent to:
-  ##  for(i in 1:length_x) {
-  ##      eval(get_init_values_code[[i]])
-  ##  }
+  if (is.character(wrt)) {
 
+    ## convert 'x[2]' to quote(x[2]).
+    wrt_code <- lapply(wrt,
+                       function(x) parse(text = x, keep.source = FALSE)[[1]])
+
+    ## convert quote(x[2]) to quote(x)
+    wrt_names <- lapply(wrt_code,
+                        function(x) if(is.name(x)) x else x[[2]])
+
+    wrt_name_strings <- as.character(wrt_names)
+    
+    ## Get unique names and track indices from wrt to unique names
+    wrt_unique_names <- unique(wrt_names)
+
+    if(!all(wrt_unique_names %in% names(fA))){
+      stop('Error:  the wrt argument to nDerivs() contains names that are not
+         arguments to the nFxn argument.')
+    }
+    
+    wrt_names_orig_indices <- match(wrt_names, wrt_unique_names)
+    wrt_unique_name_strings <- as.character(wrt_unique_names)
+    
+    eval_env <- new.env()
+    ## iterate over names in any wrt.
+
+    current_x_index <- 1
+    fxnArgs_assign_code <- list()
+    get_init_values_code <- list()
+    result_x_indices_by_wrt <- list()
+    for(i in seq_along(wrt_unique_names)) {
+      ## Below, x represents the input argument to func
+      this_unique_wrt_string <- wrt_unique_name_strings[i]
+      ##
+      dims <- nDim(fxnArgs[[this_unique_wrt_string]])
+      ##
+      assign(this_unique_wrt_string, array(1:prod(dims), dim = dims), envir = eval_env)
+      
+      ## which wrt arguments use this wrt variable
+      i_wrt_orig <- which(this_unique_wrt_string == wrt_name_strings)     
+
+      flat_indices <- lapply(wrt_code[i_wrt_orig], ## quote(x[2]) and so on for any wrt using x
+                             function(wrt_code_) {
+                               eval(wrt_code_, envir = eval_env)
+                             })
+      unique_flat_indices <- unique(unlist(flat_indices))
+      ## I is this_unique_wrt_string
+      ## J is an element of unique_flat_indices
+      ## K is a running element of x
+
+      x_indices <- current_x_index - 1 + 1:length(unique_flat_indices)
+      
+      fxnArgs_assign_code[[i]] <- mapply(
+        function(jval, kval)
+          substitute(fxnArgs[[ I ]][J] <<- x[K], list(I = this_unique_wrt_string,
+                                                      J = jval,
+                                                      K = kval)),
+        unique_flat_indices,
+        x_indices)
+      get_init_values_code[[i]] <- mapply(
+        function(jval, kval)
+          substitute(currentX[K] <- fxnArgs[[ I ]][J], list(I = this_unique_wrt_string,
+                                                            J = jval,
+                                                            K = kval)),
+        unique_flat_indices,
+        x_indices)
+
+      result_x_indices <- lapply(flat_indices,
+                                 function(fi) x_indices[match(fi, unique_flat_indices)]
+                                 )
+      result_x_indices_by_wrt[i_wrt_orig] <- result_x_indices
+      
+      current_x_index <- current_x_index + length(unique_flat_indices)
+    }
+    fxnArgs_assign_code <- unlist(fxnArgs_assign_code, recursive = FALSE)
+    get_init_values_code <- unlist(get_init_values_code, recursive = FALSE)
+    result_x_indices_all <- unlist(result_x_indices_by_wrt)
+
+    length_x <- current_x_index - 1
+    currentX <- numeric(length_x)
+    do.call("{", get_init_values_code)
+    ## equivalent to:
+    ##  for(i in 1:length_x) {
+    ##      eval(get_init_values_code[[i]])
+    ##  }
+
+  } else if (is.numeric(wrt)) {
+    ## create a column-wise flattened vector of the inputs
+    flat_input <- unlist(sapply(fxnArgs, as.vector))
+    wrt <- as.integer(wrt)
+    currentX <- flat_input[wrt]
+    ## get arg sizes and use prod to determine flattened size
+    fxnArgs_flat_sizes <- sapply(
+      lapply(arg_symbols, function(x) {
+        if(!is.numeric(x$size)) stop('Sizes of arguments to nFunctions must be
+                           explictly specified (e.g. x = double(1, 4)) in order
+                           to take derivatives.')
+        x$size
+      }),
+      prod
+    )
+    ## determine the last index for each arg in the flattened input vector
+    fxnArgs_final_indices <- c(0, cumsum(fxnArgs_flat_sizes))
+    fxnArgs_assign_code <- list()
+    for (i in seq_along(wrt)) {
+      ## get the index of the arg which this wrt indexes
+      arg_index <- Position(function(x) wrt[i] <= x, fxnArgs_final_indices) - 1
+      wrt_index_in_arg <- as.integer(wrt[i] - fxnArgs_final_indices[arg_index])
+      this_arg <- names(fxnArgs)[arg_index]
+      fxnArgs_assign_code[[i]] <- substitute(
+        fxnArgs[[ARG]][J] <<- x[I], list(ARG = this_arg, J = wrt_index_in_arg,
+                                         I = i)
+      )
+    }
+    result_x_indices_all <- 1:length(wrt)
+    fxnArgs_assign_code <- unlist(fxnArgs_assign_code, recursive = FALSE)
+  } else {
+    stop(paste("The 'wrt' argument to 'nDerivs' should either be a character vector",
+               "or an integer vector."))
+  }
+
+  ## 'func' needs to reassign its input to its enclosing environment's
+  ## 'fnxArgs' in the appropriate places
   func <- function(x) {
     do.call("{", fxnArgs_assign_code)
     ## for(i in 1:length_x) {

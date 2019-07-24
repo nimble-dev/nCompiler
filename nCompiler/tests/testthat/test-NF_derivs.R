@@ -63,11 +63,15 @@ test_that('nDerivs produces correct result for nFunction', {
   a <- 1:2
   b <- 4
   derivs1 <- nDerivs(nf(a, b)) ## uncompiled
-  ## derivs2 <- nDerivs(nf(a, b), wrt = 1:3) ## wrt arg is numeric vector
+  derivs2 <- nDerivs(nf(a, b), wrt = 1:3) ## wrt arg is numeric vector
   expect_equal(derivs1$value, c(nf(a, b)))
+  expect_equal(derivs2$value, c(nf(a, b)))
   expect_equal(derivs1$gradient, matrix(c(2, 0, 0, 2, 1, 1), nrow = 2))
+  expect_equal(derivs2$gradient, matrix(c(2, 0, 0, 2, 1, 1), nrow = 2))
   ## known issue: genD hessians are not very accurate
   expect_equal(derivs1$hessian, array(rep(0, 3*3*2), dim = c(3, 3, 2)),
+               tolerance = 1e-07)
+  expect_equal(derivs2$hessian, array(rep(0, 3*3*2), dim = c(3, 3, 2)),
                tolerance = 1e-07)
 })
 
