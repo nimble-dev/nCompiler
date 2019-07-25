@@ -78,19 +78,20 @@ argType_2_input <- function(argType, input_gen_fun = NULL) {
   nDim <- argSymbol$nDim
   size <- argSymbol$size
   if (is.null(input_gen_fun))
-    input_gen_fun <- switch(
-      type,
-      "double"  = function(arg_size) rnorm(prod(arg_size)),
-      "integer" = function(arg_size) rgeom(prod(arg_size), 0.5),
-      "logical" = function(arg_size)
-        sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
-    )
+    input_gen_fun <- function(arg_size, arg_type) {
+      switch(
+        arg_type,
+        "double"  = rnorm(prod(arg_size)),
+        "integer" = rgeom(prod(arg_size), 0.5),
+        "logical" = sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
+      )
+    }
   arg <- switch(
     nDim + 1,
-    input_gen_fun(1), ## nDim is 0
-    input_gen_fun(size), ## nDim is 1
-    matrix(input_gen_fun(size), nrow = size[1], ncol = size[2]), ## nDim is 2
-    array(input_gen_fun(size), dim = size) ## nDim is 3
+    input_gen_fun(1, type), ## nDim is 0
+    input_gen_fun(size, type), ## nDim is 1
+    matrix(input_gen_fun(size, type), nrow = size[1], ncol = size[2]), ## nDim is 2
+    array(input_gen_fun(size, type), dim = size) ## nDim is 3
   )
   if (is.null(arg))
     stop('Something went wrong while making test input.', call.=FALSE)
@@ -265,7 +266,7 @@ modifyBatchOnMatch <-
 ## subfield: An optional subfield of the 'field', e.g. 'argTypes'.
 ## test:     A function which returns TRUE or FALSE based on a single
 ##           value.
-get_matching_ops <- function(field, subfield = NULL, test) {
+get_matching_ops <- function(field, subfield = NULL, test = isTRUE) {
   ## Returns vector of operator names where the value in a given field (or its
   ## subfield) returns TRUE when the test function is applied to it.
   ops <- ls(nCompiler:::operatorDefEnv)

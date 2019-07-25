@@ -85,7 +85,7 @@ modifyBatchOnMatch(
 modifyBatchOnMatch(
   math_test_params,
   '(pmin|pmax)', 'arg1 = .+Scalar arg2 = .+(Matrix|Array)',
-  'knownFailure', '.*compiles'
+  'knownFailure', '.*runs'
 )
 
 ## Eigen doesn't seem to have implementations for && and || when one arg is a scalar

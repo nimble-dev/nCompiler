@@ -17,6 +17,8 @@
 ##   - 'matrixMultOp' (e.g. %*%)
 ##   - 'recyclingRuleOp' (e.g. 'dnorm')
 ##   - 'reductionOp' (e.g. 'mean')
+##
+## TODO: add explanation of input_gen_funs (for now see the note for '/')
 
 ##################
 ## unary operators
@@ -86,6 +88,26 @@ nCompiler:::updateOperatorDef(
   'testing',
   val = list(
     math_argTypes = binaryOp_argTypes
+  )
+)
+
+## Ensure that we don't divide by 0.
+## Since arg1 = NULL, the default input generation function in argType_2_input
+## will be used, but for arg2 it will use the custom input generation function
+## we provide.
+## See make_input() and argType_2_input() in testing_utils.R.
+nCompiler:::updateOperatorDef(
+  '/', 'testing', 'input_gen_funs',
+  list(
+    arg1 = NULL,
+    arg2 = function(size, type) {
+      switch(
+        type,
+        "double"  = rnorm(prod(size)),
+        "integer" = rgeom(prod(size), 0.5) + 1, ## no zeros
+        "logical" = rep(TRUE, prod(size)) ## always TRUE
+      )
+    }
   )
 )
 
