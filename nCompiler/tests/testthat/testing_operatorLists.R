@@ -39,8 +39,8 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('mean', 'prod', 'squaredNorm', 'exp', 'inverse', 'log', 'rsqrt', 'sqrt',
-    'tanh', 'abs', 'cube', 'square', 'atan', 'logit'),
+  c('mean', 'prod', 'exp', 'log', 'rsqrt', 'sqrt', 'tanh', 'abs', 'cube',
+    'square', 'atan', 'logit'),
   'testing',
   val = list(
     ## derivatives currently only available for scalar and vector inputs  
@@ -50,6 +50,18 @@ nCompiler:::updateOperatorDef(
                          'numericMatrix', 'integerMatrix', 'logicalMatrix',
                          'numericArray(nDim=3)',  'integerArray(nDim=3)',
                          'logicalArray(nDim=3)')
+  )
+)
+
+nCompiler:::updateOperatorDef(
+  'squaredNorm',
+  'testing',
+  val = list(
+    ## math_argTypes = list('numericScalar', 'integerScalar', 'logicalScalar',
+    ##                      'numericVector', 'integerVector', 'logicalVector',
+    ##                      'numericMatrix', 'integerMatrix', 'logicalMatrix',
+    ##                      'numericArray(nDim=3)',  'integerArray(nDim=3)',
+    ##                      'logicalArray(nDim=3)')
   )
 )
 
@@ -84,7 +96,7 @@ binaryOp_argTypes <- c(
 )
 
 nCompiler:::updateOperatorDef(
-  c('pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '+', '/', '*', '%%'),
+  c('pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '+', '/', '*'),
   'testing',
   val = list(
     math_argTypes = binaryOp_argTypes
@@ -97,7 +109,7 @@ nCompiler:::updateOperatorDef(
 ## we provide.
 ## See make_input() and argType_2_input() in testing_utils.R.
 nCompiler:::updateOperatorDef(
-  '/', 'testing', 'input_gen_funs',
+  c('/'), 'testing', 'input_gen_funs',
   list(
     arg1 = NULL,
     arg2 = function(size, type) {
@@ -133,7 +145,6 @@ nCompiler:::updateOperatorDef('&', 'testing', 'alpha_name', 'and')
 nCompiler:::updateOperatorDef('|', 'testing', 'alpha_name', 'or')
 nCompiler:::updateOperatorDef('/', 'testing', 'alpha_name', 'div')
 nCompiler:::updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
-nCompiler:::updateOperatorDef('%%', 'testing', 'alpha_name', 'mod')
 
 #############################
 ## unary and binary operators
@@ -144,7 +155,7 @@ nCompiler:::updateOperatorDef(
   c('-'),
   'testing',
   val = list(
-    AD_argTypes = list('numericScalar()', 'numericVector(7)',
+    AD_argTypes = list('numericScalar', 'numericVector(7)',
                        c('numericScalar', 'numericScalar'),
                        c('numericScalar', 'numericVector(7)'),
                        c('numericVector(7)', 'numericVector(7)'),
@@ -181,6 +192,28 @@ nCompiler:::updateOperatorDef(
                                                 'integerScalar',
                                                 'logicalScalar')),
     alpha_name = 'pow'
+  )
+)
+
+#########################################
+## %% (rhs scalar when lhs Eigen::Tensor)
+#########################################
+
+nCompiler:::updateOperatorDef(
+  '%%',
+  'testing',
+  val = list(
+    math_argTypes = c(
+      make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar'),
+      make_argType_tuples('numericVector', 'integerVector', 'logicalVector',
+                          'numericMatrix', 'integerMatrix', 'logicalMatrix',
+                          'numericArray(nDim=3)', 'integerArray(nDim=3)',
+                          'logicalArray(nDim=3)', rhs = c('numericScalar',
+                                                          'integerScalar',
+                                                          'logicalScalar'))),
+    alpha_name = 'mod',
+    ## use same input_gen_funs as for '/' so we don't divide by 0
+    input_gen_funs = nCompiler:::getOperatorDef('/', 'testing', 'input_gen_funs')
   )
 )
 

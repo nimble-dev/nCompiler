@@ -57,7 +57,7 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
 
       if (verbose) cat("### Calling compiled nFunction \n")
       test_that("uncompiled and compiled math outputs match", {
-        wrap_if_matches(param$knownFailure, 'runs', expect_error, {
+        wrap_if_true(param$runtime_failure, expect_error, {
           ansC <- try(do.call(nC_compiled_obj[[nFun_i]], input), silent = TRUE)
           if (inherits(ansC, 'try-error')) {
             msg  <- paste('Calling compiled version of test', param$name,
@@ -69,8 +69,11 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
               stop(msg, call = FALSE)
             }
           }
-          if (verbose)
+          if (verbose) {
             cat("## Testing equality of compiled and uncompiled output\n")
+            if (isTRUE(param$runtime_failure))
+              cat('### This results in a known runtime failure.')
+          }
           if (is.array(ansC)) {
             expect_equal(as.array(ansR),
                          ansC,
@@ -100,9 +103,13 @@ make_math_test_params_one_op <- function(op) {
   opInfo <- nCompiler:::getOperatorDef(op, 'testing')
   if (is.null(opInfo) || is.null(opInfo[['math_argTypes']])) return(NULL)
   argTypes <- opInfo[['math_argTypes']]
+  known_failures <- opInfo$known_failures
+  math_failures <- if (is.null(known_failures)) NULL else known_failures$math
   ans <- lapply(argTypes, function(argTypes_) {
-    make_test_param(op, argTypes_, input_gen_funs = opInfo[['input_gen_funs']],
-                     more_args = opInfo[['more_args']])
+    make_test_param(
+      op, argTypes_, input_gen_funs = opInfo[['input_gen_funs']],
+      more_args = opInfo[['more_args']], known_failures = math_failures
+    )
   })
   names(ans) <- sapply(ans, `[[`, 'name')
   invisible(ans)

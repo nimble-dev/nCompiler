@@ -140,15 +140,16 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                       control = list(), verbose = nOptions('verbose'),
                       compile_all_funs = FALSE, gold_test = FALSE,
-                      suppress_err_msgs = TRUE, ...) {
+                      suppress_err_msgs = TRUE, skip_known_failures = FALSE,
+                      ...) {
   # TODO: port over the nimble AD testing knownFailure setup
   compile_error <- sapply(
     param_list, function(param)
-      !is.null(param$knownFailure) && grepl('compiles', param$knownFailure)
+      isTRUE(param$compilation_failure)
   )
 
   ## only test knownFailures in full testing
-  if (isFALSE(gold_test)) {
+  if (isFALSE(gold_test) && !isTRUE(skip_known_failures)) {
     ## these tests should fail during compilation
     error_params <- param_list[compile_error]
     if (length(error_params) > 0) {
@@ -226,6 +227,10 @@ wrap_if_matches <- function(pattern, string, wrapper, expr) {
   } else {
     expr
   }
+}
+
+wrap_if_true <- function(truthval, wrapper, expr) {
+  if (isTRUE(truthval)) wrapper(expr) else expr
 }
 
 modifyOnMatch <- function(x, pattern, key, value, env = parent.frame(), ...) {
@@ -393,9 +398,9 @@ return_type_string <- function(op, argTypes) {
   return(paste0(scalarTypeString, dimString))
 }
 
-make_test_param <- function(op, argTypes, input_gen_funs = NULL, more_args = NULL) {
+make_test_param <- function(op, argTypes, input_gen_funs = NULL,
+                            more_args = NULL, known_failures = NULL) {
   arg_names <- names(argTypes)
-
   if (is.null(arg_names)) {
     arg_names <- paste0('arg', 1:length(argTypes))
     op_args <- lapply(arg_names, as.name)
@@ -422,12 +427,16 @@ make_test_param <- function(op, argTypes, input_gen_funs = NULL, more_args = NUL
     parse(text = arg)[[1]]
   })
 
+  known_failure <- get_known_failure(argTypes, known_failures)
+
   list(
     name = name,
     expr = expr,
     argTypes = argTypesList,
     input_gen_funs = input_gen_funs,
-    returnType = return_type_string(op, argTypes)
+    returnType = return_type_string(op, argTypes),
+    compilation_failure = known_failure == 'compilation',
+    runtime_failure = known_failure == 'runtime'
   )
 }
 
@@ -489,8 +498,8 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   invisible(RcppPacket)
 }
 
-## batch_of_ops:    A list such as that made by make_AD_test_batch(),
-##                  with one named entry per operator,
+## batch_of_ops:    A list such as that made by make_math_test_params() or
+##                  make_AD_test_batch(), with one named entry per operator,
 ##                  which itself is a list with any number of
 ##                  test parameterizations (op + arg types), e.g.:
 ##                  list(
@@ -567,6 +576,21 @@ run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
 
     test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun, ...)
   }
+}
+
+get_known_failure <- function(argTypes, known_failures = NULL) {
+  if (!is.null(known_failures)) {
+    filter_fun <- function(x) identical(x, argTypes)
+    if (!is.null(known_failures$compilation)) {
+      ans <- Filter(filter_fun, known_failures$compilation)
+      if (length(ans) > 0) return('compilation')
+    }
+    if (!is.null(known_failures$runtime)) {
+      ans <- Filter(filter_fun, known_failures$runtime)
+      if (length(ans) > 0) return('runtime')
+    }
+  }
+  return('none')
 }
 
 #############################
