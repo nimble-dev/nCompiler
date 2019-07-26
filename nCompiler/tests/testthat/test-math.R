@@ -24,11 +24,13 @@ for (util_file in utils) source(util_file)
 # run testing
 #############
 
+## Gold file testing takes approx. 1 minute.
+
 WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
 FULL_TESTING <- FALSE
 
 ## FULL_TESTING_GRANULARITY levels:
-##   1 = put all test params in one giant nClass
+##   1 = put all test params in one giant nClass (approx. 15-20 minutes)
 ##   2 = one nClass per operator
 ##   3 = one nClass (with only one method) per operator/input combo
 ##
@@ -49,8 +51,6 @@ if (WRITE_GOLD_FILES) {
     package = 'nCompiler'
   )
 }
-
-nOptions(verbose = TRUE)
 
 math_test_params <- make_math_test_params(get_math_ops())
 
