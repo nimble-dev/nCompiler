@@ -431,24 +431,45 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Colon <- function(code, symTab, auxEnv, handlingInfo, recurse = TRUE) {
+    if (length(code$args) != 2)
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste(
+            "In sizeCgetolonOperator: Problem determining ",
+            "size for ':' without two arguments."
+          )
+        ), call. = FALSE
+      )    
+
     inserts <-
       if (recurse)
         recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     else list()
 
-    if (length(code$args) != 2)
-      stop(
-        exprClassProcessingErrorMsg(
-          code, paste(
-            "In sizeColonOperator: Problem determining ",
-            "size for ':' without two arguments."
-          )
-        ), call. = FALSE
-      )
-
-    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+    ## this isn't quite right... if the first arg is a whole number double, :
+    ## returns an integer regardless of the second arg's type
+    arg1_type <- code$args[[1]]$type$type
+    code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+    code$type <- symbolBasic$new(nDim = 1, type = code_type)
 
     invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Seq <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    if (length(code$args) == 0 ||
+          ## seq(by = x) always returns 1
+          (length(code$args) == 1 && 'by' %in% names(code$args))) {
+      code$type <- symbolBasic$new(nDim = 0, type = 'integer')
+    } else {
+      arg1_type <- code$args[[1]]$type$type
+      code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+      ## TODO: What about when from and to have same value?
+      code$type <- symbolBasic$new(nDim = 1, type = code_type)
+    }
+    inserts
   }
 )
 
