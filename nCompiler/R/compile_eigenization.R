@@ -459,10 +459,13 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    code$name <- 'seq'
-    by_arg <- literalIntegerExpr(1)
-    setArg(code, 'by', by_arg, add = TRUE)
-    compile_eigenize(code, symTab, auxEnv, workEnv)
+    if (!code$caller$name == '[') {
+      code$name <- 'seq'
+      by_arg <- literalIntegerExpr(1)
+      setArg(code, 'by', by_arg, add = TRUE)
+      compile_eigenize(code, symTab, auxEnv, workEnv)
+    }
+    invisible(NULL)
   }
 )
 
