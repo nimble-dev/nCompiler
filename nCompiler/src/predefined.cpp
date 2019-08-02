@@ -26,6 +26,7 @@ using namespace Rcpp;
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(RcppParallel)]]
 
 // [[Rcpp::depends(Rcereal)]]
 
@@ -71,6 +72,7 @@ using namespace Rcpp;
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(RcppParallel)]]
 
 // [[Rcpp::depends(Rcereal)]]
 
@@ -85,7 +87,8 @@ NCOMPILER_INTERFACE(
 nC_derivClass,
 NCOMPILER_FIELDS(
 field("value", &nC_derivClass::value),
-field("gradient", &nC_derivClass::gradient)
+field("gradient", &nC_derivClass::gradient),
+field("hessian", &nC_derivClass::hessian)
 ),
 NCOMPILER_METHODS()
 )
