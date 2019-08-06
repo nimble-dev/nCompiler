@@ -55,4 +55,3 @@ run_test_suite(
 
 ## reset the automaticDerivatives option
 set_nOption('automaticDerivatives', derivs_option)
-
