@@ -369,12 +369,12 @@ calcDerivs_internal <- function(func, X, order, resultIndices ) {
 
 nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2), dropArgs = NA,
                        wrt = NULL, fxnEnv = parent.frame()) {
-  fxn <- eval(fxnCall[[1]], envir = fxnEnv)
+  nf <- eval(fxnCall[[1]], envir = fxnEnv)
 
   ## standardize the fxnCall arguments
-  fxnCall <- match.call(fxn, fxnCall)
+  fxnCall <- match.call(nf, fxnCall)
 
-  fA <- formals(fxn)
+  fA <- formals(nf)
 
   # get the user-supplied arguments to the nFunction
   fxnCall_args <- as.list(fxnCall)[-1]
@@ -544,7 +544,7 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2), dropArgs = NA,
     ##     ## Each line is like fxnArgs[[ 2 ]][23] <- x[5]
     ##     eval(fxnArgs_assign_code[[i]])
     ## }
-    c(do.call(fxn, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
+    c(do.call(nf, fxnArgs, envir = fxnEnv)) #c() unrolls any answer to a vector
   }
 
   ans <- calcDerivs_internal(func, currentX, order, result_x_indices_all)
