@@ -384,7 +384,7 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2), dropArgs = NA,
                     function(x) 
                       eval(x, envir = fxnEnv))
 
-  arg_symbols <- lapply(fA, nCompiler:::argType2symbol)
+  arg_symbols <- NFinternals(nf)$argSymTab$symbols
 
   ## check that supplied args have sizes we expect from the symbol table
   for (arg_name in names(fA)) {
