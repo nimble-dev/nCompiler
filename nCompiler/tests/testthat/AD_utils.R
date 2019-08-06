@@ -29,6 +29,8 @@
 test_AD <- function(base_list, verbose = nOptions('verbose'),
                     catch_failures = FALSE, control = list(), seed = 0,
                     return_compiled_nf = FALSE, knownFailures = list()) {
+  if (verbose)
+    cat(paste('#### Compiling test of', base_list$test_name, '\n'))
 
   param_list <- base_list$param_list
   nC <- base_list$nC
@@ -67,7 +69,10 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
 
     param <- param_list[[i]]
 
-    if (verbose) cat("## Testing ", param$name, "\n", sep = '')
+    if (!is.null(param$skip) && param$skip) {
+      if (verbose) cat(paste('### Skipping test of', param$name, '\n'))
+    } else
+      if (verbose) cat(paste('### Testing', param$name, '\n'))
 
     ## TODO: remove dependence on this Cpublic method naming convention
     nFun_i <- paste0('nFun', i)
@@ -474,10 +479,11 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 ##          input_gen_funs: A list of random input generation functions to be
 ##                          used by argType_2_input(). 
 make_AD_test_param <- function(op, argTypes, wrt_args = NULL,
-                               input_gen_funs = NULL, more_args = NULL, seed = 0) {
+                               input_gen_funs = NULL, more_args = NULL,
+                               seed = 0, known_failures = NULL) {
   ## set the seed for make_wrt
   if (is.numeric(seed)) set.seed(seed)
-  test_param <- make_test_param(op, argTypes, input_gen_funs, more_args)
+  test_param <- make_test_param(op, argTypes, input_gen_funs, more_args, known_failures)
 
   if (is.null(wrt_args)) wrt_args_filter <- rep(TRUE, length(argTypes))
   else wrt_args_filter <- wrt_args
@@ -498,10 +504,13 @@ make_AD_test_params_one_op <- function(op, seed = 0) {
   opInfo <- nCompiler:::getOperatorDef(op, 'testing')
   if (is.null(opInfo) || is.null(opInfo[['AD_argTypes']])) return(NULL)
   argTypes <- opInfo[['AD_argTypes']]
+  known_failures <- opInfo$known_failures
+  AD_failures <- if (is.null(known_failures)) NULL else known_failures$AD
   ans <- lapply(argTypes, function(argTypes_) {
     make_AD_test_param(op, argTypes_, wrt_args = opInfo[['wrt_args']],
                      input_gen_funs = opInfo[['input_gen_funs']],
-                     more_args = opInfo[['more_args']], seed = seed)
+                     more_args = opInfo[['more_args']], seed = seed,
+                     known_failures = AD_failures)
   })
   names(ans) <- sapply(ans, `[[`, 'name')
   invisible(ans)
