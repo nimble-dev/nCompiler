@@ -43,7 +43,7 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
     if (verbose) cat("## Compiling nClass \n")
 
     nC_compiled <- try(
-      nCompile_nClass(nC, control = control, interface = 'generic'),
+      nCompile_nClass(nC, control = control),
       silent = TRUE)
   }
 
@@ -61,7 +61,7 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
     }
   }
 
-  nC_obj <- nC_compiled()
+  nC_obj <- nC_compiled$new()
 
   for (i in seq_along(param_list)) {
 
@@ -108,8 +108,6 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
         stop(msg, call. = FALSE) ## throw an error here
     }
 
-    Cval <- do.call(method(nC_obj, nFun_i), input)
-
     ##
     ## call Cpublic methods of compiled nClass with generated input
     ##
@@ -118,32 +116,40 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
           nFun_i, "'\n", sep = '')
 
     Cderivs <- lapply(param$wrts, function(wrt) {
-
-      gradient <- value(
-        do.call(
-          method(nC_obj, paste0(nFun_i, '_derivs_')),
-          c(input, list(order = c(0, 1, 2), wrt = wrt))
-        ),
-        'gradient'
+      derivs_obj <- nCompiler:::nDerivs_full(
+        fxnCall = as.call(c(substitute(
+          nC_obj$NFUN,
+          list(NFUN = nFun_i)
+        ), input)), wrt = wrt, NC = nC
       )
-      list(value = Cval, jacobian = gradient)
+      list(
+        value = derivs_obj$value,
+        gradient = derivs_obj$gradient,
+        hessian = derivs_obj$hessian
+      )
     })
 
     for (wrt in names(param$wrts)) {
       if (verbose)
         cat("## Testing equality of outputs for ", wrt, '\n')
       test_that(
-        paste0("Compiled and uncompiled values and jacobians match for ", wrt),
+        paste0("Compiled and uncompiled output matches for ", wrt),
         {
           expect_equal( ## check values
             as.vector(Cderivs[[wrt]]$value),
             as.vector(Rderivs[[wrt]]$value),
             info = paste0("values with ", wrt)
           )
-          expect_equal( ## check jacobians
-            as.vector(Cderivs[[wrt]]$jacobian),
-            as.vector(Rderivs[[wrt]]$jacobian),
-            info = paste0("jacobians with ", wrt)
+          expect_equal( ## check gradients
+            as.vector(Cderivs[[wrt]]$gradient),
+            as.vector(Rderivs[[wrt]]$gradient),
+            info = paste0("gradients with ", wrt)
+          )
+          expect_equal( ## check hessians
+            as.vector(Cderivs[[wrt]]$hessian),
+            as.vector(Rderivs[[wrt]]$hessian),
+            info = paste0("hessians with ", wrt),
+            tol = 1e-07 ## known issue with numDeriv output
           )
         }
       )

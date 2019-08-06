@@ -24,13 +24,13 @@ AD_test_params <- make_AD_test_params(get_AD_ops(), seed)
 #############
 
 WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
-FULL_TESTING <- FALSE
+FULL_TESTING <- TRUE
 
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass
 ##   2 = one nClass per operator (this is also what gold testing does)
 ##   3 = one nClass with one nFunction per operator/input combo
-FULL_TESTING_GRANULARITY <- NA
+FULL_TESTING_GRANULARITY <- 3
 
 if (WRITE_GOLD_FILES) {
   gold_file_dir <- readline(
