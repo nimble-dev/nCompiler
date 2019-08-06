@@ -20,7 +20,7 @@
 #'   \code{nFxn}.
 #' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
 #'   which has a method corresponding to the one found in \code{nFxn}.  Only
-#'   required when \code{nFxn} is a compiled method call from a generic
+#'   required when \code{nFxn} is a compiled method call from a generic or full
 #'   interface.
 #' @details Derivatives for uncompiled nFunctions are calculated using the
 #'   \code{numDeriv} package.  If this package is not installed, an error will
@@ -59,7 +59,7 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
       ))
 
     nDerivs_full(fxnCall = derivFxnCall, order = order, dropArgs = dropArgs,
-                 wrt = wrt, fxnEnv = fxnEnv)
+                 wrt = wrt, fxnEnv = fxnEnv, NC = NC)
 
   } else if (is.call(derivFxnCall[[1]]) &&
                derivFxnCall[[1]][[1]] == 'method') {
@@ -96,7 +96,7 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
 #'   with respect to all arguments to \code{nFxn}.
 #' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
 #'   which has a method corresponding to the one found in \code{nFxn}. Only
-#'   required when \code{nFxn} is a compiled method call from a generic
+#'   required when \code{nFxn} is a compiled method call from a generic or full
 #'   interface.
 #'
 #' @return an integer vector of the positions in the flattened input of the
@@ -116,13 +116,21 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
         "setup_wrt does not know how to use the object ",
         deparse(fxnCall[[2]]), "."
       ))
+    if (is.null(NC))
+      stop(paste(
+        "'setup_wrt' was called for a method from a full nClass interface but",
+        "the 'NC' argument is NULL."
+      ))
+    if (!isNCgenerator(NC))
+      stop(paste(
+        "The 'NC' argument to 'setup_wrt' must be an nClass generator (returned",
+        "from a call to 'nClass')."))
 
     fxn <- eval(fxnCall, envir = parent.frame())
     fxnName <- fxnCall[[3]]
     if (!is.character(fxnName)) fxnName <- deparse(fxnName)
-    ## depends on the full interface's method having the type declarations as
-    ## the default args, e.g. x = numericVector(7), y = numericScalar()
-    fxnArgs <- formals(fxn)
+    nf <- NC$public_methods[[fxnName]]
+    fxnArgs <- NFinternals(nf)$argSymTab$symbols
 
   } else if (is.call(fxnCall) && fxnCall[[1]] == 'method') {
 
@@ -552,13 +560,23 @@ nDerivs_nf <- function(fxnCall = NULL, order = c(0,1,2), dropArgs = NA,
 }
 
 nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2), dropArgs = NA,
-                         wrt = NULL, fxnEnv = parent.frame()) {
+                         wrt = NULL, fxnEnv = parent.frame(), NC = NULL) {
+  if (is.null(NC))
+    stop(paste(
+      "'nDerivs' was called for a method from a full nClass interface but",
+      "the 'NC' argument is NULL."
+    ))
+  if (!isNCgenerator(NC))
+    stop(paste(
+      "The 'NC' argument to 'nDerivs' must be an nClass generator (returned",
+      "from a call to 'nClass')."))
+
   derivFxnCall <- str2lang(paste0(deparse(fxnCall[[1]]), '_derivs_'))
 
-  fxn <- eval(fxnCall[[1]], envir = fxnEnv)
-  fxnArgs <- formals(fxn)
-  fxnName = deparse(fxnCall[[1]])
-  
+  fxnName <- fxnCall[[1]][[3]]
+  if (is.symbol(fxnName)) fxnName <- deparse(fxnName)
+  nf <- NC$public_methods[[fxnName]]
+  fxnArgs <- NFinternals(nf)$argSymTab$symbols
   fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
   fxnCall$wrt <- if (is.numeric(wrt)) wrt else setup_wrt_internal(
