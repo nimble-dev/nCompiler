@@ -139,7 +139,8 @@ test_math_suite <- function(batch_of_ops, test_name = 'math', full, granularity,
   } else if (granularity == 2) {
 
     test_math(
-      unlist(batch_of_ops), deparse(substitute(batch_of_ops)),
+      unlist(batch_of_ops, recursive = FALSE),
+      deparse(substitute(batch_of_ops)),
     )
   }
 }

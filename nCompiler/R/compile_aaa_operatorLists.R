@@ -31,12 +31,18 @@ getOperatorDef <- function(op, field = NULL, key = NULL) {
 assignOperatorDef(
   'nFunction',
   list(
-    simpleTransformations = list(
-      handler = 'Generic_nFunction'),
     labelAbstractTypes = list(
       handler = 'Generic_nFunction'),
     cppOutput = list(
       handler = 'Generic_nFunction')
+  )
+)
+
+assignOperatorDef(
+  'nClass_method',
+  list(
+    labelAbstractTypes = list(
+      handler = 'Generic_nClass_method') ## will convert to nFunction
   )
 )
 
@@ -61,13 +67,28 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_for'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelFor'),
+    finalTransformations = list(
+      handler = "ParallelFor") ## Creates GeneralFor in the parallel_loop_body class
+  )
+)
+
+assignOperatorDef(
+  c('GeneralFor'),
+  list(
+    cppOutput = list(
+      handler = 'GeneralFor')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
-      handler = 'Colon'),
-    eigenImpl = list(
-      toEigen = 'Maybe'
-    )
+        handler = 'Colon')
   )
 )
 
@@ -86,16 +107,30 @@ assignOperatorDef(
   c('['),
   list(
     labelAbstractTypes = list(
-      handler = 'IndexingBracket'
-    ),
+      handler = 'Bracket'),
     eigenImpl = list(
-      toEigen = 'Maybe',
-      handler = 'IndexingBracket'
-    ),
+      handler = 'Bracket'), ## converts `[` to `index[`
     cppOutput = list(
-      handler = 'Bracket')
+      handler = 'IndexingBracket') ## needed for generated code such as for AD.
   )
 )
+
+assignOperatorDef(
+  c('index['),
+  list(
+    cppOutput = list(
+      handler = 'IndexingBracket')
+  )
+)
+
+assignOperatorDef(
+  c('index('),
+  list(
+    cppOutput = list(
+      handler = 'IndexingParen')
+  )
+)
+
 
 assignOperatorDef(
   c('<-','<<-','='),
@@ -103,7 +138,6 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = 'Assign'),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Assign'
     ),
     cppOutput = list(
@@ -117,9 +151,6 @@ assignOperatorDef(
     list(
         labelAbstractTypes = list(
             handler = 'Return'),
-        eigenImpl = list(
-          toEigen = 'Yes'
-        ),
         cppOutput = list(
             handler = 'Return')
     )
@@ -131,8 +162,21 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  '$',
+  list(
+    labelAbstractTypes = list(
+      handler = 'DollarSign')
+  )
+)
+
+assignOperatorDef(
   'chainedCall',
-  list(cppOutput = list(handler = 'chainedCall'))
+  list(
+    labelAbstractTypes = list(
+      handler = 'ChainedCall')
+    ## , cppOutput = list(
+    ##   handler = 'ChainedCall')
+  )
 )
 
 assignOperatorDef(
@@ -142,8 +186,7 @@ assignOperatorDef(
           handler = 'BinaryUnaryCwise',
           returnTypeCode = returnTypeCodes$promoteNoLogical),
         eigenImpl = list(
-          toEigen = 'Yes',
-            handler = 'cWiseAddSub'),
+          handler = 'cWiseAddSub'),
         cppOutput = list(
           handler = 'BinaryOrUnary'),
         testthat = list(
@@ -163,9 +206,8 @@ assignOperatorDef(
     simpleTransformations = list(
       handler = 'minMax'),
     labelAbstractTypes = list(
-      toEigen = 'Yes',
-      handler = 'UnaryReduction',
-      returnTypeCode = returnTypeCodes$promoteNoLogical),
+        handler = 'UnaryReduction',
+        returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       handler = 'Reduction',
       method = TRUE),
@@ -182,7 +224,6 @@ assignOperatorDef(
   c('pmin', 'pmax'),
   list(
     labelAbstractTypes = list(
-      toEigen = 'Yes',
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
@@ -208,9 +249,29 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  '->method',
+  list(
+    help = '->method(A, foo, b) is for A->foo(b)',
+    cppOutput = list(
+      handler = 'PtrMethod'
+    )
+  )
+)
+
+assignOperatorDef(
+  '->member',
+  list(
+    help = '->member(A, b) is for A->b',
+    cppOutput = list(
+      handler = 'PtrMember'
+    )
+  )
+)
+
+assignOperatorDef(
   '.method',
   list(
-    help = '.method(A, foo, b) is for A.foo(b).',
+    help = '.method(A, foo, b) is for A.foo(b)',
     cppOutput = list(
       handler = 'Method'
     )
@@ -220,13 +281,12 @@ assignOperatorDef(
 assignOperatorDef(
   '.member',
   list(
-    help = '.member(A, b) is for A.b.',
+    help = '.member(A, b) is for A.b',
     cppOutput = list(
       handler = 'Member'
     )
   )
 )
-
 
 assignOperatorDef(
   'cppLiteral',
@@ -245,7 +305,6 @@ assignOperatorDef(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Reduction',
       method = TRUE
     ),
@@ -266,7 +325,6 @@ assignOperatorDef(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'Reduction',
       method = TRUE
     ),
@@ -287,7 +345,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary',
       method = TRUE
     ),
@@ -309,7 +366,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary',
       method = TRUE
     ),
@@ -331,7 +387,6 @@ assignOperatorDef(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseUnary_external',
       method = TRUE
     ),
@@ -353,7 +408,6 @@ assignOperatorDef(
       handler = 'BinaryCwiseLogical',
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -384,7 +438,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -405,7 +458,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseMultDiv'),
     cppOutput = list(
       handler = 'MidOperator'),
@@ -424,7 +476,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
       method = TRUE),
     cppOutput = list(
@@ -445,7 +496,6 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
       handler = 'MidOperator',
@@ -466,7 +516,6 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$double
     ),
     eigenImpl = list(
-      toEigen = 'Yes',
       handler = 'PromoteAllButLastArg'
     ),
     cppOutput = list(

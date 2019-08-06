@@ -64,6 +64,15 @@ build_compiled_nClass <- function(NCgenerator,
   CinterfaceMethods <- mapply(buildMethod_for_compiled_nClass,
                               NCgenerator$public_methods[CmethodNames],
                               CmethodNames)
+  enableDerivs <- unlist(NCinternals(NCgenerator)$enableDerivs)
+  if (length(enableDerivs > 0)) {
+    ## add *_derivs_ method for methods in enableDerivs
+    derivsMethods <- mapply(buildMethod_derivs_for_compiled_nClass,
+                            NCgenerator$public_methods[enableDerivs],
+                            enableDerivs)
+    names(derivsMethods) <- paste0(enableDerivs, '_derivs_')
+    CinterfaceMethods <- c(CinterfaceMethods, derivsMethods)
+  }
   CfieldNames <- NCI$fieldNames
   RfieldNames <- setdiff(names(NCgenerator$public_fields),
                          CfieldNames)
@@ -74,41 +83,41 @@ build_compiled_nClass <- function(NCgenerator,
 
   ans <- substitute(
     expr = R6::R6Class(
-                 classname = CLASSNAME,
-                 private = list(
-                   CppObj = NULL
-                 ),
-                 public = c(
-                   list(initialize = function(CppObj) {
-                     if(missing(CppObj)) {
-                       newCobjFun <- NEWCOBJFUN
-                       if(is.null(newCobjFun))
-                         stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
-                       CppObj <- newCobjFun()
-                     }
-                     private$CppObj <- CppObj
-                   }),
-                   RPUBLIC,
-                   RFIELDS,
-                   CINTERFACE),
-                 active = ACTIVEBINDINGS,
-                 portable = FALSE,
-                 inherit = nCompiler:::nClassClass,
-                 parent_env = NULL ## when quoted = TRUE, env argument is not used
-               ),
+      classname = CLASSNAME,
+      private = list(
+        CppObj = NULL
+      ),
+      public = c(
+        list(initialize = function(CppObj) {
+          if(missing(CppObj)) {
+            newCobjFun <- NEWCOBJFUN
+            if(is.null(newCobjFun))
+              stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+            CppObj <- newCobjFun()
+          }
+          private$CppObj <- CppObj
+        }),
+        RPUBLIC,
+        RFIELDS,
+        CINTERFACE),
+      active = ACTIVEBINDINGS,
+      portable = FALSE,
+      inherit = nCompiler:::nClassClass,
+      parent_env = NULL ## when quoted = TRUE, env argument is not used
+    ),
     env = list(
       CLASSNAME = classname,
       NEWCOBJFUN = parse(text = paste0('new_', NCgenerator$classname),
                          keep.source = FALSE)[[1]],
       RPUBLIC = parse(text = deparse(
-                        NCgenerator$public_methods[RmethodNames]
-                      ), keep.source = FALSE)[[1]],
+        NCgenerator$public_methods[RmethodNames]
+      ), keep.source = FALSE)[[1]],
       RFIELDS = parse(text = deparse(
-                        NCgenerator$public_fields[RfieldNames]
-                      ), keep.source = FALSE)[[1]],
+        NCgenerator$public_fields[RfieldNames]
+      ), keep.source = FALSE)[[1]],
       CINTERFACE = parse(text = deparse(
-                           CinterfaceMethods
-                         ), keep.source = FALSE)[[1]],
+        CinterfaceMethods
+      ), keep.source = FALSE)[[1]],
       ACTIVEBINDINGS = parse(text = deparse(activeBindings))[[1]]
     )
   )
@@ -146,13 +155,13 @@ build_compiled_nClass <- function(NCgenerator,
 buildActiveBinding_for_compiled_nClass <- function(name) {
   ans <- function(value) {}
   body(ans) <- substitute(
-    {
-      if(missing(value))
-        nCompiler:::get_value(nCompiler:::getExtptr(private$CppObj), NAME)
-      else
-        nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
-    },
-    list(NAME = name)
+  {
+    if(missing(value))
+      nCompiler:::get_value(nCompiler:::getExtptr(private$CppObj), NAME)
+    else
+      nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
+  },
+  list(NAME = name)
   )
   ans
 }
@@ -174,5 +183,24 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
     list(NAME = name,
          LISTCODE = listcode)
   )
+  ans
+}
+
+buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
+  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
+  ans <- fun
+  ## add the 'order' and 'wrt' args to the function's formals
+  formals(ans) <- c(formals(ans), list(order = c(0, 1, 2), wrt = NULL))
+  argNames <- names(formals(ans))
+  environment(ans) <- new.env()
+  listcode <- quote(list())
+  for(i in seq_along(argNames))
+    listcode[[i+1]] <- as.name(argNames[i])
+  body(ans) <- substitute({
+    obj_env <- nCompiler:::call_method(
+      nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE
+    )
+    C_nC_derivClass$new(obj_env)
+  }, list(NAME = paste0(name, '_derivs_'), LISTCODE = listcode))
   ans
 }

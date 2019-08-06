@@ -23,8 +23,14 @@ test_that("nCompile_nClass works",
     obj <- ans()
     expect_true(class(obj) == "loadedObjectEnv")
     expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+    message("Expecting a message that method \"not_here\" doesn't exist next:\n")
+    expect_null(method(obj, "not_here")(1.2))
+    
     value(obj, "Cv") <- 1.23
     expect_equal(value(obj, "Cv"), 1.23)
+    expect_null(value(obj, "junk"))
+    message("Expecting a message that field \"junk\" doesn't exist next:\n")
+    expect_silent({value(obj, "junk") <- 5})
 })
 
 test_that("nCompile_nClass works when there are no methods",
@@ -67,6 +73,37 @@ test_that("nCompile_nClass works when there are no member data",
             obj <- ans()
             expect_true(class(obj) == "loadedObjectEnv")
             expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+          })
+
+test_that("nCompile_nClass works with one method calling another",
+          {
+            nc1 <- nClass(
+              Rpublic = list(
+                Rv = NULL,
+                Rfoo = function(x) x+1
+              ),
+              Cpublic = list(
+                Cfoo = nFunction(
+                  fun = function(x) {
+                    return(x+1)
+                  },
+                  argTypes = list(x = 'numericScalar'),
+                  returnType = 'numericScalar'),
+                Cbar = nFunction(
+                  fun = function(w) {
+                    ans <- Cfoo(w)
+                    return(ans)
+                  },
+                  argTypes = list(w = 'numericScalar'),
+                  returnType = 'numericScalar')
+              )
+            )
+            ans <- try(nCompile_nClass(nc1, interface = "generic"))
+            expect_true(is.function(ans)) ## compilation succeeded
+            obj <- ans()
+            expect_true(class(obj) == "loadedObjectEnv")
+            expect_equal(method(obj, "Cfoo")(1.2), 2.2)
+            expect_equal(method(obj, "Cbar")(1.2), 2.2)
           })
 
 test_that("nCompile_nClass works 2",
@@ -153,3 +190,165 @@ test_that("nCompile_nClass works with integerMatrix and logicalMatrix",
             value(obj, "CLM") <- matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2)
             expect_identical(value(obj, "CLM"), matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2))
           })
+
+test_that("nCompile_nClass works when number of method arguments is wrong",
+          {
+            nc1 <- nClass(
+              Rpublic = list(
+                Rv = NULL,
+                Rfoo = function(x) x+1
+              ),
+              Cpublic = list(
+                Cv = 'numericScalar'
+                , Cfoo = nFunction(
+                  fun = function(x, y) {
+                    return(x+y)
+                  },
+                  argTypes = list(x = 'numericScalar',
+                                  y = 'numericScalar'),
+                  returnType = 'numericScalar')
+                , Cnullary = nFunction(
+                  fun = function() {
+                    return(1.2)
+                  },
+                  returnType = 'numericScalar'
+                )
+              )
+            )
+            # set_nOption('showCompilerOutput', TRUE)
+            ans <- try(nCompile_nClass(nc1, interface = "generic"))
+            expect_true(is.function(ans)) ## compilation succeeded
+            obj <- ans()
+            expect_true(class(obj) == "loadedObjectEnv")
+            
+            expect_equal(method(obj, "Cfoo")(1.2, 2.3), 3.5)
+            expect_equal(method(obj, "Cnullary")(), 1.2)
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cfoo")(1.2, 2.3, 3.4))
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cfoo")(1.2))
+            message("Expected a message about incorrect number of arguments:\n")
+            expect_null(method(obj, "Cnullary")(1.2))
+          })
+
+test_that("compiling nClass works with nClass members",{
+  nc1 <- nClass(
+    Cpublic = list(
+      v = 'numericVector',
+      foo = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v)
+        },
+      returnType = 'numericVector')
+    )
+  )
+  nc2 <- nClass(
+    Cpublic = list(
+      my_nc1 = 'nc1',
+      foo = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c)
+        },
+        returnType = 'numericScalar')
+    )
+  )
+  message("nCompile doesn't keep names straight with multiple nClasses.\n")
+  test <- nCompile(nc1, nc2)
+  obj1 <- test[[1]]()
+  obj2 <- test[[2]]()
+  Rv <- 1:4
+  value(obj2, 'my_nc1') <- obj1
+  value(obj1,'v') <- Rv
+  expect_equal(value(obj1, 'v'),
+               array(Rv))
+  expect_equal(value( value(obj2, 'my_nc1'), 'v' ),
+               array(Rv))
+})
+
+test_that("compiling nClass works with nClass members and methods",{
+  nc1 <- nClass(
+    Cpublic = list(
+      v = 'numericVector',
+      foo = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v)
+        },
+        returnType = 'numericVector')
+    )
+  )
+  nc2 <- nClass(
+    Cpublic = list(
+      my_nc1 = 'nc1',
+      foo = nFunction(
+        fun = function(c = 'numericScalar') {
+          ans <- 2 * my_nc1$foo(c)
+          return(ans)
+        },
+        returnType = 'numericVector')
+    )
+  )
+  message("nCompile doesn't keep names straight with multiple nClasses.\n")
+  test <- nCompile(nc1, nc2)
+  obj1 <- test[[1]]()
+  obj2 <- test[[2]]()
+  Rv <- 1:4
+  value(obj2, 'my_nc1') <- obj1
+  value(obj1,'v') <- Rv
+  expect_equal(value(obj1, 'v'),
+               array(Rv))
+  expect_equal(value( value(obj2, 'my_nc1'), 'v' ),
+               array(Rv))
+  expect_equal(method(obj1, 'foo')(2),
+               array(2*Rv))
+  expect_equal(method(obj2, 'foo')(2),
+               array(2*2*Rv))
+})
+
+test_that("compiling nClass works with nClass members and methods and arguments",{
+  nc1 <- nClass(
+    Cpublic = list(
+      v = 'numericVector',
+      foo = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v)
+        },
+        returnType = 'numericVector')
+    )
+  )
+  nc2 <- nClass(
+    Cpublic = list(
+      my_nc1 = 'nc1',
+      take_nc1 = nFunction(
+        fun = function(arg_nc1 = 'nc1',
+                       c = 'numericScalar') {
+          ans <- 2 * arg_nc1$foo(c)
+          return(ans)
+        },
+        returnType = 'numericVector'),
+      pass_nc1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          ans <- 3 * take_nc1(my_nc1, c)
+          return(ans)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+  message("nCompile doesn't keep names straight with multiple nClasses.\n")
+  test <- nCompile(nc1, nc2)
+  obj1 <- test[[1]]()
+  obj2 <- test[[2]]()
+  value(obj2, 'my_nc1') <- obj1
+  Rv <- 1:4
+  value(obj1,'v') <- Rv
+  expect_equal(value(obj1, 'v'),
+               array(Rv))
+  expect_equal(value( value(obj2, 'my_nc1'), 'v' ),
+               array(Rv))
+  expect_equal(method(obj1, 'foo')(2), 
+               array(2*Rv))
+  expect_equal(method(obj2, 'pass_nc1')(2), 
+               array(3*2*2*Rv))
+  expect_equal(method(obj2, 'take_nc1')(obj1, 2),
+               array(2*2*Rv))
+})

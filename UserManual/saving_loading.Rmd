@@ -7,9 +7,11 @@ output: html_document
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
-Inability to save and load compiled work has been a limitation of `nimble`.  It isn't trivial to solve because of heavily intertwined use of R to manage contents of C++ objects.  Rather than tackle this, we have designed `nCompiler` with serialization and copying between R and C++ more clearly in mind from the outset.  Serialization refers to stringing the contents of an object together in some standard way for a purpose such as writing it to disk and later reading it.  R's `save` and `load` use serialization.
+Saving and loading C++ objects used from R is a challenge because those objects are not handled by R's simple `save` function.  `nCompiler` uses the deliciously named `cereal` C++ package to accomplish serialization to support saving and loading C++ objects. 
 
-`nCompiler` uses the deliciously named `cereal` C++ package for serialization.  `nClass` definitions can have `cereal` code automatically included.  The system is not fully developed,  but the core idea of code-generating `cereal` code into `nClass` definitions works.
+Serialization refers to stringing the contents of an object together in some standard way for a purpose such as writing it to disk and later reading it.  R's `save` and `load` use serialization of R objects.
+
+`nClass` definitions can have `cereal` code automatically included.  The system is not fully developed,  but the core idea of code-generating `cereal` code into `nClass` definitions works.
 
 Saving and loading compiled objects needs to go hand in hand with re-using generated-and-compiled C++ code.  The latter is done by making use of R's packaging system.  See ["Using nCompiler code in packages"](use_in_packages.html).  With both of these features, one can load a package with the compiled `nClass` definitions and then load saved objects of those classes.
 
@@ -37,15 +39,20 @@ nc1_obj <- nc1_generator[[1]]()
 method(nc1_obj, "Cfoo")(1.2) # The method works.
 value(nc1_obj, "Cv") <- 1.23 # Access to fields works.
 value(nc1_obj, "Cv") 
-serialized <- nCompiler:::serialize_nComp_object(nc1_obj) #serialize! 
-nc1_restored_obj <- nCompiler:::deserialize_nComp_object(serialized) #deserialize!
+serialized <- serialize_nComp_object(nc1_obj) #serialize! 
+# look at the gooey internals to see that they are a binary
+## representation of nc1_obj.
+serialized$serialized
+## One could save and load the serialized content and then
+## reconstitute the object by deserialization:
+nc1_restored_obj <- deserialize_nComp_object(serialized) #deserialize!
 value(nc1_restored_obj, "Cv") # The value was restored.
 method(nc1_restored_obj, "Cfoo")(1.2) # The method works
 ```
 
 ### Future plans:
 
-- The R external pointer to an `nClass` object is held in an environment.  R's serialization manages environments in a natural way.  `cereal` will handle C++ objects that point to one another with C++ shared pointers.  We will need to ensure that these two systems are coordinated.
-- Our use of `cereal` will need to be generalized for more types of objects.
-- Reasonable behavior will have to be designed for saving and loading from either full or generic interfaces.
-
+- support for use of `cereal` with more kinds of C++ member data.
+- create some coordination of R's serialization of environments that hold external pointers to nCompiler's C++ objects and `cereal` serialization of the C++ objects. 
+- create reasonable behavior for saving and loading from either full or generic interfaces.
+- manage serialization/deserialization from multiple DLLs.

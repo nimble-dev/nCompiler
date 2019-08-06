@@ -24,6 +24,11 @@ if (WRITE_GOLD_FILES) {
   )
 }
 
+## Ensure that generated strings for unique names
+## have counters that start at 1
+nCompiler:::nFunctionIDMaker(reset = TRUE)
+nCompiler:::nClassIDMaker(reset = TRUE)
+
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass
 ##   2 = group operators by type in one nClass
@@ -32,8 +37,8 @@ if (WRITE_GOLD_FILES) {
 FULL_TESTING_GRANULARITY <- 1
 
 ## test_math_suite handles granularity levels 2-4 and does nothing if
-## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by
-## putting all of the tests in one long list and calling test_math directly.
+## FULL_TESTING_GRANULARITY is 1. Instead, we handle that case by putting all
+## of the tests in one long list and calling test_math directly.
 test_math_suite(
   unaryOpTests, 'math_unaryOpTests', FULL_TESTING, FULL_TESTING_GRANULARITY,
   write_gold_file = WRITE_GOLD_FILES, gold_file_dir
@@ -48,6 +53,8 @@ test_math_suite(
 if (FULL_TESTING && FULL_TESTING_GRANULARITY == 1) {
   ## put everything in one giant nClass
   test_math(
-    c(unlist(unaryOpTests), unlist(binaryOpTests)), 'testing math'
+    c(unlist(unaryOpTests, recursive = FALSE),
+      unlist(binaryOpTests, recursive = FALSE)),
+    'testing math'
   )
 }

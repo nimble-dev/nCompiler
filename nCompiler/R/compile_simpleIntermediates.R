@@ -17,43 +17,43 @@ buildIntermCalls <- c(makeCallList(c('eigen',
 ## This turned out not to be needed much in the compilation system, but it is handy in a few cases.
 ## Many intermediates are created at a later stage, during the size processing and eigenization.
 compile_simpleIntermediates <- function(code) {
-    tempExprs <- list()
-    if(code$isCall) {
-        if(code$name == '{') {
-            for(i in seq_along(code$args)) {
-                if(!(code$args[[i]]$isCall)) {
-                    writeLines('Warning in buildInterms: there is a line of code that is not a call.')
-                    return(NULL)
-                } else {
-                    intermCalls <- unlist(compile_simpleIntermediates(code$args[[i]]))
-                    if(length(intermCalls) > 0) {
-                        newExpr <- newBracketExpr(args = c(intermCalls, code$args[i]))
-                        setArg(code, i, newExpr)
-                    }
-                }
-            }
-            return(NULL)
+  tempExprs <- list()
+  if(code$isCall) {
+    if(code$name == '{') {
+      for(i in seq_along(code$args)) {
+        if(!(code$args[[i]]$isCall)) {
+          writeLines('Warning in buildInterms: there is a line of code that is not a call.')
+          return(NULL)
+        } else {
+          intermCalls <- unlist(compile_simpleIntermediates(code$args[[i]]))
+          if(length(intermCalls) > 0) {
+            newExpr <- newBracketExpr(args = c(intermCalls, code$args[i]))
+            setArg(code, i, newExpr)
+          }
         }
-
-        ## first get temps from any arguments
-        for(i in seq_along(code$args)) {
-            if(inherits(code$args[[i]], 'exprClass')) {
-                if(code$args[[i]]$isCall) {
-                    tempExprs[[length(tempExprs) + 1]] <- compile_simpleIntermediates(code$args[[i]])
-                }
-            }
-        }
-     
-        ## second generate any temps for this call itself
-        intermCall <- buildIntermCalls[[code$name]]
-        if(!is.null(intermCall)) {
-            newpiece <- eval(call(buildIntermCalls[[code$name]], code))
-            tempExprs[[length(tempExprs) + 1 ]] <- newpiece
-        }
+      }
+      return(NULL)
     }
-    if(length(tempExprs) == 0) NULL else tempExprs
+
+    ## first get temps from any arguments
+    for(i in seq_along(code$args)) {
+      if(inherits(code$args[[i]], 'exprClass')) {
+        if(code$args[[i]]$isCall) {
+          tempExprs[[length(tempExprs) + 1]] <- compile_simpleIntermediates(code$args[[i]])
+        }
+      }
+    }
+    
+    ## second generate any temps for this call itself
+    intermCall <- buildIntermCalls[[code$name]]
+    if(!is.null(intermCall)) {
+      newpiece <- eval(call(buildIntermCalls[[code$name]], code))
+      tempExprs[[length(tempExprs) + 1 ]] <- newpiece
+    }
+  }
+  if(length(tempExprs) == 0) NULL else tempExprs
 }
 
 buildIntermNone <- function(code) {
-    return(NULL)
+  return(NULL)
 }

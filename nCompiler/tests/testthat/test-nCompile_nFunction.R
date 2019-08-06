@@ -1,5 +1,22 @@
 context("Testing nFunction compilation")
 
+nc <- nClass(
+  Cpublic = list(
+    go = nFunction(
+      fun = function(x = 'numericVector') {
+        y <- x
+        for(i in 1:10) {
+          y[i] <- 2 * x[i]
+        }
+        return(y)
+      },
+      returnType = 'numericVector'
+    )
+  )
+)
+Cnc <- nCompile_nClass(nc)
+Cnc$new()$go(1:10)
+
 test_that("addScalars double",
 {
     addScalars <- nFunction(
@@ -84,3 +101,17 @@ test_that("add3D double",
     expect_equal(test(x, y), x + 1.1)
     cat('Add tests of argument casting\n')
 })
+
+test_that("nullary function works",
+          {
+            library(nCompiler)
+            say1p1 <- nFunction(
+              fun = function() {
+                returnType(double())
+                ans <- 1.1
+                return(ans)
+              }
+            )
+            test <- nCompile_nFunction(say1p1)
+            expect_equal(test(), 1.1)
+          })

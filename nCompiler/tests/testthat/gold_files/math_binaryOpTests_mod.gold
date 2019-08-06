@@ -18,18 +18,20 @@ using namespace Rcpp;
 #endif
 #include <iostream>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <Rmath.h>
 #include <math.h>
 #include "..h"
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
+// [[Rcpp::depends(RcppParallel)]]
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]
 
-int  nClass_1::nFun_1_NFID_1 ( int ARG1_arg1_, int ARG2_arg2_ )  {
+int  nClass_1::nFun_1_NFID_1 ( int arg1, int arg2 )  {
 int ans;
-flex_(ans) = ARG1_arg1_ % ARG2_arg2_;
+flex_(ans) = arg1 % arg2;
 return(ans);
 }
 
@@ -66,12 +68,13 @@ using namespace Rcpp;
 #endif
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_class_factory.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
 class nClass_1 : public genericInterfaceC<nClass_1> {
 public:
-int  nFun_1_NFID_1 ( int ARG1_arg1_, int ARG2_arg2_ );
+int  nFun_1_NFID_1 ( int arg1, int arg2 );
 };
 
 SEXP  new_nClass_1 (  );

@@ -72,9 +72,7 @@ h6 {
 </style>
 
 
-</head>
 
-<body>
 
 <style type = "text/css">
 .main-container {
@@ -99,6 +97,9 @@ img {
 button.code-folding-btn:focus {
   outline: none;
 }
+summary {
+  display: list-item;
+}
 </style>
 
 
@@ -113,7 +114,6 @@ body {
   padding-top: 56px;
   margin-top: -56px;
 }
-
 .section h2 {
   padding-top: 56px;
   margin-top: -56px;
@@ -133,6 +133,43 @@ body {
 .section h6 {
   padding-top: 56px;
   margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
 }
 </style>
 
@@ -154,18 +191,75 @@ $(document).ready(function () {
 });
 </script>
 
-
-<div class="container-fluid main-container">
-
 <!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
 <script>
 $(document).ready(function () {
   window.buildTabsets("TOC");
 });
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
 </script>
 
 <!-- code folding -->
-
 
 
 
@@ -243,8 +337,6 @@ div.tocify {
 
 .tocify-subheader .tocify-item {
   font-size: 0.90em;
-  padding-left: 25px;
-  text-indent: 0;
 }
 
 .tocify .list-group-item {
@@ -259,6 +351,16 @@ div.tocify {
 }
 
 </style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
 
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row-fluid">
@@ -306,7 +408,7 @@ div.tocify {
 
 <div id="types" class="section level1">
 <h1>Types</h1>
-<p>Types in <code>nCompiler</code> must be static. These include <code>nClass</code> fields and <code>nFunction</code> variables that will be compiled. (A compileable <code>nClass</code> method is an <code>nFunction</code>.) To accomplish static typing, the programmer must declare types of arguments, return objects, and compiled fields (in an <code>nClass</code>). The same variable cannot be used for more than one type.</p>
+<p>Types in <code>nCompiler</code> must be static. These include <code>nClass</code> fields and <code>nFunction</code> variables. To accomplish static typing, the programmer must declare types of arguments, return objects, and Cpublic (compilable) fields in an <code>nClass</code>. The same variable cannot be used for more than one type.</p>
 <div id="numeric-integer-and-logical-types" class="section level2">
 <h2>Numeric, integer and logical types</h2>
 <p>These represent three core types of scalar and hence elements of non-scalars (vectors, matrices, arrays).</p>
@@ -323,7 +425,8 @@ numericArray(nDim = 3)
 <div id="how-to-use-numeric-integer-and-logical-type-declarations" class="section level2">
 <h2>How to use numeric, integer, and logical type declarations</h2>
 <p>Say we want to do compiled vector addition:</p>
-<pre class="r"><code>addVectors &lt;- nFunction(
+<pre class="r"><code>library(nCompiler)
+addVectors &lt;- nFunction(
   fun &lt;- function(x, y) {
     ans &lt;- x + y
     return(ans)
@@ -333,7 +436,8 @@ numericArray(nDim = 3)
   returnType = &#39;numericVector()&#39;
 )
 # We could compile like this:
-# test &lt;- nCompile_nFunction(addVectors)</code></pre>
+# test &lt;- nCompile(addVectors)</code></pre>
+<p>When using character-string type declarations, the <code>()</code> is optional if no arguments are needed. Simply <code>'numericVector'</code> would work above.</p>
 <p>As an alternative, types can be declared directly in code. The following is an equivalent way to write <code>addVectors</code>:</p>
 <pre class="r"><code>addVectors &lt;- nFunction(
   fun &lt;- function(x = numericVector(),
@@ -341,18 +445,17 @@ numericArray(nDim = 3)
     ans &lt;- x + y
     return(ans)
     returnType(numericVector())
-  })
-# We could compile like this:
-# test &lt;- nCompile_nFunction(addVectors)</code></pre>
+  })</code></pre>
+<p>nCompiler also provides backward-compatibility support for nimble-style type declarations such as <code>double(1)</code> for a numeric vector.</p>
 </div>
 <div id="future-plans" class="section level2">
 <h2>Future plans</h2>
 <ul>
 <li>Allow type declarations to establish default argument values.</li>
-<li>Allow type declarations to evaluate to new variables in a function body (similar to <code>nimble</code>).</li>
+<li>Allow type declaration code to work as a regular function (similar to <code>nimble</code>).</li>
 <li>Additional fine-grained control over initialization of values (similar to <code>nimble</code>).</li>
 <li>Support access to R objects using Rcpp.</li>
-<li>Support pass-by-copy and pass-by-reference semantics.</li>
+<li>Finish support for pass-by-copy and pass-by-reference semantics.</li>
 <li>Support sparse matrices.</li>
 </ul>
 </div>
@@ -364,29 +467,52 @@ numericArray(nDim = 3)
 <ol style="list-style-type: decimal">
 <li>Pass by value.</li>
 <li>Pass by reference, with the entire object mutable, including size. This would work for passing an entire object such as a matrix <code>X</code>. <code>X</code> could be resized in the called function.</li>
-<li>Pass by reference, with values but not sizes mutable. This would work for passing an indexed subset of an object, like <code>X[2:5, 3:6]</code>.</li>
+<li>Pass by block reference, which means values but not sizes are mutable. This would work for passing an indexed subset (block) of an object, like <code>X[2:5, 3:6]</code>.</li>
 </ol>
-<p>Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency. However, it is very un-R-like. To achieve consistent uncompiled and compiled behavior for debugging purposes, we can impose non-standard evaluation in R via modification of the function body.</p>
-<p>Currently, a system for passing entire objects by reference in R has been implemented. There are two ways to declare pass-by-reference: the <code>refArgs</code> argument, and wrapping the type declaration in <code>ref()</code>.</p>
+<p>Note that pass-by-reference is desirable for efficient C++, and after all a goal of C++ is efficiency. However, it is very un-R-like. To achieve consistent uncompiled and compiled behavior for debugging purposes, we programmatically modify the R function body.</p>
+<p>Currently, a system for passing entire objects by reference in both uncompiled (R) and compiled (C++) code has been implemented. (It remains to implement pass-by-reference semantics when calling C++ from R.)</p>
+<p>There are two ways to declare pass-by-reference: the <code>refArgs</code> argument, and wrapping the type declaration in <code>ref()</code>.</p>
+<div id="pass-by-reference-in-uncompiled-code" class="section level2">
+<h2>Pass-by-reference in uncompiled code</h2>
+<p>Note that this represents un-R-like behavior and has been implemented to support matching uncompiled and compiled behavior.</p>
 <pre class="r"><code>library(nCompiler)
-foo &lt;- nFunction(
-  fun = function(a = numericScalar()) {
-    a &lt;- a + 1
-    a
+f1 &lt;- nFunction(
+  fun = function(x = &#39;numericVector&#39;,
+                 y = &#39;numericVector&#39;) {
+    x &lt;- x + 1
+    ans &lt;- x + y
+    return(ans)
   },
-  refArgs = &#39;a&#39;, # Make a pass-by-reference
-  returnType = quote(numericScalar())
+  refArgs = &#39;x&#39;,
+  returnType = &#39;numericVector&#39;
 )
-a &lt;- 10
-foo(a)</code></pre>
-<pre><code>## [1] 11</code></pre>
-<pre class="r"><code>a # a was modified by foo, becuase it was passed by reference</code></pre>
-<pre><code>## [1] 11</code></pre>
-<p>Achieving pass-by-reference semantics across the R-C++ boundary will be an issue. For example, when calling a compiled function from R rather than from another compiled function.</p>
+x &lt;- 1:3
+f1(x, 11:13)</code></pre>
+<pre><code>## [1] 13 15 17</code></pre>
+<pre class="r"><code>x # x was modified by f1, because it was passed by reference</code></pre>
+<pre><code>## [1] 2 3 4</code></pre>
+</div>
+<div id="pass-by-reference-in-compiled-code" class="section level2">
+<h2>Pass-by-reference in compiled code</h2>
+<p>To see pass-by-reference work in compiled code, we need a second function to call the first.</p>
+<pre class="r"><code>f2 &lt;- nFunction(
+  fun = function(x = &#39;numericVector&#39;,
+                 y = &#39;numericVector&#39;) {
+    f1(x, y)  # We are not interested in the returned value.
+    return(x) # We are interested in seeing that x was modified.
+  },
+  returnType = &#39;numericVector&#39;
+)
+compiled &lt;- nCompile(f2, f1)
+x &lt;- 1:3
+compiled$f2(x, 11:3) # We see the modified x returned.</code></pre>
+<pre><code>## [1] 2 3 4</code></pre>
+</div>
 <div id="future-plans-1" class="section level2">
 <h2>Future plans</h2>
 <ul>
-<li>Implement these approachs in R and code-generated C++.</li>
+<li>Finish support for pass-by-reference.</li>
+<li>Add support for passing by block references.</li>
 </ul>
 </div>
 </div>

@@ -1,5 +1,4 @@
-## not working
-context("Testing indexing")
+context("Testing indexing (a bunch of correct caught-error messages are expected as part of this test)")
 
 test_that("drop arg variations give correct results, 3D input", {
   nC <- nClass(
@@ -125,26 +124,18 @@ test_that("indexing arg variations give correct results, 3D input", {
 test_that("assignment involving indexing give correct results, 3D input", {
   nC <- nClass(
     Cpublic = list(
-      test1 = nFunction( ## assign scalar to indexed block (does not work)
-        function(x = numericArray(nDim = 3)) {
-          ans <- x
-          ## ans[1:2, 2:3, ] <- 0 ## this fails
-          return(ans)
-          returnType(numericArray(nDim = 3))
-        }
-      ),
-      test2 = nFunction( ## assign scalar to indexed scalar (does not work)
-        function(x = numericArray(nDim = 3)) {
-          ans <- x
-          ans[2, 3, 7] <- 0 ## this fails
-          return(ans)
-          returnType(numericArray(nDim = 3))
-        }
-      ),
-      test3 = nFunction( ## assign indexed block to indexed block
+      test1 = nFunction( ## assign indexed block to indexed block
         function(x = numericArray(nDim = 3)) {
           ans <- x
           ans[2, 2:3, ] <- x[1, 3:4, ]
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
+      ),
+      test2 = nFunction( ## assign scalar to indexed scalar
+        function(x = numericArray(nDim = 3)) {
+          ans <- x
+          ans[2, 3, 7] <- 0
           return(ans)
           returnType(numericArray(nDim = 3))
         }
@@ -484,6 +475,14 @@ test_that("compilation of [ throws errors as expected ", {
       returnType(numericScalar())
     }
   )
+  nf10 = nFunction( ## assign scalar to indexed block (does not work)
+    function(x = numericArray(nDim = 3)) {
+      ans <- x
+      ans[1:2, 2:3, ] <- 0 ## this fails
+      return(ans)
+      returnType(numericArray(nDim = 3))
+    }
+  )
   expect_error(nCompile_nFunction(nf1))
   expect_error(nCompile_nFunction(nf2))
   expect_error(nCompile_nFunction(nf3))
@@ -493,4 +492,5 @@ test_that("compilation of [ throws errors as expected ", {
   expect_error(nCompile_nFunction(nf7))
   expect_error(nCompile_nFunction(nf8))
   expect_error(nCompile_nFunction(nf9))
+  expect_error(nCompile_nFunction(nf10))
 })

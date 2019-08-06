@@ -1,8 +1,8 @@
 nClassLabelMaker <- labelFunctionCreator('nClass')
 
 nClassClass <- R6::R6Class(
-    classname = "nClass",
-    portable = FALSE
+  classname = "nClass",
+  portable = FALSE
 )
 
 #' Create a nClass definition
@@ -50,29 +50,29 @@ nClassClass <- R6::R6Class(
 #'   )
 #' }
 nClass <- function(classname,
-                        Rpublic = list(),
-                        Cpublic = list(),
-                        enableDerivs = character(),
-                        env = parent.frame()) {
-    if(missing(classname))
-        classname <- nClassLabelMaker()
-    internals = NC_InternalsClass$new(Cpublic = Cpublic,
-                                      isOnlyC = length(Rpublic) == 0,
-                                      enableDerivs = enableDerivs)
-    ## We put the internals in 2 places:
-    ## 1. in an environment layer around every instance
-    new_env <- new.env(parent = env)
-    new_env$.NCinternals <- internals
-    result <- R6::R6Class(
-        classname = classname,
-        public = c(Rpublic, Cpublic),
-        portable = FALSE,
-        inherit = nCompiler:::nClassClass,
-        parent_env = new_env
-    )
-    ## 2. in the generator
-    result$.nCompiler <- internals
-    ## NB: We want to avoid having every object
-    ## include the generator, to keep saving light.
-    result
+                   Rpublic = list(),
+                   Cpublic = list(),
+                   enableDerivs = character(),
+                   env = parent.frame()) {
+  if(missing(classname))
+    classname <- nClassLabelMaker()
+  internals = NC_InternalsClass$new(Cpublic = Cpublic,
+                                    isOnlyC = length(Rpublic) == 0,
+                                    enableDerivs = enableDerivs)
+  ## We put the internals in 2 places:
+  ## 1. in an environment layer around every instance
+  new_env <- new.env(parent = env)
+  new_env$.NCinternals <- internals
+  result <- R6::R6Class(
+    classname = classname,
+    public = c(Rpublic, Cpublic),
+    portable = FALSE,
+    inherit = nCompiler:::nClassClass,
+    parent_env = new_env
+  )
+  ## 2. in the generator
+  result$.nCompiler <- internals
+  ## NB: We want to avoid having every object
+  ## include the generator, to keep saving light.
+  result
 }

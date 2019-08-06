@@ -4,6 +4,7 @@
 # We need to manage multiple DSLs somehow.
 # One approach would be to store a label in an environment enclosing all the loadedObjetEnv environments.
 
+#' @export
 serialize_nComp_object <- function(obj) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")
@@ -16,6 +17,7 @@ serialize_nComp_object <- function(obj) {
   obj
 }
 
+#' @export
 deserialize_nComp_object <- function(obj) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")

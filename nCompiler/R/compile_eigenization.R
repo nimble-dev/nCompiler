@@ -1,64 +1,3 @@
-######################################
-## System to label for eigenization ##
-######################################
-
-## exprClasses_labelForEigenization 
-##
-## This works recursively through a parse tree (exprClass object)
-## Any expression in which any piece has a size expression (in its exprClass object) that is not all 1s
-## will be wrapped in eigenize(). The exception is expressions that have indexing.
-##
-## e.g. In Y <- t(A) %*% A
-## The result of t(A) %*% A might be length 1, but the A and t(A) have size expressions != 1, so this whole line becomes
-## eigenize(Y <- t(A) %*% A)
-##
-## On the other hand, Y <- B[3,4] is not wrapped in eigenize() because, even though B might have non-1 size expressions,
-## the exprClass object for `[`(B, 3, 4) has size expressions == list(1, 1)
-##
-## two kinds of intermediates should have already been pulled out:
-## 1. arguments to nFunctions or keywords like return() that ever involve non-scalar-equivalent steps
-## 2. nFunctions that return non-scalar-equivalent and are used within a larger expression
-
-exprClasses_labelForEigenization <- function(code) {
-
-    if(code$isCall) {
-        if(code$name == '{') {
-            for(i in seq_along(code$args)) {
-                exprClasses_labelForEigenization(code$args[[i]])
-            }
-            return(invisible(NULL))
-        }
-        if(code$name == 'for') {
-            exprClasses_labelForEigenization(code$args[[3]])
-            return(invisible(NULL))
-        }
-        if(code$name %in% ifOrWhile) {
-            exprClasses_labelForEigenization(code$args[[2]])
-            if(length(code$args) == 3) exprClasses_labelForEigenization(code$args[[3]])
-            return(invisible(NULL))
-        }
-        if(code$name == 'nimSwitch') {
-            if(length(code$args) > 2)
-                for(iSwitch in 3:length(code$args))
-                    exprClasses_labelForEigenization(code$args[[iSwitch]])
-            return(invisible(NULL))
-        }
-        if(code$name %in% callToSkipInEigenization) return(invisible(NULL))
-
-        if(length(code$implementation$toEigen) > 0) {
-          if(code$implementation$toEigen == 'yes') {
-         ##   if(anyNonScalar(code)) {
-                output <- insertExprClassLayer(code$caller, code$callerArgID, 'eigenize')
-        	return(output)
-         ##   }
-            }
-        }
-    }
-    invisible(NULL)
-}
-
-
-
 ##############
 ## Eigenize ##
 ##############
@@ -72,8 +11,8 @@ eigenizeUseArgs <- c(
 eigenizeEnv <- new.env()
 eigenizeEnv$.debug <- FALSE
 inEigenizeEnv <- function(expr) {
-    expr <- substitute(expr)
-    eval(expr, envir = eigenizeEnv)
+  expr <- substitute(expr)
+  eval(expr, envir = eigenizeEnv)
 }
 
 compile_eigenize <- function(code,
@@ -81,108 +20,109 @@ compile_eigenize <- function(code,
                              auxEnv,
                              ## It is unclear if workEnv will be needed.
                              workEnv = new.env()) {
-    nErrorEnv$stateInfo <- paste0("handling eigenize for ",
-                                       code$name,
-                                       ".")
-    setupExprs <- list()
-    if(code$isLiteral) {
-        return(list())
+  nErrorEnv$stateInfo <- paste0("handling eigenize for ",
+                                code$name,
+                                ".")
+  setupExprs <- list()
+  if(code$isLiteral) {
+    return(list())
+  }
+  if(code$isName) {
+    return(list())
+  }
+  if(code$isCall) {
+    if(code$name == '{') {
+      for(i in seq_along(code$args)) {
+        ## recurse <- FALSE
+        ## if(code$args[[i]]$name == 'eigenize') {
+        ##     removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
+        ##     recurse <- TRUE
+        ## }
+        ## if(code$args[[i]]$name %in%
+        ##    c('for', ifOrWhile, '{', 'nimSwitch'))
+        ##     recurse <- TRUE
+        recurse <- TRUE
+        if(recurse) {
+          setupCalls <- unlist(
+            compile_eigenize(code$args[[i]],
+                             symTab,
+                             auxEnv,
+                             workEnv = new.env())) ## a new line
+          if(length(setupCalls) > 0) {
+            newExpr <- newBracketExpr(args = c(setupCalls,
+                                               code$args[[i]])
+                                      )
+            setArg(code, i, newExpr)
+          }
+        }
+      }
+      return(invisible(NULL))
     }
-    if(code$isName) {
-        return(list())
+    if(code$name == 'for') {
+      compile_eigenize(code$args[[3]], symTab, auxEnv)
+      return(invisible(NULL))
     }
-    if(code$isCall) {
-        if(code$name == '{') {
-            for(i in seq_along(code$args)) {
-                recurse <- FALSE
-                if(code$args[[i]]$name == 'eigenize') {
-                    removeExprClassLayer(code$args[[i]]) ## strip the eigenize()
-                    recurse <- TRUE
-                }
-                if(code$args[[i]]$name %in%
-                   c('for', ifOrWhile, '{', 'nimSwitch'))
-                    recurse <- TRUE
-                if(recurse) {
-                    setupCalls <- unlist(
-                        compile_eigenize(code$args[[i]],
-                                             symTab,
-                                             auxEnv,
-                                             workEnv = new.env())) ## a new line
-                    if(length(setupCalls) > 0) {
-                        newExpr <- newBracketExpr(args = c(setupCalls,
-                                                           code$args[[i]])
-                                                  )
-                        setArg(code, i, newExpr)
-                    }
-                }
-            }
-            return(invisible(NULL))
+    if(code$name %in% ifOrWhile) {
+      compile_eigenize(code$args[[2]], symTab, auxEnv)
+      if(length(code$args)==3)
+        compile_eigenize(code$args[[3]], symTab, auxEnv)
+      return(invisible(NULL))
+    }
+    opInfo <- operatorDefEnv[[code$name]]
+    if(!is.null(opInfo)) {
+      handlingInfo <- opInfo[["eigenImpl"]]
+      if(!is.null(handlingInfo)) {
+        beforeHandler <- handlingInfo[['beforeHandler']]
+        ##eCall <- eigenizeCallsBeforeRecursing[[code$name]] ## previous cases can be absorbed into this.  This allows catching expressions that evaluate to something numeric, like nfVar(nf, 'x')
+        if(!is.null(beforeHandler)) {
+          setupExprs <- c(setupExprs,
+                          eval(call(beforeHandler,
+                                    code,
+                                    symTab,
+                                    auxEnv,
+                                    workEnv,
+                                    handlingInfo),
+                               envir = eigenizeEnv))
+          return(if(length(setupExprs) == 0) NULL else setupExprs)
         }
-        if(code$name == 'for') {
-            compile_eigenize(code$args[[3]], symTab, auxEnv)
-            return(invisible(NULL))
-        }
-        if(code$name %in% ifOrWhile) {
-            compile_eigenize(code$args[[2]], symTab, auxEnv)
-            if(length(code$args)==3)
-                compile_eigenize(code$args[[3]], symTab, auxEnv)
-            return(invisible(NULL))
-        }
-        opInfo <- operatorDefEnv[[code$name]]
-        if(!is.null(opInfo)) {
-            handlingInfo <- opInfo[["eigenImpl"]]
-            if(!is.null(handlingInfo)) {
-                beforeHandler <- handlingInfo[['beforeHandler']]
-                ##eCall <- eigenizeCallsBeforeRecursing[[code$name]] ## previous cases can be absorbed into this.  This allows catching expressions that evaluate to something numeric, like nfVar(nf, 'x')
-                if(!is.null(beforeHandler)) {
-                    setupExprs <- c(setupExprs,
-                                    eval(call(beforeHandler,
-                                              code,
-                                              symTab,
-                                              auxEnv,
-                                              workEnv,
-                                              handlingInfo),
-                                         envir = eigenizeEnv))
-                    return(if(length(setupExprs) == 0) NULL else setupExprs)
-                }
-            }
-        }
-        IsetAliasRisk <- FALSE
-        if(code$name %in% c('t', 'asRow')) {
-            IsetAliasRisk <- workEnv[['aliasRisk']] <- TRUE
-        }
+      }
+    }
+    IsetAliasRisk <- FALSE
+    if(code$name %in% c('t', 'asRow')) {
+      IsetAliasRisk <- workEnv[['aliasRisk']] <- TRUE
+    }
 
 
-        iArgs <- seq_along(code$args)
-        useArgs <- eigenizeUseArgs[[code$name]]
-        if(!is.null(useArgs)) iArgs <- iArgs[-which(!useArgs)] ## this allows iArgs to be longer than useArgs.  if equal length, iArgs[useArgs] would work 
+    iArgs <- seq_along(code$args)
+    useArgs <- eigenizeUseArgs[[code$name]]
+    if(!is.null(useArgs)) iArgs <- iArgs[-which(!useArgs)] ## this allows iArgs to be longer than useArgs.  if equal length, iArgs[useArgs] would work 
+    
+    for(i in iArgs) {
+      if(inherits(code$args[[i]], 'exprClass'))
+        setupExprs <- c(setupExprs,
+                        compile_eigenize(code$args[[i]], symTab, auxEnv, workEnv))
+    }
+    ## finally, call any special handlers
+    if(!is.null(opInfo)) {
+      handlingInfo <- opInfo[["eigenImpl"]]
+      if(!is.null(handlingInfo)) {
+        handler <- handlingInfo[['handler']]
         
-        for(i in iArgs) {
-            if(inherits(code$args[[i]], 'exprClass'))
-                setupExprs <- c(setupExprs,
-                                compile_eigenize(code$args[[i]], symTab, auxEnv, workEnv))
+        if(!is.null(handler)) {
+          setupExprs <- c(setupExprs,
+                          eval(call(handler,
+                                    code,
+                                    symTab,
+                                    auxEnv,
+                                    workEnv,
+                                    handlingInfo),
+                               envir = eigenizeEnv))
         }
-        ## finally, call any special handlers
-        if(!is.null(opInfo)) {
-            handlingInfo <- opInfo[["eigenImpl"]]
-            if(!is.null(handlingInfo)) {
-                handler <- handlingInfo[['handler']]
-                
-                if(!is.null(handler)) {
-                    setupExprs <- c(setupExprs,
-                                    eval(call(handler,
-                                              code,
-                                              symTab,
-                                              auxEnv,
-                                              workEnv,
-                                              handlingInfo),
-                                         envir = eigenizeEnv))
-                }
-            }
-        }
-        if(IsetAliasRisk) workEnv[['aliasRisk']] <- NULL
+      }
     }
-    return(if(length(setupExprs) == 0) NULL else setupExprs)
+    if(IsetAliasRisk) workEnv[['aliasRisk']] <- NULL
+  }
+  return(if(length(setupExprs) == 0) NULL else setupExprs)
 }
 
 inEigenizeEnv(
@@ -191,7 +131,7 @@ inEigenizeEnv(
     for(i in which_args) {
       if(inherits(code$args[[i]], 'exprClass')) {
         if(code$args[[i]]$type$type != resultType)
-            eigenCast(code, i, resultType)
+          eigenCast(code, i, resultType)
       }
     }
     NULL
@@ -244,7 +184,7 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Assign <- function(code, symTab, auxEnv, workEnv,
-                                        handlingInfo) {
+                     handlingInfo) {
     if(isTRUE(get_nOption("use_flexible_assignment"))) {
       insertExprClassLayer(code, 1, 'flex_')
     }
@@ -292,7 +232,7 @@ inEigenizeEnv(
     if (!typeString %in% c('double', 'integer', 'logical'))
       stop(
         paste0("Don't know the correct C++ fundamental type keyword for ",
-              typeString, "."), call. = FALSE
+               typeString, "."), call. = FALSE
       )
     switch(
       typeString,
@@ -339,42 +279,42 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-    makeEigenArgsMatch <- function(code) {
-        if(xor(code$args[[1]]$implementation$eigMatrix,
-               code$args[[2]]$implementation$eigMatrix)) {
-            ## default to matrix:
-            if(!code$args[[1]]$implementation$eigMatrix)
-                eigenizeMatricize(code$args[[1]])
-            else
-                eigenizeMatricize(code$args[[2]])
-        }
+  makeEigenArgsMatch <- function(code) {
+    if(xor(code$args[[1]]$implementation$eigMatrix,
+           code$args[[2]]$implementation$eigMatrix)) {
+      ## default to matrix:
+      if(!code$args[[1]]$implementation$eigMatrix)
+        eigenizeMatricize(code$args[[1]])
+      else
+        eigenizeMatricize(code$args[[2]])
     }
+  }
 )
 
 inEigenizeEnv(
-    ## This hasn't been updated in redesign.
-    eigenizeArrayize <- function(code) {
-        newExpr <- exprClass$new(name = 'eigArray', args = list(code), eigMatrix = FALSE,
-                                 isName = FALSE, isCall = TRUE, isAssign = FALSE,
-                                 nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
-                                 caller = code$caller, callerArgID = code$callerArgID)
-        setArg(code$caller, code$callerArgID, newExpr)
-        setCaller(code, newExpr, 1)
-        invisible(NULL)
-    }
-    )
+  ## This hasn't been updated in redesign.
+  eigenizeArrayize <- function(code) {
+    newExpr <- exprClass$new(name = 'eigArray', args = list(code), eigMatrix = FALSE,
+                             isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                             nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
+                             caller = code$caller, callerArgID = code$callerArgID)
+    setArg(code$caller, code$callerArgID, newExpr)
+    setCaller(code, newExpr, 1)
+    invisible(NULL)
+  }
+)
 
 inEigenizeEnv(
-    ## This hasn't been updated in redesign.
-    eigenizeMatricize <- function(code) {
-        newExpr <- exprClass$new(name = 'eigMatrix', args = list(code), eigMatrix = TRUE,
-                                 isName = FALSE, isCall = TRUE, isAssign = FALSE,
-                                 nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
-                                 caller = code$caller, callerArgID = code$callerArgID)
-        setArg(code$caller, code$callerArgID, newExpr)
-        setCaller(code, newExpr, 1)
-        invisible(NULL)
-    }
+  ## This hasn't been updated in redesign.
+  eigenizeMatricize <- function(code) {
+    newExpr <- exprClass$new(name = 'eigMatrix', args = list(code), eigMatrix = TRUE,
+                             isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                             nDim = code$type$nDim, sizeExprs = code$sizeExprs, type = code$type,
+                             caller = code$caller, callerArgID = code$callerArgID)
+    setArg(code$caller, code$callerArgID, newExpr)
+    setCaller(code, newExpr, 1)
+    invisible(NULL)
+  }
 )
 
 
@@ -445,8 +385,27 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  IndexingBracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  Bracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     n_args <- length(code$args)
+    if (code$type$nDim == 0) {
+      # Either we're indexing a vector and we keep '[' in the AST, or we're
+      # indexing a non-vector object and we use 'index(' instead.
+      # TODO: if (code$args[[1]]$type$nDim == 0)
+      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
+      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
+      ## We see inconsistent C++ compiler behavior around casting a double index
+      ## to a long index, so we do it explicitly.
+      ## Right now we will hard-code the type "long" assuming it is the underlying
+      ## type. We could more generally use EigenType::Index where EigenType is the type
+      ## of the indexed variable, assuming it can't be an expression.
+      if(length(code$args)>1) {
+        for(i in 2:length(code$args)) {
+          insertExprClassLayer(code, i, "static_cast<long>")
+        }
+      }
+      return(invisible(NULL))
+    }
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
     ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
