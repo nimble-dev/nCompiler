@@ -36,7 +36,7 @@ typeDeclarationList <- list(
   integerScalar = function(value) {
     nType("integer", 0)
   },
-  integerVector = function(length = 0,
+  integerVector = function(length = NA,
                            ...) {
     nType("integer", 1, ...)
   },
@@ -47,15 +47,15 @@ typeDeclarationList <- list(
   integerArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("integer", nDim)
+    nType("integer", nDim, ...)
   },
   ## logical types
   logicalScalar = function(value) {
     nType("logical", 0)
   },
-  logicalVector = function(length = 0,
+  logicalVector = function(length = NA,
                            ...) {
-    nType("logical", 1)
+    nType("logical", 1, ...)
   },
   logicalMatrix = function(value,
                            ...) {
@@ -64,7 +64,7 @@ typeDeclarationList <- list(
   logicalArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("logical", nDim)
+    nType("logical", nDim, ...)
   },
   ## numeric types
   numericScalar = function(value) {
@@ -106,15 +106,15 @@ typeDeclarationList <- list(
     nType(type, length(dim))
   },
   ## vector versions with type embedded in keyword
-  nInteger = function(length = 0,
+  nInteger = function(length = NA,
                       ...) {
     nType("integer", 1)
   },
-  nLogical = function(length = 0,
+  nLogical = function(length = NA,
                       ...) {
     nType("logical", 1)
   },
-  nNumeric = function(length = 0,
+  nNumeric = function(length = NA,
                       ...) {
     nType("double", 1)
   },
