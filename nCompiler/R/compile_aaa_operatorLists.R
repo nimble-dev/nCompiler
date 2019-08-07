@@ -323,7 +323,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('exp', 'inverse', 'lgamma', 'log', 'rsqrt', 'sqrt', 'tanh'),
+  c('exp', 'lgamma', 'log', 'rsqrt', 'sqrt', 'tanh'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(

@@ -54,6 +54,20 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
+  c('log', 'rsqrt', 'sqrt'), 'testing', 'input_gen_funs',
+  list(
+    arg1 = function(size, type) {
+      switch(
+        type,
+        "double"  = abs(rnorm(prod(size))), ## no negatives
+        "integer" = rgeom(prod(size), 0.5),
+        "logical" = sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
+      )
+    }
+  )
+)
+
+nCompiler:::updateOperatorDef(
   'squaredNorm',
   'testing',
   val = list(

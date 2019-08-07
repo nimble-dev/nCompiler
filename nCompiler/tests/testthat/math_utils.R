@@ -90,13 +90,6 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
   invisible(NULL)
 }
 
-## every operator needs an R version of the same name in order to call
-## the uncompiled nFunctions
-square <- function(x) x*x
-cube <- function(x) x*x*x
-logit <- function(x) log(x/(1-x))
-rsqrt <- function(x) 1/sqrt(x)
-
 ## op:   operator name
 ##
 make_math_test_params_one_op <- function(op) {

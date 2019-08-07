@@ -156,17 +156,23 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       nFuns_error <- lapply(error_params, gen_nFunction)
       names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
       for (i in seq_along(nFuns_error)) {
-        if (verbose)
-          cat(paste('### Known compilation failure: ',
-                    error_params[[i]]$name, '###\n'))
+        if (verbose) cat(paste0('### Known compilation failure: ',
+                               error_params[[i]]$name, ' ###\n'))
+        nC_error <- gen_nClass(
+          list(
+            Cpublic = nFuns_error[i],
+            enableDerivs = if (isTRUE(error_params[[i]]$enableDerivs))
+              names(nFuns_error)[i] else NULL
+          )
+        )
         test_that(paste0(test_name, " knownFailures fail to compile"), {
-          if (suppress_err_msgs)
+          if (suppress_err_msgs) {
             expect_error(capture.output(
-              nCompile_nFunction(nFuns_error[[i]],
-                                 control = control)))
-          else
-            expect_error(nCompile_nFunction(nFuns_error[[i]],
-                                            control = control))
+              nCompile(nC_error, control = control)))
+            
+          } else {
+            expect_error(nCompile(nC_error, control = control))
+          }
         })
       }
     }
@@ -604,3 +610,5 @@ gen_pos_def_matrix <- function(arg_size) {
   mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
   mat %*% t(mat)
 }
+
+

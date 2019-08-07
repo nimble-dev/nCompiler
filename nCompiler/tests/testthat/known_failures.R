@@ -10,12 +10,42 @@
 ##################
 
 nCompiler:::updateOperatorDef(
-  c('min', 'max', 'all', 'any', 'mean', 'prod', 'exp', 'inverse', 'log',
-    'rsqrt', 'sqrt', 'tanh', 'abs', 'cube', 'square', 'atan', 'logit'),
+  c('min', 'max', 'all', 'any', 'exp', 'log', 'rsqrt', 'sqrt', 'tanh',
+    'cube', 'square'),
   'testing', 'known_failures',
   list(
     math = list(
       compilation = list('numericScalar', 'integerScalar', 'logicalScalar')
+    ),
+    AD = list(
+      compilation = list('numericScalar')
+    )
+  )
+)
+
+nCompiler:::updateOperatorDef(
+  c('abs'),
+  'testing', 'known_failures',
+  list(
+    math = list(
+      compilation = list('numericScalar', 'integerScalar', 'logicalScalar')
+    ),
+    AD = list(
+      compilation = list('numericScalar'),
+      runtime = list('numericVector(7)')
+    )
+  )
+)
+
+nCompiler:::updateOperatorDef(
+  c('atan', 'logit', 'mean', 'prod'),
+  'testing', 'known_failures',
+  list(
+    math = list(
+      compilation = list('numericScalar', 'integerScalar', 'logicalScalar')
+    ),
+    AD = list(
+      compilation = list('numericScalar', 'numericVector(7)')
     )
   )
 )
@@ -23,6 +53,44 @@ nCompiler:::updateOperatorDef(
 ###################
 ## binary operators
 ###################
+
+nCompiler:::updateOperatorDef(
+  c('-'),
+  'testing', 'known_failures',
+  list(
+    AD = list(
+      compilation = list(
+        ## This case fails to compile in an nClass when AD is on, but does
+        ## compile as an nFunction.
+        c('numericVector(7)', 'numericScalar')
+      )
+    )
+  )
+)
+
+nCompiler:::updateOperatorDef(
+  c('+'),
+  'testing', 'known_failures',
+  list(
+    AD = list(
+      runtime = list(
+        c('numericVector(7)', 'numericScalar')
+      )
+    )
+  )
+)
+
+nCompiler:::updateOperatorDef(
+  c('/'),
+  'testing', 'known_failures',
+  list(
+    AD = list(
+      runtime = list(
+        c('numericVector(7)', 'numericVector(7)')
+      )
+    )
+  )
+)
 
 nCompiler:::updateOperatorDef(
   c('pmin', 'pmax'),

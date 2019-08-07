@@ -120,26 +120,26 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
       cat("## Calling compiled version of nClass method '",
           nFun_i, "'\n", sep = '')
 
-    Cderivs <- lapply(param$wrts, function(wrt) {
-      derivs_obj <- nCompiler:::nDerivs_full(
-        fxnCall = as.call(c(substitute(
-          nC_obj$NFUN,
-          list(NFUN = nFun_i)
-        ), input)), wrt = wrt, NC = nC
-      )
-      list(
-        value = derivs_obj$value,
-        gradient = derivs_obj$gradient,
-        hessian = derivs_obj$hessian
-      )
-    })
+    test_that("Compiled and uncompiled output matches", {
+      wrap_if_true(param$runtime_failure, expect_error, {
 
-    for (wrt in names(param$wrts)) {
-      if (verbose)
-        cat("## Testing equality of outputs for ", wrt, '\n')
-      test_that(
-        paste0("Compiled and uncompiled output matches for ", wrt),
-        {
+        Cderivs <- lapply(param$wrts, function(wrt) {
+          derivs_obj <- nCompiler:::nDerivs_full(
+            fxnCall = as.call(c(substitute(
+              nC_obj$NFUN,
+              list(NFUN = nFun_i)
+            ), input)), wrt = wrt, NC = nC
+          )
+          list(
+            value = derivs_obj$value,
+            gradient = derivs_obj$gradient,
+            hessian = derivs_obj$hessian
+          )
+        })
+
+        for (wrt in names(param$wrts)) {
+          if (verbose)
+            cat("## Testing equality of outputs for ", wrt, '\n')
           expect_equal( ## check values
             as.vector(Cderivs[[wrt]]$value),
             as.vector(Rderivs[[wrt]]$value),
@@ -154,11 +154,11 @@ test_AD <- function(base_list, verbose = nOptions('verbose'),
             as.vector(Cderivs[[wrt]]$hessian),
             as.vector(Rderivs[[wrt]]$hessian),
             info = paste0("hessians with ", wrt),
-            tol = 1e-07 ## known issue with numDeriv output
+            tol = 1e-05 ## known issue with numDeriv hessian accuracy
           )
         }
-      )
-    }
+      })
+    })
 
     ## TODO: test hessian and distribution fun's log arg
     if (FALSE) {
