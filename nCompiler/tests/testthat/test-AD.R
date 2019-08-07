@@ -26,7 +26,7 @@ test_that("compileNimbleClass works (with AD for a scalar)", {
   obj <- ans()
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   expect_equal(method(obj, "Cfoo")(1.32), 1.5*1.32 + 1)
-  derivs <- method(obj, "Cfoo_derivs_")(1.32, c(0, 1))
+  derivs <- nDerivs(method(obj, "Cfoo")(1.32), NC = nc1)
   expect_true(nCompiler:::is.loadedObjectEnv(derivs))
   expect_equal(value(derivs, "gradient"), array(1.5, dim = c(1, 1)))
 })
@@ -56,7 +56,7 @@ test_that("compileNimbleClass works (with AD for a vector)", {
   obj <- ans()
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   expect_equal(method(obj, "Cfoo")(c(1.48, 1.52)), array(1.5*c(1.48, 1.52), dim = 2))
-  derivs <- method(obj, "Cfoo_derivs_")(c(1.48, 1.52), c(0, 1))
+  derivs <- nDerivs(method(obj, "Cfoo")(c(1.48, 1.52)), NC = nc1)
   expect_true(nCompiler:::is.loadedObjectEnv(derivs))
   expect_equal(value(derivs, "gradient"), diag(c(1.5, 1.5)))
 })
@@ -87,10 +87,10 @@ test_that("AD with indexing works (with AD for a matrix)", {
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   input <- c(0.9861515, 0.3756302, 1.0109309, 0.5898856, 0.3941390, 1.1837561, -2.2858289)
   expect_equal(method(obj, "Cfoo")(input), array(1.5*exp(input[2:5])^2, dim = 4))
-  derivs <- method(obj, "Cfoo_derivs_")(input, c(0, 1))
+  derivs <- nDerivs(method(obj, "Cfoo")(input), NC = nc1)
   expect_true(nCompiler:::is.loadedObjectEnv(derivs))
-  gradient <- matrix(0, nrow = 7, ncol = 4)
-  gradient[2:5, ] <- diag(3*exp(input[2:5])^2)
+  gradient <- matrix(0, nrow = 4, ncol = 7)
+  gradient[, 2:5] <- diag(3*exp(input[2:5])^2)
   expect_equal(value(derivs, "gradient"), gradient)
 })
 
@@ -133,7 +133,7 @@ test_AD <- function(param, info = '', size = 3,
         fun_i <- param$enableDerivs[i]
         nF_i <- nC$public_methods[[fun_i]]
         expect_equal(method(obj, fun_i)(args[i]), nF_i(args[i]))
-        derivs <- method(obj, paste0(fun_i, "_derivs_"))(args[i], c(0, 1))
+        derivs <- nDerivs(method(obj, paste0(fun_i, "_derivs_"))(args[i]), NC = nC)
         expect_true(nCompiler:::is.loadedObjectEnv(derivs))
         value(derivs, "gradient")
         ## expect_equal(value(derivs, "gradient"), )
@@ -222,4 +222,4 @@ modifyOnMatch(
   'knownFailure', '.* compiles'
 )
 
-test_batch(test_AD, ADopTests)
+## test_batch(test_AD, ADopTests)

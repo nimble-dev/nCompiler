@@ -9,7 +9,8 @@ requirements <- c(
     'inline',
     'R6',
     'pkgKitten',  ## needed for test-distributions.R
-    'Rcereal'
+    'Rcereal',
+    'numDeriv'
     )
 
 for (package in requirements) {

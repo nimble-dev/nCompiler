@@ -23,6 +23,7 @@ using namespace Rcpp;
 #endif
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_class_factory.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
@@ -59,6 +60,7 @@ using namespace Rcpp;
 #endif
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
+#include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_class_factory.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
@@ -66,6 +68,7 @@ class nC_derivClass : public genericInterfaceC<nC_derivClass> {
 public:
   Eigen::Tensor<double, 1> value;
   Eigen::Tensor<double, 2> gradient;
+  Eigen::Tensor<double, 3> hessian;
 };
 
 SEXP  new_nC_derivClass (  );

@@ -17,7 +17,8 @@ nC_derivClass <- nClass(
   classname = "nC_derivClass",
   Cpublic = list(
       value = 'numericVector',
-      gradient = 'numericMatrix'
+      gradient = 'numericMatrix',
+      hessian = 'numericArray(nDim = 3)'
   )
 )
 
