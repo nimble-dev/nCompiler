@@ -9,7 +9,7 @@ struct rep_impl {
   static Eigen::Tensor<ScalarType, 1> maybe_reshape(DerivedOut x) {
     Eigen::Tensor<ScalarType, 1> reshaped;
     if (x.NumDimensions != 1) {
-      Eigen::array<int, 1> one_dim({x.size()});
+      Eigen::array<int, 1> one_dim({static_cast<int>(x.size())});
       reshaped = x.reshape(one_dim);
     } else {
       reshaped = x;
