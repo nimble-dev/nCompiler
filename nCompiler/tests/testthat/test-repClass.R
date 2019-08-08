@@ -1,4 +1,6 @@
+## not working
 context("repClass")
+
 library(Rcpp)
 test_that("basic uses of repClass work", {
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'repClass_tests.cpp'), package = 'nCompiler')

@@ -85,6 +85,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('rep'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Rep'),
+    eigenImpl = list(
+      handler = 'Rep')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(

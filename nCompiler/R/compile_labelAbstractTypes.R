@@ -430,6 +430,15 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  Rep <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    ## TODO: more sophisticated nDim handling
+    code$type <- symbolBasic$new(nDim = 1, type = code$args[[1]]$type$type)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Colon <- function(code, symTab, auxEnv, handlingInfo, recurse = TRUE) {
     inserts <-
       if (recurse)

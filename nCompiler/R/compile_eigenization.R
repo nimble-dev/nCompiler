@@ -456,3 +456,65 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  Rep <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## TODO: this assumes proper arg ordering and naming
+    ## TODO: handle zero-dim first arg
+    arg_names <- names(code$args)
+    if (length(code$arg) > 3) {
+      ## the second arg is 'times' which is ignored whenever 'length.out' is
+      ## included
+      removeArg(code, 2)
+      ## any other args are unused and can be removed
+      code$args <- code$args[1:3]
+      code$name <- 'repLenEach'
+    } else if (length(code$args) == 3) {
+      if (!'each' %in% arg_names) {
+        ## the second arg must be 'times' and the third is 'length.out'
+        removeArg(code, 2)
+        code$name <- 'repLen'
+      } else {
+        if ('length.out' %in% arg_names)
+          code$name <- 'repLenEach'
+        else
+          code$name <- 'repTimesEach'
+      }
+    } else if (length(code$args) == 2) {
+      if ('length.out' %in% arg_names)
+        code$name <- 'repLen'
+      else if ('each' %in% arg_names)
+        code$name <- 'repEach'
+      else
+        code$name <- 'repTimes'
+    } else {
+      ## If length(code$args) == 1, this takes 'rep' out of the AST and
+      ## replaces it with its one arg. If length(code$args) == 1, 'rep' is
+      ## replaced with NULL which is exactly what the call rep() returns.
+      removeExprClassLayer(code)
+      return(invisible(NULL))
+    }
+    ## use the '*Eval' version of the C++ implementation to avoid costly
+    ## repetition when reshaping or broadcasting
+    if (!code$caller$name %in% assignmentOperators) {
+      code$name <- paste0(code$name, 'Eval')
+    }
+
+    dim_string <- switch(
+      code$args[[1]]$type$nDim + 1,
+      'Not Implemented!', ## use broadcast() directly
+      1,
+      2,
+      3,
+      '_'
+    )
+    type_string <- switch(
+      code$args[[1]]$type$type,
+      'double' = 'd',
+      'integer' = 'i',
+      'logical' = 'b'
+    )
+    code$name <- paste0(code$name, dim_string, type_string)
+    invisible(NULL)
+  }
+)
