@@ -9,7 +9,7 @@ struct rep_impl {
   static Eigen::Tensor<ScalarType, 1> maybe_reshape(DerivedOut x) {
     Eigen::Tensor<ScalarType, 1> reshaped;
     if (x.NumDimensions != 1) {
-      Eigen::array<int, 1> one_dim({static_cast<int>(x.size())});
+      Eigen::array<int, 1> one_dim{{static_cast<int>(x.size())}};
       reshaped = x.reshape(one_dim);
     } else {
       reshaped = x;
@@ -18,14 +18,14 @@ struct rep_impl {
   }
 
   static Eigen::Tensor<ScalarType, 1> repTimes(DerivedOut x, int times) {
-    Eigen::array<int, 1> bcast({times});
+    Eigen::array<int, 1> bcast{{times}};
     // auto here hopefully avoids materializing x too early?
     auto reshaped = maybe_reshape(x);
     return(reshaped.broadcast(bcast));
   }
 
   static Eigen::Tensor<ScalarType, 1> repTimesEval(DerivedOut x, int times) {
-    Eigen::array<int, 1> bcast({times});
+    Eigen::array<int, 1> bcast{{times}};
     auto reshaped = maybe_reshape(x);
     return(reshaped.eval().broadcast(bcast));
   }
@@ -38,7 +38,7 @@ struct rep_impl {
       return(reshaped.slice(offset, extent));
     } else {
       int times = ceil(static_cast<double>(length_out) / x.size());
-      Eigen::array<int, 1> bcast({times});
+      Eigen::array<int, 1> bcast{{times}};
       return(reshaped.broadcast(bcast).slice(offset, extent));
     }
   }
@@ -51,7 +51,7 @@ struct rep_impl {
       return(reshaped.slice(offset, extent));
     } else {
       int times = ceil(static_cast<double>(length_out) / x.size());
-      Eigen::array<int, 1> bcast({times});
+      Eigen::array<int, 1> bcast{{times}};
       return(reshaped.eval().broadcast(bcast).slice(offset, extent));
     }
   }
