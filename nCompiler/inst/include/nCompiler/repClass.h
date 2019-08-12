@@ -5,11 +5,12 @@ template <typename DerivedOut>
 struct rep_impl {
 
   typedef typename DerivedOut::Scalar ScalarType;
+  typedef typename DerivedOut::Index IndexType;
 
   static Eigen::Tensor<ScalarType, 1> maybe_reshape(DerivedOut x) {
     Eigen::Tensor<ScalarType, 1> reshaped;
     if (x.NumDimensions != 1) {
-      Eigen::array<int, 1> one_dim{{static_cast<int>(x.size())}};
+      Eigen::array<IndexType, 1> one_dim{{static_cast<IndexType>(x.size())}};
       reshaped = x.reshape(one_dim);
     } else {
       reshaped = x;
@@ -18,40 +19,40 @@ struct rep_impl {
   }
 
   static Eigen::Tensor<ScalarType, 1> repTimes(DerivedOut x, int times) {
-    Eigen::array<int, 1> bcast{{times}};
+    Eigen::array<IndexType, 1> bcast{{times}};
     // auto here hopefully avoids materializing x too early?
     auto reshaped = maybe_reshape(x);
     return(reshaped.broadcast(bcast));
   }
 
   static Eigen::Tensor<ScalarType, 1> repTimesEval(DerivedOut x, int times) {
-    Eigen::array<int, 1> bcast{{times}};
+    Eigen::array<IndexType, 1> bcast{{times}};
     auto reshaped = maybe_reshape(x);
     return(reshaped.eval().broadcast(bcast));
   }
 
   static Eigen::Tensor<ScalarType, 1> repLen(DerivedOut x, int length_out) {
-    Eigen::array<int, 1> offset = {0};
-    Eigen::array<int, 1> extent = {length_out};
+    Eigen::array<IndexType, 1> offset = {0};
+    Eigen::array<IndexType, 1> extent = {length_out};
     auto reshaped = maybe_reshape(x);
     if (length_out < x.size()) {
       return(reshaped.slice(offset, extent));
     } else {
       int times = ceil(static_cast<double>(length_out) / x.size());
-      Eigen::array<int, 1> bcast{{times}};
+      Eigen::array<IndexType, 1> bcast{{times}};
       return(reshaped.broadcast(bcast).slice(offset, extent));
     }
   }
 
   static Eigen::Tensor<ScalarType, 1> repLenEval(DerivedOut x, int length_out) {
-    Eigen::array<int, 1> offset = {0};
-    Eigen::array<int, 1> extent = {length_out};
+    Eigen::array<IndexType, 1> offset = {0};
+    Eigen::array<IndexType, 1> extent = {length_out};
     auto reshaped = maybe_reshape(x);
     if (length_out < x.size()) {
       return(reshaped.slice(offset, extent));
     } else {
       int times = ceil(static_cast<double>(length_out) / x.size());
-      Eigen::array<int, 1> bcast{{times}};
+      Eigen::array<IndexType, 1> bcast{{times}};
       return(reshaped.eval().broadcast(bcast).slice(offset, extent));
     }
   }
