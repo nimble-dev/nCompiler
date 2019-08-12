@@ -456,3 +456,12 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  Which <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## the labelAbstractTypes handler Which guarantees that 'code' has one
+    ## logical arg
+    code$name <- paste0('setWhich', code$args[[1]]$type$nDim)
+    invisible(NULL)
+  }
+)

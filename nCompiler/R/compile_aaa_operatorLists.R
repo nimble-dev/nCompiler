@@ -57,6 +57,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('which'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Which'),
+    eigenImpl = list(
+      handler = 'Which')
+  )
+)
+
+assignOperatorDef(
   c('for'),
   list(
     labelAbstractTypes = list(
