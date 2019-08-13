@@ -196,7 +196,7 @@ insertExprClassLayer <- function(code, argID, funName, isName = FALSE, isCall = 
 }
 
 insertIndexingBracket <- function(code, argID, index) {
-  insertExprClassLayer(code, argID, '[')
+  insertExprClassLayer(code, argID, 'index[')
   setArg(code$args[[argID]], 2, index)
 }
 
@@ -282,6 +282,29 @@ setArg <- function(expr, ID, value, add = FALSE) {
     }
     setCaller(value, expr, ID)
   }
+  invisible(value)
+}
+
+removeArg <- function(expr, ID) {
+  origNumArgs <- length(expr$args)
+  if(ID > origNumArgs)
+    stop(exprClassProcessingErrorMsg(
+      expr,
+      paste0(
+        "Attempted to remove an argument with ID = ", ID, " but that is too large. ",
+        "There are only ", origNumArgs, " arguments.")),
+      call. = FALSE)
+  value <- expr$args[[ID]]
+  argsToShift <- origNumArgs - ID
+  if(argsToShift) {
+    for(i in (ID + 1):origNumArgs) {
+      setArg(expr, i - 1, expr$args[[i]])
+      names(expr$args)[i-1] <- names(expr$args)[i]
+    }
+  }
+  ## Either the arg to remove was the last arg in the AST or the last arg is
+  ## now duplicated, appearing in the last two positions.
+  expr$args[[origNumArgs]] <- NULL
   invisible(value)
 }
 
