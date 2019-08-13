@@ -161,13 +161,14 @@ inLabelAbstractTypesEnv(
   setReturnType <- function(handlingInfo, argType) {
     returnTypeCode <- handlingInfo[['returnTypeCode']]
     if(is.null(returnTypeCode)) return('double')
-    switch(returnTypeCode,
-           'double', ##1
-           'integer', ##2
-           'logical', ##3
-           argType, ##4
-           if(argType == 'logical') 'integer' else argType ##5
-           )
+    switch(
+      returnTypeCode,
+      'double', ##1
+      'integer', ##2
+      'logical', ##3
+      argType, ##4
+      if(argType == 'logical') 'integer' else argType ##5
+    )
   }
 )
 
