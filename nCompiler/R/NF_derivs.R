@@ -325,7 +325,7 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName, dropArgs = NA) {
 }
 
 calcDerivs_internal <- function(func, X, order, resultIndices ) {
-  if(!require('numDeriv'))
+  if(!require('numDeriv', quietly = TRUE))
     stop("The 'numDeriv' package must be installed to use derivatives in
          uncompiled nFunctions.")
 

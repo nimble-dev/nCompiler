@@ -4,7 +4,8 @@
 \alias{nDerivs}
 \title{nFunction Derivatives}
 \usage{
-nDerivs(nFxn = NA, order = c(0, 1, 2), dropArgs = NA, wrt = NULL)
+nDerivs(nFxn = NA, order = c(0, 1, 2), dropArgs = NA, wrt = NULL,
+  NC = NULL)
 }
 \arguments{
 \item{nFxn}{a call to a compiled or uncompiled \code{nFunction} method with
@@ -17,22 +18,27 @@ be returned respectively.  Defaults to \code{c(0, 1, 2)}.}
 \item{dropArgs}{a vector of integers specifying any arguments to \code{nFxn}
 that derivatives should not be taken with respect to.  For example,
 \code{dropArgs = 2} means that the second argument to \code{nFxn} will not
-have derivatives taken with respect to it.  Defaults to an empty vector.}
+have derivatives taken with respect to it.  Defaults to an empty vector
+and is ignored if \code{wrt} is provided.}
 
-\item{wrt}{a character vector of either: names of function arguments to take
-derivatives with respect to.  If left empty, derivatives will be taken
-with respect to all arguments to \code{nFxn}.}
+\item{wrt}{a vector of either: names of function arguments to take
+derivatives with respect to or integers for the positions in the flattened
+input vector of the elements with respect to which to differentiate.  If
+left empty, derivatives will be taken with respect to all arguments to
+\code{nFxn}.}
 
-\item{silent}{a logical argument that determines whether warnings will be
-displayed.}
+\item{NC}{An nClass generator (returned from a call to \code{\link{nClass}})
+which has a method corresponding to the one found in \code{nFxn}.  Only
+required when \code{nFxn} is a compiled method call from a generic or full
+interface.}
 }
 \value{
-a \code{nimbleList} with elements \code{value}, \code{jacobian}, and
+a \code{list} with elements \code{value}, \code{gradient}, and
   \code{hessian}.
 }
 \description{
-EXPERIMENTAL Computes the value, Jacobian, and Hessian of a given  
-\code{nFunction} method.
+Computes the value, Jacobian, and Hessian of a given  
+\code{nFunction} or compiled \code{nClass} method.
 }
 \details{
 Derivatives for uncompiled nFunctions are calculated using the
