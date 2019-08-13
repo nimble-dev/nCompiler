@@ -26,7 +26,7 @@ for (util_file in utils) source(util_file)
 
 ## Gold file testing takes approx. 1 minute.
 
-WRITE_GOLD_FILES <- TRUE ## ignored if FULL_TESTING is TRUE
+WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
 FULL_TESTING <- FALSE
 
 ## FULL_TESTING_GRANULARITY levels:
