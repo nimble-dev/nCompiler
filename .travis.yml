@@ -22,4 +22,4 @@ install:
   - Rscript -e 'library(nCompiler); setup_nCompLocal()'
 
 script:
-  - ./run_tests.R repClass
+  - ./run_tests.R
