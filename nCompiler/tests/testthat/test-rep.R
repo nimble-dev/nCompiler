@@ -31,13 +31,13 @@ test_that("Basic rep usage works", {
           returnType(integerVector)
         }
       ),
-      nf5 = nFunction(
-        function(x = numericVector, length.out = numericScalar) {
-          ans <- 1 + rep(x, length.out = length.out)
-          return(ans)
-          returnType(numericVector)
-        }
-      ),
+      ## nf5 = nFunction(
+      ##   function(x = numericVector, length.out = numericScalar) {
+      ##     ans <- 1 + rep(exp(x), length.out = length.out)
+      ##     return(ans)
+      ##     returnType(numericVector)
+      ##   }
+      ## ),
       nf6 = nFunction(
         function(x = numericVector, times = numericScalar, length.out = numericScalar) {
           ans <- rep(x, times, length.out)
@@ -64,8 +64,8 @@ test_that("Basic rep usage works", {
   x3 <- array(1:24, c(2, 3, 4))
   expect_equivalent(nc_obj$nf4(x3, 13), rep(x3, length.out = 13))
   expect_equivalent(nc_obj$nf4(x3, 57), rep(x3, length.out = 57))
-  expect_equivalent(nc_obj$nf5(1:7, 3), 1 + rep(1:7, length.out = 3))
-  expect_equivalent(nc_obj$nf5(1:7, 24), 1 + rep(1:7, length.out = 24))
+  ## expect_equivalent(nc_obj$nf5(1:7, 3), 1 + rep(max(1:7), length.out = 3))
+  ## expect_equivalent(nc_obj$nf5(12:7, 24), 1 + rep(max(12:7), length.out = 24))
   expect_equivalent(nc_obj$nf6(7:1, 20, 9), rep(7:1, 20, 9))
   expect_equivalent(nc_obj$nf6(7:1, 20, 9), rep(7:1, 20, 9))
   expect_equivalent(nc_obj$nf7(x2, 3), exp(rep(x2, 3)))

@@ -494,27 +494,11 @@ inEigenizeEnv(
       removeExprClassLayer(code)
       return(invisible(NULL))
     }
-    ## use the '*Eval' version of the C++ implementation to avoid costly
-    ## repetition when reshaping or broadcasting
-    if (!code$caller$name %in% assignmentOperators) {
-      code$name <- paste0(code$name, 'Eval')
-    }
-
-    dim_string <- switch(
-      code$args[[1]]$type$nDim + 1,
-      'Not Implemented!', ## use broadcast() directly
-      1,
-      2,
-      3,
-      '_'
-    )
-    type_string <- switch(
-      code$args[[1]]$type$type,
-      'double' = 'd',
-      'integer' = 'i',
-      'logical' = 'b'
-    )
-    code$name <- paste0(code$name, dim_string, type_string)
+    ## In C++, eval = true when the call to rep is part of a larger expression
+    ## and rep's arg is a call to avoid costly repeated computation when
+    ## reshaping and broadcasting the tensor.
+    if (!code$caller$name %in% assignmentOperators && code$args[[1]]$isCall)
+      setArg(code, length(code$args) + 1, literalLogicalExpr())
     invisible(NULL)
   }
 )
