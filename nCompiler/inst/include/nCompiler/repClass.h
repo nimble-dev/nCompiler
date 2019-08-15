@@ -84,12 +84,12 @@ struct rep_impl<TensorIn, false> {
 
 template<typename TensorIn>
 Eigen::Tensor<typename TensorIn::Scalar, 1> repTimes(const TensorIn& x, unsigned int times, bool eval = false) {
-  return rep_impl<TensorIn>::repTimes(x, times);
+  return rep_impl<TensorIn>::repTimes(x, times, eval);
 }
 
 template<typename TensorIn>
 Eigen::Tensor<typename TensorIn::Scalar, 1> repLen(const TensorIn& x, unsigned int length_out, bool eval = false) {
-  return rep_impl<TensorIn>::repLen(x, length_out);
+  return rep_impl<TensorIn>::repLen(x, length_out, eval);
 }
 
 // TODO: implement repEach
