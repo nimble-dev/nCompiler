@@ -806,6 +806,16 @@ inLabelAbstractTypesEnv(
     }
 )
 
+inLabelAbstractTypesEnv(
+  ## recurse and set code type via setReturnType()
+  VectorReturnType <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    code$type <- symbolBasic$new(nDim = 1, type = returnType)
+    invisible(inserts)
+  }
+)
+
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing
