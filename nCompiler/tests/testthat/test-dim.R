@@ -31,4 +31,4 @@ test_that("Basic dim usage works", {
   expect_equivalent(nc_obj$nf1(1:7), 7)
   expect_equivalent(nc_obj$nf2(matrix(1:10, 5)), c(5, 2))
   expect_equivalent(nc_obj$nf3(array(1:12, dim = c(2, 3, 2))), c(2, 3, 2))
-}
+})
