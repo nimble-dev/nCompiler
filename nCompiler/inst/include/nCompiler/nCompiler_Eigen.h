@@ -9,6 +9,7 @@
 #include <memory>
 #include "tensorFlex.h"
 #include "StridedTensorMap.h"
+#include "dim.h"
 // Exporters go from SEXP to internal type
 
 // This could be organized in a better place, but it is here for now:
