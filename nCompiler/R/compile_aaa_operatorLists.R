@@ -357,9 +357,12 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('atan', 'logit'),
+  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
+    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
+    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
+    'loggam', 'log1p', 'lfactorial', 'logfact'),
   list(
-    help = 'Example help entry',
+    help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
@@ -372,6 +375,15 @@ assignOperatorDef(
     )
   )
 )
+updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
+updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
+updateOperatorDef('ceiling', 'eigenImpl', 'nameReplacement', 'ceil')
+updateOperatorDef('round', 'eigenImpl', 'nameReplacement', 'nRound')
+updateOperatorDef('trunc', 'eigenImpl', 'nameReplacement', 'nTrunc')
+updateOperatorDef('gamma', 'eigenImpl', 'nameReplacement', 'gammafn')
+updateOperatorDef('lgamma', 'eigenImpl', 'nameReplacement', 'lgammafn')
+updateOperatorDef('loggam', 'eigenImpl', 'nameReplacement', 'lgammafn')
+updateOperatorDef('logfact', 'eigenImpl', 'nameReplacement', 'lfactorial')
 
 ## binaryMidLogicalOperatorsComparison
 assignOperatorDef(
@@ -488,14 +500,14 @@ specificCallReplacements <- list(
     is.nan.vec = 'ISNAN',
     is.na = 'ISNA',
     is.na.vec = 'ISNA',
-    lgamma = 'lgammafn',
-    logfact = 'lfactorial',
-    loggam = 'lgammafn',
-    gamma = 'gammafn',
-    expit = 'ilogit',
-    phi = 'iprobit',
-    ceiling = 'ceil',
-    trunc = 'ftrunc',
+#    lgamma = 'lgammafn',
+#    logfact = 'lfactorial',
+#    loggam = 'lgammafn',
+#    gamma = 'gammafn',
+#    expit = 'ilogit',
+#    phi = 'iprobit',
+#    ceiling = 'ceil',
+#    trunc = 'ftrunc',
     nDim = 'dim',
     checkInterrupt = 'R_CheckUserInterrupt')
 

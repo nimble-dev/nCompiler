@@ -193,11 +193,11 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  convertToCppName <- function(code, handlingInfo) {
-    cppName <- handlingInfo$cppName
-    if (!is.null(cppName)) {
+  replaceCodeName <- function(code, handlingInfo) {
+    replacement <- handlingInfo$nameReplacement
+    if (!is.null(replacement)) {
       ## replace the name in the AST
-      code$name <- cppName
+      code$name <- replacement
     }
   }
 )
@@ -248,6 +248,8 @@ inEigenizeEnv(
     promoteTypes(code)
     inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
     returnType <- scalarTypeToCppType(code$type$type)
+    ## replace the operator name with the equivalent C++ method name if needed
+    replaceCodeName(code, handlingInfo)    
     convertToMethod(code, handlingInfo)
     ## the operator name becomes the argument to std::ptr_fun
     newName <- paste0('std::ptr_fun<', inputType, ', ',
