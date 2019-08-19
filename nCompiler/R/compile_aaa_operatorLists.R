@@ -472,6 +472,19 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dim'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType',
+      returnTypeCode = returnTypeCodes$integer
+    ),
+    eigenImpl = list(
+      handler = 'Dim'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(

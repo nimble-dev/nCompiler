@@ -456,3 +456,15 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  Dim <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if(code$args[[1]]$type$nDim == 0)
+      stop(
+        exprClassProcessingErrorMsg(
+          code, 'dim() cannot take a scalar as its argument.'
+        ), call. = FALSE
+      )
+    invisible(NULL)
+  }
+)
