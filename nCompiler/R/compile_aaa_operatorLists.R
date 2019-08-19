@@ -289,7 +289,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('mean', 'prod', 'squaredNorm'),
+  c('mean', 'prod', 'squaredNorm', 'sum'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(

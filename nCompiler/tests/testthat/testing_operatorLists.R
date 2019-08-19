@@ -42,8 +42,8 @@ nCompiler:::updateOperatorDef(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
-    'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'exp', 'log', 'rsqrt',
-    'sqrt', 'abs', 'cube', 'square'),
+    'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum', 'exp', 'log',
+    'rsqrt', 'sqrt', 'abs', 'cube', 'square'),
   'testing',
   val = list(
     ## derivatives currently only available for scalar and vector inputs  
@@ -83,7 +83,7 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('mean', 'prod', 'squaredNorm'),
+  c('mean', 'prod', 'squaredNorm', 'sum'),
   'testing', 'reductionOp', TRUE
 )
 
