@@ -16,6 +16,7 @@
 
 #include "typedefs.h"
 #include "recyclingRule.h"
+#include "tensorCreation.h"
 #include "nCompiler_Rcpp.h"
 #include "cWiseUnary_external.h"
 

@@ -1,0 +1,9 @@
+context("tensorCreation")
+library(Rcpp)
+test_that("basic tensor creation works", {
+  cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
+  test <- sourceCpp(cppfile)
+  expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
+  expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
+  expect_equal(tensorCreation3(1:12), array(1:12, c(2, 3, 2)))
+})
