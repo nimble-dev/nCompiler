@@ -8,8 +8,30 @@ struct create_tensor;
 template <typename ScalarTypeOut, int NumDimensionsOut, typename DerivedIn, typename... Dim>
 struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, true, Dim...> {
 
-  static Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> createTensor(const DerivedIn& value,  Dim... dim) {
-    Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> ans(dim...);
+  typedef Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> TensorOut;
+  typedef typename TensorOut::Index IndexType;
+
+  static TensorOut createTensor(const DerivedIn& value,  Dim... dim) {
+    TensorOut ans(dim...);
+    ans.setConstant(value);
+    return(ans);
+  }
+
+};
+
+// ScalarValue = true and Dim is Eigen::Tensor<int, 1>
+template <typename ScalarTypeOut, int NumDimensionsOut, typename DerivedIn>
+struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, true, Eigen::Tensor<int, 1> > {
+
+  typedef Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> TensorOut;
+  typedef typename TensorOut::Index IndexType;
+  
+  static TensorOut createTensor(const DerivedIn& value, Eigen::Tensor<int, 1> dim) {
+    std::array<IndexType, NumDimensionsOut> dims;
+    for (unsigned int i = 0; i < NumDimensionsOut; i++) {
+      dims[i] = static_cast<IndexType>(dim[i]);
+    }
+    TensorOut ans(dims);
     ans.setConstant(value);
     return(ans);
   }
@@ -20,11 +42,30 @@ struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, true, Dim...> {
 template <typename ScalarTypeOut, int NumDimensionsOut, typename DerivedIn, typename... Dim>
 struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, false, Dim...> {
 
-  typedef typename DerivedIn::Index IndexType;
+  typedef Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> TensorOut;
+  typedef typename TensorOut::Index IndexType;
 
-  static Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> createTensor(const DerivedIn& value,  Dim... dim) {
+  static TensorOut createTensor(const DerivedIn& value,  Dim... dim) {
     std::array<IndexType, NumDimensionsOut> new_dim{{static_cast<IndexType>(dim)...}};
-    Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> ans = value.reshape(new_dim);
+    TensorOut ans = value.reshape(new_dim);
+    return(ans);
+  }
+  
+};
+
+// ScalarValue = false and Dim is Eigen::Tensor<int, 1>
+template <typename ScalarTypeOut, int NumDimensionsOut, typename DerivedIn>
+struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, false, Eigen::Tensor<int, 1> > {
+
+  typedef Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> TensorOut;
+  typedef typename TensorOut::Index IndexType;
+
+  static TensorOut createTensor(const DerivedIn& value,  Eigen::Tensor<int, 1> dim) {
+    std::array<IndexType, NumDimensionsOut> new_dim;
+    for (unsigned int i = 0; i < NumDimensionsOut; i++) {
+      new_dim[i] = static_cast<IndexType>(dim[i]);
+    }
+    TensorOut ans = value.reshape(new_dim);
     return(ans);
   }
   

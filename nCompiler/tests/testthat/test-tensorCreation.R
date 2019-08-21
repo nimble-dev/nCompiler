@@ -6,4 +6,8 @@ test_that("basic tensor creation works", {
   expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
   expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
   expect_equal(tensorCreation3(1:12), array(1:12, c(2, 3, 2)))
+  x <- c(3, 2, 4, 7)
+  expect_equal(tensorCreation4(TRUE, x), array(TRUE, x))
+  x <- c(2, 3, 2)
+  expect_equal(tensorCreation5(1:12, x), array(1:12, x))
 })
