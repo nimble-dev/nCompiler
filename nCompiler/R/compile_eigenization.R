@@ -456,3 +456,95 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  TensorCreation <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    code_args <- code$args
+    code$args <- NULL
+    value_provided <- 'value' %in% names(code_args)
+    if (value_provided)
+      setArg(code, 1, code_args[['value']])
+    else {
+      value_expr <- switch(
+        code$type$type,
+        double = literalDoubleExpr(0),
+        integer = literalIntegerExpr(0),
+        logical = literalLogicalExpr(FALSE)
+      )
+      setArg(code, 1, value_expr)
+    }
+    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical')) {
+      if ('length' %in% names(code_args))
+        setArg(code, 2, code_args[['length']])
+      else {
+        if (value_provided && code_args[['value']]$type$nDim != 0)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste("In eigenization handler TensorCreation: when non-scalar",
+                    "'value' is provided, 'length' must also be provided.")
+            ), call. = FALSE
+          )
+        setArg(code, 2, literalIntegerExpr(0))
+      }
+    } else if (code$name == 'nMatrix') {
+      nrow_provided <- 'nrow' %in% names(code_args)
+      ncol_provided <- 'ncol' %in% names(code_args)
+      ## TODO: calcMissingMatrixSize
+      if ((nrow_provided || ncol_provided) &&
+            !(nrow_provided && ncol_provided))
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            paste("In eigenization handler TensorCreation: if either 'nrow'",
+                  "or 'ncol' is provided, they must both be provided.")
+          ), call. = FALSE
+        )
+      if (!(nrow_provided || ncol_provided)) {
+        if (value_provided && code_args[['value']]$type$nDim != 0)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste("In eigenization handler TensorCreation: when non-scalar",
+                    "'value' is provided, 'nrow' and 'ncol' must also be",
+                    "provided.")
+            ), call. = FALSE
+          )
+        setArg(code, 2, literalIntegerExpr(1)) ## nrow
+        setArg(code, 3, literalIntegerExpr(1)) ## ncol
+      } else {
+        setArg(code, 2, code_args[['nrow']])
+        setArg(code, 3, code_args[['ncol']])
+      }
+    } else if (code$name == 'nArray') {
+      if ('dim' %in% names(code_args)) {
+        if (code_args[['dim']]$name == 'nC') {
+          ## TODO: this won't be needed when 'nC' is implemented
+          nC_arg <- code_args[['dim']]
+          promoteTypes(nC_arg)
+          for (i in seq_along(nC_arg$args)) {
+            setArg(code, i + 1, nC_arg$args[[i]])
+          }
+        } else {
+          setArg(code, 2, code_args[['dim']])
+        }
+      } else {
+        if (value_provided && code_args[['value']]$type$nDim != 0)
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste("In eigenization handler TensorCreation: when non-scalar",
+                    "'value' is provided, 'dim' must also be provided.")
+            ), call. = FALSE
+          )
+        setArg(code, 2, literalIntegerExpr(1)) ## nrow
+        setArg(code, 3, literalIntegerExpr(1)) ## ncol
+      }
+    }
+    type_string <- scalarTypeToCppType(code$type$type)
+    code$name <- paste0(
+      'createTensor<', type_string, ', ', code$type$nDim, '>'
+    )
+    invisible(NULL)
+  }
+)

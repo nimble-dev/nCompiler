@@ -171,6 +171,14 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  setReturn_nDim <- function(handlingInfo, arg_nDim) {
+    return_nDim <- handlingInfo[['return_nDim']]
+    if (is.null(return_nDim)) return(arg_nDim)
+    return_nDim
+  }
+)
+
 ## chainedCall
 ## nParse converts something like foo(a)(b) to chainedCall(foo(a), b),
 ##     (although there is no support for a function returning a function.)
@@ -316,6 +324,95 @@ inLabelAbstractTypesEnv(
     }
 )
 
+inLabelAbstractTypesEnv(
+  RecurseAndLabel <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
+    code$type <- symbolBasic$new(type = type, nDim = nDim)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  InitData <- function(code, symTab, auxEnv, handlingInfo) {
+    ## TODO: handle 'init' arg
+    ## defaults:
+    ## n{Numeric|Integer|Logical}(length = 0, value = 0, init = TRUE)
+    ## nMatrix(value = 0, nrow = 1, ncol = 1, init = TRUE, type = 'double')
+    ## nArray(value = 0, dim = c(1, 1), init = TRUE, type = 'double')
+    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical'))
+      inserts <- RecurseAndLabel(code, symTab, auxEnv, handlingInfo)
+    else if (code$name %in% c('nMatrix', 'nArray')) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      if ('type' %in% names(code$args))
+        code$type <- symbolBasic$new(type = code$args[['type']]$name)
+      else if ('value' %in% names(code$args))
+        code$type <- symbolBasic$new(type = code$args[['value']]$type$type)
+      else
+        code$type <- symbolBasic$new(type = 'double')
+      if (code$name == 'nMatrix') code$type$nDim <- 2
+      else {
+        dim_provided <- 'dim' %in% names(code$args)
+        nDim_provided <- 'nDim' %in% names(code$args)
+        if (!(dim_provided || nDim_provided))
+          code$type$nDim <- 2 ## default is a 1x1 array
+        else {
+          if (dim_provided) {
+            if (inherits(code$args[['dim']], 'exprClass') &&
+                  code$args[['dim']]$isCall && code$args[['dim']]$name == 'nC') {
+              nDim_from_dim <- length(code$args[['dim']]$args)
+              ## 'dim' must be of type integer
+              code$args[['dim']]$type$type <- 'integer'
+            } else {
+              dim_nDim <- code$args[['dim']]$type$nDim
+              if (dim_nDim > 1)
+                stop(
+                  exprClassProcessingErrorMsg(
+                    code,
+                    paste("In labelAbstractTypes handler InitData: 'dim'",
+                          "argument must be scalar- or vector-valued.")
+                  ), call. = FALSE
+                )
+              if (dim_nDim != 0 && !nDim_provided)
+                stop(
+                  exprClassProcessingErrorMsg(
+                    code,
+                    paste("In labelAbstractTypes handler InitData: if 'nDim'",
+                          "argument is not provided, 'dim' argument must",
+                          "be a scalar-valued expression or a call to nC().")
+                  ), call. = FALSE
+                )
+              nDim_from_dim <- if (dim_nDim == 0) 1 else -1
+            }
+          }
+          if (nDim_provided) {
+            nDim <- code$args[['nDim']]$name
+            if (!code$args[['nDim']]$isLiteral || !is.numeric(nDim))
+              stop(
+                exprClassProcessingErrorMsg(
+                  code,
+                  paste('In labelAbstractTypes handler InitData:',
+                        "'nDim' argument must be a numeric literal.")
+                ), call. = FALSE
+              )
+            if (dim_provided && nDim_from_dim != -1 && nDim != nDim_from_dim) {
+              warning("In labelAbstractTypes handler InitData: both 'nDim' ",
+                      "and 'dim' provided as args to '", code$name,
+                      "' but they do not match. Using 'dim'.")
+              nDim <- nDim_from_dim
+            }
+            code$type$nDim <- nDim
+          } else {
+            ## dim_provided must be TRUE and nDim_from_dim is not -1
+            code$type$nDim <- nDim_from_dim
+          }
+        }
+      }
+    }
+    invisible(inserts)
+  }
+)
 
 inLabelAbstractTypesEnv(
   Assign <- 
