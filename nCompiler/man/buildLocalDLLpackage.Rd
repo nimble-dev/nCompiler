@@ -10,7 +10,7 @@ buildLocalDLLpackage(dir = file.path(tempdir(),
 }
 \arguments{
 \item{dir}{directory where nCompLocal package will be created and possibly installed.  The default value 
-can be controlled by setting the.nOption for \code{localDLLdir} (see \link{\code{set_nOption}}).
+can be controlled by setting the.nOption for \code{localDLLdir} (see \link{set_nOption}).
 In turn, this option be default is NULL, in which case R's session-specific temporary directory (\code{tempdir()})
 will be used.  If \code{installInR} is \code{FALSE}, then \code{dir} will also be the location of of the installed 
 package.  In such a case, the nCompLocal package will be re-created once in every R session that compiled with nCompiler.}
@@ -28,10 +28,10 @@ Create and install nCompLocal package, which contains a static dynamic library (
 on each user's machine for nCompiler-generated C++ to link to.
 }
 \details{
-See \link{\code{setup_nCompLocal}} for the simplest way to install nCompLocal, which is as a standard R
+See \link{setup_nCompLocal} for the simplest way to install nCompLocal, which is as a standard R
 package in the standard location.  \code{buildLocalDLLpackage} provides more control over where it will be
 installed and where package source files will be written.
 }
 \seealso{
-\link{\code{setup_nCompLocal}}
+\link{setup_nCompLocal}
 }

@@ -20,7 +20,7 @@ have derivatives taken with respect to it.  Defaults to an empty vector.}
 derivatives with respect to.  If left empty, derivatives will be taken
 with respect to all arguments to \code{nFxn}.}
 
-\item{NC}{An nClass generator (returned from a call to \code{\link{nClass}})
+\item{NC}{An nClass generator (returned from a call to \link{nClass})
 which has a method corresponding to the one found in \code{nFxn}. Only
 required when \code{nFxn} is a compiled method call from a generic or full
 interface.}

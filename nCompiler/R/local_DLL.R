@@ -86,7 +86,7 @@ cleanupLocalDLLpackage <- function(dir = '.') {
 #' Install the nCompLocal package, whose purpose is to hold a static library for linking from on-the-fly compilations.
 #' 
 #' @param lib location to install package.  This defaults to the first element of `.libPaths()`.  `lib` matches behavior, 
-#' and is passed to, the \code{lib} argument of \link{\code{install.packages}}.
+#' and is passed to, the \code{lib} argument of \link{install.packages}.
 #' @param source.dir directory where nCompLocal source is located.
 #' 
 #' @details This function is used internally by This function is called internally from \cite{\link{buildLocalDLLpackage}}.
@@ -109,7 +109,7 @@ installLocalDLLpackage <- function(lib, source.dir = '.') {
 #' on each user's machine for nCompiler-generated C++ to link to.
 #' 
 #' @param dir directory where nCompLocal package will be created and possibly installed.  The default value 
-#' can be controlled by setting the.nOption for \code{localDLLdir} (see \link{\code{set_nOption}}).
+#' can be controlled by setting the.nOption for \code{localDLLdir} (see \link{set_nOption}).
 #' In turn, this option be default is NULL, in which case R's session-specific temporary directory (\code{tempdir()})
 #' will be used.  If \code{installInR} is \code{FALSE}, then \code{dir} will also be the location of of the installed 
 #' package.  In such a case, the nCompLocal package will be re-created once in every R session that compiled with nCompiler.
@@ -120,11 +120,11 @@ installLocalDLLpackage <- function(lib, source.dir = '.') {
 #' to install nCompLocal to a directory provided by \code{get_nOption("localDLLdir")} and leave it there.  In that
 #' case, nCompiler will automatially find it there in future R sessions.
 #' 
-#' @details See \link{\code{setup_nCompLocal}} for the simplest way to install nCompLocal, which is as a standard R
+#' @details See \link{setup_nCompLocal} for the simplest way to install nCompLocal, which is as a standard R
 #' package in the standard location.  \code{buildLocalDLLpackage} provides more control over where it will be
 #' installed and where package source files will be written.
 #' 
-#' @seealso \link{\code{setup_nCompLocal}}
+#' @seealso \link{setup_nCompLocal}
 #' 
 #' @export
 buildLocalDLLpackage <- function(dir = file.path(tempdir(), get_nOption("localDLLdir")),
@@ -177,9 +177,9 @@ buildLocalDLLpackage <- function(dir = file.path(tempdir(), get_nOption("localDL
 #' 
 #' This function will install nCompLocal as a regular R package in the default location for packages.
 #' For more control over where the package is installed, and where package source files are written, 
-#' see \link{\code{buildLocalDLLpackage}}
+#' see \link{buildLocalDLLpackage}
 #' 
-#' @seealso \link{\code{buildLocalDLLpackage}}
+#' @seealso \link{buildLocalDLLpackage}
 #' 
 #' @export
 setup_nCompLocal <- function() {
@@ -200,7 +200,7 @@ setup_nCompLocal <- function() {
 #' @details This function is called internally every time nCompiler is ready to call the C++ compiler for
 #' generated code.
 #' 
-#' @seealso \link{\code{setup_nCompLocal}} for how to create and install nCompLocal once for an
+#' @seealso \link{setup_nCompLocal} for how to create and install nCompLocal once for an
 #' R installation, so that nCompLocal can be re-used than than re-created in every R session.
 requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
   ## Check in order: provided lib, regular .libPaths(),nOptions(localDLLdir)
