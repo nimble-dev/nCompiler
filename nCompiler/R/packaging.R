@@ -1,20 +1,172 @@
+#' @name writePackage
 #' @export
+#' @param ... One or more nClass constructor and nFunction objects to be 
+#'     compiled into the package.
+#' @param package.name Character string. The name of the package to be written.
+#' @param dir Character string. Path to the parent directory in which the main 
+#'     package directory will be created. If not provided, default is the current
+#'     working directory.
+#' @param control A named list of control options or a named list of named lists of 
+#'     control parameters for each object to be compiled. See Details for more.
+#' @param clean Logical, default FALSE. Should contents in the specified package 
+#'     directory be overwritten?
+#' @param roxygen A list of roxygen entries. For now, should be either a list of
+#'     character strings of the same length as the number of objects provided,
+#'     or a named list where names indicate which objects the roxygen entries
+#'     correspond to.
+#' @param roxygenize Logical, default FALSE. Should roxygen be called to produce
+#'     documentation pages before package build?
+#' @param nClass_full_interface
+#' 
+#' @details
+#' 
 writePackage <- function(...,
                          package.name, 
                          dir = ".",
+                         control = list(),
                          clean = FALSE,
+                         roxygen = list(),
+                         roxygenize = FALSE,
                          nClass_full_interface = TRUE) {
-  ## rcpp_hello_world MUST be included because compileAttributes will not remove its entry
-  ## even if the file is removed.
+  # rcpp_hello_world MUST be included because compileAttributes will not remove
+  # its entry even if the file is removed.
   require(Rcpp)
   if(grepl("_", package.name))
     stop("Package names are not allowed to have underscore characters.")
   objs <- list(...)
+  testname <- deparse(objs[[1]])
+  
+  # Handle the case where the user passes a list rather than using ...
   if (length(objs)==1) {
     if (is.list(objs[[1]])) {
       objs <- objs[[1]]
     }
   }
+  
+  # Handle roxygen input
+  if (!is.list(roxygen)) {
+    roxygen <- list(roxygen)
+  }
+  
+  roxygenUseNames <- FALSE
+  roxygenUseIndex <- FALSE
+  if (sum(nchar(names(roxygen)) > 0) == length(roxygen)) { # Are all rox entries named?
+    roxygenUseNames <- TRUE
+  } else if (length(roxygen) == length(objs)) { # Are there as many rox entries as objs?
+    roxygenUseIndices
+  } else { # If neither, we don't know what to do about it
+    stop("If fewer roxygen entries are provided than objects, they must be named",
+         " in the input list to indicate the objects to which they correspond.")
+  }
+  
+  # The default options for each element in control. Should have an entry for
+  # every allowed control element.
+  defaultControl <- list(
+    export = TRUE
+    # , test1 = 10,
+    # , test2 = FALSE
+  )
+  
+  # Check if control is specified properly.
+  # The user has the following options:
+  # 1) Provide nothing. Defaults are used for all NF/NC objects.
+  # 2) Provide a single unnamed list. This control list will be shared by every object.
+  # 3a) Provide 1 or more named lists. These lists are used for the objects whose
+  #    names they match, while all others get defaults.
+  # 3b) Provided 2 or more named lists, one of which is called "default." 
+  #     "default" is used to control all elements.
+  
+  if (!is.list(control))
+    stop("In writePackage, argument 'control' must be a list with controls for all
+    or else a list of named lists with controls for each object")
+  if (length(control) > 0 && !is.list(control[[1]])) control <- list(control)
+  
+  # shareControl is a boolean flag indicating if all objects will take the same
+  # control variable. If so, it'll be stored in the object globalControl for now
+  sharedControl <- FALSE
+  globalControl <- defaultControl
+  if (length(control) == 0) { # We're in option 1.
+    sharedControl <- TRUE
+  } else if (sum(nchar(names(control)) > 0) < length(control)) { # If any elements are unnamed...
+    if (length(control) == 1) { # We're in option 2
+      sharedControl <- TRUE
+      for (controlName in names(control[[1]])) {
+        if (!controlName %in% names(defaultControl)) {
+          warning(paste0('In writePackage, "', controlName, '" is not the name ',
+                         'of a valid control option and was ignored.'))
+        } else {
+          globalControl[[controlName]] <- control[[1]][[controlName]]
+        }
+      }
+    } else { # If no names were provided but control was length >1, that's a problem
+      stop(paste("More than one control list detected, but not all were named.",
+                 "Control lists can only be unnamed if exactly one is provided."))
+    }
+  }
+
+  # Build a fully fleshed out control list. The ith element of totalControl is a 
+  # controls compilation options for the ith element of objs.
+  totalControl <- list()
+  
+  # I retrieve the names of each object. Is there a better way to do this?
+  objNames <- unlist(lapply(objs, function(x) {
+    if (isNF(x)) return(x@internals$uniqueName)
+    else if (isNCgenerator(x)) return(x$classname)
+    else stop(paste("In writePackage: only nFunctions and nClass generators are",
+                    "allowed. Cannot compile object of class ", class(objs[[i]])))
+  }))
+  
+  # If options 1 or 2 were hit, we can just use the globalControl option set we
+  # already built for every element. If neither, we still do this to set up the
+  # architectre and think of user specifications as modifying this default
+  # structure
+  if (sharedControl) {
+    for (i in 1:length(objs)) totalControl[[i]] <- globalControl
+  } else { # Option 3
+
+    if ("default" %in% names(control)) {
+      for (controlName in names(control[["default"]])) {
+        if (!controlName %in% names(defaultControl)) {
+          warning(paste0('In writePackage, "', controlName, '" is not the name ',
+                         'of a valid control option and was ignored.'))
+        } else {
+          globalControl[[controlName]] <- control[["default"]][[controlName]]
+        }
+      }
+    } 
+    # If no defaults were specified, globalControl is still all defaults
+    for (i in 1:length(objs)) totalControl[[i]] <- globalControl
+    
+    if (length(unique(objNames)) < length(objNames)) {
+      stop("In writePackage: multiple objects with the same name were provided.")
+    }
+    
+    # Iterate over each specified control list and add it. Throw an error (maybe
+    # a warning, but this seems like a big enough problem) if the user provided
+    # an unrecognized name.
+    for (i in 1:length(control)) {
+      if (names(control)[[i]] %in% objNames) {
+        for (controlName in names(control[[i]])) {
+          if (!controlName %in% names(defaultControl)) {
+            warning(paste0('In writePackage, "', controlName, '" is not the name ',
+                           'of a valid control option and was ignored.'))
+          } else {
+            totalControl[[which(objNames == names(control)[[i]])]][[controlName]] <- 
+              control[[i]][[controlName]]
+          }
+        }
+      } else {
+        if (!identical(names(control)[[i]], "default")) {
+          stop(paste0('In writePackage: Control specified for object named "', 
+                      names(control)[[i]],
+                      '"\n\t but no object with that name was provided.'))
+        }
+      }
+    }
+  } # Now we have a control object, totalControl, which contains all control
+    # options for every element in objs.
+  # Used to test if this works: return(totalControl)
+    
   # if(length(objs) > 1)
   #   stop("writePackage only supports one object as a first step of development")
   
@@ -39,7 +191,8 @@ writePackage <- function(...,
         full_interface[[i]] <- build_compiled_nClass(objs[[i]], quoted = TRUE)
       }
     } else {
-      stop("provided object is not a nFunction or a nClass generator")
+      stop(paste("In writePackage: only nFunctions and nClass generators are",
+                 "allowed. Cannot compile object of class ", class(objs[[i]])))
     }
   }
   if(dir.exists(pkgDir)) {
@@ -86,8 +239,13 @@ writePackage <- function(...,
       deparsed_full_interface[1] <- paste0(
         generator_name, ' <- ', deparsed_full_interface[1]
       )
+      exportTag <- if (totalControl[[i]]$export) "#'@export\n" else NULL
       deparsed_full_interface <- c(
         '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
+        if (roxygenUseNames) roxygen[[objNames[i]]] 
+          else if (roxygenUseIndex) roxygen[[i]] 
+          else NULL,
+        exportTag,
         deparsed_full_interface,
         paste0(generator_name, '$parent_env <- new.env()'),
         paste0(generator_name, '$.newCobjFun <- NULL')
@@ -102,15 +260,35 @@ writePackage <- function(...,
   ## A nFunction might only need:
   ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
   ## A nClass might need:
-    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
+  DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.
   write.dcf(DESCRIPTION, DESCfile)
+  
+  NAMEfile <- file.path(pkgDir, "NAMESPACE")
+  NAMESPACE <- readLines(NAMEfile)
+  NAMESPACE <- NAMESPACE[NAMESPACE != 'exportPattern(\"^[[:alpha:]]+\")']
+  for (i in 1:length(objs)) {
+    if (totalControl[[i]]$export) NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
+  }
+  writeLines(NAMESPACE, con = NAMEfile)
+  
+  if (roxygenize) roxygen2::roxygenize(package.dir = pkgDir,
+                                       roclets = c("collate", "rd"))
+  
   compileAttributes(pkgdir = pkgDir)
   invisible(NULL)
 }
 
+#' @name buildPackage
 #' @export
+#' @param package.name Character string. The name of the package to be built,
+#'     corresponding to the argument of the same name in writePackages.
+#' @param dir Character string. Path to the parent directory containing the main
+#'     package directory. By default, the current working directory is used.
+#' @param lib Character string, optional. Path to the directory where the package
+#'     will be installed. See the lib.loc argument in `install.packages()`.
+#' @param load Logical, default TRUE. Should the package be attached once installed?
 buildPackage <- function(package.name, 
                          dir = ".",
                          lib,
@@ -119,6 +297,7 @@ buildPackage <- function(package.name,
     if(!dir.exists(lib))
       dir.create(lib)
   }
+
   staticLibLoc <- system.file('staticLib', package = 'nCompLocal')
   Sys.setenv("PKG_CXXFLAGS"="-std=c++11 -Wno-invalid-partial-specialization")
   Sys.setenv("PKG_LIBS"=paste0("-L \"",staticLibLoc,"\" -lnCompLocal"))
