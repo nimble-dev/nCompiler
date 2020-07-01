@@ -43,6 +43,9 @@ createLocalDLLpackage <- function(dir = '.',
   close(zz)
   if(file.exists("kitten_output_not_necessary.Rout"))
     file.remove("kitten_output_not_necessary.Rout")
+  NAMESPACE_file <- file.path(dir, "nCompLocal", "NAMESPACE")
+  sink(NAMESPACE_file) # Wipe it clean so it doesn't try to export kitten stuff
+  sink()
   DESCRIPTION_file <- file.path(dir, "nCompLocal", "DESCRIPTION")
   DESCRIPTION <- read.dcf(DESCRIPTION_file)
   DESCRIPTION[, "Version"] <- "0.1"
@@ -60,13 +63,22 @@ createLocalDLLpackage <- function(dir = '.',
                   showOutput = FALSE)
   options(rcpp.warnNoExports = currentWarn)
   ## Navigate through Rcpp's cache directory structure:
-  cacheDir <- getOption("rcpp.cache.dir", tempdir()) ## from sourceCpp
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourceCpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourcecpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
+  cacheDir1 <- getOption("rcpp.cache.dir", tempdir()) ## from sourceCpp
+  cacheDir1Files <- list.files(cacheDir1)
+  sourceCppDir1 <- cacheDir1Files[ grepl("sourceCpp", cacheDir1Files)]
+  if (length(sourceCppDir1) > 1) {
+    cppDir1_mtime <- file.mtime(sourceCppDir1)
+    sourceCppDir1 <- sourceCppDir1[which.max(cppDir1_mtime)]
+  }
+  cacheDir2 <- file.path(cacheDir1, sourceCppDir1)
+  cacheDir2Files <- list.files(cacheDir2)
+  sourceCppDir2 <- cacheDir2Files[ grepl("sourcecpp", cacheDir2Files)]
+  if (length(sourceCppDir2) > 1) {
+    cppDir2_mtime <- file.mtime(sourceCppDir2)
+    sourceCppDir2 <- sourceCppDir2[which.max(cppDir2_mtime)]
+  }
+  # We end up with the final (3rd) cacheDir
+  cacheDir <- file.path(cacheDir2, sourceCppDir2)
   ## Build static library from the .o files left by Rcpp.
   ## This will need to be updated for windows
   if(.Platform$OS.type == "windows")
