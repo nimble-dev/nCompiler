@@ -269,21 +269,34 @@ writePackage <- function(...,
   DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.
-  DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
+  # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
   write.dcf(DESCRIPTION, DESCfile)
   
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
   NAMESPACE <- readLines(NAMEfile)
   NAMESPACE <- NAMESPACE[NAMESPACE != 'exportPattern(\"^[[:alpha:]]+\")']
   for (i in 1:length(objs)) {
-    if (totalControl[[i]]$export) NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
+    if (totalControl[[i]]$export && isNCgenerator(objs[[i]])) 
+      NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
   }
   writeLines(NAMESPACE, con = NAMEfile)
+
+  compileAttributes(pkgdir = pkgDir)
+  
+  # Rename nFunctions
+  rcppExports <- readLines(file.path(pkgDir, "R/RcppExports.R"))
+  rcppExports <- lapply(rcppExports, function(x) {
+    if (grepl(" <- function", x) && grepl("NFID", x)) {
+      gsub("_NFID_[0-z]+ ", " ", x)
+    } else x
+  })
+  sink(file.path(pkgDir, "R/RcppExports.R"))
+  writeLines(unlist(rcppExports))
+  sink()
   
   if (roxygenize) roxygen2::roxygenize(package.dir = pkgDir,
                                        roclets = c("rd"))
   
-  compileAttributes(pkgdir = pkgDir)
   invisible(NULL)
 }
 
