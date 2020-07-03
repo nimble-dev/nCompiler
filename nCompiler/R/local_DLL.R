@@ -63,29 +63,28 @@ createLocalDLLpackage <- function(dir = '.',
                   showOutput = FALSE)
   options(rcpp.warnNoExports = currentWarn)
   ## Navigate through Rcpp's cache directory structure:
-  cacheDir1 <- getOption("rcpp.cache.dir", tempdir()) ## from sourceCpp
-  cacheDir1Files <- list.files(cacheDir1)
+  cacheDir1 <- getOption("rcpp.cache.dir", tempdir()) ## where sourceCpp places files
+  cacheDir1Files <- list.files(cacheDir1, full.names = TRUE)
+  ## Determine the most recent directory name with "sourceCpp" in it.
   sourceCppDir1 <- cacheDir1Files[ grepl("sourceCpp", cacheDir1Files)]
   if (length(sourceCppDir1) > 1) {
     cppDir1_mtime <- file.mtime(sourceCppDir1)
     sourceCppDir1 <- sourceCppDir1[which.max(cppDir1_mtime)]
   }
-  cacheDir2 <- file.path(cacheDir1, sourceCppDir1)
-  cacheDir2Files <- list.files(cacheDir2)
-  sourceCppDir2 <- cacheDir2Files[ grepl("sourcecpp", cacheDir2Files)]
-  if (length(sourceCppDir2) > 1) {
-    cppDir2_mtime <- file.mtime(sourceCppDir2)
-    sourceCppDir2 <- sourceCppDir2[which.max(cppDir2_mtime)]
+  sourceCppDir1Files <- list.files(sourceCppDir1, full.names = TRUE)
+  ## Determine the most recent subdirectory with the name "sourcecpp" (lower-case c) in it
+  sourcecppDir2 <- sourceCppDir1Files[ grepl("sourcecpp", sourceCppDir1Files)]
+  if (length(sourcecppDir2) > 1) {
+    cppDir2_mtime <- file.mtime(sourcecppDir2)
+    sourcecppDir2 <- sourcecppDir2[which.max(cppDir2_mtime)]
   }
-  # We end up with the final (3rd) cacheDir
-  cacheDir <- file.path(cacheDir2, sourceCppDir2)
   ## Build static library from the .o files left by Rcpp.
   ## This will need to be updated for windows
   if(.Platform$OS.type == "windows")
     message("Need to update the 'ar' call in createLocalDLLpackage for Windows.")
   system2("ar", c("rcs",
                   file.path(staticLibPath, "libnCompLocal.a"),
-                  file.path(cacheDir, "loadedObjectEnv.o")))
+                  file.path(sourcecppDir2, "loadedObjectEnv.o")))
 }
 
 cleanupLocalDLLpackage <- function(dir = '.') {
