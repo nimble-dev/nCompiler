@@ -43,6 +43,9 @@ createLocalDLLpackage <- function(dir = '.',
   close(zz)
   if(file.exists("kitten_output_not_necessary.Rout"))
     file.remove("kitten_output_not_necessary.Rout")
+  NAMESPACE_file <- file.path(dir, "nCompLocal", "NAMESPACE")
+  sink(NAMESPACE_file) # Wipe it clean so it doesn't try to export kitten stuff
+  sink()
   DESCRIPTION_file <- file.path(dir, "nCompLocal", "DESCRIPTION")
   DESCRIPTION <- read.dcf(DESCRIPTION_file)
   DESCRIPTION[, "Version"] <- "0.1"
@@ -60,20 +63,28 @@ createLocalDLLpackage <- function(dir = '.',
                   showOutput = FALSE)
   options(rcpp.warnNoExports = currentWarn)
   ## Navigate through Rcpp's cache directory structure:
-  cacheDir <- getOption("rcpp.cache.dir", tempdir()) ## from sourceCpp
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourceCpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourcecpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
+  cacheDir1 <- getOption("rcpp.cache.dir", tempdir()) ## where sourceCpp places files
+  cacheDir1Files <- list.files(cacheDir1, full.names = TRUE)
+  ## Determine the most recent directory name with "sourceCpp" in it.
+  sourceCppDir1 <- cacheDir1Files[ grepl("sourceCpp", cacheDir1Files)]
+  if (length(sourceCppDir1) > 1) {
+    cppDir1_mtime <- file.mtime(sourceCppDir1)
+    sourceCppDir1 <- sourceCppDir1[which.max(cppDir1_mtime)]
+  }
+  sourceCppDir1Files <- list.files(sourceCppDir1, full.names = TRUE)
+  ## Determine the most recent subdirectory with the name "sourcecpp" (lower-case c) in it
+  sourcecppDir2 <- sourceCppDir1Files[ grepl("sourcecpp", sourceCppDir1Files)]
+  if (length(sourcecppDir2) > 1) {
+    cppDir2_mtime <- file.mtime(sourcecppDir2)
+    sourcecppDir2 <- sourcecppDir2[which.max(cppDir2_mtime)]
+  }
   ## Build static library from the .o files left by Rcpp.
   ## This will need to be updated for windows
   if(.Platform$OS.type == "windows")
     message("Need to update the 'ar' call in createLocalDLLpackage for Windows.")
   system2("ar", c("rcs",
                   file.path(staticLibPath, "libnCompLocal.a"),
-                  file.path(cacheDir, "loadedObjectEnv.o")))
+                  file.path(sourcecppDir2, "loadedObjectEnv.o")))
 }
 
 cleanupLocalDLLpackage <- function(dir = '.') {
