@@ -140,6 +140,11 @@ typeDeclarationList <- list(
     symbolList$new(...)
   },
 
+  ## Rcpp types
+  RcppNumericVector = function(...) {
+    symbolRcppNumericVector$new(...)
+  },
+  
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
     if(inherits(x, 'symbolBasic'))

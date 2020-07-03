@@ -237,6 +237,8 @@ cppEigenTensor <- function(name = character(),
 cppRcppList <- function(name = character(0), ...)
   cppVarClass$new(name = name, baseType = 'Rcpp::List', ...)
 
+cppRcppNumericVector <- function(name = character(0), ...)
+  cppVarClass$new(name = name, baseType = 'Rcpp::NumericVector', ...)
 
 emptyTypeInfo <- function()
   cppVarClass$new(baseType = character()) ## for return type of constructors and destructors
