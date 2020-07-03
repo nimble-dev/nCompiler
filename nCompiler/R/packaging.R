@@ -321,9 +321,12 @@ buildPackage <- function(package.name,
       dir.create(lib)
   }
 
+  if(!requireLocalDLLpackage())
+    stop("There was a problem building nCompLocal.")
+  pkg_libs_entry <- get_nCompLocal_PGK_LIBS_entry()
   staticLibLoc <- system.file('staticLib', package = 'nCompLocal')
   Sys.setenv("PKG_CXXFLAGS"="-std=c++11 -Wno-invalid-partial-specialization")
-  Sys.setenv("PKG_LIBS"=paste0("-L \"",staticLibLoc,"\" -lnCompLocal"))
+  Sys.setenv("PKG_LIBS"=pkg_libs_entry)
   ## possible missingness of lib propagates to install.packages
   install.packages(file.path(dir, package.name),
                    lib = lib,
