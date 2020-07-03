@@ -277,8 +277,12 @@ writePackage <- function(...,
   NAMESPACE <- NAMESPACE[NAMESPACE != 'exportPattern(\"^[[:alpha:]]+\")']
   for (i in 1:length(objs)) {
     # if (totalControl[[i]]$export && isNCgenerator(objs[[i]])) 
-    if (totalControl[[i]]$export) 
-      NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
+    if (totalControl[[i]]$export) {
+      if (isNF(objs[[i]]) || nClass_full_interface) {
+        NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
+      }
+      if (isNCgenerator(objs[[i]])) NAMESPACE <- c(NAMESPACE, paste0("export(new_", objNames[i], ")"))
+    }
   }
   writeLines(NAMESPACE, con = NAMEfile)
 
