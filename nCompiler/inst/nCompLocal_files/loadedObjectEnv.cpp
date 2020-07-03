@@ -1,5 +1,5 @@
-// This file is intended to be copied to the inst/staticLib directory of the nCompLocal packaage.
-// nimCompLocal is a small package that nComp will install.
+// This file is intended to be copied to the inst/staticLib directory of the nCompLocal package.
+// nCompLocal is a small package that nComp will install.
 #include "nCompiler/loadedObjectEnv.h"
 
 // [[Rcpp::depends(nCompiler)]]
