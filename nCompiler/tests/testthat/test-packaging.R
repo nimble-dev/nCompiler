@@ -96,3 +96,30 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   expect_true(inherits(obj, "nClass"))
   expect_equal(obj$cp1(2), 3)
 })
+
+test_that("Export flag works", 
+          {
+            nCompiler:::nFunctionIDMaker(reset = TRUE)
+            nCompiler:::nClassIDMaker(reset = TRUE)
+            
+            foo <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            writePackage(foo,
+                         dir = tempdir(),
+                         package.name = "fooPackageNoExport",
+                         clean = TRUE,
+                         control = list(export = FALSE))
+            ans <- buildPackage("fooPackageNoExport",
+                                dir = tempdir())
+            
+            expect_error(fooPackageNoExport::foo(2))
+            expect_equal(fooPackageNoExport:::foo(2), 3)
+          })
+
