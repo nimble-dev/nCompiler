@@ -255,6 +255,7 @@ requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
 # This function is used by the nCompiler_Eigen_plugin for Rcpp.
 # This plugin is invoked by "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]" C++ source code that is compiled via Rcpp::sourceCpp.
 # The Rcpp plugin system allows packages to modify environment variables used as C++ compiler flags.
+# This function is also called by buildPackage
 get_nCompLocal_PGK_LIBS_entry <- function() {
   loc <- system.file(file.path('staticLib'), package = 'nCompLocal')
   ans <- paste0("-L \"", loc, "\" -lnCompLocal")

@@ -7,10 +7,10 @@ test_that("writePackage and buildPackage work for nFunction",
             
             foo <- nFunction(
               name = "foo",
-              fun = function(x = double()) {
+              fun = function(x = numericScalar()) {
                 ans <- x+1
                 return(ans)
-                returnType(double())
+                returnType(numericScalar())
               }
             )
             
@@ -20,8 +20,8 @@ test_that("writePackage and buildPackage work for nFunction",
                          clean = TRUE)
             ans <- buildPackage("fooPackage",
                                 dir = tempdir())
-            ## Need to get this name fixed
-            expect_equal(fooPackage::foo_NFID_1(2), 3)
+            
+            expect_equal(fooPackage::foo(2), 3)
           })
 
 test_that("writePackage and buildPackage work for nClass", 
@@ -37,10 +37,10 @@ test_that("writePackage and buildPackage work for nClass",
               Cpublic = list(
                 x = 'numericScalar',
                 cp1 = nFunction(
-                  fun = function(x = double()) {
+                  fun = function(x = 'numericScalar') {
                     ans <- x+1
                     return(ans)
-                    returnType(double())
+                    returnType(numericScalar())
                   }
                 )
               )
@@ -56,8 +56,8 @@ test_that("writePackage and buildPackage work for nClass",
                          dir = tempdir())
                          #, lib = "test_package_nc1Package_lib")
             expect_true(require("nc1Package")) #, lib.loc = "test_package_nc1Package_lib"))
-            expect_true(is.function(nc1Package::new_nc1))
-            obj <- nc1Package::new_nc1()
+            expect_true(is.function(nc1Package:::new_nc1))
+            obj <- nc1Package:::new_nc1()
             expect_equal(method(obj, 'cp1')(2), 3)
           })
 
@@ -74,10 +74,10 @@ test_that("writePackage and buildPackage work for nClass with full interface",
     Cpublic = list(
       x = 'numericScalar',
       cp1 = nFunction(
-        fun = function(x = double()) {
+        fun = function(x = numericScalar()) {
           ans <- x+1
           return(ans)
-          returnType(double())
+          returnType(numericScalar())
         }
       )
     )
@@ -96,3 +96,30 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   expect_true(inherits(obj, "nClass"))
   expect_equal(obj$cp1(2), 3)
 })
+
+test_that("Export flag works", 
+          {
+            nCompiler:::nFunctionIDMaker(reset = TRUE)
+            nCompiler:::nClassIDMaker(reset = TRUE)
+            
+            foo <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            writePackage(foo,
+                         dir = tempdir(),
+                         package.name = "fooPackageNoExport",
+                         clean = TRUE,
+                         control = list(export = FALSE))
+            ans <- buildPackage("fooPackageNoExport",
+                                dir = tempdir())
+            
+            expect_error(fooPackageNoExport::foo(2))
+            expect_equal(fooPackageNoExport:::foo(2), 3)
+          })
+
