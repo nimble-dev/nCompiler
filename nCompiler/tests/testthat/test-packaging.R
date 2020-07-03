@@ -17,7 +17,8 @@ test_that("writePackage and buildPackage work for nFunction",
             writePackage(foo,
                          dir = tempdir(),
                          package.name = "fooPackage",
-                         clean = TRUE)
+                         clean = TRUE, 
+                         control = list(export = TRUE))
             ans <- buildPackage("fooPackage",
                                 dir = tempdir())
             

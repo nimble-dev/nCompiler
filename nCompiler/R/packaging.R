@@ -292,7 +292,7 @@ writePackage <- function(...,
   rcppExports <- readLines(file.path(pkgDir, "R/RcppExports.R"))
   rcppExports <- lapply(rcppExports, function(x) {
     if (grepl(" <- function", x) && grepl("NFID", x)) {
-      gsub("_NFID_[0-z]+ ", " ", x)
+      x <- gsub("_NFID_[0-z]+ ", " ", x)
     } else x
   })
   sink(file.path(pkgDir, "R/RcppExports.R"))
