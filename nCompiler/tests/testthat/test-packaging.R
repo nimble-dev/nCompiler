@@ -7,10 +7,10 @@ test_that("writePackage and buildPackage work for nFunction",
             
             foo <- nFunction(
               name = "foo",
-              fun = function(x = double()) {
+              fun = function(x = numericScalar()) {
                 ans <- x+1
                 return(ans)
-                returnType(double())
+                returnType(numericScalar())
               }
             )
             
