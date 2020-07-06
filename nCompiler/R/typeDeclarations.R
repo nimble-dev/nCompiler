@@ -136,17 +136,17 @@ typeDeclarationList <- list(
   },
 
   ## lists
-  list = function(...) {
-    symbolList$new(...)
+  RcppList = function(...) {
+    symbolRcppType$new(type = "Rcpp::List", ...)
   },
 
   ## Rcpp types
   RcppNumericVector = function(...) {
-    symbolRcppNumericVector$new(...)
+    symbolRcppType$new(type = "Rcpp::NumericVector", ...)
   },
   
   RcppNumericMatrix = function(...) {
-    symbolRcppNumericMatrix$new(...)
+    symbolRcppType$new(type = "Rcpp::NumericMatrix", ...)
   },
   
   RcppDataFrame = function(...) {

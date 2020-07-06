@@ -226,6 +226,39 @@ symbolList <- R6::R6Class(
   )
 )
 
+symbolRcppType<- R6::R6Class(
+  classname = "symbolRcppType",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    size = NULL,
+    initialize = function(..., size = NA) {
+      super$initialize(...)
+      self$type <- RcppType
+      self$size <- size
+      self
+    },
+    shortPrint = function() {
+      self$type
+    },
+    print = function() {
+      if(is.null(self$size)) {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
+        )
+      } else {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = ', self$size)
+        )
+      }
+    },
+    genCppVar = function() {
+      return(cppRcppType(name = self$name, baseType = self$type))
+    }
+  )
+)
+
+
 symbolRcppNumericVector <- R6::R6Class(
   classname = "symbolRcppNumericVector",
   inherit = symbolBase,

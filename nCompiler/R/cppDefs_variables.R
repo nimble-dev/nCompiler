@@ -234,6 +234,9 @@ cppEigenTensor <- function(name = character(),
                       )
 }
 
+cppRcppType <- function(name = character(0), baseType, ...)
+  cppVarClass$new(name = name, baseType = baseType, ...)
+
 cppRcppList <- function(name = character(0), ...)
   cppVarClass$new(name = name, baseType = 'Rcpp::List', ...)
 
