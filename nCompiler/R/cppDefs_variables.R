@@ -240,6 +240,18 @@ cppRcppList <- function(name = character(0), ...)
 cppRcppNumericVector <- function(name = character(0), ...)
   cppVarClass$new(name = name, baseType = 'Rcpp::NumericVector', ...)
 
+cppRcppNumericMatrix <- function(name = character(0), ...)
+  cppVarClass$new(name = name, baseType = 'Rcpp::NumericMatrix', ...)
+
+cppRcppDataFrame <- function(name = character(0), ...)
+  cppVarClass$new(name = name, baseType = 'Rcpp::DataFrame', ...)
+
+# RcppEigen types
+cppRcppEigenMatrixXd <- function(name = character(0), ...)
+  cppVarClass$new(name = name, baseType = 'Eigen::MatrixXd', ...)
+
+
+
 emptyTypeInfo <- function()
   cppVarClass$new(baseType = character()) ## for return type of constructors and destructors
 

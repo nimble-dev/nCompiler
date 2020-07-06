@@ -145,6 +145,19 @@ typeDeclarationList <- list(
     symbolRcppNumericVector$new(...)
   },
   
+  RcppNumericMatrix = function(...) {
+    symbolRcppNumericMatrix$new(...)
+  },
+  
+  RcppDataFrame = function(...) {
+    symbolRcppDataFrame$new(...)
+  },
+  
+  ## RcppEigen types
+  RcppEigenMatrixXd = function(...) {
+    symbolRcppEigenMatrixXd$new(...)
+  },
+  
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
     if(inherits(x, 'symbolBasic'))

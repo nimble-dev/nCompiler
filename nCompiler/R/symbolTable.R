@@ -258,6 +258,109 @@ symbolRcppNumericVector <- R6::R6Class(
   )
 )
 
+symbolRcppNumericMatrix <- R6::R6Class(
+  classname = "symbolRcppNumericMatrix",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    size = NULL,
+    nDim = NULL,
+    initialize = function(..., size = NA) {
+      super$initialize(...)
+      self$type = 'RcppNumericMatrix'
+      self$size <- size
+      self$nDim <- 2
+      self
+    },
+    shortPrint = function() {
+      'RcppNumMtx'
+    },
+    print = function() {
+      if(is.null(self$ncol)) {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
+        )
+      } else {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = ', size)
+        )
+      }
+    },
+    genCppVar = function() {
+      return(cppRcppNumericMatrix(name = self$name))
+    }
+  )
+)
+
+symbolRcppDataFrame <- R6::R6Class(
+  classname = "symbolRcppDataFrame",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    nrow = NULL,
+    ncol = NULL,
+    initialize = function(..., nrow = NA, ncol = NA) {
+      super$initialize(...)
+      self$type = 'symbolRcppDataFrame'
+      self$nrow <- nrow
+      self$ncol <- ncol
+      self
+    },
+    shortPrint = function() {
+      'RcppDataFrame'
+    },
+    print = function() {
+      if(is.null(self$ncol)) {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' (uninitialized),')
+        )
+      } else {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' nrow = ', nrow, ', ncol = ', ncol)
+        )
+      }
+    },
+    genCppVar = function() {
+      return(cppRcppDataFrame(name = self$name))
+    }
+  )
+)
+
+symbolRcppEigenMatrixXd <- R6::R6Class(
+  classname = "symbolRcppEigenMatrixXd",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    size = NULL,
+    nDim = NULL,
+    initialize = function(..., size = NA) {
+      super$initialize(...)
+      self$type = 'symbolRcppEigenMatrixXd'
+      self$size <- size
+      self
+    },
+    shortPrint = function() {
+      'RcppEigenMtxXd'
+    },
+    print = function() {
+      if(is.null(self$ncol)) {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
+        )
+      } else {
+        writeLines(
+          paste0(self$name, ': ', self$type, ' size = ', size)
+        )
+      }
+    },
+    genCppVar = function() {
+      return(cppRcppEigenMatrixXd(name = self$name))
+    }
+  )
+)
+
+
+
 ## This was an exercise in conversion from the old system.
 ## I'm not sure this is or will be needed.
 symbolEigenMap <- R6::R6Class(
