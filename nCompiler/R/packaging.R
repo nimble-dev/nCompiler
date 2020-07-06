@@ -111,7 +111,7 @@ writePackage <- function(...,
   
   # I retrieve the names of each object. Is there a better way to do this?
   objNames <- unlist(lapply(objs, function(x) {
-    if (isNF(x)) return(x@internals$uniqueName)
+    if (isNF(x)) return(NFinternals(x)$uniqueName)
     else if (isNCgenerator(x)) return(x$classname)
     else stop(paste("In writePackage: only nFunctions and nClass generators are",
                     "allowed. Cannot compile object of class ", class(objs[[i]])))
