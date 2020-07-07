@@ -237,21 +237,21 @@ cppEigenTensor <- function(name = character(),
 cppRcppType <- function(name = character(0), baseType, ...)
   cppVarClass$new(name = name, baseType = baseType, ...)
 
-cppRcppList <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'Rcpp::List', ...)
-
-cppRcppNumericVector <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'Rcpp::NumericVector', ...)
-
-cppRcppNumericMatrix <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'Rcpp::NumericMatrix', ...)
-
-cppRcppDataFrame <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'Rcpp::DataFrame', ...)
+# cppRcppList <- function(name = character(0), ...)
+#   cppVarClass$new(name = name, baseType = 'Rcpp::List', ...)
+# 
+# cppRcppNumericVector <- function(name = character(0), ...)
+#   cppVarClass$new(name = name, baseType = 'Rcpp::NumericVector', ...)
+# 
+# cppRcppNumericMatrix <- function(name = character(0), ...)
+#   cppVarClass$new(name = name, baseType = 'Rcpp::NumericMatrix', ...)
+# 
+# cppRcppDataFrame <- function(name = character(0), ...)
+#   cppVarClass$new(name = name, baseType = 'Rcpp::DataFrame', ...)
 
 # RcppEigen types
-cppRcppEigenMatrixXd <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'Eigen::MatrixXd', ...)
+# cppRcppEigenMatrixXd <- function(name = character(0), ...)
+#   cppVarClass$new(name = name, baseType = 'Eigen::MatrixXd', ...)
 
 
 

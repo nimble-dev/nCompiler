@@ -232,7 +232,7 @@ symbolRcppType<- R6::R6Class(
   portable = TRUE,
   public = list(
     size = NULL,
-    initialize = function(..., size = NA) {
+    initialize = function(..., RcppType = NA, size = NA) {
       super$initialize(...)
       self$type <- RcppType
       self$size <- size
@@ -242,15 +242,9 @@ symbolRcppType<- R6::R6Class(
       self$type
     },
     print = function() {
-      if(is.null(self$size)) {
-        writeLines(
-          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
-        )
-      } else {
-        writeLines(
-          paste0(self$name, ': ', self$type, ' size = ', self$size)
-        )
-      }
+      writeLines(
+        paste0(self$name, ': ', self$type)
+      )
     },
     genCppVar = function() {
       return(cppRcppType(name = self$name, baseType = self$type))
