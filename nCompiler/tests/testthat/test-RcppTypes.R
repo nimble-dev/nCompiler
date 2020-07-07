@@ -1,6 +1,8 @@
 context("Testing Rcpp types")
 
-test_that("RcppNumericVector works", {
+# Test that Rcpp types work in nFunctions
+
+test_that("RcppNumericVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppNumericVector",
                    y = 'RcppNumericVector') {
@@ -20,7 +22,7 @@ test_that("RcppNumericVector works", {
   expect_equal(ans, x+y)
 })
 
-test_that("RcppNumericMatrix works", {
+test_that("RcppNumericMatrix works in nFunctions", {
   nfmx <- nFunction(
     fun = function(x = "RcppNumericMatrix()",
                    i = "numericScalar()") {
@@ -38,7 +40,7 @@ test_that("RcppNumericMatrix works", {
 })
 
 
-test_that("RcppIntegerVector works", {
+test_that("RcppIntegerVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppIntegerVector",
                    y = 'RcppIntegerVector') {
@@ -57,7 +59,7 @@ test_that("RcppIntegerVector works", {
   expect_equal(ans, x+y)
 })
 
-test_that("RcppIntegerMatrix works", {
+test_that("RcppIntegerMatrix works in nFunctions", {
   nfmx <- nFunction(
     fun = function(x = "RcppIntegerMatrix()",
                    i = "numericScalar()") {
@@ -75,7 +77,7 @@ test_that("RcppIntegerMatrix works", {
 })
 
 
-test_that("RcppLogicalVector works", {
+test_that("RcppLogicalVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppLogicalVector",
                    y = 'logicalScalar') {
@@ -94,7 +96,7 @@ return x.sort();',
   expect_true(all(ans[5:6]))
 })
 
-test_that("RcppLogicalMatrix works", {
+test_that("RcppLogicalMatrix works in nFunctions", {
   nfmx <- nFunction(
     fun = function(x = "RcppLogicalMatrix()",
                    i = "numericScalar()") {
@@ -112,7 +114,7 @@ test_that("RcppLogicalMatrix works", {
 })
 
 
-test_that("RcppComplexVector works", {
+test_that("RcppComplexVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppComplexVector") {
       cppLiteral(
@@ -127,7 +129,7 @@ test_that("RcppComplexVector works", {
   expect_equal(sort(x), ans)
 })
 
-test_that("RcppComplexMatrix works", {
+test_that("RcppComplexMatrix works in nFunctions", {
   nfmx <- nFunction(
     fun = function(x = "RcppComplexMatrix()",
                    i = "numericScalar()") {
@@ -144,7 +146,7 @@ test_that("RcppComplexMatrix works", {
   expect_equal(ans, y[2,])
 })
 
-test_that("RcppCharacterVector works", {
+test_that("RcppCharacterVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppCharacterVector") {
       cppLiteral(
@@ -159,7 +161,7 @@ test_that("RcppCharacterVector works", {
   expect_equal(sort(x), ans)
 })
 
-test_that("RcppCharacterMatrix works", {
+test_that("RcppCharacterMatrix works in nFunctions", {
   nfmx <- nFunction(
     fun = function(x = "RcppCharacterMatrix()",
                    i = "numericScalar()") {
@@ -177,7 +179,7 @@ test_that("RcppCharacterMatrix works", {
 })
 
 
-test_that("RcppDateVector works", {
+test_that("RcppDateVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppDateVector") {
       cppLiteral(
@@ -192,7 +194,7 @@ test_that("RcppDateVector works", {
   expect_equal(sort(x), ans)
 })
 
-test_that("RcppDatetimeVector works", {
+test_that("RcppDatetimeVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppDatetimeVector") {
       cppLiteral(
@@ -211,7 +213,7 @@ test_that("RcppDatetimeVector works", {
 
 ## TODO: Make a better test of RawVector. Can't figure out a simple case where
 ## this would be used (or what its methods are)
-test_that("RcppRawVector works", {
+test_that("RcppRawVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppRawVector") {
       cppLiteral(
@@ -246,7 +248,7 @@ test_that("RcppRawVector works", {
 # })
 
 
-test_that("RcppS4 works", {
+test_that("RcppS4 works in nFunctions", {
   nfs4 <- nFunction(
     fun = function(x = "RcppS4()") {
       cppLiteral(
@@ -285,7 +287,7 @@ test_that("RcppS4 works", {
 #   expect_false(nffnC(false_fn))
 # })
 
-test_that("RcppDataFrame works", {
+test_that("RcppDataFrame works in nFunctions", {
   nfdf <- nFunction(
     fun = function(x = "RcppDataFrame()",
                    v = "RcppNumericVector()") {
@@ -303,7 +305,7 @@ return x;',
   expect_equal(ans, cbind(new = c(101:110), y))
 })
 
-test_that("RcppEigenMatrixXd works", {
+test_that("RcppEigenMatrixXd works in nFunctions", {
   nfmxEigen <- nFunction(
     fun = function(x = "RcppEigenMatrixXd") {
       cppLiteral(
@@ -318,7 +320,7 @@ test_that("RcppEigenMatrixXd works", {
   ans <- nfmxEigenC(y)
   expect_equal(ans, t(y))
 })
-test_that("RcppEigenMatrixXi works", {
+test_that("RcppEigenMatrixXi works in nFunctions", {
   nfmxEigen <- nFunction(
     fun = function(x = "RcppEigenMatrixXi") {
       cppLiteral(
@@ -334,7 +336,7 @@ test_that("RcppEigenMatrixXi works", {
   expect_equal(ans, t(y))
 })
 
-test_that("RcppEigenMatrixXcd works", {
+test_that("RcppEigenMatrixXcd works in nFunctions", {
   nfmxEigen <- nFunction(
     fun = function(x = "RcppEigenMatrixXcd") {
       cppLiteral(
@@ -369,7 +371,7 @@ test_that("RcppEigenVectorXd works", {
 })
 
 
-test_that("RcppEigenVectorXi works", {
+test_that("RcppEigenVectorXi works in nFunctions", {
   nfEigen <- nFunction(
     fun = function(x = "RcppEigenVectorXi",
                    y = "RcppEigenMatrixXi") {
@@ -388,7 +390,7 @@ test_that("RcppEigenVectorXi works", {
 })
 
 
-test_that("RcppEigenVectorXcd works", {
+test_that("RcppEigenVectorXcd works in nFunctions", {
   nfEigen <- nFunction(
     fun = function(x = "RcppEigenVectorXcd",
                    y = "RcppEigenMatrixXcd") {
@@ -406,3 +408,23 @@ test_that("RcppEigenVectorXcd works", {
   expect_equal(ans, y %*% x)
 })
 
+
+# Test that Rcpp types work as public fields in nClasses
+test_that("RcppNumericVector works in nFunctions", {
+  nc <- nClass(
+    classname = "test_RcppNumericVector",
+    Cpublic = list(
+      x = "RcppNumericVector",
+      set_x = nFunction(fun = function(new_x = "RcppNumericVector") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x <- c(10, 0, 0, 0.1)
+  my_nc$set_x(test_x)
+  expect_equal(my_nc$x, test_x)
+})
