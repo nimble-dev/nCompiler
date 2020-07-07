@@ -60,14 +60,6 @@ writePackage <- function(...,
          " in the input list to indicate the objects to which they correspond.")
   }
   
-  # The default options for each element in control. Should have an entry for
-  # every allowed control element.
-  defaultControl <- list(
-    export = TRUE
-    # , test1 = 10,
-    # , test2 = FALSE
-  )
-  
   # Check if control is specified properly.
   # The user has the following options:
   # 1) Provide nothing. Defaults are used for all NF/NC objects.
@@ -85,20 +77,13 @@ writePackage <- function(...,
   # shareControl is a boolean flag indicating if all objects will take the same
   # control variable. If so, it'll be stored in the object globalControl for now
   sharedControl <- FALSE
-  globalControl <- defaultControl
+  globalControl <- defaultControl <- get_nOption("packagingOptions")
   if (length(control) == 0) { # We're in option 1.
     sharedControl <- TRUE
   } else if (sum(nchar(names(control)) > 0) < length(control)) { # If any elements are unnamed...
     if (length(control) == 1) { # We're in option 2
       sharedControl <- TRUE
-      for (controlName in names(control[[1]])) {
-        if (!controlName %in% names(defaultControl)) {
-          warning(paste0('In writePackage, "', controlName, '" is not the name ',
-                         'of a valid control option and was ignored.'))
-        } else {
-          globalControl[[controlName]] <- control[[1]][[controlName]]
-        }
-      }
+      globalControl <- updateDefaults(defaultControl, control[[1]])
     } else { # If no names were provided but control was length >1, that's a problem
       stop(paste("More than one control list detected, but not all were named.",
                  "Control lists can only be unnamed if exactly one is provided."))
@@ -114,29 +99,21 @@ writePackage <- function(...,
     if (isNF(x)) return(NFinternals(x)$uniqueName)
     else if (isNCgenerator(x)) return(x$classname)
     else stop(paste("In writePackage: only nFunctions and nClass generators are",
-                    "allowed. Cannot compile object of class ", class(objs[[i]])))
-  }))
+                    "allowed. Cannot compile object of class ", class(x)))}))
   
   # If options 1 or 2 were hit, we can just use the globalControl option set we
   # already built for every element. If neither, we still do this to set up the
-  # architectre and think of user specifications as modifying this default
+  # architecture and think of user specifications as modifying this default
   # structure
   if (sharedControl) {
     for (i in 1:length(objs)) totalControl[[i]] <- globalControl
   } else { # Option 3
 
     if ("default" %in% names(control)) {
-      for (controlName in names(control[["default"]])) {
-        if (!controlName %in% names(defaultControl)) {
-          warning(paste0('In writePackage, "', controlName, '" is not the name ',
-                         'of a valid control option and was ignored.'))
-        } else {
-          globalControl[[controlName]] <- control[["default"]][[controlName]]
-        }
-      }
+      globalControl <- updateDefaults(defaultControl, controls[["default"]])
     } 
     # If no defaults were specified, globalControl is still all defaults
-    for (i in 1:length(objs)) totalControl[[i]] <- globalControl
+    # for (i in 1:length(objs)) totalControl[[i]] <- globalControl
     
     if (length(unique(objNames)) < length(objNames)) {
       stop("In writePackage: multiple objects with the same name were provided.")
@@ -147,15 +124,8 @@ writePackage <- function(...,
     # an unrecognized name.
     for (i in 1:length(control)) {
       if (names(control)[[i]] %in% objNames) {
-        for (controlName in names(control[[i]])) {
-          if (!controlName %in% names(defaultControl)) {
-            warning(paste0('In writePackage, "', controlName, '" is not the name ',
-                           'of a valid control option and was ignored.'))
-          } else {
-            totalControl[[which(objNames == names(control)[[i]])]][[controlName]] <- 
-              control[[i]][[controlName]]
-          }
-        }
+        totalControl[[which(objNames == names(control)[[i]])]] <-
+          updateDefaults(globalControl, control[[i]])
       } else {
         if (!identical(names(control)[[i]], "default")) {
           stop(paste0('In writePackage: Control specified for object named "', 
@@ -201,14 +171,17 @@ writePackage <- function(...,
     else
       unlink(pkgDir, recursive = TRUE)
   }
-  ## The following eval(substitute(...), ...) construction is necessary
-  ## because Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used 
+  ## The following eval(substitute(...), ...) construction is necessary because
+  ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
   ## directly as needed here from inside a function.
+  
+  nCompiler_placeholder <<- function() NULL
   eval(
     substitute(
       Rcpp.package.skeleton(PN,
-                            path = DIR,
-                            author = "This package was generated by the nCompiler"),
+                        path = DIR,
+                        # list = "nCompiler_placeholder",
+                        author = "This package was generated by the nCompiler"),
       list(DIR = dir,
            PN = package.name)),
     envir = .GlobalEnv)
@@ -273,8 +246,8 @@ writePackage <- function(...,
   write.dcf(DESCRIPTION, DESCfile)
   
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
-  NAMESPACE <- readLines(NAMEfile)
-  NAMESPACE <- NAMESPACE[NAMESPACE != 'exportPattern(\"^[[:alpha:]]+\")']
+  NAMESPACE <- c("useDynLib(", package.name, ", .registration=TRUE)", 
+                 "importFrom(Rcpp, evalCpp)")
   for (i in 1:length(objs)) {
     # if (totalControl[[i]]$export && isNCgenerator(objs[[i]])) 
     if (totalControl[[i]]$export) {
@@ -295,9 +268,7 @@ writePackage <- function(...,
       x <- gsub("_NFID_[0-z]+ ", " ", x)
     } else x
   })
-  sink(file.path(pkgDir, "R/RcppExports.R"))
-  writeLines(unlist(rcppExports))
-  sink()
+  writeLines(unlist(rcppExports), file.path(pkgDir, "R/RcppExports.R"))
   
   if (roxygenize) roxygen2::roxygenize(package.dir = pkgDir,
                                        roclets = c("rd"))

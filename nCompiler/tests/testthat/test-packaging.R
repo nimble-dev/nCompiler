@@ -98,6 +98,48 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   expect_equal(obj$cp1(2), 3)
 })
 
+
+test_that("Create package with multiple objects", 
+          {
+            nCompiler:::nFunctionIDMaker(reset = TRUE)
+            nCompiler:::nClassIDMaker(reset = TRUE)
+            
+            foo1 <- nFunction(
+              name = "foo1",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            foo2 <- nClass(
+              classname = "foo2",
+              Cpublic = list(
+                cp1 = nFunction(
+                  fun = function(x = numericScalar()) {
+                    ans <- x+1
+                    return(ans)
+                    returnType(numericScalar())
+                  }
+                )
+              )
+            )
+            
+            writePackage(foo1, foo2,
+                         dir = tempdir(),
+                         package.name = "fooPackageMultiples",
+                         clean = TRUE,
+                         control = list(export = TRUE))
+            ans <- buildPackage("fooPackageMultiples",
+                                dir = tempdir())
+            
+            expect_equal(fooPackageMultiples::foo1(1), 2)
+            my_foo2 <- fooPackageMultiples::foo2$new()
+            expect_equal(my_foo2$cp1(10), 11)
+          })
+
+
 test_that("Export flag works", 
           {
             nCompiler:::nFunctionIDMaker(reset = TRUE)
@@ -111,16 +153,26 @@ test_that("Export flag works",
                 returnType(numericScalar())
               }
             )
+            foo2 <- nFunction(
+              name = "foo2",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
             
-            writePackage(foo,
+            writePackage(foo, foo2,
                          dir = tempdir(),
                          package.name = "fooPackageNoExport",
                          clean = TRUE,
-                         control = list(export = FALSE))
+                         control = list(
+                           foo = list(export = FALSE),
+                           foo2 = list(export = TRUE)))
             ans <- buildPackage("fooPackageNoExport",
                                 dir = tempdir())
             
             expect_error(fooPackageNoExport::foo(2))
             expect_equal(fooPackageNoExport:::foo(2), 3)
+            expect_equal(fooPackageNoExport::foo2(2), 4)
           })
-
