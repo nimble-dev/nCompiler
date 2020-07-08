@@ -12,11 +12,9 @@ dexp_nimble(x, rate = 1/scale, scale = 1, log = FALSE)
 
 rexp_nimble(n = 1, rate = 1/scale, scale = 1)
 
-pexp_nimble(q, rate = 1/scale, scale = 1, lower.tail = TRUE,
-  log.p = FALSE)
+pexp_nimble(q, rate = 1/scale, scale = 1, lower.tail = TRUE, log.p = FALSE)
 
-qexp_nimble(p, rate = 1/scale, scale = 1, lower.tail = TRUE,
-  log.p = FALSE)
+qexp_nimble(p, rate = 1/scale, scale = 1, lower.tail = TRUE, log.p = FALSE)
 }
 \arguments{
 \item{x}{vector of values.}

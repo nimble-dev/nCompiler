@@ -4,8 +4,7 @@
 \alias{nDerivs}
 \title{nFunction Derivatives}
 \usage{
-nDerivs(nFxn = NA, order = c(0, 1, 2), dropArgs = NA, wrt = NULL,
-  NC = NULL)
+nDerivs(nFxn = NA, order = c(0, 1, 2), dropArgs = NA, wrt = NULL, NC = NULL)
 }
 \arguments{
 \item{nFxn}{a call to a compiled or uncompiled \code{nFunction} method with

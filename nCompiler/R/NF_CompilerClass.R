@@ -24,7 +24,8 @@ NFvirtual_CompilerClass <- R6::R6Class(
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
                           ## funName,
-                          const = FALSE) {
+                          const = FALSE,
+                          useUniqueNameInCpp = FALSE) {
       const <<- const
       if(!is.null(f)) {
         isNFinternals <- inherits(f, 'NF_InternalsClass')
@@ -37,7 +38,8 @@ NFvirtual_CompilerClass <- R6::R6Class(
           NFinternals <<- NFinternals(f)
         }
         origName <<- NFinternals$uniqueName
-        name <<- NFinternals$cpp_code_name
+        if (useUniqueNameInCpp) name <<- NFinternals$uniqueName
+        else name <<- NFinternals$cpp_code_name
         origRcode <<- NFinternals$code
         newRcode <<- NFinternals$code
       }

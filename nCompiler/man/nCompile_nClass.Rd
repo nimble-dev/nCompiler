@@ -4,10 +4,15 @@
 \alias{nCompile_nClass}
 \title{Compile a nClass.}
 \usage{
-nCompile_nClass(NC, dir = file.path(tempdir(),
-  "nCompiler_generatedCode"), cacheDir = file.path(tempdir(),
-  "nCompiler_RcppCache"), env = parent.frame(), control = list(),
-  interface = c("full", "generic", "both"), ...)
+nCompile_nClass(
+  NC,
+  dir = file.path(tempdir(), "nCompiler_generatedCode"),
+  cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
+  env = parent.frame(),
+  control = list(),
+  interface = c("full", "generic", "both"),
+  ...
+)
 }
 \arguments{
 \item{NC}{A nClass generator (returned from a call to \link{nClass}).}

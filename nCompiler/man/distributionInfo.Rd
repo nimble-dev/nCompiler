@@ -15,8 +15,12 @@ isUserDefined(dist)
 
 pqDefined(dist)
 
-getType(dist, params = NULL, valueOnly = is.null(params) &&
-  !includeParams, includeParams = !is.null(params))
+getType(
+  dist,
+  params = NULL,
+  valueOnly = is.null(params) && !includeParams,
+  includeParams = !is.null(params)
+)
 
 getParamNames(dist, includeValue = TRUE)
 }

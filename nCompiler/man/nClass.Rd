@@ -4,8 +4,13 @@
 \alias{nClass}
 \title{Create a nClass definition}
 \usage{
-nClass(classname, Rpublic = list(), Cpublic = list(),
-  enableDerivs = character(), env = parent.frame())
+nClass(
+  classname,
+  Rpublic = list(),
+  Cpublic = list(),
+  enableDerivs = character(),
+  env = parent.frame()
+)
 }
 \arguments{
 \item{classname}{A name for the class.}

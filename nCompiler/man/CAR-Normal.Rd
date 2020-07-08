@@ -6,11 +6,26 @@
 \alias{rcar_normal}
 \title{The CAR-Normal Distribution}
 \usage{
-dcar_normal(x, adj, weights, num, tau, c = CAR_calcNumIslands(adj, num),
-  zero_mean = 0, log = FALSE)
+dcar_normal(
+  x,
+  adj,
+  weights,
+  num,
+  tau,
+  c = CAR_calcNumIslands(adj, num),
+  zero_mean = 0,
+  log = FALSE
+)
 
-rcar_normal(n = 1, adj, weights, num, tau, c = CAR_calcNumIslands(adj,
-  num), zero_mean = 0)
+rcar_normal(
+  n = 1,
+  adj,
+  weights,
+  num,
+  tau,
+  c = CAR_calcNumIslands(adj, num),
+  zero_mean = 0
+)
 }
 \arguments{
 \item{x}{vector of values.}

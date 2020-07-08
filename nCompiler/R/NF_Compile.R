@@ -53,7 +53,9 @@ nCompile_nFunction <- function(NF,
     on.exit(set_nOption('logging', loggingOpt, 'compilerOptions'))
   }
   
-  NF_Compiler <- NF_CompilerClass$new(f = NF)
+  NF_Compiler <- NF_CompilerClass$new(f = NF, 
+                                      useUniqueNameInCpp = 
+                                        controlFull$useUniqueNameInCode)
                                       ## , funName = funName)
   NF_Compiler$createCpp(control = controlFull)
   if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,

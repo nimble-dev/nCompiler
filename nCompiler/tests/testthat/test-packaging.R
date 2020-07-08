@@ -176,3 +176,77 @@ test_that("Export flag works",
             expect_equal(fooPackageNoExport:::foo(2), 3)
             expect_equal(fooPackageNoExport::foo2(2), 4)
           })
+
+test_that("Package writing errors and warnings for naming",
+          {
+            foo_duplicate1 <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            foo_duplicate2 <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            expect_error(
+              writePackage(foo_duplicate1, foo_duplicate2,
+                           dir = tempdir(),
+                           package.name = "fooPackageNoExport",
+                           clean = TRUE)
+            )
+            
+            foo_badname <- nFunction(
+              name = "invalid.cpp.name",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            expect_warning(
+              writePackage(foo_badname,
+                           dir = tempdir(),
+                           package.name = "fooPackageNoExport",
+                           clean = TRUE)
+            )
+            
+          })
+
+# Roxygen tests
+
+test_that("Package writing documentation",
+          {
+            foo <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            rox <- documentNFunction(obj = foo, 
+                    name  = "foo",
+                    title = "A Test nFunction",
+                    description = "This nFunction just adds one to a 
+                                   scalar input.",
+                    params = list(x = "A scalar to which 1 will be added."))
+            
+            
+            writePackage(foo,
+                         dir = tempdir(),
+                         package.name = "fooPackageWriteDoc",
+                         clean = TRUE, 
+                         roxygen = rox,
+                         roxygenize = TRUE)
+            buildPackage("fooPackageWriteDoc", 
+                         dir = tempdir())
+            
+          })
+

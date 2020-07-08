@@ -4,8 +4,7 @@
 \alias{nParse}
 \title{Create.nCompiler parse tree from R code.}
 \usage{
-nParse(code, caller = NULL, callerArgID = numeric(),
-  recursing = FALSE)
+nParse(code, caller = NULL, callerArgID = numeric(), recursing = FALSE)
 }
 \arguments{
 \item{code}{R code object such as returned by \code{quote()} or

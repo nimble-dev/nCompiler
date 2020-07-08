@@ -27,7 +27,8 @@ updateDefaults <- function(defaults, controls) {
       startDebugStage = 'end',
       endDebugStage = 'end',
       writeCpp = TRUE,
-      compileCpp = TRUE
+      compileCpp = TRUE,
+      useUniqueNameInCode = FALSE
     ),
     packagingOptions = list(
       export = TRUE

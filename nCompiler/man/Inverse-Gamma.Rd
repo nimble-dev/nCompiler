@@ -12,11 +12,23 @@ dinvgamma(x, shape, scale = 1, rate = 1/scale, log = FALSE)
 
 rinvgamma(n = 1, shape, scale = 1, rate = 1/scale)
 
-pinvgamma(q, shape, scale = 1, rate = 1/scale, lower.tail = TRUE,
-  log.p = FALSE)
+pinvgamma(
+  q,
+  shape,
+  scale = 1,
+  rate = 1/scale,
+  lower.tail = TRUE,
+  log.p = FALSE
+)
 
-qinvgamma(p, shape, scale = 1, rate = 1/scale, lower.tail = TRUE,
-  log.p = FALSE)
+qinvgamma(
+  p,
+  shape,
+  scale = 1,
+  rate = 1/scale,
+  lower.tail = TRUE,
+  log.p = FALSE
+)
 }
 \arguments{
 \item{x}{vector of values.}
@@ -48,6 +60,9 @@ generates random deviates.
 Density, distribution function, quantile function and random
   generation for the inverse gamma distribution with rate
     or scale (mean = scale / (shape - 1)) parameterizations.
+}
+\details{
+
 }
 \examples{
 x <- rinvgamma(50, shape = 1, scale = 3)

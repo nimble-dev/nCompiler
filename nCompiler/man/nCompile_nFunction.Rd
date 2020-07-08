@@ -4,9 +4,14 @@
 \alias{nCompile_nFunction}
 \title{Compile a nFunction}
 \usage{
-nCompile_nFunction(NF, dir = file.path(tempdir(),
-  "nCompiler_generatedCode"), cacheDir = file.path(tempdir(),
-  "nCompiler_RcppCache"), env = parent.frame(), control = list(), ...)
+nCompile_nFunction(
+  NF,
+  dir = file.path(tempdir(), "nCompiler_generatedCode"),
+  cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
+  env = parent.frame(),
+  control = list(),
+  ...
+)
 }
 \arguments{
 \item{NF}{A nFunction to be compiled.}

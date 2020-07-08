@@ -4,10 +4,18 @@
 \alias{nFunction}
 \title{Create a nFunction.}
 \usage{
-nFunction(fun, name = NA, argTypes = list(), refArgs = list(),
-  returnType = NULL, enableDerivs = list(),
-  check = get_nOption("check_nFunction"), returnCallable = TRUE,
-  where = parent.frame(), ...)
+nFunction(
+  fun,
+  name = NA,
+  argTypes = list(),
+  refArgs = list(),
+  returnType = NULL,
+  enableDerivs = list(),
+  check = get_nOption("check_nFunction"),
+  returnCallable = TRUE,
+  where = parent.frame(),
+  ...
+)
 }
 \arguments{
 \item{fun}{R function to be turned into a nFunction}
@@ -47,13 +55,13 @@ foo <- nFunction(
     fun = rawfoo,
     argTypes = list(a = "numericScalar()",
                     b = "ref(integerVector())"),
-    # First alternative is to provide arguments in \\code{rawfoo} as
+    # First alternative is to provide arguments in \code{rawfoo} as
     #    function(a = numericScalar(5), b = ref(integerVector()))
     # Second alternative is to use b = integerVector() and provide
     #    refArgs = "b".
     returnType = "numericScalar()"
     # Alternative would be to include "returnType(numericVector())"
-    # in \\code{rawfoo}
+    # in \code{rawfoo}
 )
 }
 }

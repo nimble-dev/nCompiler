@@ -12,11 +12,9 @@ dt_nonstandard(x, df = 1, mu = 0, sigma = 1, log = FALSE)
 
 rt_nonstandard(n, df = 1, mu = 0, sigma = 1)
 
-pt_nonstandard(q, df = 1, mu = 0, sigma = 1, lower.tail = TRUE,
-  log.p = FALSE)
+pt_nonstandard(q, df = 1, mu = 0, sigma = 1, lower.tail = TRUE, log.p = FALSE)
 
-qt_nonstandard(p, df = 1, mu = 0, sigma = 1, lower.tail = TRUE,
-  log.p = FALSE)
+qt_nonstandard(p, df = 1, mu = 0, sigma = 1, lower.tail = TRUE, log.p = FALSE)
 }
 \arguments{
 \item{x}{vector of values.}

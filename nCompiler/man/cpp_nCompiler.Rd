@@ -4,10 +4,15 @@
 \alias{cpp_nCompiler}
 \title{Call Rcpp's C++ compilation system for nCompiler-generated content}
 \usage{
-cpp_nCompiler(Rcpp_packet, dir = file.path(tempdir(),
-  "nCompiler_generatedCode"), cacheDir = file.path(tempdir(),
-  "nCompiler_RcppCache"), env = parent.frame(), write = TRUE,
-  compile = TRUE, ...)
+cpp_nCompiler(
+  Rcpp_packet,
+  dir = file.path(tempdir(), "nCompiler_generatedCode"),
+  cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
+  env = parent.frame(),
+  write = TRUE,
+  compile = TRUE,
+  ...
+)
 }
 \arguments{
 \item{dir}{Directory for writing C++ code files.}
