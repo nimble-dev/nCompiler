@@ -410,7 +410,7 @@ test_that("RcppEigenVectorXcd works in nFunctions", {
 
 
 # Test that Rcpp types work as public fields in nClasses
-test_that("RcppNumericVector works in nFunctions", {
+test_that("RcppNumericVector works in nClasses", {
   nc <- nClass(
     classname = "test_RcppNumericVector",
     Cpublic = list(
@@ -424,7 +424,282 @@ test_that("RcppNumericVector works in nFunctions", {
   )
   ncC <- nCompile(nc)
   my_nc <- ncC$new()
-  test_x <- c(10, 0, 0, 0.1)
-  my_nc$set_x(test_x)
-  expect_equal(my_nc$x, test_x)
+  test_x1 <- c(10, 0, 0, 0.1)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- c(0, 100, 10, 0.01)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
 })
+
+test_that("RcppNumericMatrix works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppNumericMatrix",
+    Cpublic = list(
+      x = "RcppNumericMatrix",
+      set_x = nFunction(fun = function(new_x = "RcppNumericMatrix") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- matrix(c(10, 0, 0, 0.1), nrow = 2)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- matrix(c(0, 100, 10, 0.01), nrow = 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+
+test_that("RcppIntegerVector works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppIntegerVector",
+    Cpublic = list(
+      x = "RcppIntegerVector",
+      set_x = nFunction(fun = function(new_x = "RcppIntegerVector") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- c(10, 0, 0, 1)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- c(0, 100, 10, 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+test_that("RcppIntegerMatrix works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppIntegerMatrix",
+    Cpublic = list(
+      x = "RcppIntegerMatrix",
+      set_x = nFunction(fun = function(new_x = "RcppIntegerMatrix") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- matrix(c(10, 0, 0, 2), nrow = 2)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- matrix(c(0, 100, 10, 4), nrow = 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+
+test_that("RcppCharacterVector works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppCharacterVector",
+    Cpublic = list(
+      x = "RcppCharacterVector",
+      set_x = nFunction(fun = function(new_x = "RcppCharacterVector") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- c("Hello", "Hi", "foo1", "foo2")
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- c("Hi", "foo1", "Hello", "foo2")
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+test_that("RcppCharacterMatrix works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppCharacterMatrix",
+    Cpublic = list(
+      x = "RcppCharacterMatrix",
+      set_x = nFunction(fun = function(new_x = "RcppCharacterMatrix") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- matrix(c("Hello", "Hi", "foo1", "foo2"), nrow = 2)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- matrix(c("Hi", "foo1", "Hello", "foo2"), nrow = 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+
+test_that("RcppComplexVector works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppComplexVector",
+    Cpublic = list(
+      x = "RcppComplexVector",
+      set_x = nFunction(fun = function(new_x = "RcppComplexVector") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- c(5i, 4i, 1, 5i + 3)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- c(4i, 1, 5i + 3, 5i)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+test_that("RcppComplexMatrix works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppComplexMatrix",
+    Cpublic = list(
+      x = "RcppComplexMatrix",
+      set_x = nFunction(fun = function(new_x = "RcppComplexMatrix") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- matrix(c(4i, 1, 5i + 3, 10), nrow = 2)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- matrix(c(4i, 1, 5i + 3, 0), nrow = 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+test_that("RcppLogicalVector works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppLogicalVector",
+    Cpublic = list(
+      x = "RcppLogicalVector",
+      set_x = nFunction(fun = function(new_x = "RcppLogicalVector") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- c(TRUE, FALSE, FALSE, TRUE)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- c(TRUE, FALSE, FALSE, FALSE)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+test_that("RcppLogicalMatrix works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppLogicalMatrix",
+    Cpublic = list(
+      x = "RcppLogicalMatrix",
+      set_x = nFunction(fun = function(new_x = "RcppLogicalMatrix") { 
+        x <- new_x
+        return(0) 
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- matrix(c(TRUE, FALSE, FALSE, TRUE), nrow = 2)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- matrix(c(FALSE, FALSE, TRUE, FALSE), nrow = 2)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
+
+# TODO: Why do the following tests not work?
+# test_that("RcppDateVector works in nClasses", {
+#   nc <- nClass(
+#     classname = "test_RcppDateVector",
+#     Cpublic = list(
+#       # x = "RcppDateVector",
+#       set_x = nFunction(fun = function(new_x = "RcppDateVector") {
+#         x <- new_x
+#         return(0)
+#       }, returnType = "integerScalar"
+#       )
+#     )
+#   )
+#   ncC <- nCompile(nc)
+#   my_nc <- ncC$new()
+#   test_x1 <- as.Date(c("2020-01-28", "2020-01-29", "2020-01-30", "2020-01-31"))
+#   my_nc$set_x(test_x1)
+#   expect_equal(my_nc$x, test_x1)
+#   test_x2 <- as.Date(c("2019-01-28", "2019-01-29", "2019-01-30", "2019-01-31"))
+#   my_nc$x <- test_x2
+#   expect_equal(my_nc$x, test_x2)
+# })
+# 
+# 
+# test_that("RcppDatetimeVector works in nClasses", {
+#   nc <- nClass(
+#     classname = "test_RcppDatetimeVector",
+#     Cpublic = list(
+#       x = "RcppDateVector",
+#       set_x = nFunction(fun = function(new_x = "RcppDatetimeVector") { 
+#         x <- new_x
+#         return(0) 
+#       }, returnType = "integerScalar"
+#       )
+#     )
+#   )
+#   ncC <- nCompile(nc)
+#   my_nc <- ncC$new()
+#   test_x1 <- as.POSIXct(c(1593166562, 1593066562, 1592166562, 159316562), 
+#                         origin = as.Date("1950-01-01"))
+#   my_nc$set_x(test_x1)
+#   expect_equal(my_nc$x, test_x1)
+#   test_x2 <- as.POSIXct(c(1493166562, 1593066562, 2592166562, 159316562), 
+#                         origin = as.Date("1950-01-01"))
+#   my_nc$x <- test_x2
+#   expect_equal(my_nc$x, test_x2)
+# })
+# 
+# 
+# test_that("RcppDataFrame works in nClasses", {
+#   nc <- nClass(
+#     classname = "test_RcppDataFrame",
+#     Cpublic = list(
+#       x = "RcppDateVector",
+#       set_x = nFunction(fun = function(new_x = "RcppDataFrame") { 
+#         x <- new_x
+#         return(0) 
+#       }, returnType = "integerScalar"
+#       )
+#     )
+#   )
+#   ncC <- nCompile(nc)
+#   my_nc <- ncC$new()
+#   test_x1 <- data.frame(x = 1:10, y = 100:110)
+#   my_nc$set_x(test_x1)
+#   expect_equal(my_nc$x, test_x1)
+#   test_x2 <- data.frame(a = 1:100, b = 101:200)
+#   my_nc$x <- test_x2
+#   expect_equal(my_nc$x, test_x2)
+# })
