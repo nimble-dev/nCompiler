@@ -515,6 +515,24 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('length'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction',
+      returnTypeCode = returnTypeCodes$integer
+    ),
+    eigenImpl = list(
+      handler = 'Reduction',
+      noPromotion = TRUE,
+      method = TRUE
+    ),
+    cppOutput = list(
+      cppString = 'size'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
@@ -526,7 +544,7 @@ assignOperatorDef(
 specificCallReplacements <- list(
 #    '^' = 'pow',
 #    '%%' = 'nimMod',
-    length = 'size',
+#    length = 'size',
     is.nan = 'ISNAN',
     is.nan.vec = 'ISNAN',
     is.na = 'ISNA',

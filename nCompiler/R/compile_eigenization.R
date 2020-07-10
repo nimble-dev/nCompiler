@@ -336,9 +336,8 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  Reduction <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(invisible(NULL))
-    promoteTypes(code)
+  Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
