@@ -20,6 +20,6 @@ This function is called internally every time nCompiler is ready to call the C++
 generated code.
 }
 \seealso{
-\link{\code{setup_nCompLocal}} for how to create and install nCompLocal once for an
+\link{setup_nCompLocal} for how to create and install nCompLocal once for an
 R installation, so that nCompLocal can be re-used than than re-created in every R session.
 }

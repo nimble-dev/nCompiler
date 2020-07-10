@@ -18,7 +18,7 @@
 #'   input vector of the elements with respect to which to differentiate.  If
 #'   left empty, derivatives will be taken with respect to all arguments to
 #'   \code{nFxn}.
-#' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
+#' @param NC An nClass generator (returned from a call to \link{nClass})
 #'   which has a method corresponding to the one found in \code{nFxn}.  Only
 #'   required when \code{nFxn} is a compiled method call from a generic or full
 #'   interface.
@@ -94,7 +94,7 @@ nDerivs <- function(nFxn = NA, order = c(0,1,2), dropArgs = NA, wrt = NULL,
 #' @param wrt a character vector of either: names of function arguments to take
 #'   derivatives with respect to.  If left empty, derivatives will be taken
 #'   with respect to all arguments to \code{nFxn}.
-#' @param NC An nClass generator (returned from a call to \code{\link{nClass}})
+#' @param NC An nClass generator (returned from a call to \link{nClass})
 #'   which has a method corresponding to the one found in \code{nFxn}. Only
 #'   required when \code{nFxn} is a compiled method call from a generic or full
 #'   interface.

@@ -15,8 +15,8 @@ use from R only.}
 
 \item{Cpublic}{A list of public data (with type declarations) and
 methods (nFunctions) that can be turned into C++ via
-\code{nCompile_nClass}.  As in R6 classes (see
-\code{\link{R6Class}}), data and methods go in the same list.}
+\link{nCompile_nClass}.  As in R6 classes (see
+\link{R6Class}), data and methods go in the same list.}
 
 \item{enableDerivs}{A list or character vector of methods in Cpublic 
 for which derivatives should be enabled.}

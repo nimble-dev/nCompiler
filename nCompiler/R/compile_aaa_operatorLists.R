@@ -103,6 +103,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('which'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Which'),
+    eigenImpl = list(
+      handler = 'Which')
+  )
+)
+
+assignOperatorDef(
   c('for'),
   list(
     labelAbstractTypes = list(
@@ -123,6 +133,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_reduce'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelReduce'),
+    finalTransformations = list(
+      handler = 'ParallelReduce')
+  )
+)
+
+assignOperatorDef(
   c('GeneralFor'),
   list(
     cppOutput = list(
@@ -131,10 +151,33 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('rep'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'Rep')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
-        handler = 'Colon')
+      handler = 'Colon'),
+    eigenImpl = list(
+      handler = 'Colon')
+  )
+)
+
+assignOperatorDef(
+  c('seq'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Seq'),
+    eigenImpl = list(
+      handler = 'Seq')
   )
 )
 
@@ -330,7 +373,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('mean', 'prod', 'squaredNorm'),
+  c('mean', 'prod', 'squaredNorm', 'sum'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
@@ -398,9 +441,12 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('atan', 'logit'),
+  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
+    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
+    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
+    'loggam', 'log1p', 'lfactorial', 'logfact'),
   list(
-    help = 'Example help entry',
+    help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$double),
@@ -413,6 +459,15 @@ assignOperatorDef(
     )
   )
 )
+updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
+updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
+updateOperatorDef('ceiling', 'eigenImpl', 'nameReplacement', 'ceil')
+updateOperatorDef('round', 'eigenImpl', 'nameReplacement', 'nRound')
+updateOperatorDef('trunc', 'eigenImpl', 'nameReplacement', 'nTrunc')
+updateOperatorDef('gamma', 'eigenImpl', 'nameReplacement', 'gammafn')
+updateOperatorDef('lgamma', 'eigenImpl', 'nameReplacement', 'lgammafn')
+updateOperatorDef('loggam', 'eigenImpl', 'nameReplacement', 'lgammafn')
+updateOperatorDef('logfact', 'eigenImpl', 'nameReplacement', 'lfactorial')
 
 ## binaryMidLogicalOperatorsComparison
 assignOperatorDef(
@@ -513,6 +568,24 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('length'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction',
+      returnTypeCode = returnTypeCodes$integer
+    ),
+    eigenImpl = list(
+      handler = 'Reduction',
+      noPromotion = TRUE,
+      method = TRUE
+    ),
+    cppOutput = list(
+      cppString = 'size'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
@@ -524,19 +597,19 @@ assignOperatorDef(
 specificCallReplacements <- list(
 #    '^' = 'pow',
 #    '%%' = 'nimMod',
-    length = 'size',
+#    length = 'size',
     is.nan = 'ISNAN',
     is.nan.vec = 'ISNAN',
     is.na = 'ISNA',
     is.na.vec = 'ISNA',
-    lgamma = 'lgammafn',
-    logfact = 'lfactorial',
-    loggam = 'lgammafn',
-    gamma = 'gammafn',
-    expit = 'ilogit',
-    phi = 'iprobit',
-    ceiling = 'ceil',
-    trunc = 'ftrunc',
+#    lgamma = 'lgammafn',
+#    logfact = 'lfactorial',
+#    loggam = 'lgammafn',
+#    gamma = 'gammafn',
+#    expit = 'ilogit',
+#    phi = 'iprobit',
+#    ceiling = 'ceil',
+#    trunc = 'ftrunc',
     nDim = 'dim',
     checkInterrupt = 'R_CheckUserInterrupt')
 
