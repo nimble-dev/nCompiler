@@ -103,7 +103,19 @@ assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
-        handler = 'Colon')
+      handler = 'Colon'),
+    eigenImpl = list(
+      handler = 'Colon')
+  )
+)
+
+assignOperatorDef(
+  c('seq'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Seq'),
+    eigenImpl = list(
+      handler = 'Seq')
   )
 )
 
