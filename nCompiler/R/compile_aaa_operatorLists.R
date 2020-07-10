@@ -52,6 +52,47 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('nC'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RecurseAndLabel',
+      return_nDim = 1,
+      returnTypeCodes$promote),
+    eigenImpl = list()
+  )
+)
+
+assignOperatorDef(
+  c('nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'InitData'),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
+)
+updateOperatorDef(
+  c('nNumeric', 'nInteger', 'nLogical'),
+  'labelAbstractTypes', 'return_nDim', 1
+)
+updateOperatorDef(
+  'nNumeric',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$double
+)
+updateOperatorDef(
+  'nInteger',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$integer
+)
+updateOperatorDef(
+  'nLogical',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
+)
+updateOperatorDef(
+  c('nMatrix', 'nArray'),
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
+)
+
+assignOperatorDef(
   c('if', 'while'),
   list(
     labelAbstractTypes = list(
