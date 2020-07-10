@@ -39,8 +39,11 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('mean', 'prod', 'exp', 'log', 'rsqrt', 'sqrt', 'tanh', 'abs', 'cube',
-    'square', 'atan', 'logit'),
+  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
+    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
+    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
+    'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum', 'exp', 'log',
+    'rsqrt', 'sqrt', 'abs', 'cube', 'square'),
   'testing',
   val = list(
     ## derivatives currently only available for scalar and vector inputs  
@@ -56,11 +59,11 @@ nCompiler:::updateOperatorDef(
 nCompiler:::updateOperatorDef(
   c('log', 'rsqrt', 'sqrt'), 'testing', 'input_gen_funs',
   list(
-    arg1 = function(size, type) {
+    arg1 = function(arg_size, type) {
       switch(
         type,
-        "double"  = abs(rnorm(prod(size))), ## no negatives
-        "integer" = rgeom(prod(size), 0.5),
+        "double"  = abs(rnorm(prod(arg_size))), ## no negatives
+        "integer" = rgeom(prod(arg_size), 0.5),
         "logical" = sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
       )
     }
@@ -80,7 +83,7 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('mean', 'prod', 'squaredNorm'),
+  c('mean', 'prod', 'squaredNorm', 'sum'),
   'testing', 'reductionOp', TRUE
 )
 
@@ -126,12 +129,12 @@ nCompiler:::updateOperatorDef(
   c('/'), 'testing', 'input_gen_funs',
   list(
     arg1 = NULL,
-    arg2 = function(size, type) {
+    arg2 = function(arg_size, type) {
       switch(
         type,
-        "double"  = rnorm(prod(size)),
-        "integer" = rgeom(prod(size), 0.5) + 1, ## no zeros
-        "logical" = rep(TRUE, prod(size)) ## always TRUE
+        "double"  = rnorm(prod(arg_size)),
+        "integer" = rgeom(prod(arg_size), 0.5) + 1, ## no zeros
+        "logical" = rep(TRUE, prod(arg_size)) ## always TRUE
       )
     }
   )
