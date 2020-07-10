@@ -100,6 +100,17 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('rep'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'Rep')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(

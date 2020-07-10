@@ -458,7 +458,53 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+  Rep <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## TODO: this assumes proper arg ordering and naming
+    ## TODO: handle zero-dim first arg
+    arg_names <- names(code$args)
+    if (length(code$arg) > 3) {
+      ## the second arg is 'times' which is ignored whenever 'length.out' is
+      ## included
+      removeArg(code, 2)
+      ## any other args are unused and can be removed
+      code$args <- code$args[1:3]
+      code$name <- 'repLenEach'
+    } else if (length(code$args) == 3) {
+      if (!'each' %in% arg_names) {
+        ## the second arg must be 'times' and the third is 'length.out'
+        removeArg(code, 2)
+        code$name <- 'repLen'
+      } else {
+        if ('length.out' %in% arg_names)
+          code$name <- 'repLenEach'
+        else
+          code$name <- 'repTimesEach'
+      }
+    } else if (length(code$args) == 2) {
+      if ('length.out' %in% arg_names)
+        code$name <- 'repLen'
+      else if ('each' %in% arg_names)
+        code$name <- 'repEach'
+      else
+        code$name <- 'repTimes'
+    } else {
+      ## If length(code$args) == 1, this takes 'rep' out of the AST and
+      ## replaces it with its one arg. If length(code$args) == 1, 'rep' is
+      ## replaced with NULL which is exactly what the call rep() returns.
+      removeExprClassLayer(code)
+      return(invisible(NULL))
+    }
+    ## In C++, eval = true when the call to rep is part of a larger expression
+    ## and rep's arg is a call to avoid costly repeated computation when
+    ## reshaping and broadcasting the tensor.
+    if (!code$caller$name %in% assignmentOperators && code$args[[1]]$isCall)
+      setArg(code, length(code$args) + 1, literalLogicalExpr())
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+ Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if (!code$caller$name == '[') {
       code$name <- 'seq'
       by_arg <- literalIntegerExpr(1)
