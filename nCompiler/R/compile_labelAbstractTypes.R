@@ -124,7 +124,7 @@ compile_labelAbstractTypes <- function(code,
           } else
             stop(exprClassProcessingErrorMsg(
               code,
-              paste0(code$name, 'is being used as a function, but it is not a nFunction.')),
+              paste0(code$name, ' is being used as a function, but it is not a nFunction.')),
               call. = FALSE)
         }
       }
@@ -360,6 +360,36 @@ inLabelAbstractTypesEnv(
       }
       NULL
     }
+)
+
+inLabelAbstractTypesEnv(
+  Which <- function(code, symTab, auxEnv, handlingInfo) {
+    if (length(code$args) != 1)
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste("In labelAbstractTypes handler Which: 'arr.ind' and",
+                      "'useNames' args are not implemented for 'which'.")
+        ), call. = FALSE)
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    if (code$args[[1]]$type$type != 'logical')
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste0("In labelAbstractTypes handler Which: The argument to ",
+                       "'which' must be logical, but got",
+                       code$args[[1]]$type$type, '.')
+        ), call. = FALSE)
+    ## TODO: remove the nDim restriction
+    if (code$args[[1]]$type$nDim > 1)
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste0("In labelAbstractTypes handler Which: handling of arg",
+                 "with dimension greater than 1 not yet implemented.")
+        ), call. = FALSE)
+    code$type <- symbolBasic$new(name = code$args[[1]]$name,
+                                 nDim = 1, type = 'integer')
+    invisible(inserts)
+  }
 )
 
 inLabelAbstractTypesEnv(

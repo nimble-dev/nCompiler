@@ -458,6 +458,15 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  Which <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## the labelAbstractTypes handler Which guarantees that 'code' has one
+    ## logical arg
+    code$name <- paste0('setWhich', code$args[[1]]$type$nDim)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   Rep <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     ## TODO: this assumes proper arg ordering and naming
     ## TODO: handle zero-dim first arg

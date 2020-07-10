@@ -15,6 +15,7 @@
 #include "shared_ptr_as_wrap.h"
 
 #include "typedefs.h"
+#include "setWhich.h"
 #include "repClass.h"
 #include "seqClass.h"
 #include "recyclingRule.h"
