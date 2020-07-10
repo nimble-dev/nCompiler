@@ -82,6 +82,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_reduce'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelReduce'),
+    finalTransformations = list(
+      handler = 'ParallelReduce')
+  )
+)
+
+assignOperatorDef(
   c('GeneralFor'),
   list(
     cppOutput = list(
