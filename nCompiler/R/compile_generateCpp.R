@@ -151,19 +151,19 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
-  chainedCall <- function(code, symTab) {
-    firstCall <- compile_generateCpp(code$args[[1]], symTab)
-    paste0(firstCall, 
-           '(',
-           paste0(unlist(lapply(code$args[-1],
-                                compile_generateCpp, 
-                                symTab, 
-                                asArg = TRUE) ),
-                  collapse = ', '), ')' 
-           )
-  }
-)
+## inGenCppEnv(
+##   chainedCall <- function(code, symTab) {
+##     firstCall <- compile_generateCpp(code$args[[1]], symTab)
+##     paste0(firstCall, 
+##            '(',
+##            paste0(unlist(lapply(code$args[-1],
+##                                 compile_generateCpp, 
+##                                 symTab, 
+##                                 asArg = TRUE) ),
+##                   collapse = ', '), ')' 
+##            )
+##   }
+## )
 
 inGenCppEnv(
   MidOperator <- function(code, symTab) {
@@ -298,18 +298,25 @@ cppOutputMemberData <- function(code, symTab) {
 
 inGenCppEnv(
   ## Member(A, x) -> A.x
-  Member <- function(code, symTab) {
+  Member <- function(code, symTab, connector = '.') {
     paste0( '(',
            compile_generateCpp(code$args[[1]], symTab),
-           ').', code$args[[2]]$name)
+           ')', connector, code$args[[2]]$name)
+  }
+)
+
+inGenCppEnv(
+  ## Member(A, x) -> A.x
+  PtrMember <- function(code, symTab) {
+    Member(code, symTab, connector = '->')
   }
 )
 
 inGenCppEnv(
   ## This differs from old system
   ## Method(A, foo, x) -> A.foo(x)
-  Method <- function(code, symTab) {
-    obj <- paste0('(', compile_generateCpp(code$args[[1]], symTab), ').')
+  Method <- function(code, symTab, connector = '.') {
+    obj <- paste0('(', compile_generateCpp(code$args[[1]], symTab), ')', connector)
     opString <- getCppString(code$args[[2]])
     methodCall <- paste0(
       opString, '(',
@@ -319,6 +326,13 @@ inGenCppEnv(
       ), ')'
     )
     paste0(obj, methodCall)
+  }
+)
+inGenCppEnv(
+  ## This differs from old system
+  ## Method(A, foo, x) -> A.foo(x)
+  PtrMethod <- function(code, symTab) {
+    Method(code, symTab, connector = '->')
   }
 )
 

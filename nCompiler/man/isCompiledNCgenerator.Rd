@@ -13,5 +13,5 @@ isCompiledNCgenerator(x)
 \code{TRUE} or \code{FALSE}
 }
 \description{
-Determine if an object is a compiled nClass generator, returned by a call to \code{\link{nCompile_nClass}} with \code{interface} set to \code{"full"} or \code{"both"}.
+Determine if an object is a compiled nClass generator, returned by a call to \link{nCompile_nClass} with \code{interface} set to \code{"full"} or \code{"both"}.
 }

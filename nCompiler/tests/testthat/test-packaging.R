@@ -7,21 +7,22 @@ test_that("writePackage and buildPackage work for nFunction",
             
             foo <- nFunction(
               name = "foo",
-              fun = function(x = double()) {
+              fun = function(x = numericScalar()) {
                 ans <- x+1
                 return(ans)
-                returnType(double())
+                returnType(numericScalar())
               }
             )
             
             writePackage(foo,
                          dir = tempdir(),
                          package.name = "fooPackage",
-                         clean = TRUE)
+                         clean = TRUE, 
+                         control = list(export = TRUE))
             ans <- buildPackage("fooPackage",
                                 dir = tempdir())
-            ## Need to get this name fixed
-            expect_equal(fooPackage::foo_NFID_1(2), 3)
+            
+            expect_equal(fooPackage::foo(2), 3)
           })
 
 test_that("writePackage and buildPackage work for nClass", 
@@ -37,10 +38,10 @@ test_that("writePackage and buildPackage work for nClass",
               Cpublic = list(
                 x = 'numericScalar',
                 cp1 = nFunction(
-                  fun = function(x = double()) {
+                  fun = function(x = 'numericScalar') {
                     ans <- x+1
                     return(ans)
-                    returnType(double())
+                    returnType(numericScalar())
                   }
                 )
               )
@@ -56,8 +57,8 @@ test_that("writePackage and buildPackage work for nClass",
                          dir = tempdir())
                          #, lib = "test_package_nc1Package_lib")
             expect_true(require("nc1Package")) #, lib.loc = "test_package_nc1Package_lib"))
-            expect_true(is.function(nc1Package::new_nc1))
-            obj <- nc1Package::new_nc1()
+            expect_true(is.function(nc1Package:::new_nc1))
+            obj <- nc1Package:::new_nc1()
             expect_equal(method(obj, 'cp1')(2), 3)
           })
 
@@ -74,10 +75,10 @@ test_that("writePackage and buildPackage work for nClass with full interface",
     Cpublic = list(
       x = 'numericScalar',
       cp1 = nFunction(
-        fun = function(x = double()) {
+        fun = function(x = numericScalar()) {
           ans <- x+1
           return(ans)
-          returnType(double())
+          returnType(numericScalar())
         }
       )
     )
@@ -96,3 +97,82 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   expect_true(inherits(obj, "nClass"))
   expect_equal(obj$cp1(2), 3)
 })
+
+
+test_that("Create package with multiple objects", 
+          {
+            nCompiler:::nFunctionIDMaker(reset = TRUE)
+            nCompiler:::nClassIDMaker(reset = TRUE)
+            
+            foo1 <- nFunction(
+              name = "foo1",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            foo2 <- nClass(
+              classname = "foo2",
+              Cpublic = list(
+                cp1 = nFunction(
+                  fun = function(x = numericScalar()) {
+                    ans <- x+1
+                    return(ans)
+                    returnType(numericScalar())
+                  }
+                )
+              )
+            )
+            
+            writePackage(foo1, foo2,
+                         dir = tempdir(),
+                         package.name = "fooPackageMultiples",
+                         clean = TRUE,
+                         control = list(export = TRUE))
+            ans <- buildPackage("fooPackageMultiples",
+                                dir = tempdir())
+            
+            expect_equal(fooPackageMultiples::foo1(1), 2)
+            my_foo2 <- fooPackageMultiples::foo2$new()
+            expect_equal(my_foo2$cp1(10), 11)
+          })
+
+
+test_that("Export flag works", 
+          {
+            nCompiler:::nFunctionIDMaker(reset = TRUE)
+            nCompiler:::nClassIDMaker(reset = TRUE)
+            
+            foo <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            foo2 <- nFunction(
+              name = "foo2",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            writePackage(foo, foo2,
+                         dir = tempdir(),
+                         package.name = "fooPackageNoExport",
+                         clean = TRUE,
+                         control = list(
+                           foo = list(export = FALSE),
+                           foo2 = list(export = TRUE)))
+            ans <- buildPackage("fooPackageNoExport",
+                                dir = tempdir())
+            
+            expect_error(fooPackageNoExport::foo(2))
+            expect_equal(fooPackageNoExport:::foo(2), 3)
+            expect_equal(fooPackageNoExport::foo2(2), 4)
+          })

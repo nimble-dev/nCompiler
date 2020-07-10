@@ -1,3 +1,5 @@
+cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
+
 #' @export
 nCompile <- function(...,
                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -47,7 +49,7 @@ nCompile <- function(...,
   }
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
-  cppfile <- "nCompiler_multiple_units.cpp"
+  cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
   writeCpp_nCompiler_combine(RcppPacket_list,
                              cppfile = cppfile)
   if(isTRUE(get_nOption('pause_after_writing_files')))

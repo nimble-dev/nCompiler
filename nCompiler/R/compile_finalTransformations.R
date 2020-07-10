@@ -29,9 +29,9 @@ inFinalTransformationsEnv(
   ParallelExpr <- function(parallel_expr_name, loop_body_name, auxEnv_field,
                            code, symTab, auxEnv, info) {
     copyVars <- eval(nDeparse(code$args[[4]], toR = TRUE), 
-                     envir = auxEnv$closure)
+                     envir = auxEnv$where)
     shareVars <- eval(nDeparse(code$args[[5]], toR = TRUE),
-                      envir = auxEnv$closure)
+                      envir = auxEnv$where)
     ## Look for a mangled argument name in nameSubList.
     ## It is unfortunate to have to do this here instead of earlier
     ## when other names are replaced, but here the names are given

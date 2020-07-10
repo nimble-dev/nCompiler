@@ -52,7 +52,6 @@ resetLabelFunctionCreators <- function() {
 # @return returns a string representing the modified rName
 # @author Jagadish Babu
 # @keywords Name
-# @seealso \code{\link{character}} 
 # @export
 # @examples
 #  genName('theta[1]')
@@ -174,4 +173,9 @@ writeCode <- function(x, ...) writeLines(unlist(x), ...)
 nDim <- function(obj) {
   if(is.null(dim(obj))) return(length(obj))
   return(dim(obj))
+}
+
+is.blank <- function(arg) {
+  if(is.null(arg)) return(FALSE)
+  return(identical(arg, quote(x[])[[3]]))
 }

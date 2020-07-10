@@ -36,7 +36,7 @@ typeDeclarationList <- list(
   integerScalar = function(value) {
     nType("integer", 0)
   },
-  integerVector = function(length = 0,
+  integerVector = function(length = NA,
                            ...) {
     nType("integer", 1, ...)
   },
@@ -47,15 +47,15 @@ typeDeclarationList <- list(
   integerArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("integer", nDim)
+    nType("integer", nDim, ...)
   },
   ## logical types
   logicalScalar = function(value) {
     nType("logical", 0)
   },
-  logicalVector = function(length = 0,
+  logicalVector = function(length = NA,
                            ...) {
-    nType("logical", 1)
+    nType("logical", 1, ...)
   },
   logicalMatrix = function(value,
                            ...) {
@@ -64,7 +64,7 @@ typeDeclarationList <- list(
   logicalArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("logical", nDim)
+    nType("logical", nDim, ...)
   },
   ## numeric types
   numericScalar = function(value) {
@@ -106,15 +106,15 @@ typeDeclarationList <- list(
     nType(type, length(dim))
   },
   ## vector versions with type embedded in keyword
-  nInteger = function(length = 0,
+  nInteger = function(length = NA,
                       ...) {
     nType("integer", 1)
   },
-  nLogical = function(length = 0,
+  nLogical = function(length = NA,
                       ...) {
     nType("logical", 1)
   },
-  nNumeric = function(length = 0,
+  nNumeric = function(length = NA,
                       ...) {
     nType("double", 1)
   },
@@ -173,11 +173,14 @@ argType2symbol <- function(argType,
   nErrorEnv$stateInfo <- paste0("handling argument ", name, ".")
   nErrorEnv$.isRef_has_been_set <- FALSE
   typeToUse <- if(!is.null(explicitType))
-                 explicitType
+    explicitType
   else
     argType
-  if(is.character(typeToUse))
+  inputAsCharacter <- FALSE
+  if(is.character(typeToUse)) {
     typeToUse <- parse(text = typeToUse, keep.source = FALSE)[[1]]
+    inputAsCharacter <- TRUE
+  }
   ## allow 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse))
     typeToUse <- as.call(list(typeToUse))
@@ -235,29 +238,24 @@ argType2symbol <- function(argType,
         }
       }
     } else {
-      ## Case 3: It is a nClass type
-      ## TO-DO: Make this work even if it appears with $new().
-      if(exists(funName, envir = evalEnv)) {
-        obj <- get(funName, envir = evalEnv)
-        if(isNCgenerator(obj)) {
-          symbol <- symbolNC$new(name = name, 
-                                 type = funName, 
-                                 isArg = isArg,
-                                 NCgenerator = obj)
-          
-        } else {
-          ## Case 4: Type can be determined by evaluating the default
-          demoObject <- eval(argType, envir = evalEnv)
-          symbol <-
-            typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
-          symbol$name <- name
-          symbol$isArg <- isArg
-          if(isTRUE(isRef)) {
-            nErrorEnv$.errorDetails <-
-              paste0("A reference variable must have its type set by explicit declaration,",
-                     " because it cannot have a default value.")
-            stop(call.=FALSE)
-          }
+      ## Case 3: It is a nClass type or possibly other "to-be-determined" type.
+      ## We defer type lookup until compiler stage labelAbstractTypes
+      if(inputAsCharacter) {
+        symbol <- symbolTBD$new(name = name, 
+                                type = funName, 
+                                isArg = isArg)
+      } else {
+        ## Case 4: Type can be determined by evaluating the default
+        demoObject <- eval(argType, envir = evalEnv)
+        symbol <-
+          typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
+        symbol$name <- name
+        symbol$isArg <- isArg
+        if(isTRUE(isRef)) {
+          nErrorEnv$.errorDetails <-
+            paste0("A reference variable must have its type set by explicit declaration,",
+                   " because it cannot have a default value.")
+          stop(call.=FALSE)
         }
       }
     }
@@ -391,4 +389,22 @@ argTypeList2symbolTable <- function(argTypeList,
     )
   }
   symTab
+}
+
+resolveTBDsymbols <- function(symTab, 
+                              env = parent.frame()) {
+  for(i in seq_along(symTab$symbols)) {
+    if(inherits(symTab$symbols[[i]], "symbolTBD")) {
+      candidate <- nGet(symTab$symbols[[i]]$type,
+                        where = env)
+      if(isNCgenerator(candidate)) {
+        newSym <- symbolNC$new(name = symTab$symbols[[i]]$name,
+                               type = symTab$symbols[[i]]$type,
+                               isArg = symTab$symbols[[i]]$isArg,
+                               NCgenerator = candidate)
+        symTab$symbols[[i]] <- newSym
+      }
+    }
+  }
+  invisible(NULL)
 }

@@ -10,7 +10,7 @@ nCompile_nClass(NC, dir = file.path(tempdir(),
   interface = c("full", "generic", "both"), ...)
 }
 \arguments{
-\item{NC}{A nClass generator (returned from a call to \code{\link{nClass}}).}
+\item{NC}{A nClass generator (returned from a call to \link{nClass}).}
 
 \item{dir}{Directory where generated C++ will be written.}
 

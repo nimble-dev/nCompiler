@@ -64,6 +64,7 @@ Collate:
     nTry.R
     packaging.R
     RcppExports.R
+    Rcpp_check.R
     Rcpp_nCompiler.R
     Rcpp_nCompiler_plugin.R
     Rexecution.R

@@ -29,6 +29,9 @@ updateDefaults <- function(defaults, controls) {
       writeCpp = TRUE,
       compileCpp = TRUE
     ),
+    packagingOptions = list(
+      export = TRUE
+    ),
     localDLL_isLoaded = FALSE, # if TRUE, the localDLL has been loaded.  This will be set TRUE after first compilation.
     localDLLdir = "nCompLocalLibrary", # directory to be used from the working directory if localDLL needs to be locally built.
     error_recover = FALSE, # if TRUE, attempt to recover into a browser() after errors caught by nComp's error trapping, similarly to options(error = recover)

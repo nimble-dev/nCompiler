@@ -3,7 +3,7 @@ NC_InternalsClass <- R6::R6Class(
   classname = "NC_InternalsClass",
   portable = FALSE,
   public = list(
-    CsymTab = NULL,
+    symbolTable = NULL,
     methodNames = character(),
     fieldNames = character(),
     RcppPacket = NULL,
@@ -28,7 +28,7 @@ NC_InternalsClass <- R6::R6Class(
                  call. = FALSE)
           }
         }
-        CsymTab <<- argTypeList2symbolTable(Cpublic[!isMethod])
+        symbolTable <<- argTypeList2symbolTable(Cpublic[!isMethod])
         methodNames <<- names(Cpublic)[isMethod]
         fieldNames <<- names(Cpublic)[!isMethod]
       }
