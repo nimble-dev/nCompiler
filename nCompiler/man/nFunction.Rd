@@ -32,7 +32,7 @@ nFunction(fun, name = NA, argTypes = list(), refArgs = list(),
 An object of class \code{nFunction}, which inherits from class \code{function}.
 }
 \description{
-Create a nFunction, which can be compiled via C++ using \code{\link{nCompile_nFunction}} or \code{nCompile} (TBD)
+Create a nFunction, which can be compiled via C++ using \link{nCompile_nFunction} or \code{nCompile} (TBD)
 }
 \details{
 A \code{nFunction} is a special kind of R function that can be compiled by automatic generation of C++.  See (TBD) for information about writing \code{nFunctions}.  See (TBD) for information about type declarations.

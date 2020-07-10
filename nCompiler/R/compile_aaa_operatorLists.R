@@ -62,6 +62,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('which'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Which'),
+    eigenImpl = list(
+      handler = 'Which')
+  )
+)
+
+assignOperatorDef(
   c('for'),
   list(
     labelAbstractTypes = list(
@@ -82,6 +92,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('parallel_reduce'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ParallelReduce'),
+    finalTransformations = list(
+      handler = 'ParallelReduce')
+  )
+)
+
+assignOperatorDef(
   c('GeneralFor'),
   list(
     cppOutput = list(
@@ -90,10 +110,33 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('rep'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'Rep')
+  )
+)
+
+assignOperatorDef(
   c(':'),
   list(
     labelAbstractTypes = list(
-        handler = 'Colon')
+      handler = 'Colon'),
+    eigenImpl = list(
+      handler = 'Colon')
+  )
+)
+
+assignOperatorDef(
+  c('seq'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Seq'),
+    eigenImpl = list(
+      handler = 'Seq')
   )
 )
 
