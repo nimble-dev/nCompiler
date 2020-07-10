@@ -545,6 +545,7 @@ inEigenizeEnv(
     type_string <- scalarTypeToCppType(code$type$type)
     code$name <- paste0(
       'createTensor<', type_string, ', ', code$type$nDim, '>'
+    )
     invisible(NULL)
   }
 )
