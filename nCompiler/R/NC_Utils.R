@@ -11,7 +11,7 @@ isNC <- function(x) inherits(x, 'nClass')
 
 #' Determine if an object is a nClass generator
 #'
-#' Determine if an object is a nClass generator, returned by a call to \code{\link{nClass}}.
+#' Determine if an object is a nClass generator, returned by a call to \link{nClass}.
 #'
 #' @param x Object to be inspected
 #'
@@ -27,7 +27,7 @@ isNCgenerator <- function(x) {
 
 #' Determine if an object is a compiled nClass generator
 #'
-#' Determine if an object is a compiled nClass generator, returned by a call to \code{\link{nCompile_nClass}} with \code{interface} set to \code{"full"} or \code{"both"}.
+#' Determine if an object is a compiled nClass generator, returned by a call to \link{nCompile_nClass} with \code{interface} set to \code{"full"} or \code{"both"}.
 #'
 #' @param x Object to be inspected
 #'

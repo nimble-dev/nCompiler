@@ -430,25 +430,101 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
+    if (length(code$args) != 3)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'expected 3 arguments but got', length(code$args))),
+        call. = FALSE)
+    ## process the initial value
+    inserts <- compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv)
+    if (code$args[[3]]$type$nDim != 0)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'initial value for parallel_reduce should be scalar but got',
+              ' nDim = ', code$args[[3]]$type$nDim)),
+        call. = FALSE)
+    if (isFALSE(code$args[[3]]$isLiteral))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'initial value for parallel_reduce must be a literal')),
+        call. = FALSE)
+    ## process the reduce operator
+    if (isTRUE(code$args[[1]]$isLiteral)) {
+      if (!is.character(code$args[[1]]$name))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'do not know how to use a reduce operator of type',
+                typeof(code$args[[1]]$name))),
+          call. = FALSE)
+      code$args[[1]]$isLiteral <- FALSE
+      code$args[[1]]$isCall <- TRUE
+    }
+    ## give reduce operator the same return type as the initial value
+    ## TODO: Maybe symbolNF is the right type for the reduction op.
+    code$args[[1]]$type <-
+      symbolBasic$new(name = code$args[[1]]$name,
+                      nDim = 0, type = code$args[[3]]$type$type)
+    ## finish by processing the vector arg
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
+    if (code$args[[2]]$type$nDim != 1)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'expected the second argument to be a vector but got nDim = ',
+              code$args[[2]]$type$nDim)),
+        call. = FALSE)
+    code$type <- symbolBasic$new(name = code$name, nDim = 0,
+                                 type = code$args[[3]]$type$type)
+    return(if (length(inserts) == 0) invisible(NULL) else inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Colon <- function(code, symTab, auxEnv, handlingInfo, recurse = TRUE) {
+    if (length(code$args) != 2)
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste(
+            "In sizeCgetolonOperator: Problem determining ",
+            "size for ':' without two arguments."
+          )
+        ), call. = FALSE
+      )    
+
     inserts <-
       if (recurse)
         recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     else list()
 
-    if (length(code$args) != 2)
-      stop(
-        exprClassProcessingErrorMsg(
-          code, paste(
-            "In sizeColonOperator: Problem determining ",
-            "size for ':' without two arguments."
-          )
-        ), call. = FALSE
-      )
-
-    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+    ## this isn't quite right... if the first arg is a whole number double, :
+    ## returns an integer regardless of the second arg's type
+    arg1_type <- code$args[[1]]$type$type
+    code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+    code$type <- symbolBasic$new(nDim = 1, type = code_type)
 
     invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Seq <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    if (length(code$args) == 0 ||
+          ## seq(by = x) always returns 1
+          (length(code$args) == 1 && 'by' %in% names(code$args))) {
+      code$type <- symbolBasic$new(nDim = 0, type = 'integer')
+    } else {
+      arg1_type <- code$args[[1]]$type$type
+      code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+      ## TODO: What about when from and to have same value?
+      code$type <- symbolBasic$new(nDim = 1, type = code_type)
+    }
+    inserts
   }
 )
 
