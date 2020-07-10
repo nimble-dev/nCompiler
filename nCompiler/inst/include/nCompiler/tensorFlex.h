@@ -43,6 +43,10 @@ struct eigenTensor {};
     typedef trueScalar type;
   };
   template<>
+  struct type_category<long> {
+    typedef trueScalar type;
+  };
+  template<>
   struct type_category<int> {
     typedef trueScalar type;
   };
@@ -174,6 +178,10 @@ struct nDimTraits<double> {
   static const int NumDimensions = 0;
 };
 template<>
+struct nDimTraits<long> {
+  static const int NumDimensions = 0;
+};
+template<>
 struct nDimTraits<int> {
   static const int NumDimensions = 0;
 };
@@ -208,6 +216,11 @@ struct is_zeroDim {
 };
 template<>
 struct is_zeroDim<double> {
+  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
+  // but nevertheless we need this template to evaluate correctly.
+};
+template<>
+struct is_zeroDim<long> {
   typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
   // but nevertheless we need this template to evaluate correctly.
 };

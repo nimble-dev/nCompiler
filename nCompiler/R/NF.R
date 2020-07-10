@@ -38,7 +38,7 @@ nFunctionClass <- setClass(
 
 #' Create a nFunction.
 #'
-#' Create a nFunction, which can be compiled via C++ using \code{\link{nCompile_nFunction}} or \code{nCompile} (TBD)
+#' Create a nFunction, which can be compiled via C++ using \link{nCompile_nFunction} or \code{nCompile} (TBD)
 #'
 #' @param fun R function to be turned into a nFunction
 #' @param name An internal name for the nFunction.  If \code{NA}, an internal name will be generated.

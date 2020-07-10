@@ -4,7 +4,7 @@
 #' manages C++ compilation of them and returns a generator for obejcts
 #' of the compiled class.
 #'
-#' @param NC A nClass generator (returned from a call to \code{\link{nClass}}).
+#' @param NC A nClass generator (returned from a call to \link{nClass}).
 #'
 #' @param dir Directory where generated C++ will be written.
 #'

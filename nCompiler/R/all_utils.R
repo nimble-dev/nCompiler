@@ -52,7 +52,6 @@ resetLabelFunctionCreators <- function() {
 # @return returns a string representing the modified rName
 # @author Jagadish Babu
 # @keywords Name
-# @seealso \code{\link{character}} 
 # @export
 # @examples
 #  genName('theta[1]')

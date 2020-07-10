@@ -26,7 +26,7 @@
 
 ## math only
 nCompiler:::updateOperatorDef(
-  c('min', 'max', 'all', 'any'),
+  c('min', 'max', 'all', 'any', 'length'),
   'testing',
   val = list(
     math_argTypes = list('numericScalar', 'integerScalar', 'logicalScalar',

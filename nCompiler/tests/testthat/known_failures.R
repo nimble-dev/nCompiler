@@ -10,7 +10,7 @@
 ##################
 
 nCompiler:::updateOperatorDef(
-  c('min', 'max', 'all', 'any', 'exp', 'log', 'rsqrt', 'sqrt', 'tanh',
+  c('min', 'max', 'all', 'any', 'exp', 'length', 'log', 'rsqrt', 'sqrt', 'tanh',
     'cube', 'square'),
   'testing', 'known_failures',
   list(

@@ -339,15 +339,14 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
-    ## if(code$type$nDim == 0) return(invisible(NULL))
-    promoteTypes(code)
+    if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
     convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )
 
 inEigenizeEnv(
-  cWiseMultDiv <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  cWiseMultDiv <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if (isEigScalar(code$args[[1]]) && isEigScalar(code$args[[2]]))
       return(invisible(NULL))
     promoteTypes(code)
@@ -356,7 +355,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  cWiseBinary <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  cWiseBinary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     promoteTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
     convertToMethod(code, handlingInfo)
@@ -365,7 +364,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  cWiseBinaryLogical <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  cWiseBinaryLogical <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     ## key difference for logical case:
     ## promote args to match each other, not logical return type
     promoteArgTypes(code)
@@ -376,7 +375,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  PromoteAllButLastArg <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  PromoteAllButLastArg <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if (length(code$args) == 0)
       stop(exprClassProcessingErrorMsg(
         code, 'In PromoteAllButLastArg: expected at least one arg, but code has none.'
@@ -387,7 +386,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  Bracket <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+  Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     n_args <- length(code$args)
     if (code$type$nDim == 0) {
       # Either we're indexing a vector and we keep '[' in the AST, or we're
@@ -455,6 +454,125 @@ inEigenizeEnv(
       ## add the b__ call to the AST as arg to blocks_expr
       setArg(blocks_expr, i, b_expr)
     }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  Which <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## the labelAbstractTypes handler Which guarantees that 'code' has one
+    ## logical arg
+    code$name <- paste0('setWhich', code$args[[1]]$type$nDim)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  Rep <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## TODO: this assumes proper arg ordering and naming
+    ## TODO: handle zero-dim first arg
+    arg_names <- names(code$args)
+    if (length(code$arg) > 3) {
+      ## the second arg is 'times' which is ignored whenever 'length.out' is
+      ## included
+      removeArg(code, 2)
+      ## any other args are unused and can be removed
+      code$args <- code$args[1:3]
+      code$name <- 'repLenEach'
+    } else if (length(code$args) == 3) {
+      if (!'each' %in% arg_names) {
+        ## the second arg must be 'times' and the third is 'length.out'
+        removeArg(code, 2)
+        code$name <- 'repLen'
+      } else {
+        if ('length.out' %in% arg_names)
+          code$name <- 'repLenEach'
+        else
+          code$name <- 'repTimesEach'
+      }
+    } else if (length(code$args) == 2) {
+      if ('length.out' %in% arg_names)
+        code$name <- 'repLen'
+      else if ('each' %in% arg_names)
+        code$name <- 'repEach'
+      else
+        code$name <- 'repTimes'
+    } else {
+      ## If length(code$args) == 1, this takes 'rep' out of the AST and
+      ## replaces it with its one arg. If length(code$args) == 1, 'rep' is
+      ## replaced with NULL which is exactly what the call rep() returns.
+      removeExprClassLayer(code)
+      return(invisible(NULL))
+    }
+    ## In C++, eval = true when the call to rep is part of a larger expression
+    ## and rep's arg is a call to avoid costly repeated computation when
+    ## reshaping and broadcasting the tensor.
+    if (!code$caller$name %in% assignmentOperators && code$args[[1]]$isCall)
+      setArg(code, length(code$args) + 1, literalLogicalExpr())
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+ Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if (!code$caller$name == '[') {
+      code$name <- 'seq'
+      by_arg <- literalIntegerExpr(1)
+      setArg(code, 'by', by_arg, add = TRUE)
+      compile_eigenize(code, symTab, auxEnv, workEnv)
+    }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  Seq <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if (length(code$args) == 0 ||
+          ## seq(by = x) always returns 1
+          (length(code$args) == 1 && 'by' %in% names(code$args))) {
+      integer1 <- literalIntegerExpr(1)
+      setArg(code$caller, code$callerArgID, integer1)
+      return(invisible(NULL))
+    }
+    if (length(code$args) == 1) {
+      ## the only arg becomes 'to'... note that `seq(from = 10)` gives 1:10
+      integer1 <- literalIntegerExpr(1)
+      if ('length.out' %in% names(code$args))
+        insertExprClassLayer(code, 1, 'ceil')
+      insertArg(code, 1, integer1, 'from')
+      names(code$args)[2] <- 'to'
+    }
+    byProvided <- 'by' %in% names(code$args)
+    lengthProvided <- 'length.out' %in% names(code$args) 
+    if (!byProvided && !lengthProvided) {
+      if (length(code$args) >= 3) {
+        ## by was provided as a positional arg
+        byProvided <- TRUE
+        if (length(code$args) >= 4)
+          ## length.out was also provided as a positional arg
+          lengthProvided <- TRUE
+        ## TODO: what if more than 4 args provided (e.g. 'along.with')
+      } else {
+        by_arg <- literalIntegerExpr(1)
+        setArg(code, 'by', by_arg, add = TRUE)
+        byProvided <- TRUE
+      }
+    }
+    if (byProvided) {
+      code$name <- 'nSeqBy'
+      if(lengthProvided)
+        code$name <- paste0(code$name, 'Len')
+    } else { ## must be lengthProvided
+      code$name <- 'nSeqLen'
+    }
+    code$name <- paste0(
+      code$name,
+      switch(
+        code$type$type,
+        'double' = 'D',
+        'integer' = 'I'
+      )
+    )
     invisible(NULL)
   }
 )
