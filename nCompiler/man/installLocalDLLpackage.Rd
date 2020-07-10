@@ -8,7 +8,7 @@ installLocalDLLpackage(lib, source.dir = ".")
 }
 \arguments{
 \item{lib}{location to install package.  This defaults to the first element of `.libPaths()`.  `lib` matches behavior, 
-and is passed to, the \code{lib} argument of \link{\code{install.packages}}.}
+and is passed to, the \code{lib} argument of \link{install.packages}.}
 
 \item{source.dir}{directory where nCompLocal source is located.}
 }

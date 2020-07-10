@@ -13,5 +13,5 @@ isNCgenerator(x)
 \code{TRUE} or \code{FALSE}
 }
 \description{
-Determine if an object is a nClass generator, returned by a call to \code{\link{nClass}}.
+Determine if an object is a nClass generator, returned by a call to \link{nClass}.
 }

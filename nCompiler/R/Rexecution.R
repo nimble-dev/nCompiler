@@ -11,3 +11,17 @@ parallel_for <- function(index, range, body, ...) {
   for_loop[[4]] <- body
   eval(for_loop, envir = parent.frame())
 }
+
+#' @export
+parallel_reduce <- function(f, x, init, ...) {
+  Reduce(f, x, init)
+}
+
+#' @export
+square <- function(x) x*x
+#' @export
+cube <- function(x) x*x*x
+#' @export
+logit <- function(x) log(x/(1-x))
+#' @export
+rsqrt <- function(x) 1/sqrt(x)

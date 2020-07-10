@@ -27,9 +27,10 @@ test_that('setup_wrt produces correct wrt indices for compiled nClass method fro
   )
   ncc <- nCompile(nc)
   nc_obj <- ncc$new()
-  wrt1 <- setup_wrt(nc_obj$nf)
+  wrt1 <- setup_wrt(nc_obj$nf, NC = nc)
   expect_equal(wrt1, 1:15)
-  wrt2 <- setup_wrt(nc_obj$nf, wrt = c('x[1:2]', 'x[1]', 'z[2:3, 2]', 'y'))
+  wrt2 <- setup_wrt(nc_obj$nf, wrt = c('x[1:2]', 'x[1]', 'z[2:3, 2]', 'y'),
+                    NC = nc)
   expect_equal(wrt2, c(1:2, 1, 8:9, 3))
 })
 
@@ -68,12 +69,12 @@ test_that('setup_wrt handles dropArgs argument correctly', {
   )
   nc_full <- nCompile_nClass(nc)
   nc_full_obj <- nc_full$new()
-  wrt <- setup_wrt(nc_full_obj$nf, wrt = 'z')
+  wrt <- setup_wrt(nc_full_obj$nf, wrt = 'z', NC = nc)
   ## ignore 'dropArgs' when 'wrt' is provided:
-  wrt1 <- setup_wrt(nc_full_obj$nf, dropArgs = 'z', wrt = 'z')
+  wrt1 <- setup_wrt(nc_full_obj$nf, dropArgs = 'z', wrt = 'z', NC = nc)
   expect_equal(wrt1, wrt)
   ## for full interface:
-  wrt2 <- setup_wrt(nc_full_obj$nf, dropArgs = c('x', 'y'))
+  wrt2 <- setup_wrt(nc_full_obj$nf, dropArgs = c('x', 'y'), NC = nc)
   expect_equal(wrt2, wrt)
   ## for generic interface:
   nc_generic <- nCompile_nClass(nc, interface = 'generic')
@@ -164,8 +165,8 @@ test_that('nDerivs produces correct result for compiled nClass method from full 
   derivs <- nDerivs(nc$public_methods$nf(a, b)) ## uncompiled
   nc_full <- nCompile_nClass(nc)
   nc_full_obj <- nc_full$new()
-  Cderivs1 <- nDerivs(nc_full_obj$nf(a, b))
-  Cderivs2 <- nDerivs(nc_full_obj$nf(a, b), wrt = 1:3) ## wrt is numeric vector
+  Cderivs1 <- nDerivs(nc_full_obj$nf(a, b), NC = nc)
+  Cderivs2 <- nDerivs(nc_full_obj$nf(a, b), wrt = 1:3, NC = nc) ## wrt is numeric vector
   expect_equivalent(derivs$value, Cderivs1$value)
   expect_equivalent(derivs$value, Cderivs2$value)
   expect_equal(derivs$gradient, Cderivs1$gradient)

@@ -23,8 +23,8 @@ to assume that dynamically building a package from source will work.
 
 This function will install nCompLocal as a regular R package in the default location for packages.
 For more control over where the package is installed, and where package source files are written, 
-see \link{\code{buildLocalDLLpackage}}
+see \link{buildLocalDLLpackage}
 }
 \seealso{
-\link{\code{buildLocalDLLpackage}}
+\link{buildLocalDLLpackage}
 }

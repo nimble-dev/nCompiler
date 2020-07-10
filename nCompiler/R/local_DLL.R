@@ -43,6 +43,9 @@ createLocalDLLpackage <- function(dir = '.',
   close(zz)
   if(file.exists("kitten_output_not_necessary.Rout"))
     file.remove("kitten_output_not_necessary.Rout")
+  NAMESPACE_file <- file.path(dir, "nCompLocal", "NAMESPACE")
+  sink(NAMESPACE_file) # Wipe it clean so it doesn't try to export kitten stuff
+  sink()
   DESCRIPTION_file <- file.path(dir, "nCompLocal", "DESCRIPTION")
   DESCRIPTION <- read.dcf(DESCRIPTION_file)
   DESCRIPTION[, "Version"] <- "0.1"
@@ -60,20 +63,28 @@ createLocalDLLpackage <- function(dir = '.',
                   showOutput = FALSE)
   options(rcpp.warnNoExports = currentWarn)
   ## Navigate through Rcpp's cache directory structure:
-  cacheDir <- getOption("rcpp.cache.dir", tempdir()) ## from sourceCpp
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourceCpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
-  cacheDirFiles <- list.files(cacheDir)
-  sourceCppDir <- cacheDirFiles[ grepl("sourcecpp", cacheDirFiles)]
-  cacheDir <- file.path(cacheDir, sourceCppDir)
+  cacheDir1 <- getOption("rcpp.cache.dir", tempdir()) ## where sourceCpp places files
+  cacheDir1Files <- list.files(cacheDir1, full.names = TRUE)
+  ## Determine the most recent directory name with "sourceCpp" in it.
+  sourceCppDir1 <- cacheDir1Files[ grepl("sourceCpp", cacheDir1Files)]
+  if (length(sourceCppDir1) > 1) {
+    cppDir1_mtime <- file.mtime(sourceCppDir1)
+    sourceCppDir1 <- sourceCppDir1[which.max(cppDir1_mtime)]
+  }
+  sourceCppDir1Files <- list.files(sourceCppDir1, full.names = TRUE)
+  ## Determine the most recent subdirectory with the name "sourcecpp" (lower-case c) in it
+  sourcecppDir2 <- sourceCppDir1Files[ grepl("sourcecpp", sourceCppDir1Files)]
+  if (length(sourcecppDir2) > 1) {
+    cppDir2_mtime <- file.mtime(sourcecppDir2)
+    sourcecppDir2 <- sourcecppDir2[which.max(cppDir2_mtime)]
+  }
   ## Build static library from the .o files left by Rcpp.
   ## This will need to be updated for windows
   if(.Platform$OS.type == "windows")
     message("Need to update the 'ar' call in createLocalDLLpackage for Windows.")
   system2("ar", c("rcs",
                   file.path(staticLibPath, "libnCompLocal.a"),
-                  file.path(cacheDir, "loadedObjectEnv.o")))
+                  file.path(sourcecppDir2, "loadedObjectEnv.o")))
 }
 
 cleanupLocalDLLpackage <- function(dir = '.') {
@@ -86,7 +97,7 @@ cleanupLocalDLLpackage <- function(dir = '.') {
 #' Install the nCompLocal package, whose purpose is to hold a static library for linking from on-the-fly compilations.
 #' 
 #' @param lib location to install package.  This defaults to the first element of `.libPaths()`.  `lib` matches behavior, 
-#' and is passed to, the \code{lib} argument of \link{\code{install.packages}}.
+#' and is passed to, the \code{lib} argument of \link{install.packages}.
 #' @param source.dir directory where nCompLocal source is located.
 #' 
 #' @details This function is used internally by This function is called internally from \cite{\link{buildLocalDLLpackage}}.
@@ -109,7 +120,7 @@ installLocalDLLpackage <- function(lib, source.dir = '.') {
 #' on each user's machine for nCompiler-generated C++ to link to.
 #' 
 #' @param dir directory where nCompLocal package will be created and possibly installed.  The default value 
-#' can be controlled by setting the.nOption for \code{localDLLdir} (see \link{\code{set_nOption}}).
+#' can be controlled by setting the.nOption for \code{localDLLdir} (see \link{set_nOption}).
 #' In turn, this option be default is NULL, in which case R's session-specific temporary directory (\code{tempdir()})
 #' will be used.  If \code{installInR} is \code{FALSE}, then \code{dir} will also be the location of of the installed 
 #' package.  In such a case, the nCompLocal package will be re-created once in every R session that compiled with nCompiler.
@@ -120,11 +131,11 @@ installLocalDLLpackage <- function(lib, source.dir = '.') {
 #' to install nCompLocal to a directory provided by \code{get_nOption("localDLLdir")} and leave it there.  In that
 #' case, nCompiler will automatially find it there in future R sessions.
 #' 
-#' @details See \link{\code{setup_nCompLocal}} for the simplest way to install nCompLocal, which is as a standard R
+#' @details See \link{setup_nCompLocal} for the simplest way to install nCompLocal, which is as a standard R
 #' package in the standard location.  \code{buildLocalDLLpackage} provides more control over where it will be
 #' installed and where package source files will be written.
 #' 
-#' @seealso \link{\code{setup_nCompLocal}}
+#' @seealso \link{setup_nCompLocal}
 #' 
 #' @export
 buildLocalDLLpackage <- function(dir = file.path(tempdir(), get_nOption("localDLLdir")),
@@ -177,9 +188,9 @@ buildLocalDLLpackage <- function(dir = file.path(tempdir(), get_nOption("localDL
 #' 
 #' This function will install nCompLocal as a regular R package in the default location for packages.
 #' For more control over where the package is installed, and where package source files are written, 
-#' see \link{\code{buildLocalDLLpackage}}
+#' see \link{buildLocalDLLpackage}
 #' 
-#' @seealso \link{\code{buildLocalDLLpackage}}
+#' @seealso \link{buildLocalDLLpackage}
 #' 
 #' @export
 setup_nCompLocal <- function() {
@@ -200,7 +211,7 @@ setup_nCompLocal <- function() {
 #' @details This function is called internally every time nCompiler is ready to call the C++ compiler for
 #' generated code.
 #' 
-#' @seealso \link{\code{setup_nCompLocal}} for how to create and install nCompLocal once for an
+#' @seealso \link{setup_nCompLocal} for how to create and install nCompLocal once for an
 #' R installation, so that nCompLocal can be re-used than than re-created in every R session.
 requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
   ## Check in order: provided lib, regular .libPaths(),nOptions(localDLLdir)
@@ -244,6 +255,7 @@ requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
 # This function is used by the nCompiler_Eigen_plugin for Rcpp.
 # This plugin is invoked by "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]" C++ source code that is compiled via Rcpp::sourceCpp.
 # The Rcpp plugin system allows packages to modify environment variables used as C++ compiler flags.
+# This function is also called by buildPackage
 get_nCompLocal_PGK_LIBS_entry <- function() {
   loc <- system.file(file.path('staticLib'), package = 'nCompLocal')
   ans <- paste0("-L \"", loc, "\" -lnCompLocal")

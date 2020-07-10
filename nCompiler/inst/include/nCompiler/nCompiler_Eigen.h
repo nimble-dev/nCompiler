@@ -16,6 +16,8 @@
 
 #include "typedefs.h"
 #include "setWhich.h"
+#include "repClass.h"
+#include "seqClass.h"
 #include "recyclingRule.h"
 #include "nCompiler_Rcpp.h"
 #include "cWiseUnary_external.h"
