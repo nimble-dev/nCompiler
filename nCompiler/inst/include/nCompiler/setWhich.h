@@ -18,7 +18,7 @@ struct which_impl {
   }
 };
 
-Eigen::Tensor<int, 1> setWhich0(bool boolArg) {
+inline Eigen::Tensor<int, 1> setWhich0(bool boolArg) {
   if (boolArg) {
     Eigen::Tensor<int, 1> ans(1);
     ans.setValues({1});

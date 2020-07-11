@@ -5,7 +5,7 @@
 
 // TODO: find a better place for this
 // A utility function that will return floor(x) unless x is within numerical imprecision of an integer, in which case it will return round(x)
-int floorOrEquivalent(double x) {
+inline int floorOrEquivalent(double x) {
   double roundX = round(x);
   double sqrtEpsilon = sqrt(std::numeric_limits<double>::epsilon());
   bool shouldBeExactInteger(false);

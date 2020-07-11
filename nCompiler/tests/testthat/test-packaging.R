@@ -134,6 +134,7 @@ test_that("Create package with multiple objects",
             ans <- buildPackage("fooPackageMultiples",
                                 dir = tempdir())
             
+            expect_true(ans)
             expect_equal(fooPackageMultiples::foo1(1), 2)
             my_foo2 <- fooPackageMultiples::foo2$new()
             expect_equal(my_foo2$cp1(10), 11)
@@ -171,7 +172,7 @@ test_that("Export flag works",
                            foo2 = list(export = TRUE)))
             ans <- buildPackage("fooPackageNoExport",
                                 dir = tempdir())
-            
+            expect_true(ans)
             expect_error(fooPackageNoExport::foo(2))
             expect_equal(fooPackageNoExport:::foo(2), 3)
             expect_equal(fooPackageNoExport::foo2(2), 4)
@@ -252,8 +253,9 @@ test_that("Package writing documentation for nFunctions",
                          clean = TRUE, 
                          roxygen = list(foo = rox),
                          roxygenize = TRUE)
-            buildPackage("fooPackageWriteDocnFunction", 
-                         dir = tempdir())
+            ans <- buildPackage("fooPackageWriteDocnFunction", 
+                                dir = tempdir())
+            expect_true(ans)
             expect_true(length(help("foo", package = "fooPackageWriteDocnFunction")) > 0)
             expect_error(help("foo2", package = "fooPackageWriteDocnFunction"))
           })
@@ -303,8 +305,9 @@ test_that("Package writing documentation for nClasses",
                          roxygen = list(foo = rox),
                          roxygenize = TRUE
                          )
-            buildPackage("fooPackageWriteDocnClass", 
-                         dir = tempdir())
+            ans <- buildPackage("fooPackageWriteDocnClass", 
+                                dir = tempdir())
+            expect_true(ans)
             expect_true(length(help("foo", package = "fooPackageWriteDocnClass")) > 0)
             expect_error(help("foo2", package = "fooPackageWriteDocnClass"))
           })
