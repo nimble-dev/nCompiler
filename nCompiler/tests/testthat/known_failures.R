@@ -10,7 +10,7 @@
 ##################
 
 nCompiler:::updateOperatorDef(
-  c('min', 'max', 'all', 'any', 'exp', 'log', 'rsqrt', 'sqrt', 'tanh',
+  c('min', 'max', 'all', 'any', 'exp', 'length', 'log', 'rsqrt', 'sqrt', 'tanh',
     'cube', 'square'),
   'testing', 'known_failures',
   list(
@@ -38,7 +38,10 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('atan', 'logit', 'mean', 'prod'),
+  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
+    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
+    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
+    'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum'),
   'testing', 'known_failures',
   list(
     math = list(

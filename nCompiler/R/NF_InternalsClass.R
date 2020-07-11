@@ -49,10 +49,10 @@ NF_InternalsClass <- R6::R6Class(
                                                   explicitTypeList = argTypes,
                                                   evalEnv = where)
 
-            ## nf_changeNimKeywords changes all.nCompiler keywords,
-            ## e.g. 'print' to 'nimPrint'; see 'nimKeyWords' list at
-            ## bottom
-            code <<- nf_changeNimKeywords(body(fun)) 
+            ## nf_changeKeywords changes all.nCompiler keywords,
+            ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
+            ## changeKeywords.R
+            code <<- nf_changeKeywords(body(fun)) 
             if(code[[1]] != '{')
                 code <<- substitute({CODE}, list(CODE=code))
             ## check all code except.nCompiler package nFunctions
@@ -142,10 +142,10 @@ nf_extractReturnType <- function(code) {
         returnTypeDeclaration <- code[[returnLineNum]][[2]]
         code[returnLineNum] <- NULL
     }
-    ## a very patchy solution: switch nimInteger back to integer
-    ## if(as.character(returnTypeDeclaration[[1]]) == 'nimInteger')
+    ## a very patchy solution: switch nInteger back to integer
+    ## if(as.character(returnTypeDeclaration[[1]]) == 'nInteger')
     ##     returnTypeDeclaration[[1]] <- as.name('integer')
-    ## if(as.character(returnTypeDeclaration[[1]]) == 'nimLogical')
+    ## if(as.character(returnTypeDeclaration[[1]]) == 'nLogical')
     ##     returnTypeDeclaration[[1]] <- as.name('logical')
     list(code = code,
          returnType = returnTypeDeclaration)

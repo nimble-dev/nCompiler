@@ -15,7 +15,11 @@
 #include "shared_ptr_as_wrap.h"
 
 #include "typedefs.h"
+#include "setWhich.h"
+#include "repClass.h"
+#include "seqClass.h"
 #include "recyclingRule.h"
+#include "tensorCreation.h"
 #include "nCompiler_Rcpp.h"
 #include "cWiseUnary_external.h"
 
