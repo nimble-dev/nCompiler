@@ -100,6 +100,9 @@ writePackage <- function(...,
     else if (isNCgenerator(x)) return(x$classname)
     else stop(paste("In writePackage: only nFunctions and nClass generators are",
                     "allowed. Cannot compile object of class ", class(x)))}))
+  if (length(unique(objNames)) < length(objNames)) stop(paste(
+    "in writePackage: Duplicate internal object names detected.",
+  ))
   
   # If options 1 or 2 were hit, we can just use the globalControl option set we
   # already built for every element. If neither, we still do this to set up the
@@ -159,13 +162,50 @@ writePackage <- function(...,
                             control = list(endStage = "writeCpp",
                                            useUniqueNameInCode = TRUE))
       RcppPackets[[i]] <- NFinternals(objs[[i]])$RcppPacket
-    } else if(isNCgenerator(objs[[i]])) {
+      thisRox <- switch(roxygenFlag,
+                        none = NULL,
+                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+                        names = if (objNames[[i]] %in% names(roxygen)) 
+                          roxygen[[ objNames[i] ]] 
+                        else NULL)
+      if (!is.null(thisRox)) {
+        exportIndex <- which(RcppPackets[[i]]$cppContent == "// [[Rcpp::export]]")
+        RcppPackets[[i]]$cppContent <-
+          c(RcppPackets[[i]]$cppContent[1:(exportIndex - 1)],
+            thisRox$header, 
+            RcppPackets[[i]]$cppContent[exportIndex:length(RcppPackets[[i]]$cppContent)])
+      }
+    } else if (isNCgenerator(objs[[i]])) {
       writtenNC1 <- nCompile_nClass(objs[[i]],
                                     control = list(endStage = "writeCpp"))
       RcppPackets[[i]] <- NCinternals(objs[[i]])$RcppPacket
       if (isTRUE(nClass_full_interface)) {
         full_interface[[i]] <- build_compiled_nClass(objs[[i]], quoted = TRUE)
       }
+      
+      # I thought maybe I could put methods doc in C++ as follows but I had issues
+      # thisRox <- switch(roxygenFlag,
+      #                   none = NULL,
+      #                   indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+      #                   names = if (objNames[[i]] %in% names(roxygen)) 
+      #                     roxygen[[ objNames[i] ]] 
+      #                   else NULL)
+      # if (!is.null(thisRox)) {
+      #   # givenNames <- names(objs[[i]]$public_methods)
+      #   cppCodeNames <- lapply(objs[[i]]$public_methods, 
+      #                          function(x) if (isNF(x)) 
+      #                            NFinternals(x)$cpp_code_name)
+      #   for (m in 1:length(thisRox$methods)) {
+      #     thisFnDefIndex <- grep(paste0(cppCodeNames[names(thisRox$methods)[m]], " ("), 
+      #                             RcppPackets[[i]]$cppContent, fixed = TRUE)
+      #     
+      #     RcppPackets[[i]]$cppContent <-
+      #       c(RcppPackets[[i]]$cppContent[1:(thisFnDefIndex - 1)],
+      #         thisRox$methods[[m]], 
+      #         RcppPackets[[i]]$cppContent[(thisFnDefIndex):length(RcppPackets[[i]]$cppContent)])
+      #   }
+      # }
+      
     } else {
       stop(paste("In writePackage: only nFunctions and nClass generators are",
                  "allowed. Cannot compile object of class ", class(objs[[i]])))
@@ -199,14 +239,6 @@ writePackage <- function(...,
   
   # Loop over each object again
   for (i in 1:length(objs)) {
-    # Retrieve entry
-    thisRox <- switch(roxygenFlag,
-                      none = NULL,
-                      indices = if (length(roxygen) < i) roxygen[[i]] else NULL,
-                      names = if (objNames[[i]] %in% names(roxygen)) 
-                                roxygen[[ objNames[i] ]] 
-                              else NULL
-                      )
     
     ## We write the code once for the package's DLL...
     nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
@@ -229,6 +261,31 @@ writePackage <- function(...,
         generator_name, ' <- ', deparsed_full_interface[1]
       )
       exportTag <- if (totalControl[[i]]$export) "#' @export\n" else NULL
+      # Retrieve roxygen entry
+      thisRox <- switch(roxygenFlag,
+                        none = NULL,
+                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+                        names = if (objNames[[i]] %in% names(roxygen)) 
+                                  roxygen[[ objNames[i] ]] 
+                                else NULL
+                        )
+      
+      if (!is.null(thisRox)) {
+        # Find the spot where each documented method is defined
+        for (m in 1:length(thisRox$methods)) {
+          thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
+                           deparsed_full_interface, fixed = TRUE)
+          targetStr <- deparsed_full_interface[thisDefn]
+          deparsed_full_interface[thisDefn] <- 
+            gsub(pattern = names(thisRox$methods)[m],
+                 replacement = paste0(
+                   "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
+                 ),
+                 x = deparsed_full_interface[thisDefn], 
+                 fixed = TRUE)
+        }
+      }
+      
       deparsed_full_interface <- c(
         '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
         if (is.list(thisRox)) thisRox[["header"]] else thisRox,
@@ -248,13 +305,14 @@ writePackage <- function(...,
   ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
   ## A nClass might need:
   DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
+  # DESCRIPTION$Encoding <- "UTF-8"
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.
   # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
   write.dcf(DESCRIPTION, DESCfile)
   
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
-  NAMESPACE <- c("useDynLib(", package.name, ", .registration=TRUE)", 
+  NAMESPACE <- c(paste0("useDynLib(", package.name, ", .registration=TRUE)"), 
                  "importFrom(Rcpp, evalCpp)")
   for (i in 1:length(objs)) {
     # if (totalControl[[i]]$export && isNCgenerator(objs[[i]])) 
@@ -268,15 +326,6 @@ writePackage <- function(...,
   writeLines(NAMESPACE, con = NAMEfile)
 
   compileAttributes(pkgdir = pkgDir)
-  
-  # # Rename nFunctions
-  # rcppExports <- readLines(file.path(pkgDir, "R/RcppExports.R"))
-  # rcppExports <- lapply(rcppExports, function(x) {
-  #   if (grepl(" <- function", x) && grepl("NFID", x)) {
-  #     x <- gsub("_NFID_[0-z]+ ", " ", x)
-  #   } else x
-  # })
-  # writeLines(unlist(rcppExports), file.path(pkgDir, "R/RcppExports.R"))
   
   if (roxygenize) roxygen2::roxygenize(package.dir = pkgDir,
                                        roclets = c("rd"))
@@ -366,6 +415,12 @@ buildPackage <- function(package.name,
 #'   string, optional.
 #' @param processWhitespace Logical, default TRUE. Can whitespace be modified to
 #'   maintain style?
+#' @param headerComment what string indicates the start of a roxygen comment for
+#'   the header? By default nCompiler packaging puts header comments for
+#'   nClasses in R, so the default value `#'` should almost always be kept.
+#' @param methodsComment what string indicates the start of a roxygen comment
+#'   for the methods? By default nCompiler packaging puts methods comments for
+#'   nClasses in C++, so the default value `//'` should almost always be kept.
 #' @param checkAgainstObj Logical, default TRUE. Should the input be compared
 #'   against the actual nClass generator to confirm that all elements have been
 #'   documented appropriately?
@@ -380,6 +435,8 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
                            CMethodsDescriptions = list(), 
                            CMethodsParams = list(),
                            otherRoxygen = NULL,
+                           headerComment = "#'",
+                           methodsComment = "//'",
                            processWhitespace = TRUE,
                            checkAgainstObj = TRUE) {
   # Check sanity of inputs
@@ -393,30 +450,36 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
   
   if (processWhitespace) {
     nameProc <- strwrap(gsub("[[:space:]]+", " ", name), width = 80, 
-                           prefix = "#'   ", initial = "#' @name ")
+                           prefix = paste0(headerComment, "   "), 
+                        initial = paste0(headerComment, " @name "))
     titleProc <- strwrap(gsub("[[:space:]]+", " ", title), width = 80, 
-                           prefix = "#'   ", initial = "#' @title ")
+                           prefix = paste0(headerComment, "   "), 
+                         initial = paste0(headerComment, " @title "))
     descProc <- 
       if (is.null(description)) { NULL
       } else strwrap(gsub("[[:space:]]+", " ", description), width = 80, 
-                   prefix = "#'   ", initial = "#' @description ")
+                   prefix = paste0(headerComment, "   "), 
+                   initial = paste0(headerComment, " @description "))
     
     fieldsProc <- character(length(fields))
     if (length(fields) > 0) for (i in 1:length(fields)) {
       fieldsProc[i] <- strwrap(paste(names(fields)[i], fields[[i]]),
-                               width = 80, prefix = "#'   ",
-                               initial = "#' @field ")
+                               width = 80, prefix = paste0(headerComment, "   "),
+                               initial = paste0(headerComment, " @field "))
     }
     
   } else {
-    nameProc <- gsub("\n", "\n#'", paste0("#' @name ", name))
-    titleProc <- gsub("\n", "\n#'", paste0("#' @title ", title))
-    descProc <- gsub("\n", "\n#'", paste0("#' @description ", description))
+    nameProc <- gsub("\n", paste0("\n", headerComment), 
+                     paste0(headerComment, " @name ", name))
+    titleProc <- gsub("\n", paste0("\n", headerComment), 
+                      paste0(headerComment, " @title ", title))
+    descProc <- gsub("\n", paste0("\n", headerComment), 
+                     paste0(headerComment, " @description ", description))
     fieldsProc <- character(length(fields))
     if (length(fields) > 0) for (i in 1:length(fields)) {
-      fieldsProc[[i]] <- gsub("\n", "\n#'", paste("#' @field", 
-                                                   names(fields)[i], 
-                                                   fields[[i]]))
+      fieldsProc[[i]] <- gsub("\n", paste0("\n", headerComment), 
+                              paste(headerComment, "@field", names(fields)[i], 
+                                    fields[[i]]))
     }
   }
   
@@ -432,14 +495,18 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
   methodsList <- list()
   for (i in 1:length(methodsToDocument)) {
     thisMethod <- methodsToDocument[i]
+    thisNameProc <- strwrap(gsub("[[:space:]]+", " ", thisMethod), width = 80, 
+                            prefix = paste0(methodsComment, "   "), 
+                            initial = paste0(methodsComment, " @name "))
+    
     thisDescStr <- strwrap(gsub("[[:space:]]+", " ", CMethodsDescriptions[[thisMethod]]),
-                           width = 80, prefix = "#'   ", 
-                           initial = "#' @description ")
+                           width = 80, prefix = paste0(methodsComment, "   "), 
+                           initial = paste0(methodsComment, " @description "))
     thisParams <- character(length(CMethodsParams[[thisMethod]]))
     for (j in 1:length(thisParams)) {
       thisParams[j] <- strwrap(gsub("[[:space:]]+", " ", CMethodsParams[[i]][j]), 
-                               width = 80, prefix = "#'   ", 
-                               initial = paste0("#' @param ", 
+                               width = 80, prefix = paste0(methodsComment, "   "), 
+                               initial = paste0(methodsComment, " @param ", 
                                                 names(CMethodsParams[[i]])[j], 
                                                 " "))
     }
@@ -483,6 +550,9 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 #'   string, optional.
 #' @param processWhitespace Logical, default TRUE. Can whitespace be modified to
 #'   maintain style?
+#' @param roxComment what string indicates the start of a roxygen comment?
+#'   By default nCompiler packaging puts comments for nFunctions in C++, so the
+#'   default value `//'` should almost always be kept.
 #' @param checkAgainstObj Logical, default TRUE. Should the input be compared
 #'   against the actual nClass generator to confirm that all elements have been
 #'   documented appropriately?
@@ -493,8 +563,9 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 # TODO: Be more thoughtful about when whitespace is and isn't addressed,
 #       incl. tabs and the like
 documentNFunction <- function(obj = NULL, name, title, description = NULL, 
-                              params = list(), otherRoxygen = NULL,
-                              processWhitespace = TRUE, checkAgainstObj = TRUE){
+                              params = list(), otherRoxygen = NULL, 
+                              processWhitespace = TRUE, roxComment = "//'",
+                              checkAgainstObj = TRUE){
   # Check sanity of inputs
   if (sum(nchar(names(params)) > 0) < length(params)) {
     stop("in documentNClass: Some elements of list 'params' are unnamed.")
@@ -507,30 +578,36 @@ documentNFunction <- function(obj = NULL, name, title, description = NULL,
   if (processWhitespace) {
     
     nameProc <- strwrap(gsub("[[:space:]]+", " ", name), width = 80, 
-                        prefix = "#'   ", initial = "#' @name ")
+                        prefix = paste0(roxComment, "   "), 
+                        initial = paste0(roxComment, " @name "))
     titleProc <- strwrap(gsub("[[:space:]]+", " ", title), width = 80, 
-                         prefix = "#'   ", initial = "#' @title ")
+                         prefix = paste0(roxComment, "   "), 
+                         initial = paste0(roxComment, " @title "))
     descProc <- 
       if (is.null(description)) { NULL
       } else strwrap(gsub("[[:space:]]+", " ", description), width = 80, 
-                     prefix = "#'   ", initial = "#' @description ")
+                     prefix = paste0(roxComment, "   "),  
+                     initial = paste0(roxComment, " @description "))
     
     paramsProc <- character(length(params))
     if (length(params) > 0) for (i in 1:length(params)) {
       paramsProc[i] <- strwrap(paste(names(params)[i], params[[i]]),
-                               width = 80, prefix = "#'   ",
-                               initial = "#' @param ")
+                               width = 80, prefix = paste0(roxComment, "   "),
+                               initial = paste0(roxComment, " @param "))
     }
     
   } else {
-    nameProc <- gsub("\n", "\n#'", paste0("#' @name ", name))
-    titleProc <- gsub("\n", "\n#'", paste0("#' @title ", title))
-    descProc <- gsub("\n", "\n#'", paste0("#' @description ", description))
+    nameProc <- gsub("\n", paste0("\n", roxComment), 
+                     paste0(roxComment, " @name ", name))
+    titleProc <- gsub("\n", paste0("\n", roxComment), 
+                      paste0(roxComment, " @title ", title))
+    descProc <- gsub("\n", paste0("\n", roxComment), 
+                     paste0(roxComment, " @description ", description))
     fieldsProc <- character(length(params))
     if (length(params) > 0) for (i in 1:length(params)) {
-      paramsProc[[i]] <- gsub("\n", "\n#'", paste("#' @param", 
-                                                  names(params)[i], 
-                                                  params[[i]]))
+      paramsProc[[i]] <- gsub("\n", paste0("\n", roxComment), 
+                              paste(roxComment, "@param", 
+                                    names(params)[i], params[[i]]))
     }
   }
   

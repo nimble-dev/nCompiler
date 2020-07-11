@@ -198,7 +198,7 @@ test_that("Package writing errors and warnings for naming",
             expect_error(
               writePackage(foo_duplicate1, foo_duplicate2,
                            dir = tempdir(),
-                           package.name = "fooPackageNoExport",
+                           package.name = "fooPackageDuplicates",
                            clean = TRUE)
             )
             
@@ -221,7 +221,7 @@ test_that("Package writing errors and warnings for naming",
 
 # Roxygen tests
 
-test_that("Package writing documentation",
+test_that("Package writing documentation for nFunctions",
           {
             foo <- nFunction(
               name = "foo",
@@ -231,22 +231,80 @@ test_that("Package writing documentation",
                 returnType(numericScalar())
               }
             )
+            foo2 <- nFunction(
+              name = "foo2",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
             rox <- documentNFunction(obj = foo, 
                     name  = "foo",
                     title = "A Test nFunction",
-                    description = "This nFunction just adds one to a 
+                    description = "This nFunction just adds 1 to a 
                                    scalar input.",
-                    params = list(x = "A scalar to which 1 will be added."))
-            
-            
-            writePackage(foo,
+                    params = list(x = "A scalar to which 1 will be added."), 
+                    otherRoxygen = "//' @export")
+            writePackage(foo2, foo,
                          dir = tempdir(),
-                         package.name = "fooPackageWriteDoc",
+                         package.name = "fooPackageWriteDocnFunction",
                          clean = TRUE, 
-                         roxygen = rox,
+                         roxygen = list(foo = rox),
                          roxygenize = TRUE)
-            buildPackage("fooPackageWriteDoc", 
+            buildPackage("fooPackageWriteDocnFunction", 
                          dir = tempdir())
-            
+            expect_true(length(help("foo", package = "fooPackageWriteDocnFunction")) > 0)
+            expect_error(help("foo2", package = "fooPackageWriteDocnFunction"))
           })
 
+# TODO: nClass methods documentation
+test_that("Package writing documentation for nClasses",
+          {
+            foo <- nClass(
+              classname = "foo",
+              Cpublic = list(
+              x = "numericScalar",
+              cp1 = nFunction(fun = function(x = numericScalar()) {
+                x <<- x
+                ans <- x + 1
+                return(ans)
+                returnType(numericScalar())
+              }))
+            )
+            foo2 <- nClass(
+              classname = "foo2",
+              Cpublic = list(
+                x = "numericScalar",
+                cp2 = nFunction(fun = function(x = numericScalar()) {
+                  x <<- x
+                  ans <- x + 2
+                  return(ans)
+                  returnType(numericScalar())
+                }))
+            )
+            rox <- documentNClass(obj = foo, 
+                                 name  = "foo",
+                                 title = "A Test nClass",
+                                 description = "This nClass has a method to add 1 
+                                    to a scalar input, and has a field to store
+                                    that input.",
+                                 fields = list(x = "A scalar input."),
+                                 CMethodsDescriptions = list(cp1 = "Adds 1 to x."),
+                                 CMethodsParams = 
+                                   list(cp1 = list(x = "A scalar to which 
+                                                        1 will be added.")),
+                                 methodsComment = "#'")
+            
+            writePackage(foo2, foo,
+                         dir = tempdir(),
+                         package.name = "fooPackageWriteDocnClass",
+                         clean = TRUE, 
+                         roxygen = list(foo = rox),
+                         roxygenize = TRUE
+                         )
+            buildPackage("fooPackageWriteDocnClass", 
+                         dir = tempdir())
+            expect_true(length(help("foo", package = "fooPackageWriteDocnClass")) > 0)
+            expect_error(help("foo2", package = "fooPackageWriteDocnClass"))
+          })
