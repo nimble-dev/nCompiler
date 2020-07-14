@@ -12,6 +12,7 @@ documentNFunction(
   params = list(),
   otherRoxygen = NULL,
   processWhitespace = TRUE,
+  roxComment = "//'",
   checkAgainstObj = TRUE
 )
 }
@@ -35,6 +36,10 @@ nFunction. Values are descriptions of each parameter.}
 
 \item{processWhitespace}{Logical, default TRUE. Can whitespace be modified to
 maintain style?}
+
+\item{roxComment}{what string indicates the start of a roxygen comment?
+By default nCompiler packaging puts comments for nFunctions in C++, so the
+default value `//'` should almost always be kept.}
 
 \item{checkAgainstObj}{Logical, default TRUE. Should the input be compared
 against the actual nClass generator to confirm that all elements have been

@@ -1,4 +1,5 @@
 #' @name writePackage
+#' @title Create packages containing compiled elements
 #' @export
 #' @param ... One or more nClass constructor and nFunction objects to be
 #'   compiled into the package.
@@ -368,6 +369,7 @@ writePackage <- function(...,
 
 
 #' @name buildPackage
+#' @title Build and install packages written by writePackage
 #' @export
 #' @param package.name Character string. The name of the package to be built,
 #'   corresponding to the argument of the same name in writePackages.

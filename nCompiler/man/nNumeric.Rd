@@ -9,14 +9,11 @@
 \alias{logical}
 \title{Creates numeric, integer or logical vectors for use in nFunctions}
 \usage{
-nNumeric(length = 0, value = 0, init = TRUE, fillZeros = TRUE,
-  recycle = TRUE)
+nNumeric(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE)
 
-nInteger(length = 0, value = 0, init = TRUE, fillZeros = TRUE,
-  recycle = TRUE)
+nInteger(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE)
 
-nLogical(length = 0, value = 0, init = TRUE, fillZeros = TRUE,
-  recycle = TRUE)
+nLogical(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE)
 }
 \arguments{
 \item{length}{the length of the vector (default = 0)}

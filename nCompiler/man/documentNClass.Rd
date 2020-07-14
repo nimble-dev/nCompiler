@@ -13,6 +13,8 @@ documentNClass(
   CMethodsDescriptions = list(),
   CMethodsParams = list(),
   otherRoxygen = NULL,
+  headerComment = "#'",
+  methodsComment = "//'",
   processWhitespace = TRUE,
   checkAgainstObj = TRUE
 )
@@ -47,6 +49,14 @@ CMethodsParams should match exactly the names of the methods of the nClass.
 Each element of CMethodsParams should itself be a named list, with names
 matching parameters of the appropriate function, and elements being text
 strings describing those parameters.}
+
+\item{headerComment}{what string indicates the start of a roxygen comment for
+the header? By default nCompiler packaging puts header comments for
+nClasses in R, so the default value `#'` should almost always be kept.}
+
+\item{methodsComment}{what string indicates the start of a roxygen comment
+for the methods? By default nCompiler packaging puts methods comments for
+nClasses in C++, so the default value `//'` should almost always be kept.}
 
 \item{processWhitespace}{Logical, default TRUE. Can whitespace be modified to
 maintain style?}

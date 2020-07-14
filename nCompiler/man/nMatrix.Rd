@@ -7,11 +7,25 @@
 \alias{array}
 \title{Creates matrix or array objects for use in nFunctions}
 \usage{
-nMatrix(value = 0, nrow = NA, ncol = NA, init = TRUE,
-  fillZeros = TRUE, recycle = TRUE, type = "double")
+nMatrix(
+  value = 0,
+  nrow = NA,
+  ncol = NA,
+  init = TRUE,
+  fillZeros = TRUE,
+  recycle = TRUE,
+  type = "double"
+)
 
-nArray(value = 0, dim = c(1, 1), init = TRUE, fillZeros = TRUE,
-  recycle = TRUE, nDim, type = "double")
+nArray(
+  value = 0,
+  dim = c(1, 1),
+  init = TRUE,
+  fillZeros = TRUE,
+  recycle = TRUE,
+  nDim,
+  type = "double"
+)
 }
 \arguments{
 \item{value}{value(s) for initialization (default = 0).  This can be a vector, matrix or array, but it will be used as a vector.}
