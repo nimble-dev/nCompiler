@@ -10,7 +10,8 @@ requirements <- c(
     'R6',
     'pkgKitten',  ## needed for test-distributions.R
     'Rcereal',
-    'numDeriv'
+    'numDeriv',
+    'roxygen2'
     )
 
 for (package in requirements) {
