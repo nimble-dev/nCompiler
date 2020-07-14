@@ -382,3 +382,25 @@ test_that("Packaging errors occur where expected", {
                             dir = tempdir()))
   
 })
+
+test_that("erasePackage works", {
+  foo <- nFunction(
+    name = "foo",
+    fun = function(x = numericScalar()) {
+      ans <- x+100
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  writePackage(foo, package.name = "toBeErased", dir = tempdir())
+  expect_true(dir.exists(file.path(tempdir(), "toBeErased")))
+  
+  erasePackage(package.name = "toBeErased", dir = tempdir())
+  expect_true(!dir.exists(file.path(tempdir(), "toBeErased")))
+  
+  expect_error(erasePackage(package.name = "NeverExisted", dir = tempdir()))
+  
+  dir.create(file.path(tempdir(), "NewDirNotPackage"))
+  expect_error(erasePackage(package.name = "NewDirNotPackage", dir = tempdir()))
+  expect_true(dir.exists(file.path(tempdir(), "NewDirNotPackage")))
+})
