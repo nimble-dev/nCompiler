@@ -666,7 +666,7 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
                            headerComment = "#'",
                            methodsComment = "#'",
                            processWhitespace = TRUE,
-                           checkAgainstObj = TRUE) {
+                           checkAgainstObj = FALSE) {
   # Check sanity of inputs
   if (sum(nchar(names(fields)) > 0) < length(fields)) {
     stop("in documentNClass: Some elements of list 'fields' are unnamed.")
@@ -823,7 +823,7 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 documentNFunction <- function(obj = NULL, name, title, description = NULL, 
                               params = list(), otherRoxygen = NULL, 
                               processWhitespace = TRUE, roxComment = "//'",
-                              checkAgainstObj = TRUE){
+                              checkAgainstObj = FALSE){
   # Check sanity of inputs
   if (sum(nchar(names(params)) > 0) < length(params)) {
     stop("in documentNClass: Some elements of list 'params' are unnamed.")
