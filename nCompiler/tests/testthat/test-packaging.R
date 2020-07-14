@@ -17,7 +17,6 @@ test_that("writePackage and buildPackage work for nFunction",
             writePackage(foo,
                          dir = tempdir(),
                          package.name = "fooPackage",
-                         clean = TRUE, 
                          control = list(export = TRUE))
             ans <- buildPackage("fooPackage",
                                 dir = tempdir())
@@ -50,7 +49,6 @@ test_that("writePackage and buildPackage work for nClass",
                 nc1,
                 dir = tempdir(),
                 package.name = "nc1Package",
-                clean = TRUE,
                 nClass_full_interface = FALSE
             )
             buildPackage("nc1Package",
@@ -86,8 +84,7 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   writePackage(
       nc2,
       dir = tempdir(),
-      package.name = "nc2Package",
-      clean = TRUE
+      package.name = "nc2Package"
   )
   expect_true(buildPackage("nc2Package",
                            dir = tempdir()))
@@ -129,7 +126,6 @@ test_that("Create package with multiple objects",
             writePackage(foo1, foo2,
                          dir = tempdir(),
                          package.name = "fooPackageMultiples",
-                         clean = TRUE,
                          control = list(export = TRUE))
             ans <- buildPackage("fooPackageMultiples",
                                 dir = tempdir())
@@ -166,7 +162,6 @@ test_that("Export flag works",
             writePackage(foo, foo2,
                          dir = tempdir(),
                          package.name = "fooPackageNoExport",
-                         clean = TRUE,
                          control = list(
                            foo = list(export = FALSE),
                            foo2 = list(export = TRUE)))
@@ -199,8 +194,7 @@ test_that("Package writing errors and warnings for naming",
             expect_error(
               writePackage(foo_duplicate1, foo_duplicate2,
                            dir = tempdir(),
-                           package.name = "fooPackageDuplicates",
-                           clean = TRUE)
+                           package.name = "fooPackageDuplicates")
             )
             
             foo_badname <- nFunction(
@@ -214,8 +208,7 @@ test_that("Package writing errors and warnings for naming",
             expect_warning(
               writePackage(foo_badname,
                            dir = tempdir(),
-                           package.name = "fooPackageNoExport",
-                           clean = TRUE)
+                           package.name = "fooPackageBadname")
             )
             
           })
@@ -250,14 +243,14 @@ test_that("Package writing documentation for nFunctions",
             writePackage(foo2, foo,
                          dir = tempdir(),
                          package.name = "fooPackageWriteDocnFunction",
-                         clean = TRUE, 
-                         roxygen = list(foo = rox),
-                         roxygenize = TRUE)
+                          
+                         roxygen = list(foo = rox))
             ans <- buildPackage("fooPackageWriteDocnFunction", 
-                                dir = tempdir())
+                                dir = tempdir(), 
+                                roxygenize = TRUE)
             expect_true(ans)
             expect_true(length(help("foo", package = "fooPackageWriteDocnFunction")) > 0)
-            expect_error(help("foo2", package = "fooPackageWriteDocnFunction"))
+            expect_error(length(help("foo2", package = "fooPackageWriteDocnFunction")) == 0)
           })
 
 # TODO: nClass methods documentation
@@ -301,13 +294,91 @@ test_that("Package writing documentation for nClasses",
             writePackage(foo2, foo,
                          dir = tempdir(),
                          package.name = "fooPackageWriteDocnClass",
-                         clean = TRUE, 
-                         roxygen = list(foo = rox),
-                         roxygenize = TRUE
+                         roxygen = list(foo = rox)
                          )
             ans <- buildPackage("fooPackageWriteDocnClass", 
+                                roxygenize = TRUE,
                                 dir = tempdir())
             expect_true(ans)
             expect_true(length(help("foo", package = "fooPackageWriteDocnClass")) > 0)
             expect_error(help("foo2", package = "fooPackageWriteDocnClass"))
           })
+
+test_that("Package updating and editing",
+          {
+            foo <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+1
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            foo2 <- nFunction(
+              name = "foo2",
+              fun = function(x = numericScalar()) {
+                ans <- x+2
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+            
+            writePackage(foo2, foo,
+                         dir = tempdir(),
+                         package.name = "fooPackageUpdating")
+            
+            # ans <- buildPackage("fooPackageUpdating", 
+            #                     dir = tempdir())
+            # expect_true(ans)
+            # expect_equal(fooPackageUpdating::foo(21), 22)
+            # expect_equal(fooPackageUpdating::foo2(21), 23)
+            # 
+            foo3 <- nFunction(
+              name = "foo",
+              fun = function(x = numericScalar()) {
+                ans <- x+100
+                return(ans)
+                returnType(numericScalar())
+              }
+            )
+
+            writePackage(foo3,
+                         dir = tempdir(),
+                         modify = TRUE,
+                         package.name = "fooPackageUpdating")
+            
+            # dir.create(file.path(tempdir(), "libs"))
+            ans <- buildPackage("fooPackageUpdating", 
+                                dir = tempdir())
+            expect_true(ans)
+            expect_equal(fooPackageUpdating::foo(21), 121)
+            expect_equal(fooPackageUpdating::foo2(21), 23)
+          })
+
+
+test_that("Packaging errors occur where expected", {
+  foo <- nFunction(
+    name = "foo",
+    fun = function(x = numericScalar()) {
+      ans <- x+100
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  
+  # Warn if modify = TRUE on new dir
+  expect_warning(
+    writePackage(foo, package.name = "fooDoesntExistYet", 
+                 modify = TRUE, dir  = tempdir())
+  )
+  
+  # No underscore in fn name
+  expect_error(writePackage(foo, package.name = "bad_package_name", 
+                            dir = tempdir()))
+  
+  # Only nFunctions and nClasses allowed
+  expect_error(writePackage(foo, function(x) x+10,
+                            package.name = "neverWritten", 
+                            dir = tempdir()))
+  
+})
