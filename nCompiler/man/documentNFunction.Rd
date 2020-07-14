@@ -43,7 +43,7 @@ default value `//'` should almost always be kept.}
 
 \item{checkAgainstObj}{Logical, default TRUE. Should the input be compared
 against the actual nClass generator to confirm that all elements have been
-documented appropriately?}
+documented appropriately? (NOTE: not implemented yet, currently ignored)}
 }
 \description{
 Builds out a text block in roxygen2 format given the inputs. The
@@ -53,6 +53,36 @@ Builds out a text block in roxygen2 format given the inputs. The
   the nFunction generator object, reporting whether all fields and methods
   were described.
 }
+\examples{
+# Initialize an example nFunction
+foo <- nFunction(name = "foo",
+                 fun = function(x = numericScalar()) {
+                     ans <- x+1
+                     return(ans)
+                     returnType(numericScalar())
+                 })
+# Create the roxygen
+rox <- documentNFunction(obj = foo, 
+                    name  = "foo",
+                    title = "A Test nFunction",
+                    description = "This nFunction just adds 1 to a 
+                              scalar input.",
+                    params = list(x = "A scalar to which 1 will be added."), 
+                    otherRoxygen = "//' @export")
+# Use the roxygen to write and build a package, which will include 
+# documentation for foo
+writePackage(foo,
+             dir = tempdir(),
+             package.name = "fooPackageWriteDocnFunction",
+             roxygen = list(foo = rox))
+buildPackage("fooPackageWriteDocnFunction", 
+             dir = tempdir(), 
+             roxygenize = TRUE)
+?foo
+}
 \seealso{
-\link[roxygen2]{roxygenize}
+For documenting nFunctions see \link{documentNFunction}. For
+  nCompiler packaging tools see \link{writePackage}. To learn about roxygen
+  documentation format see the package roxygen, e.g.
+  \link[roxygen2]{roxygenize}.
 }

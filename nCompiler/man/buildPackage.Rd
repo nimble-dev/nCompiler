@@ -23,3 +23,40 @@ installed?}
 \description{
 Build and install packages written by writePackage
 }
+\details{
+\code{buildPackage} is a function for adding compiled nFunctions and nClasses
+to an R package. It handles the building and installation. Optionally
+buildPackage calls \code{roxygen2::roxygenize} on the home directory of the
+package. It may not be necessary to use buildPackage if another developer
+tool is preferred for your package.
+
+\code{buildPackage} errors if package installation fails. If an uncompilable
+nFunction or nClass was written to the package, this will cause
+\code{buildPackage} to fail, printing the message that install.packages
+finished with "non-zero exit status."
+}
+\examples{
+# Initialize an example nFunction
+foo <- nFunction(name = "foo",
+                 fun = function(x = numericScalar()) {
+                     ans <- x+1
+                     return(ans)
+                     returnType(numericScalar())
+                 })
+# Write a package containing the compiled nFunction "foo"
+writePackage(foo,
+             dir = tempdir(),
+             package.name = "fooPackage",
+             control = list(export = TRUE))
+# Build and install the package
+buildPackage("fooPackage", dir = tempdir())
+# We can call "foo" from the new namespace
+fooPackage::foo(10)
+}
+\seealso{
+For other nCompiler packaging tools, see \code{\link{writePackage}}
+  and \code{\link{erasePackage}}. For nCompiler roxygen utilities see
+  \code{\link{documentNClass}} and \code{\link{documentNFunction}}. For
+  roxygen2 tools on which \code{buildPackage} depends see
+  \code{\link[roxygen2]{roxygenize}}.
+}

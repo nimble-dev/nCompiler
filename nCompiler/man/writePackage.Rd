@@ -48,5 +48,54 @@ documentation pages before package build?}
 Create packages containing compiled elements
 }
 \details{
+`writePackage` is a function for adding compiled nFunctions and nClasses to
+an R package. `writePackage` handles compilation, documentation, and
+exporting, so that the resulting R package can call the compiled nFunctions
+and instantiate members of the nClass without further compilation.
 
+The names of the elements exported in the package will match the internal
+names of the elements as they are passed (the \code{name} field in
+\code{nFunction} and the \code{classname} field in \code{nClass}), NOT
+the names of the objects in the R environment.
+
+If a nonexistent directory or nonexistent directory is indicated by the
+arguments \code{dir} and \code{package.name}, writePackage uses Rcpp's
+Rcpp.package.skeleton to initialize a directory.
+
+If the directory indicated by those two arguments does exist and
+\code{modify} is \code{TRUE}, then the elements passed to `...` are compiled
+and added to the package. This process will overwrite existing compiled
+objects with overlapping names, so can be used to edit and update package
+elements as well as add new elements.
+
+If an uncompilable nFunction or nClass is passed, \code{writePackage} will
+not error. This will not be caught until the package is built, for example
+with \code{buildPackage}.
+}
+\examples{
+# Initialize an example nFunction
+foo <- nFunction(name = "foo",
+                 fun = function(x = numericScalar()) {
+                     ans <- x+1
+                     return(ans)
+                     returnType(numericScalar())
+                   }
+                 )
+# Write a package containing the compiled nFunction "foo"
+writePackage(foo,
+             dir = tempdir(),
+             package.name = "fooPackage",
+             control = list(export = TRUE))
+# Build and install the package
+buildPackage("fooPackage", dir = tempdir())
+# We can call "foo" from the new namespace
+fooPackage::foo(10)
+}
+\seealso{
+For more nCompiler packaging tools, see \code{\link{buildPackage}}
+  and \code{\link{erasePackage}}. For nCompiler roxygen utilities see
+  \code{\link{documentNClass}} and \code{\link{documentNFunction}}. For
+  package initialization tools on which \code{writePackage} depends see
+  \code{\link[Rcpp]{Rcpp.package.skeleton}} and
+  \code{\link[utils]{package.skeleton}}.
 }

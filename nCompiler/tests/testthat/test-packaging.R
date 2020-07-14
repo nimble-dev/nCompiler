@@ -243,7 +243,6 @@ test_that("Package writing documentation for nFunctions",
             writePackage(foo2, foo,
                          dir = tempdir(),
                          package.name = "fooPackageWriteDocnFunction",
-                          
                          roxygen = list(foo = rox))
             ans <- buildPackage("fooPackageWriteDocnFunction", 
                                 dir = tempdir(), 

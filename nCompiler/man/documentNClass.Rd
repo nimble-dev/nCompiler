@@ -14,7 +14,7 @@ documentNClass(
   CMethodsParams = list(),
   otherRoxygen = NULL,
   headerComment = "#'",
-  methodsComment = "//'",
+  methodsComment = "#'",
   processWhitespace = TRUE,
   checkAgainstObj = TRUE
 )
@@ -56,14 +56,14 @@ nClasses in R, so the default value `#'` should almost always be kept.}
 
 \item{methodsComment}{what string indicates the start of a roxygen comment
 for the methods? By default nCompiler packaging puts methods comments for
-nClasses in C++, so the default value `//'` should almost always be kept.}
+nClasses in R, so the default value `#'` should almost always be kept.}
 
 \item{processWhitespace}{Logical, default TRUE. Can whitespace be modified to
 maintain style?}
 
 \item{checkAgainstObj}{Logical, default TRUE. Should the input be compared
 against the actual nClass generator to confirm that all elements have been
-documented appropriately?}
+documented appropriately? (NOTE: not implemented yet, currently ignored)}
 }
 \description{
 Builds out a text block in roxygen2 format given the inputs. The
@@ -73,6 +73,47 @@ Builds out a text block in roxygen2 format given the inputs. The
   the nClass generator object, reporting whether all fields and methods were
   described.
 }
+\examples{
+# Initialize an example nClass
+foo <- nClass(
+  classname = "foo",
+  Cpublic = list(
+    x = "numericScalar",
+    cp1 = nFunction(fun = function(x = numericScalar()) {
+      x <<- x
+      ans <- x + 1
+      return(ans)
+      returnType(numericScalar())
+    }))
+)
+# Create the roxygen
+rox <- documentNClass(obj = foo, 
+                      name  = "foo",
+                      title = "A Test nClass",
+                      description = "This nClass has a method to add 1 
+                         to a scalar input, and has a field to store
+                         that input.",
+                      fields = list(x = "A scalar input."),
+                      CMethodsDescriptions = list(cp1 = "Adds 1 to x."),
+                      CMethodsParams = 
+                        list(
+                         cp1 = list(x = "A scalar to which 1 will be added.")
+                        ),
+                      methodsComment = "#'")
+# Use the roxygen to write and build a package, which will include 
+# documentation for foo
+writePackage(foo,
+             dir = tempdir(),
+             package.name = "fooPackageWriteDocnFunction",
+             roxygen = list(foo = rox))
+buildPackage("fooPackageWriteDocnFunction", 
+             dir = tempdir(), 
+             roxygenize = TRUE)
+?foo
+}
 \seealso{
-\link[roxygen2]{roxygenize}
+For documenting nFunctions see \link{documentNFunction}. For
+  nCompiler packaging tools see \link{writePackage}. To learn about roxygen
+  documentation format see the package roxygen, e.g.
+  \link[roxygen2]{roxygenize}.
 }
