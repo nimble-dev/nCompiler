@@ -126,7 +126,111 @@ x <- 1:3
 compiled$f2(x, 11:3) # We see the modified x returned.
 ```
 
+## Rcpp types
+
+nCompiler supports the use of many Rcpp types. Rcpp's types are designed for
+easy integration with R objects, and they include types like `DataFrame`,
+`List`, and `S4`, as well as a variety of typed matrices and vectors.
+
+In nCompiler, these types are prefixed with Rcpp, such as `RcppDataFrame` and
+`RcppNumericMatrix`. This is to differentiate between certain Rcpp and nCompiler
+types with similar names and functions but which are fundamentally different
+types under the hood.
+
+The following Rcpp types are supported:
+
+```{r echo = FALSE}
+rcpptypes <- data.frame(
+  `Rcpp Type` = c(
+    "NumericVector",
+    "NumericMatrix",
+    "IntegerVector",
+    "IntegerMatrix",
+    "LogicalVector",
+    "LogicalMatrix",
+    "CharacterVector",
+    "CharacterMatrix",
+    "ComplexVector",
+    "ComplexMatrix",
+    "DateVector",
+    "DatetimeVector",
+    "RawVector",
+    "DataFrame",
+    "S4",
+    "Function"
+  )
+)
+rcpptypes$`Equivalent nCompiler type` <- paste0("Rcpp", rcpptypes$Rcpp.Type)
+knitr::kable(rcpptypes)
+```
+
+nCompiler also supports the direct use of the following RcppEigen types:
+
+```{r echo = FALSE}
+eigentypes <- data.frame(
+  `RcppEigen Type` = c(
+    "MatrixXd",
+    "MatrixXi",
+    "MatrixXcd",
+    "VectorXd",
+    "VectorXi",
+    "VectorXcd"
+  )
+)
+eigentypes$`Equivalent nCompiler type` <- paste0("RcppEigen", rcpptypes$Rcpp.Type)
+knitr::kable(rcpptypes)
+
+```
+
+
+The following example shows how one might want an Rcpp type in an nFunction.
+
+```{r}
+nf <- nFunction(
+  fun = function(x = "RcppIntegerVector",
+                 y = 'RcppIntegerVector') {
+    cppLiteral(
+      'ans = x + y;
+return ans;',
+      types = list(ans = "RcppIntegerVector()")
+    )
+    returnType("RcppIntegerVector()")
+  }
+)
+nfC <- nCompile_nFunction(nf)
+x <- c(1, 2)
+y <- c(100, 200)
+nfC(x, y)
+```
+
+You may also want an nClass with a public field of an Rcpp type, for example:
+
+```{r}
+nc <- nClass(
+  classname = "demo_RcppNumericMatrix",
+  Cpublic = list(
+    x = "RcppNumericMatrix",
+    invert_x = nFunction(fun = function(new_x = "RcppNumericMatrix") { 
+      x <<- new_x
+      cppLiteral("return transpose(x);")
+    }, returnType = "RcppNumericMatrix()"
+    )
+  )
+)
+ncC <- nCompile(nc)
+my_nc <- ncC$new()
+test_x1 <- matrix(c(1000, 100, 0, 0), nrow = 2)
+
+my_nc$invert_x(test_x1)
+my_nc$x
+
+class(my_nc$x) # Return type corresponds to that of a numeric matrix in R
+```
+
+
 ## Future plans
 
 - Finish support for pass-by-reference.
 - Add support for passing by block references.
+- Support the Rcpp "Named" type (RcppNamed in nCompiler)
+- Support the RcppEigen "SparseMatrix<double>" type?

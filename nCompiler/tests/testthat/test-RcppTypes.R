@@ -228,18 +228,16 @@ test_that("RcppRawVector works in nFunctions", {
   expect_equal(x, ans)
 })
 
-## TODO: RcppNames seems like it doesn't work, but I don't really get how we
+## RcppNames seems like it doesn't work, but I don't really get how we
 ## should expect to be able to use it.
 # test_that("RcppNames works", {
 #   nf <- nFunction(
 #     fun = function(x = "RcppNamed") {
 #       cppLiteral(
-# '
-# ans = Rcpp::List::create(Named("Zero") = 0, x = 2);
-# return ans;',
-#         types = list(ans = "RcppList")
+# 'return x;',
+#         types = list()
 #       )
-#       returnType("RcppList()")
+#       returnType("RcppNamed()")
 #     })
 #   nfC <- nCompile_nFunction(nf)
 #   x <- c("One" = 1)
@@ -269,23 +267,20 @@ test_that("RcppS4 works in nFunctions", {
 
 
 ## TODO: Figure out if Rcpp::Function works?
-# test_that("RcppS4 works", {
-#   nffn <- nFunction(
-#     fun = function() {
-#       cppLiteral(
-#         'f = Rcpp::Function("rnorm"); return f(1, 0, 1);',
-#         types = list(f = "RcppFunction()")
-#       )
-#       returnType("numericScalar")
-#     }
-#   )
-#   nffnC <- nCompile_nFunction(nffn)
-#   
-#   test_fn <- function(l) {l + 1}
-# 
-#   expect_equal(nffnC(test_fn), 11)
-#   expect_false(nffnC(false_fn))
-# })
+test_that("RcppFunction works", {
+  nffn <- nFunction(
+    fun = function(x = "RcppFunction") {
+      cppLiteral(
+        'return x;',
+        types = list()
+      )
+      returnType("RcppFunction()")
+    }
+  )
+  nffnC <- nCompile_nFunction(nffn)
+
+  expect_equal(nffnC(rnorm), rnorm)
+})
 
 test_that("RcppDataFrame works in nFunctions", {
   nfdf <- nFunction(
