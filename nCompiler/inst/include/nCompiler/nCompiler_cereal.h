@@ -19,6 +19,56 @@ struct is_RcppType {
 template<>
 struct is_RcppType<Rcpp::NumericVector> {static const bool value = true;};
 
+template<>
+struct is_RcppType<Rcpp::NumericMatrix> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::IntegerVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::IntegerMatrix> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::LogicalVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::LogicalMatrix> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::CharacterVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::CharacterMatrix> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::ComplexVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::ComplexMatrix> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::DateVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::DatetimeVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::RawVector> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::DataFrame> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::S4> {static const bool value = true;};
+
+template<>
+struct is_RcppType<Rcpp::Function> {static const bool value = true;};
+
+// template<>
+// struct is_RcppType<RcppEigen::MatrixXd> {static const bool value = true;};
+
+
+
 namespace cereal {
   template<class Archive,
     class possibleRcppType,
