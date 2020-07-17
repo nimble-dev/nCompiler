@@ -38,10 +38,12 @@ test_that("serialization works",
             value(obj, "Cx") <- 3
             expect_equal(value(obj, "Cx"), 3L)
             
-            serialized <- nCompiler:::serialize_nComp_object(obj) 
+            serialized <- 
+              nCompiler:::serialize_nComp_object(obj, nComp_serialize)
             expect_true(nCompiler:::is.loadedObjectEnv(serialized))
             
-            deserialized <- nCompiler:::deserialize_nComp_object(serialized)
+            deserialized <- 
+              nCompiler:::deserialize_nComp_object(serialized, nComp_deserialize)
             expect_true(nCompiler:::is.loadedObjectEnv(serialized))
             expect_equal(value(deserialized, "Cv"), 1.23)
             x <- matrix(as.numeric(1:6), nrow = 2)
