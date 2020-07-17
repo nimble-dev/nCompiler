@@ -56,7 +56,7 @@ its particular behavior is far from final.
 
 ```{r}
 
-obj <- ans[[1]]()
+obj <- nc1_generator[[1]]()
 value(obj, "Cx") <- 10
 value(obj, "Cv") <- 0.1
 
@@ -82,13 +82,14 @@ Did we get our info back?
 
 ```{r}
 value(deserialized, "Cx")
-method(deserialized, "Cfoo")(10)
+method(deserialized, "Cfoo")(100)
 ```
 
 
 
 ### Future plans:
 
+- Get saving/loading to work with full nClass interfaces
 - support for use of `cereal` with more kinds of C++ member data.
 - create some coordination of R's serialization of environments that hold external pointers to nCompiler's C++ objects and `cereal` serialization of the C++ objects. 
 - create reasonable behavior for saving and loading from either full or generic interfaces.

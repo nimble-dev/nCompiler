@@ -93,6 +93,6 @@ read_nClass <- function(file, package.name,
   
   deserialize_fn <- utils::getFromNamespace("nComp_deserialize", package.name)
   deserialized <- deserialize_nComp_object(
-    serialized, nComp_deserialize_fn = nComp_deserialize)
+    serialized, nComp_deserialize_fn = deserialize_fn)
   return(deserialized)
 }
