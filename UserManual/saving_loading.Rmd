@@ -23,7 +23,7 @@ Here is an example.  Note that the system is sufficiently incomplete that it mus
 library(nCompiler)
 nc1 <- nClass(
   Cpublic = list(
-    Cv = 'numericScalar',
+    Cv = 'RcppNumericVector',
     Cx = 'integerScalar',
     Cfoo = nFunction(
       fun = function(x) {
@@ -37,7 +37,7 @@ set_nOption('serialize', TRUE)
 nc1_generator <- nCompile_nClass(nc1, interface = "generic")
 nc1_obj <- nc1_generator[[1]]()
 method(nc1_obj, "Cfoo")(1.2) # The method works.
-value(nc1_obj, "Cv") <- 1.23 # Access to fields works.
+value(nc1_obj, "Cv") <- c(1.23, 2.34) # Access to fields works.
 value(nc1_obj, "Cv") 
 serialized <- serialize_nComp_object(nc1_obj) #serialize! 
 # look at the gooey internals to see that they are a binary
