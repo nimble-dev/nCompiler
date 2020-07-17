@@ -13,7 +13,7 @@ documentNFunction(
   otherRoxygen = NULL,
   processWhitespace = TRUE,
   roxComment = "//'",
-  checkAgainstObj = TRUE
+  checkAgainstObj = FALSE
 )
 }
 \arguments{

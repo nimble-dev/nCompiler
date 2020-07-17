@@ -49,6 +49,43 @@ nc1_restored_obj <- deserialize_nComp_object(serialized, nComp_deserialize) #des
 value(nc1_restored_obj, "Cv") # The value was restored.
 method(nc1_restored_obj, "Cfoo")(1.2) # The method works
 ```
+### Saving and loading between sessions
+
+nClasses can be saved and loaded between sessions. This parameterization and
+its particular behavior is far from final.
+
+```{r}
+
+obj <- ans[[1]]()
+value(obj, "Cx") <- 10
+value(obj, "Cv") <- 0.1
+
+save_nClass(ncObj = obj, ncDef = nc1, serializeFn = nComp_serialize,
+            file = "~/savedObj.rds", package.name = "savedObjPkg", 
+            dir = tempdir())
+```
+
+The following code runs even in a new session, loading all info about `obj` from
+what was saved in the 
+
+```{r}
+### Start the 2nd session here...
+library(nCompiler)
+set_nOption("serialize", TRUE)
+
+deserialized <- read_nClass(file = "~/savedObj.rds", 
+                            package.name = "savedObjPkg", 
+                            dir = tempdir())
+```
+
+Did we get our info back?
+
+```{r}
+value(deserialized, "Cx")
+method(deserialized, "Cfoo")(10)
+```
+
+
 
 ### Future plans:
 

@@ -16,7 +16,7 @@ documentNClass(
   headerComment = "#'",
   methodsComment = "#'",
   processWhitespace = TRUE,
-  checkAgainstObj = TRUE
+  checkAgainstObj = FALSE
 )
 }
 \arguments{
