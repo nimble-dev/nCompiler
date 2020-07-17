@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
@@ -86,7 +86,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -235,6 +234,7 @@ $(document).ready(function () {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -247,48 +247,9 @@ $(document).ready(function () {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
-
-<script>
-$(document).ready(function ()  {
-
-    // move toc-ignore selectors from section div to header
-    $('div.section.toc-ignore')
-        .removeClass('toc-ignore')
-        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
-
-    // establish options
-    var options = {
-      selectors: "h1,h2,h3",
-      theme: "bootstrap3",
-      context: '.toc-content',
-      hashGenerator: function (text) {
-        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
-      },
-      ignoreSelector: ".toc-ignore",
-      scrollTo: 0
-    };
-    options.showAndHide = false;
-    options.smoothScroll = true;
-
-    // tocify
-    var toc = $("#TOC").tocify(options).data("toc-tocify");
-});
-</script>
 
 <style type="text/css">
 
@@ -302,6 +263,12 @@ $(document).ready(function ()  {
 }
 }
 
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
 
 .toc-content {
   padding-left: 30px;
@@ -412,7 +379,7 @@ div.tocify {
 <div id="numeric-integer-and-logical-types" class="section level2">
 <h2>Numeric, integer and logical types</h2>
 <p>These represent three core types of scalar and hence elements of non-scalars (vectors, matrices, arrays).</p>
-<p>Note that in R, “numeric” sometimes means “double <em>or</em> integer” [e.g., <code>is.numeric</code>] and sometimes means “double” [e.g. <code>as.numeric</code>]. In <code>nCompiler</code>, “numeric” means “double”.</p>
+<p>Note that in R, “numeric” sometimes means “double <em>or</em> integer” [e.g., <code>is.numeric</code>] and sometimes means “double” [e.g. <code>as.numeric</code>]. In <code>nCompiler</code>, “numeric” means “double”.</p>
 <p>There are several ways to declare these three core types. We use numeric as an example:</p>
 <pre class="r"><code>numericScalar()
 numericVector()
@@ -508,11 +475,171 @@ x &lt;- 1:3
 compiled$f2(x, 11:3) # We see the modified x returned.</code></pre>
 <pre><code>## [1] 2 3 4</code></pre>
 </div>
+<div id="rcpp-types" class="section level2">
+<h2>Rcpp types</h2>
+<p>nCompiler supports the use of many Rcpp types. Rcpp’s types are designed for easy integration with R objects, and they include types like <code>DataFrame</code>, <code>List</code>, and <code>S4</code>, as well as a variety of typed matrices and vectors.</p>
+<p>In nCompiler, these types are prefixed with Rcpp, such as <code>RcppDataFrame</code> and <code>RcppNumericMatrix</code>. This is to differentiate between certain Rcpp and nCompiler types with similar names and functions but which are fundamentally different types under the hood.</p>
+<p>The following Rcpp types are supported:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Rcpp.Type</th>
+<th align="left">Equivalent nCompiler type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">NumericVector</td>
+<td align="left">RcppNumericVector</td>
+</tr>
+<tr class="even">
+<td align="left">NumericMatrix</td>
+<td align="left">RcppNumericMatrix</td>
+</tr>
+<tr class="odd">
+<td align="left">IntegerVector</td>
+<td align="left">RcppIntegerVector</td>
+</tr>
+<tr class="even">
+<td align="left">IntegerMatrix</td>
+<td align="left">RcppIntegerMatrix</td>
+</tr>
+<tr class="odd">
+<td align="left">LogicalVector</td>
+<td align="left">RcppLogicalVector</td>
+</tr>
+<tr class="even">
+<td align="left">LogicalMatrix</td>
+<td align="left">RcppLogicalMatrix</td>
+</tr>
+<tr class="odd">
+<td align="left">CharacterVector</td>
+<td align="left">RcppCharacterVector</td>
+</tr>
+<tr class="even">
+<td align="left">CharacterMatrix</td>
+<td align="left">RcppCharacterMatrix</td>
+</tr>
+<tr class="odd">
+<td align="left">ComplexVector</td>
+<td align="left">RcppComplexVector</td>
+</tr>
+<tr class="even">
+<td align="left">ComplexMatrix</td>
+<td align="left">RcppComplexMatrix</td>
+</tr>
+<tr class="odd">
+<td align="left">DateVector</td>
+<td align="left">RcppDateVector</td>
+</tr>
+<tr class="even">
+<td align="left">DatetimeVector</td>
+<td align="left">RcppDatetimeVector</td>
+</tr>
+<tr class="odd">
+<td align="left">RawVector</td>
+<td align="left">RcppRawVector</td>
+</tr>
+<tr class="even">
+<td align="left">DataFrame</td>
+<td align="left">RcppDataFrame</td>
+</tr>
+<tr class="odd">
+<td align="left">S4</td>
+<td align="left">RcppS4</td>
+</tr>
+<tr class="even">
+<td align="left">Function</td>
+<td align="left">RcppFunction</td>
+</tr>
+</tbody>
+</table>
+<p>nCompiler also supports the direct use of the following RcppEigen types:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">RcppEigen.Type</th>
+<th align="left">Equivalent nCompiler type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">MatrixXd</td>
+<td align="left">RcppEigenMatrixXd</td>
+</tr>
+<tr class="even">
+<td align="left">MatrixXi</td>
+<td align="left">RcppEigenMatrixXi</td>
+</tr>
+<tr class="odd">
+<td align="left">MatrixXcd</td>
+<td align="left">RcppEigenMatrixXcd</td>
+</tr>
+<tr class="even">
+<td align="left">VectorXd</td>
+<td align="left">RcppEigenVectorXd</td>
+</tr>
+<tr class="odd">
+<td align="left">VectorXi</td>
+<td align="left">RcppEigenVectorXi</td>
+</tr>
+<tr class="even">
+<td align="left">VectorXcd</td>
+<td align="left">RcppEigenVectorXcd</td>
+</tr>
+</tbody>
+</table>
+<p>The following example shows how one might want an Rcpp type in an nFunction.</p>
+<pre class="r"><code>nf &lt;- nFunction(
+  fun = function(x = &quot;RcppIntegerVector&quot;,
+                 y = &#39;RcppIntegerVector&#39;) {
+    cppLiteral(
+      &#39;ans = x + y;
+return ans;&#39;,
+      types = list(ans = &quot;RcppIntegerVector()&quot;)
+    )
+    returnType(&quot;RcppIntegerVector()&quot;)
+  }
+)
+nfC &lt;- nCompile_nFunction(nf)
+x &lt;- c(1, 2)
+y &lt;- c(100, 200)
+nfC(x, y)</code></pre>
+<pre><code>## [1] 101 202</code></pre>
+<p>You may also want an nClass with a public field of an Rcpp type, for example:</p>
+<pre class="r"><code>nc &lt;- nClass(
+  classname = &quot;demo_RcppNumericMatrix&quot;,
+  Cpublic = list(
+    x = &quot;RcppNumericMatrix&quot;,
+    invert_x = nFunction(fun = function(new_x = &quot;RcppNumericMatrix&quot;) { 
+      x &lt;&lt;- new_x
+      cppLiteral(&quot;return transpose(x);&quot;)
+    }, returnType = &quot;RcppNumericMatrix()&quot;
+    )
+  )
+)
+ncC &lt;- nCompile(nc)
+my_nc &lt;- ncC$new()
+test_x1 &lt;- matrix(c(1000, 100, 0, 0), nrow = 2)
+
+my_nc$invert_x(test_x1)</code></pre>
+<pre><code>##      [,1] [,2]
+## [1,] 1000  100
+## [2,]    0    0</code></pre>
+<pre class="r"><code>my_nc$x</code></pre>
+<pre><code>##      [,1] [,2]
+## [1,] 1000    0
+## [2,]  100    0</code></pre>
+<pre class="r"><code>class(my_nc$x) # Return type corresponds to that of a numeric matrix in R</code></pre>
+<pre><code>## [1] &quot;matrix&quot; &quot;array&quot;</code></pre>
+</div>
 <div id="future-plans-1" class="section level2">
 <h2>Future plans</h2>
 <ul>
 <li>Finish support for pass-by-reference.</li>
 <li>Add support for passing by block references.</li>
+<li>Support the Rcpp “Named” type (RcppNamed in nCompiler)</li>
+<li>Support the RcppEigen “SparseMatrix<double>” type?</li>
 </ul>
 </div>
 </div>
@@ -535,6 +662,49 @@ $(document).ready(function () {
 });
 
 
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
 </script>
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

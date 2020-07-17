@@ -135,11 +135,85 @@ typeDeclarationList <- list(
     nType("void", 0)
   },
 
-  ## lists
-  list = function(...) {
-    symbolList$new(...)
+  ## Rcpp types
+  RcppList = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::List", ...)
   },
-
+  RcppNumericVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::NumericVector", ...)
+  },
+  RcppNumericMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::NumericMatrix", ...)
+  },
+  RcppIntegerVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::IntegerVector", ...)
+  },
+  RcppIntegerMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::IntegerMatrix", ...)
+  },
+  RcppCharacterVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::CharacterVector", ...)
+  },
+  RcppCharacterMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::CharacterMatrix", ...)
+  },
+  RcppComplexVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::ComplexVector", ...)
+  },
+  RcppComplexMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::ComplexMatrix", ...)
+  },
+  RcppLogicalVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::LogicalVector", ...)
+  },
+  RcppLogicalMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::LogicalMatrix", ...)
+  },
+  RcppDateVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::DateVector", ...)
+  },
+  RcppDatetimeVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::DatetimeVector", ...)
+  },
+  RcppRawVector = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::RawVector", ...)
+  },
+  RcppNamed = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::Named", ...)
+  },
+  RcppDataFrame = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::DataFrame")
+  },
+  RcppLogicalMatrix = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::LogicalMatrix", ...)
+  },
+  RcppS4 = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::S4", ...)
+  },
+  RcppFunction = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::Function", ...)
+  },
+  
+  ## RcppEigen RcppTypes
+  RcppEigenMatrixXd = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::MatrixXd", ...)
+  },
+  RcppEigenMatrixXi = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::MatrixXi", ...)
+  },
+  RcppEigenMatrixXcd = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::MatrixXcd", ...)
+  },
+  RcppEigenVectorXd = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::VectorXd", ...)
+  },
+  RcppEigenVectorXi = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::VectorXi", ...)
+  },
+  RcppEigenVectorXcd = function(...) {
+    symbolRcppType$new(RcppType = "Eigen::VectorXcd", ...)
+  },
+  
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
     if(inherits(x, 'symbolBasic'))
