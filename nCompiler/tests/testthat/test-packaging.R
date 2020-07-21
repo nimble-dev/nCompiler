@@ -137,6 +137,36 @@ test_that("Create package with multiple objects",
           })
 
 
+test_that("Write package with member data", {
+  nCompiler:::nFunctionIDMaker(reset = TRUE)
+  nCompiler:::nClassIDMaker(reset = TRUE)
+  
+  foo1 <- nFunction(
+    name = "foo1",
+    fun = function(x = numericScalar()) {
+      ans <- x+1
+      return(ans)
+      returnType(numericScalar())
+    }
+  )
+  
+  writePackage(foo1,
+               dir = tempdir(),
+               memberData = list(x = 1:5,
+                                 y = data.frame(y = 1:10, x = -1:-10),
+                                 name = "test"),
+               package.name = "fooPackageMemberDat",
+               control = list(export = TRUE))
+  ans <- buildPackage("fooPackageMemberDat",
+                      dir = tempdir())
+  expect_true(ans)
+  data(list = c("x", "y", "name"), package = "fooPackageMemberDat")
+  expect_equal(x, 1:5)
+  expect_equal(y, data.frame(y = 1:10, x = -1:-10))
+  expect_equal(name, "test")
+  
+})
+
 test_that("Export flag works", 
           {
             nCompiler:::nFunctionIDMaker(reset = TRUE)

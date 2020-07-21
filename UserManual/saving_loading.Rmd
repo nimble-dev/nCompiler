@@ -39,7 +39,7 @@ nc1_obj <- nc1_generator[[1]]()
 method(nc1_obj, "Cfoo")(1.2) # The method works.
 value(nc1_obj, "Cv") <- c(123, 234) # Access to fields works.
 value(nc1_obj, "Cv") 
-serialized <- serialize_nComp_object(nc1_obj, nComp_serialize) #serialize! 
+serialized <- serialize_nComp_object(nc1_obj, ) #serialize! 
 # look at the gooey internals to see that they are a binary
 ## representation of nc1_obj.
 serialized$serialized

@@ -15,6 +15,8 @@
 #'   elements are overwritten, while elements without name conflicts are
 #'   retained. To change the default across multiple calls, use
 #'   `set_nOption("modifyPackageContents" = TRUE)`
+#' @param memberData A named list of elements to be stored as exported package 
+#'   data objects.
 #' @param roxygen A list of roxygen entries corresponding to the objects being
 #'   compiled, indicated either by matching names or (if all objects are
 #'   documented) by order. The elements of the list are either character strings
@@ -78,6 +80,7 @@ writePackage <- function(...,
                          dir = ".",
                          control = list(),
                          modify = get_nOption("modifyPackageContents"),
+                         memberData = list(),
                          roxygen = list(),
                          nClass_full_interface = TRUE) {
 
@@ -205,7 +208,8 @@ writePackage <- function(...,
   srcDir <- file.path(pkgDir, "src")
   instDir <- file.path(pkgDir, "inst")
   codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
-
+  datDir <- file.path(pkgDir, "data")
+  
   full_interface <- list(); RcppPackets <- list()
   for (i in 1:length(objs)) {
     if(isNF(objs[[i]])) {
@@ -290,6 +294,7 @@ writePackage <- function(...,
     if(file.exists(file.path(pkgDir, "Read-and-delete-me")))
       file.remove(file.path(pkgDir, "Read-and-delete-me"))
     dir.create(instDir)
+    dir.create(datDir)
     dir.create(codeDir, recursive = TRUE)
   }
   
@@ -357,6 +362,14 @@ writePackage <- function(...,
     }
   }
   
+  # Write out data
+  if (length(memberData) > 0) {
+    datEnv <- as.environment(memberData)
+    for (i in 1:length(ls(datEnv))) {
+      save(list = ls(datEnv)[i], envir = datEnv, 
+           file = file.path(datDir, paste0(ls(datEnv)[i], ".RData")))
+    }
+  }
   DESCfile <- file.path(pkgDir, "DESCRIPTION")
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
   if (initializePkg) {

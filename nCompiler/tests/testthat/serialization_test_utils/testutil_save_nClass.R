@@ -9,6 +9,7 @@ library(nCompiler)
 
 # Define the nClass
 nc1 <- nClass(
+  classname = "nc1_test",
   Cpublic = list(
     Cv = 'numericScalar()',
     Cx = 'integerScalar',
@@ -29,7 +30,7 @@ value(obj, "Cx") <- 10
 value(obj, "Cv") <- 0.1
 
 # Save the nClass instance and its 
-save_nClass(ncObj = obj, ncDef = nc1, serializeFn = nComp_serialize,
+save_nClass(ncObj = obj, ncDef = nc1,
             file = "serialization_test_utils/savedObj.rds", 
             package.name = "savedObjPkg", 
             dir = tempdir())

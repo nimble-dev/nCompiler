@@ -8,6 +8,7 @@ set_nOption("serialize", TRUE)
 test_that("Basic serialization works",
           {
             nc1 <- nClass(
+              classname = "nc1",
               Rpublic = list(
                 Rv = NULL,
                 Rfoo = function(x) x+1
@@ -41,11 +42,12 @@ test_that("Basic serialization works",
             expect_equal(value(obj, "Cx"), 3L)
             
             serialized <- 
-              nCompiler:::serialize_nComp_object(obj, nComp_serialize)
+              nCompiler:::serialize_nComp_object(obj, nComp_serialize_nc1)
             expect_true(nCompiler:::is.loadedObjectEnv(serialized))
             
             deserialized <- 
-              nCompiler:::deserialize_nComp_object(serialized, nComp_deserialize)
+              nCompiler:::deserialize_nComp_object(serialized, 
+                                                   nComp_deserialize_nc1)
             expect_true(nCompiler:::is.loadedObjectEnv(serialized))
             expect_equal(value(deserialized, "Cv"), 1.23)
             x <- matrix(as.numeric(1:6), nrow = 2)
@@ -67,6 +69,10 @@ test_that("Saving and loading nClasses across sessions works", {
 })
 
 
+test_that("Saving and loading mult nClasses across sessions works", {
+  system("Rscript serialization_test_utils/testutil_save_multiple.R")
+  system("Rscript serialization_test_utils/testutil_read_multiple.R")
+})
 
 
 
@@ -82,18 +88,18 @@ rcpp_supported_types <- c(
   "RcppCharacterMatrix",
   "RcppComplexVector",
   "RcppComplexMatrix",
-  "RcppDateVector",
-  "RcppDatetimeVector",
+  # "RcppDateVector", # Doesn't work
+  # "RcppDatetimeVector", # Doesn't work
   "RcppRawVector",
-  "RcppDataFrame",
-  "RcppS4",
-  "RcppFunction",
-  "RcppEigenMatrixXd",
-  "RcppEigenMatrixXi",
-  "RcppEigenMatrixXcd",
-  "RcppEigenVectorXd",
-  "RcppEigenVectorXi",
-  "RcppEigenVectorXcd"
+  # "RcppDataFrame", # Doesn't work
+  "RcppS4"#,
+  # "RcppFunction", # Doesn't work
+  # "RcppEigenMatrixXd", # Doesn't work
+  # "RcppEigenMatrixXi", # Doesn't work
+  # "RcppEigenMatrixXcd", # Doesn't work
+  # "RcppEigenVectorXd", # Doesn't work
+  # "RcppEigenVectorXi", # Doesn't work
+  # "RcppEigenVectorXcd" # Doesn't work
 )
 IntMat <- matrix(1:9, nrow = 3)
 DblMat <- matrix(1:9 / 10, nrow = 3)
@@ -129,33 +135,36 @@ compare_fn <- list(all.equal.numeric, all.equal.numeric,
                    )
 
 test_rcpp_serial_class <- function(type, value, compfn) {
-  nc1 <- nClass(classname = "nc1", 
+  name <- paste0("nc_", type)
+  nc1 <- nClass(classname = name, 
                 Cpublic = list(x = type))
   nc1_generator <- nCompile_nClass(nc1, interface = "generic")
   
   my_nc1 <- nc1_generator[[1]]()
   value(my_nc1, "x") <- value
-  serialized <- serialize_nComp_object(my_nc1, nComp_serialize)
+  serialized <- serialize_nComp_object(my_nc1, 
+                                       get(paste0("nComp_serialize_", name)))
   
-  deserialized <- deserialize_nComp_object(serialized, nComp_deserialize)
+  deserialized <- deserialize_nComp_object(serialized, 
+                                           get(paste0("nComp_deserialize_", name)))
   return(compfn(value(deserialized, "x"), value(my_nc1, "x")))
 }
 
 ### TODO: the below breaks because the fns aren't getting overwritten
 ### (same problem as cases above re: multiple nClasses per session)
-# 
-# for (i in 1:length(rcpp_supported_types)) {
-#   # Right now test_that loop needs to be inside for loop because nClass 
-#   # serialization can only handle 1 class / session
-#   cat(i, "\n")
-#   test_that("Serialization works for Rcpp types", {
-#     expect_true(
-#       test_rcpp_serial_class(value = rcpp_type_values[[i]],
-#                              type = rcpp_supported_types[i],
-#                              compfn = compare_fn[[i]])
-#     )
-#   })
-# }
+
+for (i in 1:length(rcpp_supported_types)) {
+  # Right now test_that loop needs to be inside for loop because nClass
+  # serialization can only handle 1 class / session
+  cat(i, "\n")
+  test_that("Serialization works for Rcpp types", {
+    expect_true(
+      test_rcpp_serial_class(value = rcpp_type_values[[i]],
+                             type = rcpp_supported_types[i],
+                             compfn = compare_fn[[i]])
+    )
+  })
+}
 
 set_nOption("serialize", old_serialize_option)
 

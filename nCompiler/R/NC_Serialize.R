@@ -49,7 +49,7 @@ deserialize_nComp_object <- function(obj, nComp_deserialize_fn) {
 #' @param lib The lib folder where the package will be quietly installed
 #'   (probably not going to be a part of the final product)
 #' @export
-save_nClass <- function(ncObj, ncDef, serializeFn,
+save_nClass <- function(ncObj, ncDef,
                         file, package.name,
                         dir = tempdir(), lib = .libPaths()[1]) {
   if (isFALSE(get_nOption("serialize"))) {
@@ -59,15 +59,17 @@ save_nClass <- function(ncObj, ncDef, serializeFn,
   
   if (missing(lib)) lib <- .libPaths()[1]
   
+  serializeFn <- get(paste0("nComp_serialize_", ncDef$classname))
   serialized <- serialize_nComp_object(ncObj, serializeFn)
   serializedList <- mget(c("serialized", "extptr"), envir = serialized)
   saveRDS(serialized$serialized, file)
   
   writePackage(ncDef,
                package.name = package.name,
-               dir = dir, 
+               dir = dir,
                control = list(export = FALSE), 
-               modify = FALSE)
+               modify = FALSE,
+               memberData = list(classname = ncDef$classname))
   buildPackage(package.name = package.name, 
                dir = dir, lib = lib, load = FALSE)
   
@@ -90,8 +92,13 @@ read_nClass <- function(file, package.name,
   serialized <- new.loadedObjectEnv(serialized = readRDS(file))
   
   library(package.name, character.only = TRUE, lib = lib)
+  loadEnv <- new.env()
+  data(list = "classname", package = package.name, envir = loadEnv)
   
-  deserialize_fn <- utils::getFromNamespace("nComp_deserialize", package.name)
+  deserialize_fn <- utils::getFromNamespace(
+    paste0("nComp_deserialize_", loadEnv$classname), 
+    package.name
+  )
   deserialized <- deserialize_nComp_object(
     serialized, nComp_deserialize_fn = deserialize_fn)
   return(deserialized)

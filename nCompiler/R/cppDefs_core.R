@@ -280,7 +280,8 @@ addSerialization_impl <- function(self) {
   serialize_deserialize <-
     cppMacroCallClass$new(
       cppContent = paste0("//[[Rcpp::export]]\n",
-                          "RawVector nComp_serialize(SEXP Sfrom) {\n",
+                          "RawVector nComp_serialize_", self$name,
+                          "(SEXP Sfrom) {\n",
                           "genericInterfaceBaseC *baseobj =\n",
                           "reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sfrom))->get_ptr());\n",
                           "std::unique_ptr<genericInterfaceBaseC> shared_baseobj(baseobj);\n",
@@ -298,7 +299,8 @@ addSerialization_impl <- function(self) {
                           "}\n",
                           "\n",
                           "//[[Rcpp::export]]\n",
-                          "SEXP nComp_deserialize(RawVector src) {\n",
+                          "SEXP nComp_deserialize_", self$name,
+                          "(RawVector src) {\n",
                           "  std::stringstream ss;\n",
                           "  ss.write(reinterpret_cast<char*>(&src[0]), src.size());\n",
                           "  ss.seekg(0, ss.beg);\n",
