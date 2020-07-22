@@ -2,8 +2,15 @@ library(nCompiler)
 library(testthat)
 
 set_nOption('serialize', TRUE)
+file1 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
+                             'savedObj1.rds'), 
+                   package = 'nCompiler')
+file2 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
+                              'savedObj2.rds'), 
+                    package = 'nCompiler')
 
-deserialized1 <- read_nClass(file = "serialization_test_utils/savedObj1.rds", 
+
+deserialized1 <- read_nClass(file = file1, 
                              package.name = "savedObjPkgMult1", 
                              dir = tempdir())
 
@@ -12,7 +19,7 @@ expect_equal(value(deserialized1, "C2"), 100)
 expect_equal(value(deserialized1, "C1"), 3.14)
 expect_equal(method(deserialized1, "Cfoo")(1.5), 2.5)
 
-deserialized2 <- read_nClass(file = "serialization_test_utils/savedObj2.rds", 
+deserialized2 <- read_nClass(file = file2, 
                              package.name = "savedObjPkgMult2", 
                              dir = tempdir())
 

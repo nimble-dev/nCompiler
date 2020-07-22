@@ -25,7 +25,7 @@ test_that("Simple parallel example works", {
   Cnc1 <- Cnc$new()
   expect_equal(nc1$go(101:110), 2*(101:110))
   expect_equal(Cnc1$go(101:110), array(2*(101:110)))
-1})
+})
 
 test_that("Parallel reduction example works", {
   ## this doesn't work yet: see TODO beginning on line 187 of cppDefs_nClass.R

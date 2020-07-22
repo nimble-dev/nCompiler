@@ -1,5 +1,6 @@
-# not working
-# Works when run directly, but not through test_package.
+# NOT WORKING. 
+# Issue with where to write objects... can't use tempdir() across sessions
+
 context("Test serialization with cereal package")
 
 old_serialize_option <- get_nOption("serialize")
@@ -63,18 +64,39 @@ test_that("Basic serialization works",
 
 # The below block uses to calls to `RScript` to test nClass saving/loading in
 # distinct sessions. See scripts in the folder testthat/serialization_test_utils/
+delete_dir <- FALSE
+if (!dir.exists(testserial_nCompInternalOnly)) {
+  dir.create("testserial_nCompInternalOnly")
+  delete_dir <- TRUE
+}
 test_that("Saving and loading nClasses across sessions works", {
-  system("Rscript serialization_test_utils/testutil_save_nClass.R")
-  system("Rscript serialization_test_utils/testutil_read_nClass.R")
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_save_nClass.R'), 
+                            package = 'nCompiler')))
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_read_nClass.R'), 
+                            package = 'nCompiler')))
 })
 
 
 test_that("Saving and loading mult nClasses across sessions works", {
-  system("Rscript serialization_test_utils/testutil_save_multiple.R")
-  system("Rscript serialization_test_utils/testutil_read_multiple.R")
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_save_multiple.R'), 
+                            package = 'nCompiler')))
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_read_multiple.R'), 
+                            package = 'nCompiler')))
 })
 
-
+if (delete_dir) unlink("testserial_nCompInternalOnly", recursive = TRUE)
 
 # Can we serialize and retrieve all supported Rcpp types?
 rcpp_supported_types <- c(

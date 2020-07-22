@@ -29,8 +29,12 @@ obj <- nc1_generator[[1]]()
 value(obj, "Cx") <- 10
 value(obj, "Cv") <- 0.1
 
-# Save the nClass instance and its 
+# Save the nClass instance and its member data
+file = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
+                             'savedObj.rds'), 
+                                 package = 'nCompiler')
+
 save_nClass(ncObj = obj, ncDef = nc1,
-            file = "serialization_test_utils/savedObj.rds", 
+            file = file, 
             package.name = "savedObjPkg", 
             dir = tempdir())

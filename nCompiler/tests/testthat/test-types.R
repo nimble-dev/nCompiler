@@ -207,10 +207,10 @@ test_that("nMatrix(type = \"integer\")",
 
 test_that("list type works",
 {
-  l <- quote(list())
+  l <- "RcppList"
   lSym <- nCompiler:::argType2symbol(l, name = "l", isArg = TRUE)
   expect_identical(lSym$name, "l")
-  expect_identical(lSym$type, "list")
+  expect_identical(lSym$type, "Rcpp::List")
   expect_identical(lSym$isRef, FALSE)
   expect_identical(lSym$isArg, TRUE)
 })

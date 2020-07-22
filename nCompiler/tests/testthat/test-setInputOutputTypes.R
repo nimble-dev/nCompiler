@@ -11,7 +11,7 @@ test_that("double()",
             return(y)
         }
     )
-    test <- compileNimbleFunction(
+    test <- nCompile_nFunction(
         nf,
         control = list(
             endStage = 'setInputOutputTypes'

@@ -8,6 +8,12 @@
 library(nCompiler)
 set_nOption('serialize', TRUE)
 
+file1 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
+                              'savedObj1.rds'), 
+                    package = 'nCompiler')
+file2 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
+                              'savedObj2.rds'), 
+                    package = 'nCompiler')
 # Define the nClass
 nc1 <- nClass(
   classname = "nc1_test",
@@ -31,7 +37,7 @@ value(obj1, "C1") <- 3.14
 
 # Save the nClass instance and its data
 save_nClass(ncObj = obj1, ncDef = nc1,
-            file = "serialization_test_utils/savedObj1.rds", 
+            file = file1, 
             package.name = "savedObjPkgMult1", 
             dir = tempdir())
 
@@ -56,6 +62,6 @@ obj2 <- nc2_generator[[1]]()
 value(obj2, "Cm") <- 2.17
 value(obj2, "Cs") <- 3
 save_nClass(ncObj = obj2, ncDef = nc2,
-            file = "serialization_test_utils/savedObj2.rds", 
+            file = file2, 
             package.name = "savedObjPkgMult2", 
             dir = tempdir())

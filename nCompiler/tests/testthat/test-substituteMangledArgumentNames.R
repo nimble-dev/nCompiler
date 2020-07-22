@@ -1,5 +1,3 @@
-## not working
-
 context("Compiler stage: simpleTransformations")
 
 test_that("replacement",

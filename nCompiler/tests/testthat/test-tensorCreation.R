@@ -3,7 +3,7 @@ context("tensorCreation")
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
-  test <- sourceCpp(cppfile)
+  test <- nCompiler:::QuietSourceCpp(cppfile)
   expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
   expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
   expect_equal(tensorCreation3(1:12), array(1:12, c(2, 3, 2)))
@@ -15,7 +15,9 @@ test_that("tensor creation C++ implementation works", {
 
 test_that("data initialization working: nNumeric, nInteger, nLogical", {
   nc <- nClass(
+    classname = "nc_init",
     Cpublic = list(
+      # dummy = nFunction(function() return(10), returnType = "numericScalar")
       nf1 = nFunction(
         function() {
           ans <- numeric() + integer() + logical()
@@ -23,20 +25,22 @@ test_that("data initialization working: nNumeric, nInteger, nLogical", {
           returnType(numericVector)
         }
       ),
-      nf2 = nFunction(
-        function(x = numericVector, y = integerVector, z = logicalVector) {
-          ans <- numeric(value = x, length = 4) + exp(integer(value = y, length = 4)) *
-            logical(value = z, length = 4)
-          return(ans)
-          returnType(numericVector)
-        }
-      ),
+    nf2 = nFunction(
+      function(x = "numericVector",
+               y = "integerVector",
+               z = "logicalVector") {
+        ans <- numeric(value = x, length = 4) + exp(integer(value = y, length = 4)) *
+          logical(value = z, length = 4)
+        return(ans)
+        returnType("numericVector")
+      }
+    ),
       nf3 = nFunction(
         function() {
           ans <- numeric(length = 7) + exp(integer(length = 7)) -
             logical(length = 7)
           return(ans)
-          returnType(numericVector)
+          returnType("numericVector")
         }
       )
     )
