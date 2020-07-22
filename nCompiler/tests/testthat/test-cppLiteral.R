@@ -11,10 +11,10 @@ test_that("cppLiteral with list of scalars works", {
   Rcpp::Named("item1") = a,
   Rcpp::Named("item2") = b
 );',
-        types = list(ans = list())
+        types = list(ans = "RcppList")
       )
       return(ans)
-      returnType(list())
+      returnType("RcppList")
     }
   )
   nfC <- nCompile_nFunction(nf)
@@ -36,10 +36,10 @@ test_that("cppLiteral with list including vector works", {
   Rcpp::Named("y") = y,
   Rcpp::Named("z") = Rcpp::wrap(z)
 );',
-        types = list(ans = list())
+        types = list(ans = "RcppList")
       )
       return(ans)
-      returnType(list())
+      returnType("RcppList")
     }
   )
   nfC <- nCompile_nFunction(nf)

@@ -266,20 +266,27 @@ test_that("RcppS4 works in nFunctions", {
 })
 
 
-## TODO: Figure out if Rcpp::Function works?
 test_that("RcppFunction works", {
   nffn <- nFunction(
-    fun = function(x = "RcppFunction") {
+    fun = function(f = 'RcppFunction', x = 'numericScalar') {
       cppLiteral(
-        'return x;',
-        types = list()
+        'ans = f(x);
+ return ans;',
+        types = list(ans = "RcppNumericVector")
       )
-      returnType("RcppFunction()")
-    }
-  )
+      returnType("RcppNumericVector")
+    })
   nffnC <- nCompile_nFunction(nffn)
 
-  expect_equal(nffnC(rnorm), rnorm)
+  set.seed(505)
+  result1 <- nffnC(rnorm, 10)
+  set.seed(505)
+  result1_Correct <- rnorm(10)
+  expect_equal(result1, result1_Correct)
+  
+  result2 <- nffnC(nCompiler::logit, 0.4)
+  result2_correct <- nCompiler::logit(0.4)
+  expect_equal(result2, result2_correct)
 })
 
 test_that("RcppDataFrame works in nFunctions", {
@@ -656,7 +663,7 @@ test_that("RcppLogicalMatrix works in nClasses", {
 #   nc <- nClass(
 #     classname = "test_RcppDatetimeVector",
 #     Cpublic = list(
-#       x = "RcppDateVector",
+#       x = "RcppDatetimeVector",
 #       set_x = nFunction(fun = function(new_x = "RcppDatetimeVector") { 
 #         x <- new_x
 #         return(0) 
@@ -677,24 +684,24 @@ test_that("RcppLogicalMatrix works in nClasses", {
 # })
 # 
 # 
-# test_that("RcppDataFrame works in nClasses", {
-#   nc <- nClass(
-#     classname = "test_RcppDataFrame",
-#     Cpublic = list(
-#       x = "RcppDateVector",
-#       set_x = nFunction(fun = function(new_x = "RcppDataFrame") { 
-#         x <- new_x
-#         return(0) 
-#       }, returnType = "integerScalar"
-#       )
-#     )
-#   )
-#   ncC <- nCompile(nc)
-#   my_nc <- ncC$new()
-#   test_x1 <- data.frame(x = 1:10, y = 100:110)
-#   my_nc$set_x(test_x1)
-#   expect_equal(my_nc$x, test_x1)
-#   test_x2 <- data.frame(a = 1:100, b = 101:200)
-#   my_nc$x <- test_x2
-#   expect_equal(my_nc$x, test_x2)
-# })
+test_that("RcppDataFrame works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppDataFrame",
+    Cpublic = list(
+      x = "RcppDataFrame",
+      set_x = nFunction(fun = function(new_x = "RcppDataFrame") {
+        x <- new_x
+        return(0)
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- data.frame(x = 1:10, y = 100:110)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- data.frame(a = 1:100, b = 101:200)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})
