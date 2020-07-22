@@ -82,11 +82,11 @@ nCompile_nClass <- function(NC,
   }
   interface <- match.arg(interface)
   if(interface == "generic")
-    return(newCobjFun)
+    return(newCobjFun[[1]])
   ## To Do: Only "generic" works when more than one function will be returned from sourceCpp in cpp_nCompiler.  That occurs with serialization turned on.
-  fullInterface <- build_compiled_nClass(NC, newCobjFun, env = env)
+  fullInterface <- build_compiled_nClass(NC, newCobjFun[[1]], env = env)
   if(interface == "full")
     return(fullInterface)
   ## interface is "both"
-  return(list(full = fullInterface, generic = newCobjFun))
+  return(list(full = fullInterface, generic = newCobjFun[[1]]))
 }
