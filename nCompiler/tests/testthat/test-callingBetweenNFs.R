@@ -1,4 +1,4 @@
-## not working
+
 ## The second test below works locally but not on travis.
 context("Calling from one nFunction to another")
 
