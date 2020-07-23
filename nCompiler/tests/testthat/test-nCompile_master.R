@@ -1,5 +1,3 @@
-# not working
-# (These work when run locally, but not when run through test_package().)
 context("Testing nCompile")
 
 test_that("Compile one nFunction via nCompile, returning a list.",
