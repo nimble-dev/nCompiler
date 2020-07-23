@@ -1,5 +1,3 @@
-## not working
-library(testthat)
 
 ## This version will test each successive compiler stage
 context("Compiler stages")
@@ -20,15 +18,15 @@ cases[["mean(D1)"]] <- list(
 
 nCompiler:::writeTypesText_manyCases(cases["mean(D1)"],
                                           endStage = 'makeRcppPacket')
-debugonce(nCompiler:::eigenizeEnv$ReductionEither)
-test <- compileNimbleFunction(nFunction(fun = cases[["mean(D1)"]]$fun))
+# debugonce(nCompiler:::eigenizeEnv$ReductionEither)
+test <- nCompile(nFunction(fun = cases[["mean(D1)"]]$fun))
 
 nCompiler:::writeTypesText_manyCases(cases)
-nCompiler:::writeTypesText_manyCases(cases,
-                                          endStage = 'setToEigen',
-                                          showArgs = list(showImpl = TRUE))
-nCompiler:::writeTypesText_manyCases(cases,
-                                          endStage = 'labelForEigen')
+# nCompiler:::writeTypesText_manyCases(cases,
+#                                           # endStage = 'setToEigen',
+#                                           showArgs = list(showImpl = TRUE))
+# nCompiler:::writeTypesText_manyCases(cases,
+#                                           endStage = 'labelForEigen')
 #debug(nCompiler:::compile_eigenize)
 nCompiler:::writeTypesText_manyCases(cases,
                                           endStage = 'doImplementation')
@@ -37,10 +35,10 @@ nCompiler:::writeTypesText_manyCases(cases,
 nCompiler:::generateTypesText_oneCase(cases[[1]],
                           endStage = 'makeRcppPacket')
 
-debugonce(compileNimbleFunction)
-test <- compileNimbleFunction(nFunction(fun = cases[[1]]$fun))
+# debugonce(compileNimbleFunction)
+test <- nCompile(nFunction(fun = cases[[1]]$fun))
 
-compareAllFilesInDir("correct_labelAbstractTypes", "trial_labelAbstractTypes")
+# compareAllFilesInDir("correct_labelAbstractTypes", "trial_labelAbstractTypes")
 
 test_that("double() + literal",
           {
@@ -50,11 +48,11 @@ test_that("double() + literal",
               }
             )
 
-            debug(processNFstages)
-            test <- compileNimbleFunction(
-              nf,
-              control = list(
-                endStage = 'labelAbstractTypes'
-              )
+            # debug(processNFstages)
+            test <- nCompile(
+              nf#,
+              # control = list(
+              #   endStage = 'labelAbstractTypes'
+              # )
             )
           })
