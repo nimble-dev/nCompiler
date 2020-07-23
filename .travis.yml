@@ -9,9 +9,9 @@ notifications:
     on_success: always
     on_failure: always
 
-branches:
-  only:
-    - master
+# branches:
+#   only:
+#     - master
 
 latex: false  # Work around tlmgr issues.
 
