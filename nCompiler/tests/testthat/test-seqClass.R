@@ -1,4 +1,3 @@
-# NOT WORKING
 context("seqClass")
 library(Rcpp)
 test_that("basic uses of seqClass work",{
