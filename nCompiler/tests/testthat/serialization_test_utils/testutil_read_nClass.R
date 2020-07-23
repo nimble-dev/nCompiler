@@ -2,9 +2,7 @@ library(nCompiler)
 library(testthat)
 
 set_nOption('serialize', TRUE)
-file = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
-                             'savedObj.rds'), 
-                   package = 'nCompiler')
+file = file.path('testserial_nCompInternalOnly', 'savedObj.rds')
 
 deserialized <- read_nClass(file = file, 
                             package.name = "savedObjPkg", 

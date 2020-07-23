@@ -30,9 +30,7 @@ value(obj, "Cx") <- 10
 value(obj, "Cv") <- 0.1
 
 # Save the nClass instance and its member data
-file = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
-                             'savedObj.rds'), 
-                                 package = 'nCompiler')
+file = file.path('testserial_nCompInternalOnly', 'savedObj.rds')
 
 save_nClass(ncObj = obj, ncDef = nc1,
             file = file, 

@@ -2,12 +2,8 @@ library(nCompiler)
 library(testthat)
 
 set_nOption('serialize', TRUE)
-file1 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
-                             'savedObj1.rds'), 
-                   package = 'nCompiler')
-file2 = system.file(file.path('tests', 'testthat', 'serialization_test_utils', 
-                              'savedObj2.rds'), 
-                    package = 'nCompiler')
+file1 = file.path('testserial_nCompInternalOnly', 'savedObj1.rds')
+file2 = file.path('testserial_nCompInternalOnly', 'savedObj2.rds')
 
 
 deserialized1 <- read_nClass(file = file1, 

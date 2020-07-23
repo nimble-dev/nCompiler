@@ -1,4 +1,3 @@
-# NOT WORKING. 
 # Issue with where to write objects... can't use tempdir() across sessions
 
 context("Test serialization with cereal package")
@@ -65,10 +64,11 @@ test_that("Basic serialization works",
 # The below block uses to calls to `RScript` to test nClass saving/loading in
 # distinct sessions. See scripts in the folder testthat/serialization_test_utils/
 delete_dir <- FALSE
-if (!dir.exists(testserial_nCompInternalOnly)) {
+if (!dir.exists("testserial_nCompInternalOnly")) {
   dir.create("testserial_nCompInternalOnly")
   delete_dir <- TRUE
 }
+
 test_that("Saving and loading nClasses across sessions works", {
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
@@ -98,95 +98,98 @@ test_that("Saving and loading mult nClasses across sessions works", {
 
 if (delete_dir) unlink("testserial_nCompInternalOnly", recursive = TRUE)
 
-# Can we serialize and retrieve all supported Rcpp types?
-rcpp_supported_types <- c(
-  "RcppNumericVector",
-  "RcppNumericMatrix",
-  "RcppIntegerVector",
-  "RcppIntegerMatrix",
-  "RcppLogicalVector",
-  "RcppLogicalMatrix",
-  "RcppCharacterVector",
-  "RcppCharacterMatrix",
-  "RcppComplexVector",
-  "RcppComplexMatrix",
-  # "RcppDateVector", # Doesn't work
-  # "RcppDatetimeVector", # Doesn't work
-  "RcppRawVector",
-  # "RcppDataFrame", # Doesn't work
-  "RcppS4"#,
-  # "RcppFunction", # Doesn't work
-  # "RcppEigenMatrixXd", # Doesn't work
-  # "RcppEigenMatrixXi", # Doesn't work
-  # "RcppEigenMatrixXcd", # Doesn't work
-  # "RcppEigenVectorXd", # Doesn't work
-  # "RcppEigenVectorXi", # Doesn't work
-  # "RcppEigenVectorXcd" # Doesn't work
-)
-IntMat <- matrix(1:9, nrow = 3)
-DblMat <- matrix(1:9 / 10, nrow = 3)
-LogMat <- IntMat %% 2 == 0
-ChrMat <- matrix(as.character(1:9), nrow = 3)
-CpxMat <- matrix(1:9 + 2i, nrow  = 3)
-track <- setClass("track", slots = c(x="numeric", y="numeric"))
-t1 <- track(x = 1:10, y = 1:10 + rnorm(10))
 
-# The following is a list of objects with types corresponding to the list of
-# supported Rcpp types above.
-rcpp_type_values <- list(as.numeric(DblMat), DblMat,
-                         as.numeric(IntMat), IntMat,
-                         as.logical(LogMat), LogMat,
-                         as.character(ChrMat), ChrMat,
-                         as.complex(CpxMat), CpxMat,
-                         rep(as.Date(c("2010-01-01", "2011-02-03")), 2),
-                         rep(as.POSIXct(c(Sys.time(), Sys.time() + 100900)), 2),
-                         serialize(ChrMat, connection = NULL),
-                         data.frame(x = 1:9, y = (1:9)^2),
-                         t1, rnorm, 
-                         DblMat, IntMat, CpxMat,
-                         as.numeric(DblMat), as.numeric(IntMat), 
-                         as.complex(CpxMat))
-compare_fn <- list(all.equal.numeric, all.equal.numeric,
-                   all.equal.numeric, all.equal.numeric,
-                   all.equal, all.equal, 
-                   all.equal.character, all.equal.character,
-                   all.equal, all.equal, all.equal, all.equal, all.equal.raw,
-                   identical, identical, identical, 
-                   all.equal, all.equal, all.equal, 
-                   all.equal, all.equal, all.equal
-                   )
 
-test_rcpp_serial_class <- function(type, value, compfn) {
-  name <- paste0("nc_", type)
-  nc1 <- nClass(classname = name, 
-                Cpublic = list(x = type))
-  nc1_generator <- nCompile_nClass(nc1, interface = "generic")
+
+test_that("Serialization works for Rcpp types", {
+  # Can we serialize and retrieve all supported Rcpp types?
+  rcpp_supported_types <- c(
+    "RcppNumericVector",
+    "RcppNumericMatrix",
+    "RcppIntegerVector",
+    "RcppIntegerMatrix",
+    "RcppLogicalVector",
+    "RcppLogicalMatrix",
+    "RcppCharacterVector",
+    "RcppCharacterMatrix",
+    "RcppComplexVector",
+    "RcppComplexMatrix",
+    # "RcppDateVector", # Doesn't work
+    # "RcppDatetimeVector", # Doesn't work
+    "RcppRawVector",
+    # "RcppDataFrame", # Doesn't work
+    "RcppS4"#,
+    # "RcppFunction", # Doesn't work
+    # "RcppEigenMatrixXd", # Doesn't work
+    # "RcppEigenMatrixXi", # Doesn't work
+    # "RcppEigenMatrixXcd", # Doesn't work
+    # "RcppEigenVectorXd", # Doesn't work
+    # "RcppEigenVectorXi", # Doesn't work
+    # "RcppEigenVectorXcd" # Doesn't work
+  )
+  IntMat <- matrix(1:9, nrow = 3)
+  DblMat <- matrix(1:9 / 10, nrow = 3)
+  LogMat <- IntMat %% 2 == 0
+  ChrMat <- matrix(as.character(1:9), nrow = 3)
+  CpxMat <- matrix(1:9 + 2i, nrow  = 3)
+  track <- setClass("track", slots = c(x="numeric", y="numeric"))
+  t1 <- track(x = 1:10, y = 1:10 + rnorm(10))
   
-  my_nc1 <- nc1_generator[[1]]()
-  value(my_nc1, "x") <- value
-  serialized <- serialize_nComp_object(my_nc1, 
-                                       get(paste0("nComp_serialize_", name)))
+  # The following is a list of objects with types corresponding to the list of
+  # supported Rcpp types above.
+  rcpp_type_values <- list(as.numeric(DblMat), DblMat,
+                           as.numeric(IntMat), IntMat,
+                           as.logical(LogMat), LogMat,
+                           as.character(ChrMat), ChrMat,
+                           as.complex(CpxMat), CpxMat,
+                           #rep(as.Date(c("2010-01-01", "2011-02-03")), 2),
+                           #rep(as.POSIXct(c(Sys.time(), Sys.time() + 100900)), 2),
+                           serialize(ChrMat, connection = NULL),
+                           #data.frame(x = 1:9, y = (1:9)^2),
+                           t1# rnorm, 
+                           #DblMat, IntMat, CpxMat,
+                           #as.numeric(DblMat), as.numeric(IntMat), 
+                           #as.complex(CpxMat)
+                           )
+  compare_fn <- list(all.equal.numeric, all.equal.numeric,
+                     all.equal.numeric, all.equal.numeric,
+                     all.equal, all.equal, 
+                     all.equal.character, all.equal.character,
+                     all.equal, all.equal, 
+                     #all.equal, all.equal, 
+                     all.equal.raw,
+                     #identical, 
+                     identical#, 
+                     #identical, 
+                     #all.equal, all.equal, all.equal, 
+                     #all.equal, all.equal, all.equal
+                     )
   
-  deserialized <- deserialize_nComp_object(serialized, 
-                                           get(paste0("nComp_deserialize_", name)))
-  return(compfn(value(deserialized, "x"), value(my_nc1, "x")))
-}
+  test_rcpp_serial_class <- function(type, value, compfn) {
+    name <- paste0("nc_", type)
+    nc1 <- nClass(classname = name, 
+                  Cpublic = list(x = type))
+    nc1_generator <- nCompile_nClass(nc1, interface = "generic")
+    
+    my_nc1 <- nc1_generator[[1]]()
+    value(my_nc1, "x") <- value
+    serialized <- serialize_nComp_object(my_nc1, 
+                                         get(paste0("nComp_serialize_", name)))
+    
+    deserialized <- deserialize_nComp_object(serialized, 
+                                             get(paste0("nComp_deserialize_", name)))
+    return(compfn(value(deserialized, "x"), value(my_nc1, "x")))
+  }
 
-### TODO: the below breaks because the fns aren't getting overwritten
-### (same problem as cases above re: multiple nClasses per session)
-
-for (i in 1:length(rcpp_supported_types)) {
-  # Right now test_that loop needs to be inside for loop because nClass
-  # serialization can only handle 1 class / session
-  cat(i, "\n")
-  test_that("Serialization works for Rcpp types", {
+  for (i in 1:length(rcpp_supported_types)) {
+    # cat(i, "\n")
     expect_true(
       test_rcpp_serial_class(value = rcpp_type_values[[i]],
                              type = rcpp_supported_types[i],
                              compfn = compare_fn[[i]])
     )
-  })
-}
+  }
+})
 
 set_nOption("serialize", old_serialize_option)
 
