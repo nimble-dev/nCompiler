@@ -684,24 +684,24 @@ test_that("RcppLogicalMatrix works in nClasses", {
 # })
 # 
 # 
-test_that("RcppDataFrame works in nClasses", {
-  nc <- nClass(
-    classname = "test_RcppDataFrame",
-    Cpublic = list(
-      x = "RcppDataFrame",
-      set_x = nFunction(fun = function(new_x = "RcppDataFrame") {
-        x <- new_x
-        return(0)
-      }, returnType = "integerScalar"
-      )
-    )
-  )
-  ncC <- nCompile(nc)
-  my_nc <- ncC$new()
-  test_x1 <- data.frame(x = 1:10, y = 100:110)
-  my_nc$set_x(test_x1)
-  expect_equal(my_nc$x, test_x1)
-  test_x2 <- data.frame(a = 1:100, b = 101:200)
-  my_nc$x <- test_x2
-  expect_equal(my_nc$x, test_x2)
-})
+# test_that("RcppDataFrame works in nClasses", {
+#   nc <- nClass(
+#     classname = "test_RcppDataFrame",
+#     Cpublic = list(
+#       x = "RcppDataFrame",
+#       set_x = nFunction(fun = function(new_x = "RcppDataFrame") {
+#         x <- new_x
+#         return(0)
+#       }, returnType = "integerScalar"
+#       )
+#     )
+#   )
+#   ncC <- nCompile(nc)
+#   my_nc <- ncC$new()
+#   test_x1 <- data.frame(x = 1:10, y = 100:110)
+#   my_nc$set_x(test_x1)
+#   expect_equal(my_nc$x, test_x1)
+#   test_x2 <- data.frame(a = 1:100, b = 101:200)
+#   my_nc$x <- test_x2
+#   expect_equal(my_nc$x, test_x2)
+# })
