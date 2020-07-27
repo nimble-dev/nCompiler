@@ -1,4 +1,4 @@
-# Not working
+# NOT WORKING
 context('Testing rep operator')
 
 test_that("Basic rep usage works", {

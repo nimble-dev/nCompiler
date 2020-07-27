@@ -1,5 +1,3 @@
-## not working
-library(testthat)
 
 context("Compiler stage: setInputOutputTypes")
 
@@ -82,43 +80,38 @@ cases[["mean(I1)"]] <- list(
   fun = function(x = integerVector()) y <- mean(x)
 )
 
-writeLines(generateTypesText_oneCase(cases[["D0+literal_integer"]]))
-writeLines(generateTypesText_oneCase(cases[["D0+literal_double"]]))
-writeLines(generateTypesText_oneCase(cases[["D0+literal_logical"]]))
-writeLines(generateTypesText_oneCase(cases[["D1+literal_integer"]]))
-writeLines(generateTypesText_oneCase(cases[["D1+literal_double"]]))
-writeLines(generateTypesText_oneCase(cases[["D1+literal_logical"]]))
-writeLines(generateTypesText_oneCase(cases[["literal_integer+D2"]]))
-writeLines(generateTypesText_oneCase(cases[["literal_double+D2"]]))
-writeLines(generateTypesText_oneCase(cases[["literal_logical+D2"]]))
-
-
-writeLines(generateTypesText_oneCase(cases[["I0+literal_double"]]))
-
-writeLines(generateTypesText_oneCase(cases[["exp(D1)"]]))
-writeLines(generateTypesText_oneCase(cases[["mean(D1)"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D0+literal_integer"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D0+literal_double"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D0+literal_logical"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D1+literal_integer"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D1+literal_double"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["D1+literal_logical"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["literal_integer+D2"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["literal_double+D2"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["literal_logical+D2"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["I0+literal_double"]]))
+writeLines(nCompiler:::generateTypesText_oneCase(cases[["mean(D1)"]]))
 
 nCompiler:::writeTypesText_manyCases(cases,
-                         endStage = 'setToEigen',
+                         # endStage = 'setToEigen',
                          showArgs = list(showImpl = TRUE))
-writeTypesText_manyCases(cases, "correct_labelAbstractTypes")
-writeTypesText_manyCases(cases, "trial_labelAbstractTypes")
+nCompiler:::writeTypesText_manyCases(cases, "correct_labelAbstractTypes")
+nCompiler:::writeTypesText_manyCases(cases, "trial_labelAbstractTypes")
 
-compareAllFilesInDir("correct_labelAbstractTypes", "trial_labelAbstractTypes")
+nCompiler:::compareAllFilesInDir("correct_labelAbstractTypes", 
+                                 "trial_labelAbstractTypes")
 
 test_that("double() + literal",
           {
             nf <- nFunction(
-              function(x = double()) {
+              function(x = "numericScalar") {
                 y <- x + 1
               }
             )
-
-                        debug(processNFstages)
-            test <- compileNimbleFunction(
-              nf,
-              control = list(
-                endStage = 'labelAbstractTypes'
-              )
+            test <- nCompile(
+              nf
+              # control = list(
+              #   endStage = 'labelAbstractTypes'
+              # )
             )
           })

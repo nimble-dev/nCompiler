@@ -1,4 +1,5 @@
-# Not working
+# NOT WORKING
+
 context("Testing seq and colon operators")
 
 test_that("Basic colon usage works", {

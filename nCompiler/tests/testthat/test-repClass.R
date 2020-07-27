@@ -1,4 +1,3 @@
-# NOT WORKING
 context("repClass")
 
 library(Rcpp)
