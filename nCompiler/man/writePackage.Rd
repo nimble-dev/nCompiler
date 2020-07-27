@@ -10,6 +10,7 @@ writePackage(
   dir = ".",
   control = list(),
   modify = get_nOption("modifyPackageContents"),
+  memberData = list(),
   roxygen = list(),
   nClass_full_interface = TRUE
 )
@@ -33,6 +34,9 @@ existing package. Existing package elements with the same name as new
 elements are overwritten, while elements without name conflicts are
 retained. To change the default across multiple calls, use
 `set_nOption("modifyPackageContents" = TRUE)`}
+
+\item{memberData}{A named list of elements to be stored as exported package 
+data objects.}
 
 \item{roxygen}{A list of roxygen entries corresponding to the objects being
 compiled, indicated either by matching names or (if all objects are

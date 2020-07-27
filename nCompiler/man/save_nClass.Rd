@@ -7,7 +7,6 @@
 save_nClass(
   ncObj,
   ncDef,
-  serializeFn,
   file,
   package.name,
   dir = tempdir(),
