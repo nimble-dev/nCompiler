@@ -50,6 +50,12 @@ Each element of CMethodsParams should itself be a named list, with names
 matching parameters of the appropriate function, and elements being text
 strings describing those parameters.}
 
+\item{otherRoxygen}{Additional roxygen content to be tacked onto the end of
+the roxygen2 header. This could be `@examples`, `@seealso`, or any other
+valid roxygen field. You are responsible for formatting these the way you
+want, including nwlines, `#'` comment notation, and `@` prefixes.
+Character string, optional.}
+
 \item{headerComment}{what string indicates the start of a roxygen comment for
 the header? By default nCompiler packaging puts header comments for
 nClasses in R, so the default value `#'` should almost always be kept.}
@@ -87,27 +93,27 @@ foo <- nClass(
     }))
 )
 # Create the roxygen
-rox <- documentNClass(obj = foo, 
+rox <- documentNClass(obj = foo,
                       name  = "foo",
                       title = "A Test nClass",
-                      description = "This nClass has a method to add 1 
+                      description = "This nClass has a method to add 1
                          to a scalar input, and has a field to store
                          that input.",
                       fields = list(x = "A scalar input."),
                       CMethodsDescriptions = list(cp1 = "Adds 1 to x."),
-                      CMethodsParams = 
+                      CMethodsParams =
                         list(
                          cp1 = list(x = "A scalar to which 1 will be added.")
                         ),
                       methodsComment = "#'")
-# Use the roxygen to write and build a package, which will include 
+# Use the roxygen to write and build a package, which will include
 # documentation for foo
 writePackage(foo,
              dir = tempdir(),
              package.name = "fooPackageWriteDocnFunction",
              roxygen = list(foo = rox))
-buildPackage("fooPackageWriteDocnFunction", 
-             dir = tempdir(), 
+buildPackage("fooPackageWriteDocnFunction",
+             dir = tempdir(),
              roxygenize = TRUE)
 ?foo
 }

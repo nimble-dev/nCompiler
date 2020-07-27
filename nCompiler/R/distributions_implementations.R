@@ -751,7 +751,7 @@ qexp_nimble <- function(p, rate = 1/scale, scale = 1, lower.tail = TRUE, log.p =
 #'  }{f(x)= (s^a / Gamma(a)) x^-(a+1) e^-(s/x)}
 #' for \eqn{x \ge 0}, \eqn{\alpha > 0}{a > 0} and \eqn{\sigma > 0}{s > 0}.
 #' (Here \eqn{\Gamma(\alpha)}{Gamma(a)} is the function implemented by \R's
-#'  \link{gamma})} and defined in its help.
+#'  \link{gamma}) and defined in its help.
 #'
 #'  The mean and variance are
 #'  \eqn{E(X) = \frac{\sigma}{\alpha}-1}{E(X) = s/(a-1)} and

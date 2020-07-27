@@ -34,11 +34,17 @@ ignored and the code block will be reformatted for style.}
 \item{params}{A named list. Names are the names of parameters in the
 nFunction. Values are descriptions of each parameter.}
 
+\item{otherRoxygen}{Additional roxygen content to be tacked onto the end of
+the roxygen2 header. This could be `@examples`, `@seealso`, or any other
+valid roxygen field. You are responsible for formatting these the way you
+want, including nwlines, `#'` comment notation, and `@` prefixes.
+Character string, optional.}
+
 \item{processWhitespace}{Logical, default TRUE. Can whitespace be modified to
 maintain style?}
 
-\item{roxComment}{what string indicates the start of a roxygen comment?
-By default nCompiler packaging puts comments for nFunctions in C++, so the
+\item{roxComment}{what string indicates the start of a roxygen comment? By
+default nCompiler packaging puts comments for nFunctions in C++, so the
 default value `//'` should almost always be kept.}
 
 \item{checkAgainstObj}{Logical, default TRUE. Should the input be compared
@@ -62,21 +68,21 @@ foo <- nFunction(name = "foo",
                      returnType(numericScalar())
                  })
 # Create the roxygen
-rox <- documentNFunction(obj = foo, 
+rox <- documentNFunction(obj = foo,
                     name  = "foo",
                     title = "A Test nFunction",
-                    description = "This nFunction just adds 1 to a 
+                    description = "This nFunction just adds 1 to a
                               scalar input.",
-                    params = list(x = "A scalar to which 1 will be added."), 
+                    params = list(x = "A scalar to which 1 will be added."),
                     otherRoxygen = "//' @export")
-# Use the roxygen to write and build a package, which will include 
+# Use the roxygen to write and build a package, which will include
 # documentation for foo
 writePackage(foo,
              dir = tempdir(),
              package.name = "fooPackageWriteDocnFunction",
              roxygen = list(foo = rox))
-buildPackage("fooPackageWriteDocnFunction", 
-             dir = tempdir(), 
+buildPackage("fooPackageWriteDocnFunction",
+             dir = tempdir(),
              roxygenize = TRUE)
 ?foo
 }

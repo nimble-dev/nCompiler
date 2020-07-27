@@ -62,7 +62,23 @@ Density, distribution function, quantile function and random
     or scale (mean = scale / (shape - 1)) parameterizations.
 }
 \details{
+The inverse gamma distribution with parameters \code{shape} \eqn{=\alpha}{= a} and
+\code{scale} \eqn{=\sigma}{= s} has density
+\deqn{
+  f(x)= \frac{s^a}{\Gamma(\alpha)} {x}^{-(\alpha+1)} e^{-\sigma/x}%
+ }{f(x)= (s^a / Gamma(a)) x^-(a+1) e^-(s/x)}
+for \eqn{x \ge 0}, \eqn{\alpha > 0}{a > 0} and \eqn{\sigma > 0}{s > 0}.
+(Here \eqn{\Gamma(\alpha)}{Gamma(a)} is the function implemented by \R's
+ \link{gamma}) and defined in its help.
 
+ The mean and variance are
+ \eqn{E(X) = \frac{\sigma}{\alpha}-1}{E(X) = s/(a-1)} and
+\eqn{Var(X) = \frac{\sigma^2}{(\alpha-1)^2 (\alpha-2)}}{Var(X) = s^2 / ((a-1)^2 * (a-2))},
+with the mean defined only
+for \eqn{\alpha > 1}{a > 1} and the variance only for \eqn{\alpha > 2}{a > 2}.
+
+See Gelman et al., Appendix A or
+the BUGS manual for mathematical details.
 }
 \examples{
 x <- rinvgamma(50, shape = 1, scale = 3)
