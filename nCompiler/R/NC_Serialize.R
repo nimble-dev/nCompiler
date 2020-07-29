@@ -96,7 +96,7 @@ read_nClass <- function(file, package.name,
   data(list = "classname", package = package.name, envir = loadEnv)
   
   deserialize_fn <- utils::getFromNamespace(
-    paste0("nComp_deserialize_", loadEnv$classname), 
+    paste0("nComp_deserialize_", Rname2CppName(loadEnv$classname)), 
     package.name
   )
   deserialized <- deserialize_nComp_object(

@@ -191,7 +191,37 @@ test_that("Serialization works for Rcpp types", {
   }
 })
 
-set_nOption("serialize", old_serialize_option)
 
+test_that("Serialize with a bad classname", {
+  nc1 <- nClass(
+    classname = "nc one",
+    Rpublic = list(
+      Rv = NULL,
+      Rfoo = function(x) x+1
+    ),
+    Cpublic = list(
+      Cv = 'numericScalar',
+      Cx = 'integerScalar',
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+1)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar'),
+      Cbar = nFunction(
+        fun = function(x, y) {
+          return(x + y)
+        },
+        argTypes = list(x = 'numericMatrix',
+                        y = 'numericMatrix'),
+        returnType = 'numericMatrix')
+    )
+  )
+  ans <- try(nCompile_nClass(nc1, interface = "generic"))
+  expect_true(is.function(ans[[1]])) ## compilation succeeded
+  
+})
+
+set_nOption("serialize", old_serialize_option)
 
 

@@ -277,10 +277,15 @@ addSerialization_impl <- function(self) {
   self$neededCppDefs[["cereal_dynamic_init"]] <- cereal_dynamic_init
 
   self$Hpreamble <- c(self$Hpreamble, "#define _INCLUDE_SERIALIZE_AND_DESERIALIZE_FUNCTIONS\n")
+  
+  cleanname <- Rname2CppName(self$name)
+  # if (!identical(cleanname, self$name)) 
+  #   warning("When serializing nClass ", self$name, " name for serialization ",
+  #           " functions was changed to ", cleanname)
   serialize_deserialize <-
     cppMacroCallClass$new(
       cppContent = paste0("//[[Rcpp::export]]\n",
-                          "RawVector nComp_serialize_", self$name,
+                          "RawVector nComp_serialize_", cleanname,
                           "(SEXP Sfrom) {\n",
                           "genericInterfaceBaseC *baseobj =\n",
                           "reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sfrom))->get_ptr());\n",
@@ -299,7 +304,7 @@ addSerialization_impl <- function(self) {
                           "}\n",
                           "\n",
                           "//[[Rcpp::export]]\n",
-                          "SEXP nComp_deserialize_", self$name,
+                          "SEXP nComp_deserialize_", cleanname,
                           "(RawVector src) {\n",
                           "  std::stringstream ss;\n",
                           "  ss.write(reinterpret_cast<char*>(&src[0]), src.size());\n",
