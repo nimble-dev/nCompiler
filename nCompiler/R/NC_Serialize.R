@@ -56,23 +56,42 @@ save_nClass <- function(ncObj, ncDef,
     set_nOption("serialize", TRUE)
     on.exit(set_nOption("serialize", FALSE))
   }
-  
   if (missing(lib)) lib <- .libPaths()[1]
   
   serializeFn <- get(paste0("nComp_serialize_", ncDef$classname))
-  serialized <- serialize_nComp_object(ncObj, serializeFn)
-  serializedList <- mget(c("serialized", "extptr"), envir = serialized)
-  saveRDS(serialized$serialized, file)
   
-  writePackage(ncDef,
-               package.name = package.name,
-               dir = dir,
-               control = list(export = FALSE), 
-               modify = FALSE,
-               memberData = list(classname = ncDef$classname))
-  buildPackage(package.name = package.name, 
-               dir = dir, lib = lib, load = FALSE)
-  
+  if (is.loadedObjectEnv(ncObj)) {
+    serialized <- serialize_nComp_object(ncObj, serializeFn)
+    # serializedList <- mget(c("serialized", "extptr"), envir = serialized)
+    saveRDS(serialized$serialized, file)
+    
+    writePackage(ncDef,
+                 package.name = package.name,
+                 dir = dir,
+                 control = list(export = FALSE), 
+                 modify = FALSE,
+                 memberData = list(classname = ncDef$classname))
+    buildPackage(package.name = package.name, 
+                 dir = dir, lib = lib, load = FALSE)
+    
+  } else if (isNC(ncObj)) {
+    serialized <- serialize_nComp_object(ncObj$private$CppObj, serializeFn)
+    listToSerialize <- list(full = ncObj, CppObj = serialized$serialized)
+    
+    saveRDS(listToSerialize, file)
+    
+    writePackage(ncDef,
+                 package.name = package.name,
+                 dir = dir,
+                 control = list(export = FALSE), 
+                 modify = FALSE,
+                 memberData = list(classname = ncDef$classname))
+    buildPackage(package.name = package.name, 
+                 dir = dir, lib = lib, load = FALSE)
+    
+  } else {
+    stop("Object to save, 'ncObj', must be an instance of an nClass.")
+  }
   invisible(NULL)
 }
 
@@ -89,17 +108,41 @@ save_nClass <- function(ncObj, ncDef,
 read_nClass <- function(file, package.name,
                         dir = tempdir(), lib = .libPaths()[1]) {
   
-  serialized <- new.loadedObjectEnv(serialized = readRDS(file))
+  savedObj <- readRDS(file)
   
-  library(package.name, character.only = TRUE, lib = lib)
-  loadEnv <- new.env()
-  data(list = "classname", package = package.name, envir = loadEnv)
-  
-  deserialize_fn <- utils::getFromNamespace(
-    paste0("nComp_deserialize_", Rname2CppName(loadEnv$classname)), 
-    package.name
-  )
-  deserialized <- deserialize_nComp_object(
-    serialized, nComp_deserialize_fn = deserialize_fn)
-  return(deserialized)
+  if (is.list(savedObj)) {
+    serialized <- new.loadedObjectEnv(serialized = savedObj$CppObj)
+    
+    library(package.name, character.only = TRUE, lib = lib)
+    loadEnv <- new.env()
+    data(list = "classname", package = package.name, envir = loadEnv)
+    deserialize_fn <- utils::getFromNamespace(
+      paste0("nComp_deserialize_", Rname2CppName(loadEnv$classname)), 
+      package.name
+    )
+    deserialized <- deserialize_nComp_object(
+      serialized, nComp_deserialize_fn = deserialize_fn)
+    
+    rtnObjFull <- savedObj$full
+    rtnObjFull$private$CppObj <- deserialized
+    
+    return(rtnObjFull)
+    
+  } else if (is.raw(savedObj)) {
+    serialized <- new.loadedObjectEnv(serialized = savedObj)
+    
+    library(package.name, character.only = TRUE, lib = lib)
+    loadEnv <- new.env()
+    data(list = "classname", package = package.name, envir = loadEnv)
+    
+    deserialize_fn <- utils::getFromNamespace(
+      paste0("nComp_deserialize_", Rname2CppName(loadEnv$classname)), 
+      package.name
+    )
+    deserialized <- deserialize_nComp_object(
+      serialized, nComp_deserialize_fn = deserialize_fn)
+    return(deserialized)
+  } else {
+    stop("Unknown class in specified RDS file.")
+  }
 }

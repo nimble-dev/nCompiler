@@ -20,15 +20,16 @@ nc1 <- nClass(
 set_nOption('serialize', TRUE)
 
 # Instantiate an object of this nClass
-nc1_generator <- nCompile_nClass(nc1, interface = "generic")
-obj <- nc1_generator[[1]]()
-value(obj, "Cx") <- 10
-value(obj, "Cv") <- 0.1
+nc1_generator <- nCompile_nClass(nc1, interface = "full")
+# nc1_generator  <- nCompile(nc1)
+obj <- nc1_generator$new()
+obj$Cx <- 10
+obj$Cv <- 0.1
 
 # Save the nClass instance and its member data
-file = file.path('testserial_nCompInternalOnly', 'savedObj.rds')
+file = file.path('testserial_nCompInternalOnly', 'savedObj_Full.rds')
 
 save_nClass(ncObj = obj, ncDef = nc1,
             file = file, 
-            package.name = "savedObjPkg", 
+            package.name = "savedObjPkgFull", 
             dir = tempdir())

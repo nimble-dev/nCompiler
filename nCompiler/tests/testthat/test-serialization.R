@@ -69,7 +69,7 @@ if (!dir.exists("testserial_nCompInternalOnly")) {
   delete_dir <- TRUE
 }
 
-test_that("Saving and loading nClasses across sessions works", {
+test_that("Saving and loading nClasses across sessions works (generic interface)", {
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
@@ -79,6 +79,19 @@ test_that("Saving and loading nClasses across sessions works", {
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
                                       'testutil_read_nClass.R'), 
+                            package = 'nCompiler')))
+})
+
+test_that("Saving and loading nClasses across sessions works (full interface)", {
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_save_full_nClass.R'), 
+                            package = 'nCompiler')))
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testutil_read_full_nClass.R'), 
                             package = 'nCompiler')))
 })
 

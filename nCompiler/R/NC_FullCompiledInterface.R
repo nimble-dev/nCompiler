@@ -143,8 +143,13 @@ build_compiled_nClass <- function(NCgenerator,
     # we put newCobjFun in two places:
     # 1. In the generator
     # 2. In the environment that every object will have as its parent.env
-    ans$.newCobjFun <- newCobjFun
-    new_env$.newCobjFun <- newCobjFun
+    if (is.list(newCobjFun)) {
+      ans$.newCobjFun <- newCobjFun[[1]]
+      new_env$.newCobjFun <- newCobjFun[[1]]
+    } else {
+      ans$.newCobjFun <- newCobjFun
+      new_env$.newCobjFun <- newCobjFun
+    }
   } else {
     ans$.newCobjFun <- NULL
     new_env$.newCobjFun <- NULL
