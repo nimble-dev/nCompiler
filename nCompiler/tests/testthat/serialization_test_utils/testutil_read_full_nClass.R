@@ -5,9 +5,9 @@ set_nOption('serialize', TRUE)
 file = file.path('testserial_nCompInternalOnly', 'savedObj.rds')
 
 deserialized <- read_nClass(file = file, 
-                            package.name = "savedObjPkg", 
+                            package.name = "savedObjPkgFull", 
                             dir = tempdir())
 
-expect_equal(value(deserialized, "Cx"), 10)
-expect_equal(value(deserialized, "Cv"), 0.1)
-expect_equal(method(deserialized, "Cfoo")(1.5), 2.5)
+expect_equal(deserialized$Cx, 10)
+expect_equal(deserialized$Cv, 0.1)
+expect_equal(deserialized$Cfoo(1.5), 2.5)
