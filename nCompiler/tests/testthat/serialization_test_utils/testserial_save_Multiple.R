@@ -35,7 +35,6 @@ value(obj1, "C1") <- 3.14
 # Save the nClass instance and its data
 save_nClass(ncObj = obj1, ncDef = nc1,
             file = file1, 
-            package.name = "savedObjPkgMult1", 
             dir = tempdir())
 
 # Within the same session, save a 2nd nclass with its data
@@ -60,5 +59,4 @@ value(obj2, "Cm") <- 2.17
 value(obj2, "Cs") <- 3
 save_nClass(ncObj = obj2, ncDef = nc2,
             file = file2, 
-            package.name = "savedObjPkgMult2", 
             dir = tempdir())

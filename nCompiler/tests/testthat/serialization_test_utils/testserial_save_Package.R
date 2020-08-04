@@ -12,8 +12,8 @@ expect_equal(my_nc1$Cfoo(10), 13)
 
 file <- file.path("testserial_nCompInternalOnly", "nc1_from_pkg.Rds")
 
-save_nClass_fromPkg(ncObj = my_nc1, 
-                    classname = "nc1Packaged",
-                    file = file, 
-                    package.name = "saveNClassPkg")
+save_nClass(ncObj = my_nc1, 
+            classname = "nc1Packaged",
+            file = file, 
+            packageWithDefn = "saveNClassPkg")
 

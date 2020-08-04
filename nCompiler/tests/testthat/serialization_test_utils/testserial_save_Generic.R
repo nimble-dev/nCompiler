@@ -30,5 +30,4 @@ file = file.path('testserial_nCompInternalOnly', 'savedObj.rds')
 
 save_nClass(ncObj = obj, ncDef = nc1,
             file = file, 
-            package.name = "savedObjPkg", 
             dir = tempdir())
