@@ -62,7 +62,7 @@ test_that("Basic serialization works",
 
 
 # The below block uses to calls to `RScript` to test nClass saving/loading in
-# distinct sessions. See scripts in the folder testthat/serialization_test_utils/
+# distinct sessions. See scripts in the dir testthat/serialization_test_utils/
 delete_dir <- FALSE
 if (!dir.exists("testserial_nCompInternalOnly")) {
   dir.create("testserial_nCompInternalOnly")
@@ -73,12 +73,12 @@ test_that("Saving and loading nClasses across sessions works (generic interface)
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_save_nClass.R'), 
+                                      'testserial_save_Generic.R'), 
                             package = 'nCompiler')))
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_read_nClass.R'), 
+                                      'testserial_read_Generic.R'), 
                             package = 'nCompiler')))
 })
 
@@ -86,12 +86,12 @@ test_that("Saving and loading nClasses across sessions works (full interface)", 
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_save_full_nClass.R'), 
+                                      'testserial_save_Full.R'), 
                             package = 'nCompiler')))
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_read_full_nClass.R'), 
+                                      'testserial_read_Full.R'), 
                             package = 'nCompiler')))
 })
 
@@ -100,14 +100,35 @@ test_that("Saving and loading mult nClasses across sessions works", {
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_save_multiple.R'), 
+                                      'testserial_save_Multiple.R'), 
                             package = 'nCompiler')))
   system(paste0("Rscript ",
                 system.file(file.path('tests', 'testthat', 
                                       'serialization_test_utils', 
-                                      'testutil_read_multiple.R'), 
+                                      'testserial_read_Multiple.R'), 
                             package = 'nCompiler')))
 })
+
+
+test_that("Saving and loading an nClass from a specified package works", {
+
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testserial_create_Package.R'), 
+                            package = 'nCompiler')))
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testserial_save_Package.R'), 
+                            package = 'nCompiler')))
+  system(paste0("Rscript ",
+                system.file(file.path('tests', 'testthat', 
+                                      'serialization_test_utils', 
+                                      'testserial_read_Package.R'), 
+                            package = 'nCompiler')))
+})
+
 
 if (delete_dir) unlink("testserial_nCompInternalOnly", recursive = TRUE)
 
