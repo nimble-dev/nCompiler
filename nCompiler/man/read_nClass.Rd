@@ -2,21 +2,52 @@
 % Please edit documentation in R/NC_Serialize.R
 \name{read_nClass}
 \alias{read_nClass}
-\title{Read an an nClass object saved by \code{save_nClass}}
+\title{Read an nClass object saved by \code{save_nClass}}
 \usage{
-read_nClass(file, package.name, dir = tempdir(), lib = .libPaths()[1])
+read_nClass(file, lib = .libPaths()[1])
 }
 \arguments{
 \item{file}{The (probably .rds) file to which the nClass object was written}
 
-\item{package.name}{The name of the package to which the nClass}
-
-\item{dir}{The directory in which the package was written (probably not going
-to be a part of the final product)}
-
-\item{lib}{The lib folder where the package will be quietly installed
-(probably not going to be a part of the final product)}
+\item{lib}{The lib folder where the package defining the nClass is found}
 }
 \description{
-Read an an nClass object saved by \code{save_nClass}
+Read an instance of an nClass saved by \code{save_nClass}.
+  The class definition and deserialization tools (using the \code{cereal}
+  library for C++) are loaded from the relevant package, whether it was
+  written or generated automatically from \code{save_nClass}.
+}
+\examples{
+set_nOption("serialize", TRUE)
+
+# Create a new nClass
+nc1 <- nClass(
+  classname = "nc1",
+  Cpublic = list(
+    Cv = 'numericScalar',
+    Cx = 'integerScalar',
+    Cfoo = nFunction(
+      fun = function(x) {
+        return(x+1)
+      },
+      argTypes = list(x = 'numericScalar'),
+      returnType = 'numericScalar')
+  )
+)
+
+# Compile the nClass
+Cnc1 <- nCompile_nClass(nc1, interface = "full")
+
+# Instantiate an object of the nClass
+my_nc1_instance <- Cnc1$new()
+my_nc1_instance$Cv <- 10
+
+# Save the instance (along with its class definition)
+save_nClass(my_nc1_instance, file = "example_save.Rds", ncDef = nc1)
+
+### A new session can be started here
+my_nc1_read <- read_nClass("example_save.Rds")
+my_nc1_read$Cv
+my_nc1_read$Cfoo(10)
+
 }

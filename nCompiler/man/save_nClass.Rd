@@ -6,9 +6,10 @@
 \usage{
 save_nClass(
   ncObj,
-  ncDef,
   file,
-  package.name,
+  ncDef = NULL,
+  packageWithDefn = NULL,
+  classname = NULL,
   dir = tempdir(),
   lib = .libPaths()[1]
 )
@@ -17,20 +18,72 @@ save_nClass(
 \item{ncObj}{A compiled instance of an nClass object. Right now this only
 works for}
 
-\item{ncDef}{The uncompiled nClass generator used to define ncObj's nClass}
-
 \item{file}{The filename to which the serialized object will be written as
 RDS, probably with extension ".rds"}
 
-\item{package.name}{The name of the package that'll be generated to store the
-nClass definition (probably not going to be a part of the final product)}
+\item{ncDef}{The uncompiled nClass generator used to define ncObj's nClass.
+Leave NULL and use the argument \code{packageWithDefn} if the nClass is
+defined in an existing package.}
 
-\item{dir}{The directory in which the package will be written (probably not
-going to be a part of the final product)}
+\item{packageWithDefn}{If one exists, the name of the previously defined
+package that defines the nClass (character string). Leave NULL if no such
+package exists in which case a small package will be created. If NULL, an
+ncDef object must be provided.}
 
-\item{lib}{The lib folder where the package will be quietly installed
-(probably not going to be a part of the final product)}
+\item{classname}{If no ncDef is provided, a character string giving the class
+name of the ncObj. If ncDef is provided, can be left NULL.}
+
+\item{dir}{The directory in which the package directory will be created and
+source code will be written. Ignored if packageWithDefn is not NULL.}
+
+\item{lib}{The lib folder where the package will be quietly installed.
+Ignored if packageWithDefn is not NULL.}
 }
 \description{
-TBW
+Saves an nClass, including its compiled components, across
+  sessions using the `cereal` serialization library for C++.
+}
+\details{
+There are two parameterizations of this function. If you've defined an nClass
+and want to save it as an instance, use:
+
+\code{ save_nClass(ncObj, file, ncDef) }
+
+In this case, a package storing the nClass definition will be created. This
+allows the nClass info to be restored with the specific instantiated object
+upon reading.
+
+If the nClass is defined in a package, and so will be found even in a new
+(fresh) session, use:
+
+\code{ save_nClass(ncObj, file, packageWithDefn, classname) }
+}
+\examples{
+set_nOption("serialize", TRUE)
+
+# Create a new nClass
+nc1 <- nClass(
+  classname = "nc1",
+  Cpublic = list(
+    Cv = 'numericScalar',
+    Cx = 'integerScalar',
+    Cfoo = nFunction(
+      fun = function(x) {
+        return(x+1)
+      },
+      argTypes = list(x = 'numericScalar'),
+      returnType = 'numericScalar')
+  )
+)
+
+# Compile the nClass
+Cnc1 <- nCompile_nClass(nc1, interface = "full")
+
+# Instantiate an object of the nClass
+my_nc1_instance <- Cnc1$new()
+my_nc1_instance$Cv <- 10
+
+# Save the instance (along with its class definition)
+save_nClass(my_nc1_instance, file = "example_save.Rds", ncDef = nc1)
+
 }

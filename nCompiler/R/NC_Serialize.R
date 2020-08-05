@@ -1,9 +1,8 @@
 # Code for serializing and de-serializing loaded nComp objects
 
-# Currently this only works for one DSL at a time.
-# We need to manage multiple DSLs somehow.
-# One approach would be to store a label in an environment enclosing all the loadedObjetEnv environments.
-
+# Internal function used by save_nClass() which calls the provided serialization
+# function, then instantiates and returns a new loadedObjectEnv with the
+# contents
 serialize_nComp_object <- function(obj, nComp_serialize_fn) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")
@@ -18,6 +17,8 @@ serialize_nComp_object <- function(obj, nComp_serialize_fn) {
   }
 }
 
+# Internal function used by read_nClass() which calls the provided
+# deserialization function and applies it to a loadedObjectEnv
 deserialize_nComp_object <- function(obj, nComp_deserialize_fn) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")
@@ -36,7 +37,8 @@ deserialize_nComp_object <- function(obj, nComp_deserialize_fn) {
 
 #' @name save_nClass
 #' @title Save an instance of an nClass object across sessions
-#' @description TBW
+#' @description Saves an nClass, including its compiled components, across
+#'   sessions using the `cereal` serialization library for C++.
 #' @param ncObj A compiled instance of an nClass object. Right now this only
 #'   works for
 #' @param ncDef The uncompiled nClass generator used to define ncObj's nClass.
@@ -50,30 +52,56 @@ deserialize_nComp_object <- function(obj, nComp_deserialize_fn) {
 #'   ncDef object must be provided.
 #' @param classname If no ncDef is provided, a character string giving the class
 #'   name of the ncObj. If ncDef is provided, can be left NULL.
-#' @param dir The directory in which the package will be written. Ignored if
-#'   packageWithDefn is not NULL.
+#' @param dir The directory in which the package directory will be created and
+#'   source code will be written. Ignored if packageWithDefn is not NULL.
 #' @param lib The lib folder where the package will be quietly installed.
 #'   Ignored if packageWithDefn is not NULL.
 #' @export
-#' 
+#'
 #' @details
-#' 
-#' There are two parameterizations of this argument.
-#' If you've defined an nClass and want to save it as an instance, use:
-#' \code{
-#' save_nClass(ncObj, file, ncDef)
-#' }
+#'
+#' There are two parameterizations of this function. If you've defined an nClass
+#' and want to save it as an instance, use:
+#'
+#' \code{ save_nClass(ncObj, file, ncDef) }
+#'
 #' In this case, a package storing the nClass definition will be created. This
 #' allows the nClass info to be restored with the specific instantiated object
 #' upon reading.
-#' 
+#'
 #' If the nClass is defined in a package, and so will be found even in a new
 #' (fresh) session, use:
-#' \code{
-#' save_nClass(ncObj, file, packageWithDefn, classname)
-#' }
 #'
-#' In this case
+#' \code{ save_nClass(ncObj, file, packageWithDefn, classname) }
+#'
+#' @examples
+#' set_nOption("serialize", TRUE)
+#'
+#' # Create a new nClass
+#' nc1 <- nClass(
+#'   classname = "nc1",
+#'   Cpublic = list(
+#'     Cv = 'numericScalar',
+#'     Cx = 'integerScalar',
+#'     Cfoo = nFunction(
+#'       fun = function(x) {
+#'         return(x+1)
+#'       },
+#'       argTypes = list(x = 'numericScalar'),
+#'       returnType = 'numericScalar')
+#'   )
+#' )
+#' 
+#' # Compile the nClass
+#' Cnc1 <- nCompile_nClass(nc1, interface = "full")
+#' 
+#' # Instantiate an object of the nClass
+#' my_nc1_instance <- Cnc1$new()
+#' my_nc1_instance$Cv <- 10
+#' 
+#' # Save the instance (along with its class definition)
+#' save_nClass(my_nc1_instance, file = "example_save.Rds", ncDef = nc1)
+#' 
 save_nClass <- function(ncObj,
                         file,
                         ncDef = NULL,
@@ -155,10 +183,48 @@ save_nClass <- function(ncObj,
 
 
 #' @name read_nClass
-#' @title Read an an nClass object saved by \code{save_nClass}
+#' @title Read an nClass object saved by \code{save_nClass}
+#' @description Read an instance of an nClass saved by \code{save_nClass}.
+#'   The class definition and deserialization tools (using the \code{cereal}
+#'   library for C++) are loaded from the relevant package, whether it was
+#'   written or generated automatically from \code{save_nClass}.
 #' @param file The (probably .rds) file to which the nClass object was written
 #' @param lib The lib folder where the package defining the nClass is found
 #' @export
+#' 
+#' @examples
+#' set_nOption("serialize", TRUE)
+#'
+#' # Create a new nClass
+#' nc1 <- nClass(
+#'   classname = "nc1",
+#'   Cpublic = list(
+#'     Cv = 'numericScalar',
+#'     Cx = 'integerScalar',
+#'     Cfoo = nFunction(
+#'       fun = function(x) {
+#'         return(x+1)
+#'       },
+#'       argTypes = list(x = 'numericScalar'),
+#'       returnType = 'numericScalar')
+#'   )
+#' )
+#' 
+#' # Compile the nClass
+#' Cnc1 <- nCompile_nClass(nc1, interface = "full")
+#' 
+#' # Instantiate an object of the nClass
+#' my_nc1_instance <- Cnc1$new()
+#' my_nc1_instance$Cv <- 10
+#' 
+#' # Save the instance (along with its class definition)
+#' save_nClass(my_nc1_instance, file = "example_save.Rds", ncDef = nc1)
+#' 
+#' ### A new session can be started here
+#' my_nc1_read <- read_nClass("example_save.Rds")
+#' my_nc1_read$Cv
+#' my_nc1_read$Cfoo(10)
+#' 
 read_nClass <- function(file, lib = .libPaths()[1]) {
   
   savedObj <- readRDS(file)
