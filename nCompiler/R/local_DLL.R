@@ -2,7 +2,7 @@
 
 ## TO-DO:
 ## Write uninstallLocalDLL (skeleton below).
-## Perhaps re-name some funcions below for consistency.
+## Perhaps re-name some functions below for consistency.
 
 #' Create (but don't install) files for nCompLocal package
 #' 
@@ -25,9 +25,12 @@ createLocalDLLpackage <- function(dir = '.',
     if(toupper(userInput) == "Y")
       unlink(file.path(dir, "nCompLocal"), recursive = TRUE)
   }
-  zz <- file("kitten_output_not_necessary.Rout", open = "wt")
-  sink(zz)
-  sink(zz, type = "message")
+  showLocalDLLoutput <- isTRUE(get_nOption("showLocalDLLoutput"))
+  if(!showLocalDLLoutput) {
+    zz <- file("kitten_output_not_necessary.Rout", open = "wt")
+    sink(zz)
+    sink(zz, type = "message")
+  }
   eval(
     substitute(
       kitten("nCompLocal",
@@ -38,11 +41,13 @@ createLocalDLLpackage <- function(dir = '.',
              email = "not@available.org"),
       list(DIR = dir)),
     envir = .GlobalEnv)
-  sink()
-  sink(type = "message")
-  close(zz)
-  if(file.exists("kitten_output_not_necessary.Rout"))
-    file.remove("kitten_output_not_necessary.Rout")
+  if(!showLocalDLLoutput) {
+    sink()
+    sink(type = "message")
+    close(zz)
+    if(file.exists("kitten_output_not_necessary.Rout"))
+      file.remove("kitten_output_not_necessary.Rout")
+  }
   NAMESPACE_file <- file.path(dir, "nCompLocal", "NAMESPACE")
   sink(NAMESPACE_file) # Wipe it clean so it doesn't try to export kitten stuff
   sink()
@@ -88,8 +93,17 @@ createLocalDLLpackage <- function(dir = '.',
 }
 
 cleanupLocalDLLpackage <- function(dir = '.') {
-  if(dir.exists(dir))
-    unlink(dir, recursive = TRUE)
+  # Previously we removed the working directory of package creation.
+  # This causes problems via the non-standard effects of pkgKitten
+  # via tools it uses like pkgload.  A simple solution is to not remove the package source.
+  # In normal working operation, this will be done in tempdir() so it 
+  # will be cleaned up when R exits.
+  #
+  # We leave this currently empty step in the workflow in case we come up
+  # with valid cleanup steps at some point.
+  #
+  #  if(dir.exists(dir))
+  #    unlink(dir, recursive = TRUE)
 }
 
 #' Install nCompLocal package
@@ -107,11 +121,11 @@ cleanupLocalDLLpackage <- function(dir = '.') {
 installLocalDLLpackage <- function(lib, source.dir = '.') {
   if(missing(lib)) lib <- .libPaths()[1]
   pkgs <- file.path(source.dir, "nCompLocal")
-  install.packages(pkgs,
+  utils::install.packages(pkgs,   # Rstudio / devtools takes over install.packages. use core R version.
                    lib = lib,
                    repos = NULL,
                    type = "source",
-                   quiet = TRUE) 
+                   quiet = !isTRUE(get_nOption("showLocalDLLoutput")))
 }
 
 #' Create and install nCompLocal package
