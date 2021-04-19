@@ -147,7 +147,9 @@ parent.env(sourceCppEnv) <- environment(Rcpp::sourceCpp)
 QuietSourceCpp <- Rcpp::sourceCpp
 environment(QuietSourceCpp) <- sourceCppEnv
 sourceCppEnv$system <- function(...) {
-  system(..., ignore.stderr = TRUE, ignore.stdout = TRUE)  
+  sourceCpp_verbose <- isTRUE(nOptions("sourceCpp_verbose"))
+  # We would want to use system2, but Rcpp::sourceCpp uses system
+  system(..., ignore.stderr = !sourceCpp_verbose, ignore.stdout = !sourceCpp_verbose)  
 }
 
 ## Manage a call to Rcpp's sourceCpp()

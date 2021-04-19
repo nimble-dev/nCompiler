@@ -50,7 +50,7 @@ isCompiledNCgenerator <- function(x) {
 #' @export
 NCinternals <- function(x) {
   if(isNC(x))
-    parent.env(x)$.NCinternals
+    stop("NCinternals for an nClass object is not supported.") # deprecated?: parent.env(x)$.NCinternals
   else if(isNCgenerator(x))
     x$.nCompiler
   else
@@ -68,7 +68,7 @@ NCinternals <- function(x) {
 #' @export
 `NCinternals<-` <- function(x, value) {
   if(isNC(x))
-    parent.env(x)$.NCinternals <- value
+    stop("NCinternals<- for an nClass object is not supported.") # deprecated?: parent.env(x)$.NCinternals <- value
   else if(isNCgenerator(x))
     x$.nCompiler <- value
   else

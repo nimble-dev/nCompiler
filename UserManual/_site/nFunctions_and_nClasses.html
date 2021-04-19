@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
 
 <title>nFunctions and nClasses</title>
 
+<script src="site_libs/header-attrs-2.5/header-attrs.js"></script>
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
@@ -25,6 +26,17 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="site_libs/anchor-sections-1.0/anchor-sections.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
@@ -86,7 +98,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -235,6 +246,7 @@ $(document).ready(function () {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -247,48 +259,9 @@ $(document).ready(function () {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
-
-<script>
-$(document).ready(function ()  {
-
-    // move toc-ignore selectors from section div to header
-    $('div.section.toc-ignore')
-        .removeClass('toc-ignore')
-        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
-
-    // establish options
-    var options = {
-      selectors: "h1,h2,h3",
-      theme: "bootstrap3",
-      context: '.toc-content',
-      hashGenerator: function (text) {
-        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
-      },
-      ignoreSelector: ".toc-ignore",
-      scrollTo: 0
-    };
-    options.showAndHide = false;
-    options.smoothScroll = true;
-
-    // tocify
-    var toc = $("#TOC").tocify(options).data("toc-tocify");
-});
-</script>
 
 <style type="text/css">
 
@@ -302,6 +275,12 @@ $(document).ready(function ()  {
 }
 }
 
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
 
 .toc-content {
   padding-left: 30px;
@@ -407,6 +386,12 @@ div.tocify {
 
 
 <p>nCompiler provides new kinds of functions and classes that can be fully or partially compiled. They can also be used uncompiled (i.e. in R), which is useful for debugging.</p>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<p>Prior to any compilation steps below, one needs to run the following and then restart R.</p>
+<pre class="r"><code>setup_nCompLocal()</code></pre>
+<p>This creates a installs a tiny helper package, <code>nCompLocal</code>, that needs to be built locally. We have tried to devise a system to do this on-the-fly and not require re-starting R, but it has issues. Steps involving package building and loading are sometimes taken over for special handling in RStudio, which might be part of the issues. For now, run the above and restart R.</p>
+</div>
 <div id="nfunction" class="section level1">
 <h1><code>nFunction</code></h1>
 <p>An <code>nFunction</code> is created from an R function and information about argument types and the return type.</p>
@@ -424,7 +409,7 @@ nf_mult2 &lt;- nFunction(
 nf_mult2(1:3)</code></pre>
 <pre><code>## [1] 2 4 6</code></pre>
 <p>This can be compiled by:</p>
-<pre class="r"><code># With a new installation, one might first see ouput from building a local library called nCompLocal.
+<pre class="r"><code># See above on setup step of running setup_nCompLocal() and restarting R.
 Cnf_mult2 &lt;- nCompile(nf_mult2)
 Cnf_mult2(1:3) # The compiled version works.</code></pre>
 <pre><code>## [1] 2 4 6</code></pre>
@@ -468,7 +453,7 @@ Cnf_mult2(1:3) # The compiled version works.</code></pre>
 <pre class="r"><code># Something about the non-standard evaluation of knitr seems
 # to cause a problem with nCompile in this context.  The slightly
 # lower-level nCompile_nClass works.
-Cadd_class &lt;- nCompile_nClass(add_class)
+Cadd_class &lt;- nCompile(add_class)
 # By default we get a full interface, which
 # behaves as one would expect for a class generator.
 obj &lt;- Cadd_class$new()
@@ -478,7 +463,7 @@ obj$Cnumber</code></pre>
 <pre class="r"><code>obj$add_Cnumber(2:4) ## and automatically calls the C++ method.</code></pre>
 <pre><code>## [1] 5 6 7</code></pre>
 <pre class="r"><code># We can also make a generic interface (or get it out of the full interface).
-Cadd_class_gen &lt;- nCompile_nClass(add_class, interface = &quot;generic&quot;)
+Cadd_class_gen &lt;- nCompile(add_class, interfaces = &quot;generic&quot;)
 obj &lt;- Cadd_class_gen()
 # To access fields and methods in an object from the generic interface, 
 # use value() and method().
@@ -517,13 +502,56 @@ value(obj, &#39;Cnumber&#39;)</code></pre>
 
 // add bootstrap table styles to pandoc tables
 function bootstrapStylePandocTables() {
-  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
 }
 $(document).ready(function () {
   bootstrapStylePandocTables();
 });
 
 
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
 </script>
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

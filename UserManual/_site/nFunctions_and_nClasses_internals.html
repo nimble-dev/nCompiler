@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Internals of nFunctions and nClasses</title>
+
+<script src="site_libs/header-attrs-2.5/header-attrs.js"></script>
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="site_libs/anchor-sections-1.0/anchor-sections.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">nimbleCompiler</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Internals of nFunctions and nClasses</h1>
+
+</div>
+
+
+<p>This document gives a quick tour of some of the internals of nFunctions and nClasses.</p>
+<pre class="r"><code>library(nCompiler)
+# Be sure to have done setup_nCompLocal() and restarted R after installing nCompiler</code></pre>
+<div id="nfunction-internals" class="section level1">
+<h1><code>nFunction</code> internals</h1>
+<p>We’ll use the same <code>nFunction</code> as introduced previously:</p>
+<pre class="r"><code>mult2 &lt;- function(x) {
+  ans &lt;- 2 * x
+  return(ans)
+}
+
+nf_mult2 &lt;- nFunction(
+  fun = mult2,
+  argTypes = list(x = &#39;numericVector&#39;),
+  returnType = &#39;numericVector&#39;
+)
+nf_mult2(1:3)</code></pre>
+<pre><code>## [1] 2 4 6</code></pre>
+<div id="nf_internalsclass" class="section level2">
+<h2><code>NF_internalsClass</code></h2>
+<p>An <code>nFunction</code> is an object of class <code>nFunction</code>, which inherits from <code>function</code>. It has a slot for an object of class <code>NF_internalsClass</code>, where all information needed for compilation and management is held. General accessors for this are <code>NFinternals</code> and <code>NFinternals&lt;-</code>.</p>
+<pre class="r"><code>class(nf_mult2)                   # See the class label.</code></pre>
+<pre><code>## [1] &quot;nFunction&quot;
+## attr(,&quot;package&quot;)
+## [1] &quot;nCompiler&quot;</code></pre>
+<pre class="r"><code>NFinternals(nf_mult2)             # See the NF_internalsClass object.</code></pre>
+<pre><code>## &lt;NF_InternalsClass&gt;
+##   Public:
+##     argSymTab: symbolTableClass, R6
+##     arguments: list
+##     aux: NULL
+##     clone: function (deep = FALSE) 
+##     code: {
+##     cpp_code_name: nFun_1_NFID_1
+##     externalCPPincludes: list
+##     externalHincludes: list
+##     getFunction: function () 
+##     initialize: function (fun, name, argTypes = list(), refArgs = list(), returnType = NULL, 
+##     isMethod: FALSE
+##     needed_nFunctions: list
+##     RcppPacket: NULL
+##     returnSym: symbolBasic, symbolBase, R6
+##     Rwrapper: NULL
+##     self: NF_InternalsClass, R6
+##     template: function (x) 
+##     uniqueName: nFun_1
+##     where: environment</code></pre>
+<pre class="r"><code>NFinternals(nf_mult2)$argSymTab   # See the symbol table for function arguments.</code></pre>
+<pre><code>## symbol table:
+## x: double sizes = (NA), nDim = 1</code></pre>
+<pre class="r"><code>class(NFinternals(nf_mult2)$argSymTab)            # See that there is a class symbolTable.</code></pre>
+<pre><code>## [1] &quot;symbolTableClass&quot; &quot;R6&quot;</code></pre>
+<pre class="r"><code>NFinternals(nf_mult2)$argSymTab$getSymbolNames()  # Glimpse how a symbolTable can be used.</code></pre>
+<pre><code>## [1] &quot;x&quot;</code></pre>
+<pre class="r"><code>NFinternals(nf_mult2)$argSymTab$getSymbol(&quot;x&quot;)    # Glimpse how symbol objects are accessed.</code></pre>
+<pre><code>## x: double sizes = (NA), nDim = 1</code></pre>
+<pre class="r"><code>NFinternals(nf_mult2)$returnSym   # See there is a symbol for the return type.</code></pre>
+<pre><code>## : double sizes = (NA), nDim = 1</code></pre>
+</div>
+<div id="internals-from-compilation" class="section level2">
+<h2>Internals from compilation</h2>
+<p>Next we compile the <code>nFunction</code> and look at resulting objects.</p>
+<pre class="r"><code>Cnf_mult2 &lt;- nCompile(nf_mult2)
+Cnf_mult2(1:3) # The compiled version works.</code></pre>
+<pre><code>## [1] 2 4 6</code></pre>
+</div>
+<div id="the-rcpppacket" class="section level2">
+<h2>The <code>RcppPacket</code></h2>
+<p>A list with the text output components to be written to files and handed to a C++ compiler via Rcpp is called the <code>RcppPacket</code>. After compilation, it is populated in the <code>NFinternals</code> of the <code>nFunction</code>. The actual generated code can be found by default in <code>tempdir()</code>.</p>
+<pre class="r"><code>NFinternals(nf_mult2)$RcppPacket</code></pre>
+<pre><code>## $cppContent
+##  [1] &quot;#ifndef __nFun_1_NFID_1_CPP&quot;                                                                                                                                         
+##  [2] &quot;#define __nFun_1_NFID_1_CPP&quot;                                                                                                                                         
+##  [3] &quot;#include &lt;RcppEigen.h&gt;\n#include &lt;Rcpp.h&gt;\n\n\n#ifndef BEGIN_RCPP\n#define BEGIN_RCPP\n#endif\n\n#ifndef END_RCPP\n#define END_RCPP\n#endif\n\nusing namespace Rcpp;&quot;
+##  [4] &quot;#ifndef R_NO_REMAP&quot;                                                                                                                                                  
+##  [5] &quot;#define R_NO_REMAP&quot;                                                                                                                                                  
+##  [6] &quot;#endif&quot;                                                                                                                                                              
+##  [7] &quot;#include &lt;nCompiler/nCompiler_Eigen.h&gt;&quot;                                                                                                                              
+##  [8] &quot;#include &lt;nCompiler/nCompiler_TBB.h&gt;&quot;                                                                                                                                
+##  [9] &quot;#include &lt;Rmath.h&gt;&quot;                                                                                                                                                  
+## [10] &quot;#include &lt;math.h&gt;&quot;                                                                                                                                                   
+## [11] &quot;#include &lt;iostream&gt;&quot;                                                                                                                                                 
+## [12] &quot;#include \&quot;nFun_1_NFID_1_c_.h\&quot;&quot;                                                                                                                                     
+## [13] &quot;using namespace Rcpp;&quot;                                                                                                                                               
+## [14] &quot;// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]&quot;                                                                                                                        
+## [15] &quot;// [[Rcpp::depends(RcppEigenAD)]]&quot;                                                                                                                                   
+## [16] &quot;// [[Rcpp::depends(RcppParallel)]]&quot;                                                                                                                                  
+## [17] &quot;// [[Rcpp::depends(nCompiler)]]&quot;                                                                                                                                     
+## [18] &quot;// [[Rcpp::depends(Rcereal)]]&quot;                                                                                                                                       
+## [19] &quot;&quot;                                                                                                                                                                    
+## [20] &quot;// [[Rcpp::export]]&quot;                                                                                                                                                 
+## [21] &quot;Eigen::Tensor&lt;double, 1&gt;  nFun_1_NFID_1 ( Eigen::Tensor&lt;double, 1&gt; x )  {&quot;                                                                                           
+## [22] &quot;Eigen::Tensor&lt;double, 1&gt; ans;&quot;                                                                                                                                       
+## [23] &quot;ans = 2.*x;&quot;                                                                                                                                                         
+## [24] &quot;return(ans);&quot;                                                                                                                                                        
+## [25] &quot;}&quot;                                                                                                                                                                   
+## [26] &quot;#endif&quot;                                                                                                                                                              
+## 
+## $hContent
+##  [1] &quot;#ifndef __nFun_1_NFID_1_H&quot;                                                                                                                                           
+##  [2] &quot;#define __nFun_1_NFID_1_H&quot;                                                                                                                                           
+##  [3] &quot;#include &lt;RcppEigen.h&gt;\n#include &lt;Rcpp.h&gt;\n\n\n#ifndef BEGIN_RCPP\n#define BEGIN_RCPP\n#endif\n\n#ifndef END_RCPP\n#define END_RCPP\n#endif\n\nusing namespace Rcpp;&quot;
+##  [4] &quot;#ifndef R_NO_REMAP&quot;                                                                                                                                                  
+##  [5] &quot;#define R_NO_REMAP&quot;                                                                                                                                                  
+##  [6] &quot;#endif&quot;                                                                                                                                                              
+##  [7] &quot;#include &lt;Rinternals.h&gt;&quot;                                                                                                                                             
+##  [8] &quot;#include &lt;nCompiler/nCompiler_Eigen.h&gt;&quot;                                                                                                                              
+##  [9] &quot;#include &lt;nCompiler/nCompiler_TBB.h&gt;&quot;                                                                                                                                
+## [10] &quot;&quot;                                                                                                                                                                    
+## [11] &quot;Eigen::Tensor&lt;double, 1&gt;  nFun_1_NFID_1 ( Eigen::Tensor&lt;double, 1&gt; x );&quot;                                                                                             
+## [12] &quot;#endif&quot;                                                                                                                                                              
+## 
+## $filebase
+## [1] &quot;nFun_1_NFID_1_c_&quot;</code></pre>
+</div>
+<div id="the-nfcompiler-and-cppdef-objects" class="section level2">
+<h2>The <code>NFcompiler</code> and <code>cppDef</code> objects</h2>
+<p>Next we look at objects used for all the processing to create the <code>RcppPacket</code> from the uncompiled <code>nFunction</code>. To do so, we interrupt compilation at an intermediate step. There is a moderately clearly defined set of compilation steps in the list <code>NFcompilerStages</code>.</p>
+<pre class="r"><code>nCompiler:::NFcompilerStages</code></pre>
+<pre><code>## $start
+## [1] 0
+## 
+## $setInputOutputTypes
+## [1] 1
+## 
+## $substituteMangledArgumentNames
+## [1] 2
+## 
+## $initializeCode
+## [1] 3
+## 
+## $initializeAuxiliaryEnvironment
+## [1] 4
+## 
+## $simpleTransformations
+## [1] 5
+## 
+## $simpleIntermediates
+## [1] 6
+## 
+## $labelAbstractTypes
+## [1] 7
+## 
+## $addInsertions
+## [1] 9
+## 
+## $setImplementation
+## [1] 10
+## 
+## $doImplementation
+## [1] 12
+## 
+## $addDebugging
+## [1] 13
+## 
+## $makeCppDef
+## [1] 14
+## 
+## $makeRcppPacket
+## [1] 15
+## 
+## $writeCpp
+## [1] 16
+## 
+## $compileCpp
+## [1] 17
+## 
+## $end
+## [1] 18</code></pre>
+<p>The control list argument used in compilation can set the end stage, which in some cases results in intermediate objects being returned for inspection and debugging. This is done through the lower-level functions <code>nCompile_nFunction</code> or <code>nCompile_nClass</code>. The user-facing function <code>nCompile</code> manages either or both of these for potentially multiple <code>nFunction</code> and/or <code>nClass</code> definitions in one call, whereas the lower-level functions handle one at a time.</p>
+<p>There are a set of classes for representing C++ content that are collectively called “cppDefs”. A good stage for stopping compilation is <code>makeCppDef</code>, which results in an object of class <code>NF_CompilerClass</code> that contains an object of class <code>cpp_nFunctionClass</code>, which is the cppDef class for nFunctions.</p>
+<pre class="r"><code>Cnf_compiler_object &lt;- nCompile_nFunction(nf_mult2, control = list(endStage = &#39;makeCppDef&#39;))
+class(Cnf_compiler_object)   # See the class name NF_CompilerClass.</code></pre>
+<pre><code>## [1] &quot;NF_CompilerClass&quot;        &quot;NFvirtual_CompilerClass&quot;
+## [3] &quot;R6&quot;</code></pre>
+<pre class="r"><code>ls(Cnf_compiler_object)      # See its contents.</code></pre>
+<pre><code>##  [1] &quot;auxEnv&quot;                   &quot;clone&quot;                   
+##  [3] &quot;code&quot;                     &quot;const&quot;                   
+##  [5] &quot;cppDef&quot;                   &quot;createCpp&quot;               
+##  [7] &quot;createCppInternal&quot;        &quot;initialize&quot;              
+##  [9] &quot;initialTypeInferenceDone&quot; &quot;name&quot;                    
+## [11] &quot;nameSubList&quot;              &quot;needed_nFunctions&quot;       
+## [13] &quot;newRcode&quot;                 &quot;NFinternals&quot;             
+## [15] &quot;origName&quot;                 &quot;origRcode&quot;               
+## [17] &quot;process&quot;                  &quot;returnSymbol&quot;            
+## [19] &quot;self&quot;                     &quot;setupSymbolTable&quot;        
+## [21] &quot;showCpp&quot;                  &quot;stageCompleted&quot;          
+## [23] &quot;super&quot;                    &quot;symbolTable&quot;</code></pre>
+<pre class="r"><code>Cnf_compiler_object$cppDef   # See the cppDef it contains</code></pre>
+<pre><code>## &lt;cpp_nFunctionClass&gt;
+##   Inherits from: &lt;cppFunctionClass&gt;
+##   Public:
+##     abstract: FALSE
+##     args: symbolTableClass, R6
+##     buildFunction: function (NF_Compiler, parentST = NULL) 
+##     classMethod: FALSE
+##     clone: function (deep = FALSE) 
+##     code: cppCodeBlockClass, R6
+##     commentsAbove: // [[Rcpp::export]]
+##     const: FALSE
+##     CPPincludes: list
+##     CPPpreamble: #include &lt;RcppEigen.h&gt;
+##     #include &lt;Rcpp.h&gt;
+##     
+##     
+##     #ifndef BEGIN ...
+##     CPPusings: using namespace Rcpp; // [[Rcpp::plugins(nCompiler_Eigen ...
+##     externC: NULL
+##     filename: 
+##     generate: function (declaration = FALSE, scopes = character(), ...) 
+##     getCPPincludes: function () 
+##     getCPPpreamble: function () 
+##     getCPPusings: function () 
+##     getDefs: function () 
+##     getHincludes: function () 
+##     getHpreamble: function () 
+##     Hincludes: list
+##     Hpreamble: #include &lt;RcppEigen.h&gt;
+##     #include &lt;Rcpp.h&gt;
+##     
+##     
+##     #ifndef BEGIN ...
+##     initialize: function (...) 
+##     initializerList: NULL
+##     name: nFun_1_NFID_1
+##     neededCppDefs: list
+##     NF_Compiler: NF_CompilerClass, NFvirtual_CompilerClass, R6
+##     returnType: cppVarFullClass, cppVarClass, R6
+##     self: cpp_nFunctionClass, cppFunctionClass, cppDefinitionClass, R6
+##     SEXPwrapper: NULL
+##     SEXPwrapperCname: 
+##     static: FALSE
+##     super: environment
+##     template: NULL
+##     virtual: FALSE</code></pre>
+<pre class="r"><code>Cnf_compiler_object$cppDef$generate()   # All cppDefs generate C++ code via generate()</code></pre>
+<pre><code>## [[1]]
+## [1] &quot;// [[Rcpp::export]]&quot;
+## 
+## [[2]]
+## [1] &quot;Eigen::Tensor&lt;double, 1&gt;  nFun_1_NFID_1 ( Eigen::Tensor&lt;double, 1&gt; x )  {&quot;
+## 
+## [[3]]
+## [1] &quot;Eigen::Tensor&lt;double, 1&gt; ans;&quot;
+## 
+## [[4]]
+## [[4]][[1]]
+## [1] &quot;ans = 2.*x;&quot;
+## 
+## 
+## [[5]]
+## [[5]][[1]]
+## [1] &quot;return(ans);&quot;
+## 
+## 
+## [[6]]
+## [1] &quot;}&quot;</code></pre>
+<pre class="r"><code># When compilation expands lines of code, they appear as nested lists, which writeCode collapses:
+writeCode(Cnf_compiler_object$cppDef$generate(declaration=FALSE)) # default to definitions, for .cpp file </code></pre>
+<pre><code>## // [[Rcpp::export]]
+## Eigen::Tensor&lt;double, 1&gt;  nFun_1_NFID_1 ( Eigen::Tensor&lt;double, 1&gt; x )  {
+## Eigen::Tensor&lt;double, 1&gt; ans;
+## ans = 2.*x;
+## return(ans);
+## }</code></pre>
+<pre class="r"><code>writeCode(Cnf_compiler_object$cppDef$generate(declaration=TRUE))  # declarations, for .h file</code></pre>
+<pre><code>## Eigen::Tensor&lt;double, 1&gt;  nFun_1_NFID_1 ( Eigen::Tensor&lt;double, 1&gt; x );</code></pre>
+</div>
+<div id="cppcodeblockclass-and-exprclass" class="section level2">
+<h2><code>cppCodeBlockClass</code> and <code>exprClass</code></h2>
+<p>The cppDef object contains a <code>cppCodeBlockClass</code>, which represents a block of code with additional information like a symbol table and type definitions (for <code>typeDef</code> statements in C++).</p>
+<p>The actual block of code is an <code>exprClass</code> object. <code>exprClass</code> objects are the building blocks at the heart of all code processing and transformation. They are R6 objects arranged as doubly-linked lists. Every node in the abstract syntax tree is represented by an <code>exprClass</code> object that has a list of its arguments (<code>exprClass</code> objects) and knows the <code>exprClass</code> object for which it is an argument as well as which argument it is. The <code>exprClass</code> definition has a <code>print</code> method to show the parse tree via indentation.</p>
+<p>Here is a tour</p>
+<pre class="r"><code>Cnf_compiler_object$cppDef$code # cppCodeBlockClass object</code></pre>
+<pre><code>## &lt;cppCodeBlockClass&gt;
+##   Public:
+##     clone: function (deep = FALSE) 
+##     code: exprClass, R6
+##     cppADCode: NULL
+##     generate: function (indent = &quot;&quot;, ...) 
+##     generatorSymTab: NULL
+##     initialize: function (...) 
+##     self: cppCodeBlockClass, R6
+##     skipBrackets: NULL
+##     symbolTable: symbolTableClass, R6
+##     typeDefs: list</code></pre>
+<pre class="r"><code>Cnf_compiler_object$cppDef$code$code          # See exprClass for the code of the function body.</code></pre>
+<pre><code>## {
+##   {
+##     &lt;-
+##       ans
+##       *
+##         2
+##         x
+##   }
+##   {
+##     return
+##       ans
+##   }
+## }</code></pre>
+<pre class="r"><code>class(Cnf_compiler_object$cppDef$code$code)   # See its class.</code></pre>
+<pre><code>## [1] &quot;exprClass&quot; &quot;R6&quot;</code></pre>
+<pre class="r"><code>ls(Cnf_compiler_object$cppDef$code$code)      # See its contents</code></pre>
+<pre><code>##  [1] &quot;args&quot;           &quot;caller&quot;         &quot;callerArgID&quot;    &quot;clone&quot;         
+##  [5] &quot;cppADCode&quot;      &quot;implementation&quot; &quot;initialize&quot;     &quot;insertions&quot;    
+##  [9] &quot;isAssign&quot;       &quot;isCall&quot;         &quot;isLiteral&quot;      &quot;isName&quot;        
+## [13] &quot;name&quot;           &quot;print&quot;          &quot;Rexpr&quot;          &quot;self&quot;          
+## [17] &quot;type&quot;</code></pre>
+<pre class="r"><code>codeStart &lt;- Cnf_compiler_object$cppDef$code$code # These are reference objects, so it is not a copy
+codeStart$args[[1]]$args[[1]]$args[[2]]       # Dig into the 2*x layer of the abstract syntax tree</code></pre>
+<pre><code>## *
+##   2
+##   x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]        # x is...</code></pre>
+<pre><code>## x</code></pre>
+<pre class="r"><code>class(codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]) #   an exprClass object</code></pre>
+<pre><code>## [1] &quot;exprClass&quot; &quot;R6&quot;</code></pre>
+<pre class="r"><code>ls(codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]])    #   with some contents</code></pre>
+<pre><code>##  [1] &quot;args&quot;           &quot;caller&quot;         &quot;callerArgID&quot;    &quot;clone&quot;         
+##  [5] &quot;cppADCode&quot;      &quot;implementation&quot; &quot;initialize&quot;     &quot;insertions&quot;    
+##  [9] &quot;isAssign&quot;       &quot;isCall&quot;         &quot;isLiteral&quot;      &quot;isName&quot;        
+## [13] &quot;name&quot;           &quot;print&quot;          &quot;Rexpr&quot;          &quot;self&quot;          
+## [17] &quot;type&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$name   #   whose name is &quot;x&quot;</code></pre>
+<pre><code>## [1] &quot;x&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$isName #   and is known to be a name, not a call or a literal</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$type   #   and has a numeric type label</code></pre>
+<pre><code>## x: double sizes = (NA), nDim = 1</code></pre>
+<pre class="r"><code>class(codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$type)  #    which is itself a symbol object</code></pre>
+<pre><code>## [1] &quot;symbolBasic&quot; &quot;symbolBase&quot;  &quot;R6&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$caller       #    and knows what is is called from</code></pre>
+<pre><code>## *
+##   2
+##   x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[2]]$callerArgID  #    and which argument it is </code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[1]]        # 2 is an exprClass object....</code></pre>
+<pre><code>## 2</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[1]]$name   #    whose name is the number 2</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[1]]$isLiteral  #    and is known to be a literal</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[1]]$type       #    with a numeric type label</code></pre>
+<pre><code>## NONAME: double sizes = (1), nDim = 0</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$args[[1]]$callerArgID #     and is the first argument to 2*x</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]               # 2*x is an exprClass object....</code></pre>
+<pre><code>## *
+##   2
+##   x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$name          #    whose name is &quot;*&quot;</code></pre>
+<pre><code>## [1] &quot;*&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$isCall        #    and is known to be  call</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$type          #    with a numeric type label</code></pre>
+<pre><code>## : double sizes = (NA), nDim = 1</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$caller        #    and is called from ans &lt;- 2*x</code></pre>
+<pre><code>## &lt;-
+##   ans
+##   *
+##     2
+##     x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$args[[2]]$callerArgID   #    and is the second argument of ans &lt;- 2*x</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]           # ans &lt;- 2*x is an exprClass object...</code></pre>
+<pre><code>## &lt;-
+##   ans
+##   *
+##     2
+##     x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$name      #      whose name is &quot;&lt;-&quot;</code></pre>
+<pre><code>## [1] &quot;&lt;-&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$isCall    #      and is a call</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$type      #      with a numeric type label</code></pre>
+<pre><code>## ans: double sizes = (NA), nDim = 1</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$caller        #  ans is called from &quot;{&quot;, whose arguments are lines of code</code></pre>
+<pre><code>## {
+##   &lt;-
+##     ans
+##     *
+##       2
+##       x
+## }</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]$callerArgID   #  ans is the first line of code of &quot;{&quot;}</code></pre>
+<pre><code>## [1] 1</code></pre>
+<pre class="r"><code>codeStart$args[[1]]            # A code block &quot;{...}&quot;, as in R, is like a function &quot;{&quot; with lines as arguments</code></pre>
+<pre><code>## {
+##   &lt;-
+##     ans
+##     *
+##       2
+##       x
+## }</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$name       </code></pre>
+<pre><code>## [1] &quot;{&quot;</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$isCall</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$type       # Unlike R, there is no return object from &quot;{&quot;</code></pre>
+<pre><code>## NULL</code></pre>
+<div id="parsing-and-deparsing-fromto-exprclass-with-nparse-and-ndeparse" class="section level3">
+<h3>Parsing and deparsing from/to <code>exprClass</code> with <code>nParse</code> and <code>nDeparse</code></h3>
+<p><code>exprClass</code> objects are made and can be unmade using <code>nDeparse</code> and <code>nDeparse</code>. These can convert to/from either an R code object or a character object.</p>
+<pre class="r"><code>nCompiler:::nParse(quote(ans &lt;- 2*x))</code></pre>
+<pre><code>## &lt;-
+##   ans
+##   *
+##     2
+##     x</code></pre>
+<pre class="r"><code>nCompiler:::nParse(&quot;ans &lt;- 2*x&quot;)</code></pre>
+<pre><code>## &lt;-
+##   ans
+##   *
+##     2
+##     x</code></pre>
+<pre class="r"><code>codeStart$args[[1]]$args[[1]]</code></pre>
+<pre><code>## &lt;-
+##   ans
+##   *
+##     2
+##     x</code></pre>
+<pre class="r"><code>nCompiler:::nDeparse(codeStart$args[[1]]$args[[1]])</code></pre>
+<pre><code>## [1] &quot;ans &lt;- 2 * x&quot;</code></pre>
+<pre class="r"><code>nCompiler:::nDeparse(codeStart$args[[1]]$args[[1]], toR = TRUE)</code></pre>
+<pre><code>## ans &lt;- 2 * x</code></pre>
+</div>
+</div>
+</div>
+<div id="nclass-internals" class="section level1">
+<h1><code>nClass</code> internals</h1>
+<p>Next we take a quick tour of <code>nClass</code> internals. The <code>Cpublic</code> methods of <code>nClass</code> objects are <code>nFunction</code> objects. (Currently there are no <code>Rprivate</code> or <code>Rpublic</code> fields, but someday there should be.)</p>
+<p>We will use the same example as introduced previously.</p>
+<pre class="r"><code>add_class &lt;- nClass(
+  classname = &quot;add_class&quot;,
+  Rpublic = list(               # only available in R
+     Rnumber = NULL,
+     add_Rnumber = function(v) {
+       v + Rnumber
+     }
+     # initialize method not supported through compilation yet.
+  ),
+  Cpublic = list(                # available in R or compiled version
+    # field (aka member data) -- must have a type declaration
+    Cnumber = &#39;numericScalar&#39;, 
+    # method (aka member function) -- written as an nFunction
+    add_Cnumber = nFunction(
+      fun = function(v = numericVector()) {
+        ans &lt;- v + Cnumber
+        return(ans)
+      },
+      returnType = &#39;numericVector&#39;)
+  )
+)</code></pre>
+<div id="nc_compilerclass-ncinternals-and-cppdef-for-nclass" class="section level2">
+<h2><code>NC_CompilerClass</code>, <code>NCinternals</code>, and <code>cppDef</code> for <code>nClass</code></h2>
+<p>Again we stop compilation after creating a “cppDef”, this time of class <code>cpp_nClassClass</code>, which represents C++ for a class definition. The name comes from being the R class representing a C++ nClass, hence the “nClassClass” label.</p>
+<pre class="r"><code>Cnc_compiler_object &lt;- nCompile_nClass(add_class, control = list(endStage = &#39;makeCppDef&#39;))
+Cnc_compiler_object                               # See the NC_CompilerClass label.</code></pre>
+<pre><code>## &lt;NC_CompilerClass&gt;
+##   Inherits from: &lt;NCvirtual_CompilerClass&gt;
+##   Public:
+##     clone: function (deep = FALSE) 
+##     cppDef: cpp_nClassClass, cpp_nClassBaseClass, cppClassDef, cppNamespaceClass, cppDefinitionClass, R6
+##     createCpp: function (control = list(), sourceObj) 
+##     createCppMethods: function (control, sourceObj) 
+##     initialize: function (NC = NULL, className = NULL) 
+##     makeSymbolTables: function () 
+##     name: add_class
+##     NCgenerator: R6ClassGenerator
+##     neededTypes: list
+##     NFcompilers: list
+##     process: function (control = list(), sourceObj) 
+##     self: NC_CompilerClass, NCvirtual_CompilerClass, R6
+##     setupMethodSymbolTables: function () 
+##     super: environment
+##     symbolTable: symbolTableClass, R6</code></pre>
+<pre class="r"><code>Cnc_compiler_object$cppDef                        # See the cpp_nClassClass object.</code></pre>
+<pre><code>## &lt;cpp_nClassClass&gt;
+##   Inherits from: &lt;cpp_nClassBaseClass&gt;
+##   Public:
+##     addADargumentTransferFunction: function (funName, independentVarNames) 
+##     addADclassContent: function () 
+##     addADclassContentOneFun: function (funName) 
+##     addADmethodMacros: function (funName, args) 
+##     addADtapingFunction: function (funName, independentVarNames, dependentVarNames) 
+##     addFunction: function (newName, newFun) 
+##     addGenericInterface: function () 
+##     addInheritance: function (newI) 
+##     addSerialization: function () 
+##     addStaticInitClass: function () 
+##     addSym: function (newName, newObj) 
+##     addTypeTemplateFunction: function (funName) 
+##     buildAll: function (where = where) 
+##     buildFunctionDefs: function () 
+##     buildParallelClassDefs: function () 
+##     buildSEXPgenerator: function () 
+##     built: FALSE
+##     checkADargument: function (funName, argSym, argName = NULL, returnType = FALSE) 
+##     clone: function (deep = FALSE) 
+##     Compiler: NC_CompilerClass, NCvirtual_CompilerClass, R6
+##     cppFunctionDefs: list
+##     CPPincludes: list
+##     CPPpreamble: #include &lt;RcppEigen.h&gt;
+##     #include &lt;Rcpp.h&gt;
+##     
+##     
+##     #ifndef BEGIN ...
+##     CPPusings: using namespace Rcpp; // [[Rcpp::plugins(nCompiler_Eigen ...
+##     Cwritten: FALSE
+##     filename: 
+##     functionNamesForInterface: add_Cnumber
+##     generate: function (declaration = FALSE, ...) 
+##     getCPPincludes: function () 
+##     getCPPpreamble: function () 
+##     getCPPusings: function () 
+##     getDefs: function () 
+##     getHincludes: function () 
+##     getHpreamble: function () 
+##     Hincludes: list
+##     Hpreamble: #include &lt;RcppEigen.h&gt;
+##     #include &lt;Rcpp.h&gt;
+##     
+##     
+##     #ifndef BEGIN ...
+##     inheritance: list
+##     initialize: function (Compiler, isNode = FALSE, debugCpp = FALSE, fromModel = FALSE, 
+##     loaded: FALSE
+##     makeCppNames: function () 
+##     name: add_class
+##     neededCppDefs: list
+##     process_Compiler: function (InputCompiler, debugCpp = FALSE, fromModel = FALSE) 
+##     process_NC_Compiler: function (Compiler, debugCpp = FALSE, fromModel = FALSE) 
+##     self: cpp_nClassClass, cpp_nClassBaseClass, cppClassDef, cppNamespaceClass, cppDefinitionClass, R6
+##     SEXPgeneratorDef: cppFunctionClass, cppDefinitionClass, R6
+##     super: environment
+##     symbolTable: symbolTableClass, R6
+##     useGenerator: TRUE
+##     variableNamesForInterface: Cnumber</code></pre>
+<pre class="r"><code>names(Cnc_compiler_object$cppDef$cppFunctionDefs) # It contains a list of cppDefs for its methods</code></pre>
+<pre><code>## [1] &quot;add_Cnumber&quot;</code></pre>
+<pre class="r"><code>Cnc_compiler_object$cppDef$cppFunctionDefs$add_Cnumber$code$code   # See the exprClass for its add_Cnumber method</code></pre>
+<pre><code>## {
+##   {
+##     &lt;-
+##       ans
+##       +
+##         v
+##         Cnumber
+##   }
+##   {
+##     return
+##       ans
+##   }
+## }</code></pre>
+<pre class="r"><code>writeCode(Cnc_compiler_object$cppDef$cppFunctionDefs$add_Cnumber$generate())  # See the C++ code for it.</code></pre>
+<pre><code>## Eigen::Tensor&lt;double, 1&gt;  nFun_2_NFID_2 ( Eigen::Tensor&lt;double, 1&gt; v )  {
+## Eigen::Tensor&lt;double, 1&gt; ans;
+## ans = v+Cnumber;
+## return(ans);
+## }</code></pre>
+<pre class="r"><code># It also contains a method for instantiation of new objects:
+writeCode(Cnc_compiler_object$cppDef$SEXPgeneratorDef$generate())</code></pre>
+<pre><code>## // [[Rcpp::export]]
+## SEXP  new_add_class (  )  {
+## return(loadedObjectEnv(new_nCompiler_object&lt;add_class&gt;()));
+## }</code></pre>
+<pre class="r"><code>Cnc_compiler_object$cppDef$symbolTable            # It also contains a symbol table for C++ member data...</code></pre>
+<pre><code>## symbol table:
+## double Cnumber</code></pre>
+<pre class="r"><code>Cnc_compiler_object$cppDef$symbolTable$getSymbol(&quot;Cnumber&quot;)  # which in this case is Cnumber.</code></pre>
+<pre><code>## double Cnumber</code></pre>
+<pre class="r"><code># It also contains a list of any cppDefs needed that are not part of the class itself
+names(Cnc_compiler_object$cppDef$neededCppDefs)   </code></pre>
+<pre><code>## [1] &quot;macroCall&quot;</code></pre>
+<pre class="r"><code>writeCode(Cnc_compiler_object$cppDef$neededCppDefs$macroCall$generate()) # This macro invokes the generic C++ interface.</code></pre>
+<pre><code>## NCOMPILER_INTERFACE(
+## add_class,
+## NCOMPILER_FIELDS(
+## field(&quot;Cnumber&quot;, &amp;add_class::Cnumber)
+## ),
+## NCOMPILER_METHODS(
+## method(&quot;add_Cnumber&quot;, &amp;add_class::nFun_2_NFID_2)
+## )
+## )</code></pre>
+<p>We defer looking at the NCinternals until after completing compilation, which makes it more interesting.</p>
+</div>
+<div id="full-and-generic-interfaces" class="section level2">
+<h2>Full and generic interfaces</h2>
+<p>When a full interface is requested, a new R6 class definition is dynamically generated and returned. We can use and inspect that like any R6 class.</p>
+<pre class="r"><code># We can also make a generic interface (or get it out of the full interface).
+Cadd_class_full &lt;- nCompile(add_class, interfaces = c(&quot;full&quot;))
+obj &lt;- Cadd_class_full$new()
+class(Cadd_class_full)</code></pre>
+<pre><code>## [1] &quot;R6ClassGenerator&quot;</code></pre>
+<pre class="r"><code>obj</code></pre>
+<pre><code>## &lt;add_class_compiled&gt;
+##   Inherits from: &lt;nClass&gt;
+##   Public:
+##     add_Cnumber: function (v = numericVector()) 
+##     add_Rnumber: function (v) 
+##     clone: function (deep = FALSE) 
+##     Cnumber: active binding
+##     initialize: function (CppObj) 
+##     private: environment
+##     Rnumber: NULL
+##     self: add_class_compiled, nClass, R6
+##     super: environment
+##   Private:
+##     CppObj: loadedObjectEnv</code></pre>
+<pre class="r"><code>obj$add_Rnumber # A regular R method</code></pre>
+<pre><code>## function (v) 
+## {
+##     v + Rnumber
+## }
+## &lt;environment: 0x7f99d8012a58&gt;</code></pre>
+<pre class="r"><code>obj$add_Cnumber # A method that calls C++</code></pre>
+<pre><code>## function (v = numericVector()) 
+## nCompiler:::call_method(nCompiler:::getExtptr(private$CppObj), 
+##     &quot;add_Cnumber&quot;, list(v))
+## &lt;environment: 0x7f99d8012a58&gt;</code></pre>
+</div>
+<div id="ncinternals" class="section level2">
+<h2><code>NCinternals</code></h2>
+<p>Now that we have compiled the <code>nClass</code>, its internals are more interesting. Similar to <code>NFinternals</code>, we have a utility <code>NCinternals</code> to access or modify the internal information of the class used for compilation and other needs.</p>
+<pre class="r"><code>NCinternals(add_class)</code></pre>
+<pre><code>## &lt;NC_InternalsClass&gt;
+##   Public:
+##     clone: function (deep = FALSE) 
+##     enableDerivs: list
+##     fieldNames: Cnumber
+##     initialize: function (Cpublic, isOnlyC = FALSE, enableDerivs = NULL) 
+##     isOnlyC: FALSE
+##     methodNames: add_Cnumber
+##     RcppPacket: list
+##     self: NC_InternalsClass, R6
+##     symbolTable: symbolTableClass, R6</code></pre>
+<pre class="r"><code>lapply(NCinternals(add_class)$RcppPacket, writeLines)</code></pre>
+<pre><code>## #ifndef __add_class_CPP
+## #define __add_class_CPP
+## #include &lt;RcppEigen.h&gt;
+## #include &lt;Rcpp.h&gt;
+## 
+## 
+## #ifndef BEGIN_RCPP
+## #define BEGIN_RCPP
+## #endif
+## 
+## #ifndef END_RCPP
+## #define END_RCPP
+## #endif
+## 
+## using namespace Rcpp;
+## #ifndef R_NO_REMAP
+## #define R_NO_REMAP
+## #endif
+## #include &lt;iostream&gt;
+## #include &lt;nCompiler/nCompiler_Eigen.h&gt;
+## #include &lt;nCompiler/nCompiler_TBB.h&gt;
+## #include &lt;Rmath.h&gt;
+## #include &lt;math.h&gt;
+## #include &quot;add_class.h&quot;
+## using namespace Rcpp;
+## // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+## // [[Rcpp::depends(RcppEigenAD)]]
+## // [[Rcpp::depends(RcppParallel)]]
+## // [[Rcpp::depends(nCompiler)]]
+## // [[Rcpp::depends(Rcereal)]]
+## 
+## Eigen::Tensor&lt;double, 1&gt;  add_class::nFun_2_NFID_2 ( Eigen::Tensor&lt;double, 1&gt; v )  {
+## Eigen::Tensor&lt;double, 1&gt; ans;
+## ans = v+Cnumber;
+## return(ans);
+## }
+## 
+## // [[Rcpp::export]]
+## SEXP  new_add_class (  )  {
+## return(loadedObjectEnv(new_nCompiler_object&lt;add_class&gt;()));
+## }
+## 
+## NCOMPILER_INTERFACE(
+## add_class,
+## NCOMPILER_FIELDS(
+## field(&quot;Cnumber&quot;, &amp;add_class::Cnumber)
+## ),
+## NCOMPILER_METHODS(
+## method(&quot;add_Cnumber&quot;, &amp;add_class::nFun_2_NFID_2)
+## )
+## )
+## #endif
+## #ifndef __add_class_H
+## #define __add_class_H
+## #include &lt;RcppEigen.h&gt;
+## #include &lt;Rcpp.h&gt;
+## 
+## 
+## #ifndef BEGIN_RCPP
+## #define BEGIN_RCPP
+## #endif
+## 
+## #ifndef END_RCPP
+## #define END_RCPP
+## #endif
+## 
+## using namespace Rcpp;
+## #ifndef R_NO_REMAP
+## #define R_NO_REMAP
+## #endif
+## #include &lt;Rinternals.h&gt;
+## #include &lt;nCompiler/nCompiler_Eigen.h&gt;
+## #include &lt;nCompiler/nCompiler_TBB.h&gt;
+## #include &lt;nCompiler/nCompiler_class_factory.h&gt;
+## #include &lt;nCompiler/nCompiler_class_interface.h&gt;
+## 
+## class add_class : public genericInterfaceC&lt;add_class&gt; {
+## public:
+##   double Cnumber;
+## Eigen::Tensor&lt;double, 1&gt;  nFun_2_NFID_2 ( Eigen::Tensor&lt;double, 1&gt; v );
+## };
+## 
+## SEXP  new_add_class (  );
+## 
+## 
+## #endif
+## add_class</code></pre>
+<pre><code>## $cppContent
+## NULL
+## 
+## $hContent
+## NULL
+## 
+## $filebase
+## NULL</code></pre>
+<pre class="r"><code>NCinternals(add_class)$symbolTable</code></pre>
+<pre><code>## symbol table:
+## Cnumber: double sizes = (1), nDim = 0</code></pre>
+<div id="the-external-pointer-is-stored-in-a-loadedobjectenv." class="section level3">
+<h3>The external pointer is stored in a <code>loadedObjectEnv</code>.</h3>
+<p>Inside of an <code>nClass</code> object must be a R external pointer to a C++ object. It is helpful to store that in its own object to provide an extra layer of management of it. That layer should be fast and light, so it is an environment with an S3 class tag of <code>loadedObjectEnv</code>. The unexported function <code>getExtptr</code> accesses the actual external pointer object but doesn’t seem to be working in this document, perhaps due to namespace issues.</p>
+<pre class="r"><code>obj$private$CppObj</code></pre>
+<pre><code>## &lt;environment: 0x7f99affdbf20&gt;
+## attr(,&quot;class&quot;)
+## [1] &quot;loadedObjectEnv&quot;</code></pre>
+<pre class="r"><code>is.environment(obj$private$CppObj)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>obj$private$CppObj$extptr</code></pre>
+<pre><code>## &lt;pointer: 0x7f99e9ddb760&gt;</code></pre>
+</div>
+</div>
+<div id="generic-interface" class="section level2">
+<h2>Generic interface</h2>
+<p>When we get a generic interface, it is just a <code>loadedObjectEnv</code>.</p>
+<pre class="r"><code>Cadd_class_gen &lt;- nCompile(add_class, interfaces = c(&quot;generic&quot;))
+# To access fields and methods in an object from the generic interface, 
+# use value() and method()
+gen_obj &lt;- Cadd_class_gen() 
+class(gen_obj)</code></pre>
+<pre><code>## [1] &quot;loadedObjectEnv&quot;</code></pre>
+<p>Functions <code>value</code>, <code>value&lt;-</code> and <code>method</code> use the external pointer and the C++ generic interface system that enables named access of member data and methods.</p>
+<pre class="r"><code>gen_obj$extptr</code></pre>
+<pre><code>## &lt;pointer: 0x7f9a09dd7a80&gt;</code></pre>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

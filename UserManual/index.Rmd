@@ -16,6 +16,8 @@ For many features, the effort so far has been to create a skeleton of core funct
 
 ### [nFunctions and nClasses](nFunctions_and_nClasses.html)
 
+#####      [Developer: nFunction and nClass internals](nFunctions_and_nClasses_internals.html)
+
 ### [Types and argument passing](types.html)
 
 ### [What can be compiled](what_can_be_compiled.html)

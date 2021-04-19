@@ -57,8 +57,8 @@ nCompile_nClass <- function(NC,
   if(get_nOption('automaticDerivatives'))
     cppDef$addADclassContent()
   cppDef$addGenericInterface()
-  if(NFcompilerMaybeStop('writeCpp', controlFull))
-    return(cppDef)
+  if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
+    return(NC_Compiler)
   filebase <- controlFull$filename
   
   if(is.null(filebase))
