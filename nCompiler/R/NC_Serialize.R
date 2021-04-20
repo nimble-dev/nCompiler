@@ -3,16 +3,21 @@
 # Internal function used by save_nClass() which calls the provided serialization
 # function, then instantiates and returns a new loadedObjectEnv with the
 # contents
-serialize_nComp_object <- function(obj, nComp_serialize_fn) {
+serialize_nComp_object <- function(obj, serializer) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")
   if(is.null(getExtptr(obj))) {
     warning("No nComp serialization to be done.")
     return(obj)
   } else {
-    newObj <- new.loadedObjectEnv(extptr = obj$extptr, serialized = obj$serialized)
-    loadedObjectEnv_serialized(newObj) <- nComp_serialize_fn(getExtptr(newObj))
-    setExtptr(newObj, NULL)
+    if(missing(serializer)) {
+      serializer <- parent.env(obj)$nComp_serialize_
+      if(!is.function(serializer))
+        stop("Function for serializing not found not found.")
+    }
+    serial_data <- serializer(getExtptr(obj))
+    
+    newObj <- new.serialObjectEnv(serial_data, get_DLLenv(obj))
     return(newObj)
   }
 }

@@ -53,7 +53,7 @@ nCompile_nClass <- function(NC,
   ##
   cppDef$buildSEXPgenerator()
   if(get_nOption('serialize'))
-    cppDef$addSerialization()
+    cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
   if(get_nOption('automaticDerivatives'))
     cppDef$addADclassContent()
   cppDef$addGenericInterface()
@@ -80,6 +80,13 @@ nCompile_nClass <- function(NC,
   if(NFcompilerMaybeStop('compileCpp', controlFull)) {
     return(newCobjFun)
   }
+  
+  newDLLenv <- make_DLLenv()
+  newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
+  if(length(newCobjFun) != 1) 
+    warning("There may be a problem with number of returned functions in nCompile_nClass.")
+  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
+  
   interface <- match.arg(interface)
   if(interface == "generic")
     return(newCobjFun)
@@ -90,3 +97,4 @@ nCompile_nClass <- function(NC,
   ## interface is "both"
   return(list(full = fullInterface, generic = newCobjFun))
 }
+

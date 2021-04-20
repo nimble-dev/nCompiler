@@ -390,7 +390,7 @@ div.tocify {
 <h1>Setup</h1>
 <p>Prior to any compilation steps below, one needs to run the following and then restart R.</p>
 <pre class="r"><code>setup_nCompLocal()</code></pre>
-<p>This creates a installs a tiny helper package, <code>nCompLocal</code>, that needs to be built locally. We have tried to devise a system to do this on-the-fly and not require re-starting R, but it has issues. Steps involving package building and loading are sometimes taken over for special handling in RStudio, which might be part of the issues. For now, run the above and restart R.</p>
+<p>This creates a installs a tiny helper package, <code>nCompLocal</code>, that needs to be built locally. We have tried to devise a system to do this on-the-fly and not require re-starting R. It should be feasible, but currently it has fiddly issues. Steps involving package building and loading are sometimes taken over for special handling in RStudio, which might be part of the issues. For now, the setup procedure is to run the above and restart R.</p>
 </div>
 <div id="nfunction" class="section level1">
 <h1><code>nFunction</code></h1>
@@ -408,6 +408,8 @@ nf_mult2 &lt;- nFunction(
 )
 nf_mult2(1:3)</code></pre>
 <pre><code>## [1] 2 4 6</code></pre>
+<div id="compiling-an-nfunction" class="section level2">
+<h2>Compiling an <code>nFunction</code></h2>
 <p>This can be compiled by:</p>
 <pre class="r"><code># See above on setup step of running setup_nCompLocal() and restarting R.
 Cnf_mult2 &lt;- nCompile(nf_mult2)
@@ -422,6 +424,7 @@ Cnf_mult2(1:3) # The compiled version works.</code></pre>
     return(ans)
   }
 )</code></pre>
+</div>
 </div>
 <div id="nclass" class="section level1">
 <h1><code>nClass</code></h1>
@@ -448,19 +451,22 @@ Cnf_mult2(1:3) # The compiled version works.</code></pre>
   )
 )</code></pre>
 <p>This can be used uncompiled for debugging purposes. Then it can be compiled.</p>
-<p>For objects of the compiled class, there are two kinds of interfaces, generic and full. In a generic interface, there isn’t an R6 object for every compiled object. This saves a lot of R processing and memory in large collections of compiled objects. In a full interface, there is an R6 object for every compiled object. The full interface is better for nice use of a small number of objects.</p>
+<div id="compiling-an-nclass-with-full-andor-generic-interfaces." class="section level2">
+<h2>Compiling an <code>nClass</code> with full and/or generic interfaces.</h2>
+<p>For objects of the compiled class, there are two kinds of interfaces, generic and full.</p>
+<ul>
+<li>In a generic interface, there isn’t an R6 object for every compiled object. This saves a lot of R processing and memory in large collections of compiled objects.</li>
+<li>In a full interface, there is an R6 object for every compiled object. The full interface is better for nice use of a small number of objects.</li>
+</ul>
 <p>Let’s compile <code>add_class</code>:</p>
-<pre class="r"><code># Something about the non-standard evaluation of knitr seems
-# to cause a problem with nCompile in this context.  The slightly
-# lower-level nCompile_nClass works.
-Cadd_class &lt;- nCompile(add_class)
+<pre class="r"><code>Cadd_class &lt;- nCompile(add_class)
 # By default we get a full interface, which
 # behaves as one would expect for a class generator.
 obj &lt;- Cadd_class$new()
-obj$Cnumber &lt;- 3  ## This automatically stores into the C++ object
+obj$Cnumber &lt;- 3  ## This automatically stores Cnumber in the C++ object...
 obj$Cnumber</code></pre>
 <pre><code>## [1] 3</code></pre>
-<pre class="r"><code>obj$add_Cnumber(2:4) ## and automatically calls the C++ method.</code></pre>
+<pre class="r"><code>obj$add_Cnumber(2:4) ## and automatically calls the C++ method add_Cnumber.</code></pre>
 <pre><code>## [1] 5 6 7</code></pre>
 <pre class="r"><code># We can also make a generic interface (or get it out of the full interface).
 Cadd_class_gen &lt;- nCompile(add_class, interfaces = &quot;generic&quot;)
@@ -472,6 +478,7 @@ value(obj, &#39;Cnumber&#39;)</code></pre>
 <pre><code>## [1] 5</code></pre>
 <pre class="r"><code>method(obj, &#39;add_Cnumber&#39;)(2:4)</code></pre>
 <pre><code>## [1] 7 8 9</code></pre>
+</div>
 </div>
 <div id="other-capabilities" class="section level1">
 <h1>Other capabilities</h1>

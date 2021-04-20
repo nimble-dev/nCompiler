@@ -39,6 +39,7 @@ cppMacroCallClass <- R6::R6Class(
   portable = FALSE,
   inherit = cppDefinitionClass,
   public = list(
+    name = character(),
     hContent = "",
     cppContent = "",
     initialize = function(...) {
@@ -196,145 +197,6 @@ addGenericInterface_impl <- function(self) {
   invisible(NULL)
 }
 
-addSerialization_impl <- function(self) {
-
-  ## This function adds a C++ method like:
-  ##   template<class Archive>
-  ##   void _SERIALIZE_(Archive & archive) {
-  ##   archive(cereal::base_class<genericInterfaceC<fooC> >(this),
-  ##           CEREAL_NVP(x),
-  ##           CEREAL_NVP(y));
-  ## }
-
-  ## construct the central call to archive:
-  namesToArchive <- self$symbolTable$getSymbolNames()
-  codeText <- paste0(
-    "archive(\ncereal::base_class<genericInterfaceC<",self$name,"> >(this),\n",
-    paste0("CEREAL_NVP(", namesToArchive, ")", collapse = ",\n"),
-    "\n);\n"
-  )
-  allCodeList <-
-    list(
-      substitute(cppLiteral(CODETEXT),
-                 list(CODETEXT = as.character(codeText)))
-    )
-  allCode <- putCodeLinesInBrackets(allCodeList)
-  allCode <- nParse(allCode)
-
-  ## construct a cppFunctionClass
-  serialize_method <- cppFunctionClass$new(
-    name = "_SERIALIZE_"
-  , template = cppTemplateDeclaration("Archive")
-  , args = symbolTableClass$new(
-    symbols = list(
-      archive = cppVarClass$new(
-        name = "archive",
-        baseType = "Archive",
-        ref = TRUE
-      )
-    )
-  )
-, code = cppCodeBlockClass$new(
-  code = allCode,
-  symbolTable = symbolTableClass$new(),
-  skipBrackets = TRUE
-)
-, returnType = nCompiler:::cppVoid()
-)
-  self$cppFunctionDefs[["_SERIALIZE_"]] <- serialize_method
-  
-  ## The next code creates lines to force the needed specializations of the
-  ## template methods above.  These lines will look like:
-  ## template void fooC::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
-  ## template void fooC::_SERIALIZE_(cereal::BinaryInputArchive &archive);
-  cereal_template_instantiations <-
-    cppMacroCallClass$new(
-      hContent =
-        paste0("template void ",
-               self$name,
-               "::_SERIALIZE_(cereal::",
-               c("BinaryOutputArchive", "BinaryInputArchive"),
-               " &archive);",
-               collapse = "\n")
-    )
-  self$neededCppDefs[["cereal_template_instantiations"]] <-
-    cereal_template_instantiations
-
-  ## A line like:
-  ## CEREAL_REGISTER_TYPE(fooC)
-  cereal_register_type_macro <-
-    cppMacroCallClass$new(
-      cppContent = paste0("CEREAL_REGISTER_TYPE(", self$name, ")\n")
-    )
-  self$neededCppDefs[["cereal_register_type_macro"]] <- cereal_register_type_macro
-
-  ## Lines to force dynamic initialization
-  cereal_dynamic_init <-
-    cppMacroCallClass$new(
-      cppContent = paste0("CEREAL_REGISTER_DYNAMIC_INIT(", self$name, ")\n"),
-      hContent = paste0("CEREAL_FORCE_DYNAMIC_INIT(", self$name, ")\n")
-    )
-  self$neededCppDefs[["cereal_dynamic_init"]] <- cereal_dynamic_init
-
-  self$Hpreamble <- c(self$Hpreamble, "#define _INCLUDE_SERIALIZE_AND_DESERIALIZE_FUNCTIONS\n")
-  
-  cleanname <- Rname2CppName(self$name)
-  # if (!identical(cleanname, self$name)) 
-  #   warning("When serializing nClass ", self$name, " name for serialization ",
-  #           " functions was changed to ", cleanname)
-  serialize_deserialize <-
-    cppMacroCallClass$new(
-      cppContent = paste0("//[[Rcpp::export]]\n",
-                          "RawVector nComp_serialize_", cleanname,
-                          "(SEXP Sfrom) {\n",
-                          "genericInterfaceBaseC *baseobj =\n",
-                          "reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sfrom))->get_ptr());\n",
-                          "std::unique_ptr<genericInterfaceBaseC> shared_baseobj(baseobj);\n",
-                          "std::stringstream ss;\n",
-                          "{\n",
-                          "cereal::BinaryOutputArchive oarchive(ss);\n",
-                          "oarchive(shared_baseobj);\n",
-                          "}\n",
-                          "shared_baseobj.release();\n",
-                          "ss.seekg(0, ss.end);\n",
-                          "RawVector retval(ss.tellg());\n",
-                          "ss.seekg(0, ss.beg);\n",
-                          "ss.read(reinterpret_cast<char*>(&retval[0]), retval.size());\n",
-                          "return retval;\n",
-                          "}\n",
-                          "\n",
-                          "//[[Rcpp::export]]\n",
-                          "SEXP nComp_deserialize_", cleanname,
-                          "(RawVector src) {\n",
-                          "  std::stringstream ss;\n",
-                          "  ss.write(reinterpret_cast<char*>(&src[0]), src.size());\n",
-                          "  ss.seekg(0, ss.beg);\n",
-                          "  std::unique_ptr<genericInterfaceBaseC> shared_baseobj;\n",
-                          "  {\n",
-                          "    cereal::BinaryInputArchive iarchive(ss);\n",
-                          "    iarchive(shared_baseobj);\n",
-                          "  }\n",
-                          paste0("std::shared_ptr<", self$name,
-                                 "> shared(dynamic_cast<", self$name, "*>(shared_baseobj.release()));\n"),
-                          paste0("SEXP Sans = PROTECT(return_nCompiler_object<", self$name ,">(shared));\n"),
-                          "UNPROTECT(1);\n",
-                          "return(Sans);\n",
-                          "}\n"
-                          )
-    )
-  self$neededCppDefs[["cereal_serialize_deserialize"]] <- serialize_deserialize
-  
-  ## Was this a test or a way to avoid a possibly empty class?
-  dummy <-
-    cppMacroCallClass$new(
-      cppContent = paste0("int dummy;\n"),
-      hContent = paste0("extern int dummy;\n")
-    )
-  self$neededCppDefs[["dummy"]] <- dummy
-  invisible(NULL)
-  
-}
-
 cppClassClass <- R6::R6Class(
   'cppClassDef',
   inherit = cppNamespaceClass,
@@ -441,8 +303,8 @@ cppClassClass <- R6::R6Class(
     addGenericInterface = function() {
       addGenericInterface_impl(self)
     },
-    addSerialization = function() {
-      addSerialization_impl(self)
+    addSerialization = function(include_DLL_funs = FALSE) {
+      addSerialization_impl(self, include_DLL_funs)
     }
   )
 )

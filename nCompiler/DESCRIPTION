@@ -35,6 +35,7 @@ Collate:
     cppDefs_core.R
     cppDefs_nFunction.R
     cppDefs_nClass.R
+    cppDefs_serialize.R
     cppDefs_TBB.R
     cppDefs_utils.R
     cppDefs_variables.R

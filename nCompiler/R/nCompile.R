@@ -47,6 +47,12 @@ nCompile <- function(...,
       RcppPacket_list[[i]] <- NCinternals(unitResults[[i]])$RcppPacket
     }
   }
+
+  if(get_nOption('serialize')) {
+    serial_cppDef <- make_serialization_cppDef()
+    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(serial_cppDef, "serialization_")
+  }
+  
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
   cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
@@ -61,10 +67,14 @@ nCompile <- function(...,
                               env = resultEnv,
                               returnList = returnList)
 
+  newDLLenv <- make_DLLenv()
+  ans <- setup_DLLenv(ans, newDLLenv)
+  
   setup_nClass_interface <- function(interfaceType,
                                      NC,
                                      ans,
                                      env) {
+    ans <- wrapNCgenerator_for_DLLenv(ans, newDLLenv)
     if(interfaceType == "generic")
       return(ans)
     fullInterface <- try(build_compiled_nClass(NC,

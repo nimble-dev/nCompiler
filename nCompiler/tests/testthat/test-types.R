@@ -252,7 +252,7 @@ test_that("list arguments handled correctly",
   expect_identical(vSym$nDim, 0)
 })
 
-test_that("symbolNC works",
+test_that("symbolTBD works",
 {
   nCompiler:::resetLabelFunctionCreators()
   nc1 <- nClass(

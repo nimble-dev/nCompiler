@@ -54,6 +54,10 @@ class genericInterfaceBaseC {
     std::cout<<"Error: you should be in a derived genericInterfaceC class for call_method"<<std::endl;
     return R_NilValue;
   }
+  virtual SEXP make_deserialized_return_SEXP() {
+    std::cout<<"In  base class make_deserialized_return_SEXP"<<std::endl;
+    return R_NilValue;
+  }
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {}
   virtual ~genericInterfaceBaseC() {

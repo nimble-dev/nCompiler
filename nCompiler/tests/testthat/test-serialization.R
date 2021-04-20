@@ -31,15 +31,25 @@ test_that("Basic serialization works",
                   returnType = 'numericMatrix')
               )
             )
+            set_nOption("showCompilerOutput", TRUE)
+            set_nOption("pause_after_writing_files", TRUE)
             ans <- try(nCompile_nClass(nc1, interface = "generic"))
-            expect_true(is.function(ans[[1]])) ## compilation succeeded
-            obj <- ans[[1]]()
+            expect_true(is.function(ans)) ## compilation succeeded
+            obj <- ans()
             expect_true(nCompiler:::is.loadedObjectEnv(obj))
             expect_equal(method(obj, "Cfoo")(1.2), 2.2)
             value(obj, "Cv") <- 1.23
             expect_equal(value(obj, "Cv"), 1.23)
             value(obj, "Cx") <- 3
             expect_equal(value(obj, "Cx"), 3L)
+            
+            test <- parent.env(obj)$nComp_serialize_( nCompiler:::getExtptr(obj) )
+            untest <- parent.env(obj)$nComp_deserialize_(test)
+            
+            debug(nCompiler:::serialize_nComp_object)
+            test2 <- nCompiler:::serialize_nComp_object(obj)
+            
+            nCompiler:::get_value(untest, "Cv")
             
             serialized <- 
               nCompiler:::serialize_nComp_object(obj, nComp_serialize_nc1)
