@@ -1,3 +1,5 @@
+# not working (flag to omit from testing)
+# This was working after Ben drafted it all and is recently broken (April 2021) by Perry's changes.
 context("Test writePackage and buildPackage")
 
 test_that("writePackage and buildPackage work for nFunction", 
@@ -95,7 +97,6 @@ test_that("writePackage and buildPackage work for nClass with full interface",
   expect_equal(obj$cp1(2), 3)
 })
 
-
 test_that("Create package with multiple objects", 
           {
             nCompiler:::nFunctionIDMaker(reset = TRUE)
@@ -127,6 +128,7 @@ test_that("Create package with multiple objects",
                          dir = tempdir(),
                          package.name = "fooPackageMultiples",
                          control = list(export = TRUE))
+            # This fails. 4/20/21.
             ans <- buildPackage("fooPackageMultiples",
                                 dir = tempdir())
             
@@ -164,7 +166,6 @@ test_that("Write package with member data", {
   expect_equal(x, 1:5)
   expect_equal(y, data.frame(y = 1:10, x = -1:-10))
   expect_equal(name, "test")
-  
 })
 
 test_that("Export flag works", 

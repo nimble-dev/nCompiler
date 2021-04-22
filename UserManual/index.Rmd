@@ -26,6 +26,8 @@ For many features, the effort so far has been to create a skeleton of core funct
 
 ### [Saving and loading](saving_loading.html)
 
+#####      [Developer: saving and loading internals](saving_loading_internals.html)
+
 ### [Using nCompiler code in packages](use_in_packages.html)
 
 ### [Automatic differentiation](automatic_differentiation.html)

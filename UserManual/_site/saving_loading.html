@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
 
 <title>Saving and Loading</title>
 
+<script src="site_libs/header-attrs-2.5/header-attrs.js"></script>
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/cerulean.min.css" rel="stylesheet" />
@@ -25,6 +26,17 @@
 <script src="site_libs/navigation-1.1/tabsets.js"></script>
 <link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
 <script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="site_libs/anchor-sections-1.0/anchor-sections.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
@@ -86,7 +98,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -235,6 +246,7 @@ $(document).ready(function () {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -247,48 +259,9 @@ $(document).ready(function () {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
-
-<script>
-$(document).ready(function ()  {
-
-    // move toc-ignore selectors from section div to header
-    $('div.section.toc-ignore')
-        .removeClass('toc-ignore')
-        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
-
-    // establish options
-    var options = {
-      selectors: "h1,h2,h3",
-      theme: "bootstrap3",
-      context: '.toc-content',
-      hashGenerator: function (text) {
-        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
-      },
-      ignoreSelector: ".toc-ignore",
-      scrollTo: 0
-    };
-    options.showAndHide = false;
-    options.smoothScroll = true;
-
-    // tocify
-    var toc = $("#TOC").tocify(options).data("toc-tocify");
-});
-</script>
 
 <style type="text/css">
 
@@ -302,6 +275,12 @@ $(document).ready(function ()  {
 }
 }
 
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
 
 .toc-content {
   padding-left: 30px;
@@ -413,10 +392,11 @@ div.tocify {
 <div id="example" class="section level3">
 <h3>Example:</h3>
 <p>Here is an example. Note that the system is sufficiently incomplete that it must be turned “on” via an option.</p>
-<pre class="r"><code>library(nCompiler)
-nc1 &lt;- nClass(
+<pre class="r"><code>library(nCompiler)</code></pre>
+<pre><code>## For nCompiler: Run &#39;setup_nCompLocal()&#39; once per installation and re-start R.</code></pre>
+<pre class="r"><code>nc1 &lt;- nClass(
   Cpublic = list(
-    Cv = &#39;numericScalar&#39;,
+    Cv = &#39;RcppIntegerVector&#39;,
     Cx = &#39;integerScalar&#39;,
     Cfoo = nFunction(
       fun = function(x) {
@@ -426,32 +406,56 @@ nc1 &lt;- nClass(
       returnType = &#39;numericScalar&#39;)
   )
 )
-set_nOption(&#39;serialize&#39;, TRUE)</code></pre>
+set_nOption(&#39;serialize&#39;, TRUE)              # Turn on serialization</code></pre>
 <pre><code>## [1] TRUE</code></pre>
-<pre class="r"><code>nc1_generator &lt;- nCompile_nClass(nc1, interface = &quot;generic&quot;)
-nc1_obj &lt;- nc1_generator[[1]]()
-method(nc1_obj, &quot;Cfoo&quot;)(1.2) # The method works.</code></pre>
+<pre class="r"><code>nc1_generator &lt;- nCompile_nClass(nc1, interface = &quot;generic&quot;) # no support yet for full interface
+nc1_obj &lt;- nc1_generator()                  # Make an object.
+method(nc1_obj, &quot;Cfoo&quot;)(1.2)                # Confirm the method in called in C++ correctly.</code></pre>
 <pre><code>## [1] 2.2</code></pre>
-<pre class="r"><code>value(nc1_obj, &quot;Cv&quot;) &lt;- 1.23 # Access to fields works.
+<pre class="r"><code>value(nc1_obj, &quot;Cv&quot;) &lt;- c(123, 234)         # Confirm  member data in C++ is used correctly.
 value(nc1_obj, &quot;Cv&quot;) </code></pre>
-<pre><code>## [1] 1.23</code></pre>
+<pre><code>## [1] 123 234</code></pre>
 <pre class="r"><code>serialized &lt;- serialize_nComp_object(nc1_obj) #serialize! 
-# look at the gooey internals to see that they are a binary
-## representation of nc1_obj.
-serialized$serialized</code></pre>
-<pre><code>##  [1] 01 00 00 80 08 00 00 00 00 00 00 00 6e 43 6c 61 73 73 5f 31 01 ae 47
-## [24] e1 7a 14 ae f3 3f 03 00 7a a7</code></pre>
-<pre class="r"><code>## One could save and load the serialized content and then
-## reconstitute the object by deserialization:
+# look at the result to see it is binary (class &quot;raw&quot; in R).
+serialized$serial</code></pre>
+<pre><code>##  [1] 01 00 00 80 08 00 00 00 00 00 00 00 6e 43 6c 61 73 73 5f 31 01 27 00 00 00
+## [26] 00 00 00 00 58 0a 00 00 00 03 00 04 00 04 00 03 05 00 00 00 00 05 55 54 46
+## [51] 2d 38 00 00 00 0d 00 00 00 02 00 00 00 7b 00 00 00 ea e0 e4 80 ec</code></pre>
+<pre class="r"><code>## One can reconstitute the object by deserialization:
 nc1_restored_obj &lt;- deserialize_nComp_object(serialized) #deserialize!
-value(nc1_restored_obj, &quot;Cv&quot;) # The value was restored.</code></pre>
-<pre><code>## [1] 1.23</code></pre>
-<pre class="r"><code>method(nc1_restored_obj, &quot;Cfoo&quot;)(1.2) # The method works</code></pre>
+value(nc1_restored_obj, &quot;Cv&quot;)               # The value was restored.</code></pre>
+<pre><code>## [1] 123 234</code></pre>
+<pre class="r"><code>method(nc1_restored_obj, &quot;Cfoo&quot;)(1.2)       # The method works</code></pre>
 <pre><code>## [1] 2.2</code></pre>
+</div>
+<div id="saving-and-loading-between-sessions" class="section level3">
+<h3>Saving and loading between sessions</h3>
+<p>nClasses are designed to be saved and loaded between sessions. nCompiler takes advantage of R’s packaging tools to implement this.</p>
+<p>Not all of the following code is executed as part of this page. It worked when first developed. At the time of building this doc, the saving works but the loading does not. Moreover, there is a need to revise how saving works.</p>
+<pre class="r"><code>obj &lt;- nc1_generator()
+value(obj, &quot;Cx&quot;) &lt;- 10
+value(obj, &quot;Cv&quot;) &lt;- 0.1
+
+# This creates a package and installs it.
+# Package source code is in tempdir()
+save_nClass(ncObj = obj, file = &quot;~/savedObj.rds&quot;, ncDef = nc1,
+            dir = tempdir())</code></pre>
+<pre><code>## Loading required package: Rcpp</code></pre>
+<p>The following code should run even in a new session, loading all info about <code>obj</code> from what was saved above. It does not currently work.</p>
+<pre class="re"><code>### Start the 2nd session here...
+library(nCompiler)
+set_nOption(&quot;serialize&quot;, TRUE)
+
+deserialized &lt;- read_nClass(file = &quot;~/savedObj.rds&quot;) ## Must be the same dir as above, which won&#39;t be true in a new R session.</code></pre>
+<p>Did we get our info back?</p>
+<pre class="r"><code># This previously worked but does not work.
+value(deserialized, &quot;Cx&quot;)
+method(deserialized, &quot;Cfoo&quot;)(100)</code></pre>
 </div>
 <div id="future-plans" class="section level3">
 <h3>Future plans:</h3>
 <ul>
+<li>Get saving/loading to work with full nClass interfaces</li>
 <li>support for use of <code>cereal</code> with more kinds of C++ member data.</li>
 <li>create some coordination of R’s serialization of environments that hold external pointers to nCompiler’s C++ objects and <code>cereal</code> serialization of the C++ objects.</li>
 <li>create reasonable behavior for saving and loading from either full or generic interfaces.</li>
@@ -470,13 +474,56 @@ value(nc1_restored_obj, &quot;Cv&quot;) # The value was restored.</code></pre>
 
 // add bootstrap table styles to pandoc tables
 function bootstrapStylePandocTables() {
-  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
 }
 $(document).ready(function () {
   bootstrapStylePandocTables();
 });
 
 
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
 </script>
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

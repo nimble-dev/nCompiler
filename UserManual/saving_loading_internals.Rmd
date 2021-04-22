@@ -1,5 +1,5 @@
 ---
-title: "Saving and Loading"
+title: "Saving and Loading Internals"
 output: html_document
 ---
 
@@ -7,8 +7,144 @@ output: html_document
 knitr::opts_chunk$set(eval = TRUE)
 ```
 
-This document gives a quick tour of how serialization works and what remains to build.
+This document shows some of how serialization works and what remains to build.
 
-### Example:
+### Example
 
 Here is the previous example.
+```{r}
+library(nCompiler)
+nc1 <- nClass(
+  Cpublic = list(
+    Cv = 'RcppIntegerVector',
+    Cx = 'integerScalar',
+    Cfoo = nFunction(
+      fun = function(x) {
+        return(x+1)
+      },
+      argTypes = list(x = 'numericScalar'),
+      returnType = 'numericScalar')
+  )
+)
+set_nOption('serialize', TRUE)              # Turn on serialization
+nc1_generator <- nCompile(nc1, interfaces = "generic") # no support yet for full interface
+nc1_obj <- nc1_generator()                  # Make an object.
+method(nc1_obj, "Cfoo")(1.2)                # Confirm the method in called in C++ correctly.
+value(nc1_obj, "Cv") <- c(123, 234)         # Confirm  member data in C++ is used correctly.
+value(nc1_obj, "Cv") 
+```
+
+How is the external pointer to C++ stored and used?
+
+```{r}
+# The external pointer (externalptr) to a C++ object is held in an
+# environment with the class attributed "loadedObjectEnv"
+class(nc1_obj)
+# The extptr is here:
+nc1_obj$extptr
+class(nc1_obj$extptr)
+# Generic way to access the extptr from nCompiler code
+nCompiler:::getExtptr(nc1_obj)
+# In a full interface, the extptr is in an R6 object and is used via active bindings.
+nc1_full <- nCompile(nc1, interfaces = "full")
+nc1_full$new()$private$CppObj
+# loadedObjectEnv objects are created from new.loadedObjectEnv, which is called 
+# from code-generated C++.
+new.loadedObjectEnv
+# The parent environment of loadedObjectenv objects is set up to 
+# have serialization and deseriatlization functions.  It has class attribute
+# nc_DLL_env.  It is the same environment for all objects of the same nClass 
+# or others from the same DLL.
+# Thus its contents should be information relevant for any objects from that DLL.
+parent.env(nc1_obj)
+ls(parent.env(nc1_obj)) # Those are serialization and deserialization functions for this DLL.
+# How these things are stored and navigated is subject to evolution.
+# The serialized version is stored in an environment with class label "serialObjectEnv"
+serialized <- serialize_nComp_object(nc1_obj)
+class(serialized)
+# It has a single element:
+serialized$serial
+class(serialized$serial)
+# It has the same parent environment as the loadedObjectEnv
+parent.env(serialized)
+```
+
+What does serialization look like in C++?
+
+```{r}
+# The additional code for serialization using the cereal library
+# is quite small.
+lapply(NCinternals(nc1)$RcppPacket, writeCode)
+# One can see the pieces relevant to serialization easily.
+# These work with some permanent (not generated) C++ code
+# in nCompiler.
+```
+
+# Serializing nested objects
+
+One `nClass` can contain another `nClass`, which is implemented by pointer. The `cereal` library used by `nCompiler` successfully manages these through serialization and deserialization. Here is an example
+
+```{r}
+nc1 <- nClass(
+  classname = "nc1",
+  Cpublic = list(
+    x = 'numericScalar'
+  )
+)
+
+nc2 <- nClass(
+  classname = "nc2",
+  Cpublic = list(
+    myNc1 = 'nc1'
+  )
+)
+
+set_nOption('serialize', TRUE)
+
+comp <- nCompile(nc1, nc2,
+                 interfaces = list(nc1 = "generic", nc2 = "generic"))
+# Serialization currently works from the loadedObjectEnv that holds the externalptr,
+# so this example uses generic interface because it is the loadedObjectEnv.
+
+nc1a <- comp$nc1()    # Make an nc1 and test it
+value(nc1a, 'x')
+value(nc1a, 'x') <- 2
+value(nc1a, 'x')
+
+nc2a <- comp$nc2()             # Make an nc2 and test it with myNc1 pointing to nc1a
+value(nc2a, 'myNc1') <- nc1a
+value(value(nc2a, 'myNc1'), 'x')
+ref_to_nc1a  <- value(nc2a, 'myNc1')
+value(ref_to_nc1a, 'x')
+
+serialized <- serialize_nComp_object(nc2a) # Serialize nc2a, expecting nc1a to be included
+serialized$serial
+
+nc2a_copy <- deserialize_nComp_object(serialized) # Deserialize, see that nc1a was included
+value(value(nc2a_copy, 'myNc1'), 'x')
+value(value(nc2a_copy, 'myNc1'), 'x') <- 3       # Modify the new one.
+value(value(nc2a_copy, 'myNc1'), 'x')
+value(value(nc2a, 'myNc1'), 'x')                 # See that it is not the original one.
+```
+
+Here are some ideas for further development of serialization in `nCompiler`:
+
+- This needs to work in tandem with generating package code from nClasses and nFunctions. 
+
+    - We have this drafted in `save_nClass` and `load_nClass`, but those need improvement.
+    - I think placing loadedObjectEnv with a parent environment that holds DLL-level functions (a recent change) does not work from a generated package.
+
+- We want something like `nSave(nc1_object, nc2_object, file)` to work in situation where either object has one or more full or generic interfaces from R, or no interface objects, and or one object points to the other, or both point to each other.  For example:
+
+    - Say `nc1_object` points to `nc2_object`.
+    - Say we have `R1` and `R2` that are full interfaces to `nc1_object` and `nc2_object`, respectively. 
+    - We want to serialize `R1` and `R2` from R.
+    - That needs to serialize `nc1_object` and `nc2_object` so they will be deserialized correctly.
+    - Serialization of `R2` should not make a separate serialization of `nc1_object` from the one nested in serialization of `R1`, even though both are initiated from R.
+    - Deserialization should ensure that `R2` points to the `nc2_object` also pointed to by `nc1_object`.
+    - Lots of variants on these scenarios could be imagined.
+
+- This seems to be a problem of coordinating two serialization systems: R's and `cereal`'s.
+
+- The R function `serialize` has a `refhook` argument that could be useful.
+

@@ -33,59 +33,56 @@ nc1 <- nClass(
       returnType = 'numericScalar')
   )
 )
-set_nOption('serialize', TRUE)
-nc1_generator <- nCompile_nClass(nc1, interface = "generic")
-nc1_obj <- nc1_generator[[1]]()
-method(nc1_obj, "Cfoo")(1.2) # The method works.
-value(nc1_obj, "Cv") <- c(123, 234) # Access to fields works.
+set_nOption('serialize', TRUE)              # Turn on serialization
+nc1_generator <- nCompile(nc1, interfaces = "generic") # no support yet for full interface
+nc1_obj <- nc1_generator()                  # Make an object.
+method(nc1_obj, "Cfoo")(1.2)                # Confirm the method in called in C++ correctly.
+value(nc1_obj, "Cv") <- c(123, 234)         # Confirm  member data in C++ is used correctly.
 value(nc1_obj, "Cv") 
-serialized <- serialize_nComp_object(nc1_obj, ) #serialize! 
-# look at the gooey internals to see that they are a binary
-## representation of nc1_obj.
-serialized$serialized
-## One could save and load the serialized content and then
-## reconstitute the object by deserialization:
-nc1_restored_obj <- deserialize_nComp_object(serialized, nComp_deserialize) #deserialize!
-value(nc1_restored_obj, "Cv") # The value was restored.
-method(nc1_restored_obj, "Cfoo")(1.2) # The method works
+serialized <- serialize_nComp_object(nc1_obj) #serialize! 
+# look at the result to see it is binary (class "raw" in R).
+serialized$serial
+## One can reconstitute the object by deserialization:
+nc1_restored_obj <- deserialize_nComp_object(serialized) #deserialize!
+value(nc1_restored_obj, "Cv")               # The value was restored.
+method(nc1_restored_obj, "Cfoo")(1.2)       # The method works
 ```
 ### Saving and loading between sessions
 
-nClasses can be saved and loaded between sessions. This parameterization and
-its particular behavior is far from final.
+nClasses are designed to be saved and loaded between sessions.  nCompiler takes advantage of R's packaging tools 
+ to implement this.
+
+Not all of the following code is executed as part of this page.  It worked when first developed.  At the time of building this doc, the saving works but the loading does not.  Moreover, there is a need to revise how saving works.
 
 ```{r}
-
-obj <- nc1_generator[[1]]()
+obj <- nc1_generator()
 value(obj, "Cx") <- 10
 value(obj, "Cv") <- 0.1
 
-save_nClass(ncObj = obj, ncDef = nc1, serializeFn = nComp_serialize,
-            file = "~/savedObj.rds", package.name = "savedObjPkg", 
+# This creates a package and installs it.
+# Package source code is in tempdir()
+save_nClass(ncObj = obj, file = "~/savedObj.rds", ncDef = nc1,
             dir = tempdir())
 ```
 
-The following code runs even in a new session, loading all info about `obj` from
-what was saved in the 
+The following code should run even in a new session, loading all info about `obj` from
+what was saved above.  It does not currently work.
 
-```{r}
+```{re eval = FALSE}
 ### Start the 2nd session here...
 library(nCompiler)
 set_nOption("serialize", TRUE)
 
-deserialized <- read_nClass(file = "~/savedObj.rds", 
-                            package.name = "savedObjPkg", 
-                            dir = tempdir())
+deserialized <- read_nClass(file = "~/savedObj.rds") ## Must be the same dir as above, which won't be true in a new R session.
 ```
 
 Did we get our info back?
 
-```{r}
+```{r eval = FALSE}
+# This previously worked but does not work.
 value(deserialized, "Cx")
 method(deserialized, "Cfoo")(100)
 ```
-
-
 
 ### Future plans:
 
@@ -94,3 +91,4 @@ method(deserialized, "Cfoo")(100)
 - create some coordination of R's serialization of environments that hold external pointers to nCompiler's C++ objects and `cereal` serialization of the C++ objects. 
 - create reasonable behavior for saving and loading from either full or generic interfaces.
 - manage serialization/deserialization from multiple DLLs.
+

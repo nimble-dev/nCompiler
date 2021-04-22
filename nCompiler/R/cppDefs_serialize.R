@@ -159,7 +159,7 @@ addSerialization_impl <- function(self,
   ## Was this a test or a way to avoid a possibly empty class?
   dummy <-
     cppMacroCallClass$new(
-      cppContent = paste0("int dummy;\n"),
+      cppContent = paste0("#ifndef __dummy__\n#define __dummy__\n int dummy;\n#endif"),
       hContent = paste0("extern int dummy;\n")
     )
   self$neededCppDefs[["dummy"]] <- dummy

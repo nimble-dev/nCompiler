@@ -102,8 +102,9 @@ nCompile <- function(...,
   ## names(units) corresponding to cpp_names.
   if(is.list(ans)) {
     newNames <- names(ans)
+    SEXPgen_names <- paste0("new_", cpp_names)
     for(i in seq_along(units)) {
-      iRes <- which(cpp_names[i] == names(ans))
+      iRes <- which(SEXPgen_names[i] == names(ans))
       if(length(iRes) != 1) {
         warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
         return(ans)

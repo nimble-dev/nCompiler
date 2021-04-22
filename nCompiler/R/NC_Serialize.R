@@ -3,6 +3,15 @@
 # Internal function used by save_nClass() which calls the provided serialization
 # function, then instantiates and returns a new loadedObjectEnv with the
 # contents
+
+get_serialize_fun <- function(obj) {
+  parent.env(obj)$nComp_serialize_
+}
+
+get_deserialize_fun <- function(obj) {
+  parent.env(obj)$nComp_deserialize_
+}
+
 serialize_nComp_object <- function(obj, serializer) {
   if(!is.loadedObjectEnv(obj))
     stop("obj must be a loadedObjectEnv.")
@@ -11,7 +20,7 @@ serialize_nComp_object <- function(obj, serializer) {
     return(obj)
   } else {
     if(missing(serializer)) {
-      serializer <- parent.env(obj)$nComp_serialize_
+      serializer <-get_serialize_fun(obj)
       if(!is.function(serializer))
         stop("Function for serializing not found not found.")
     }
@@ -24,21 +33,21 @@ serialize_nComp_object <- function(obj, serializer) {
 
 # Internal function used by read_nClass() which calls the provided
 # deserialization function and applies it to a loadedObjectEnv
-deserialize_nComp_object <- function(obj, nComp_deserialize_fn) {
-  if(!is.loadedObjectEnv(obj))
-    stop("obj must be a loadedObjectEnv.")
-  if(!(class(loadedObjectEnv_serialized(obj))[1] == "raw"))
-    stop("serialized content must have class 'raw'")
-  newXptr <- nComp_deserialize_fn(loadedObjectEnv_serialized(obj))
-  setExtptr(obj, newXptr)
-  ## Could be a little dangerous to clear the serialized data,
-  ## but in a typical use case it would still be saved.
-  loadedObjectEnv_serialized(obj) <- NULL
-  obj
+deserialize_nComp_object <- function(obj, deserializer) {
+  if(!is.serialObjectEnv(obj))
+    stop("obj must be a serialObjectEnv.")
+  if(!(class(obj$serial) == "raw"))
+      stop("serialized content must have class 'raw'")
+  if(missing(deserializer)) {
+    deserializer <- get_deserialize_fun(obj)
+    if(!is.function(deserializer))
+      stop("Function for serializing not found not found.")
+  }
+  newXptr <- deserializer(obj$serial)
+  newObj <- new.loadedObjectEnv(newXptr)
+  parent.env(newObj) <- parent.env(obj)
+  newObj
 }
-
-
-
 
 #' @name save_nClass
 #' @title Save an instance of an nClass object across sessions
@@ -141,24 +150,22 @@ save_nClass <- function(ncObj,
     else classname <- ncDef$classname
   }
   
-  if (createPackage) {
-    serialize_fn <- get(paste0("nComp_serialize_", 
-                              Rname2CppName(classname)))
-  } else {
-    serialize_fn <- utils::getFromNamespace(
-      paste0("nComp_serialize_", Rname2CppName(classname)), 
-      package.name
-    )
-  }
+  ## if (createPackage) {
+  ##   serialize_fn <- get_serialize_fun(ncObj)
+  ## } else {
+  ##   serialize_fn <- utils::getFromNamespace(
+  ##     "nComp_serialize_" 
+  ##     package.name
+  ##   )
+  ## }
   
   if (is.loadedObjectEnv(ncObj)) {
-    serialized <- serialize_nComp_object(ncObj, serialize_fn)
+    serialized <- serialize_nComp_object(ncObj)
     listToSerialize <- list(CppObj = serialized$serialized, 
                             constructedPackage = TRUE,
                             classname = classname,
                             package.name = package.name)
     saveRDS(listToSerialize, file)
-    
   } else if (isNC(ncObj)) {
     serialized <- serialize_nComp_object(ncObj$private$CppObj, serialize_fn)
     listToSerialize <- list(full = ncObj, 
