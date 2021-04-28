@@ -156,9 +156,10 @@ sourceCppEnv$system <- function(...) {
 sourceCpp_nCompiler <- function(file,
                                 cacheDir,
                                 ...) {
-  if(!requireLocalDLLpackage()) {
-    stop("Unable to load or create nCompLocal.")
-  }
+  if(isTRUE(get_nOption("use_nCompLocal")))
+    if(!requireLocalDLLpackage()) {
+      stop("Unable to load or create nCompLocal.")
+    }
     ## In the future, this function can store "exported"
     ## in the nFunction somewhere if it is needed later.
     ## For now it just calls Rcpp::sourceCpp

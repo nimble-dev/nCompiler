@@ -126,7 +126,10 @@ cppNamespaceClass <- R6::R6Class(
 ## The finalizer is the finalizer assigned to the object when the external pointer is made
 buildSEXPgenerator_impl <- function(self) {
   self$Hincludes <- c(self$Hincludes,
-                      nCompilerIncludeFile("nCompiler_class_factory.h"))
+                      nCompilerIncludeFile("nCompiler_class_factory.h")
+                     ,if(!isTRUE(get_nOption("use_nCompLocal"))) 
+                       nCompilerIncludeFile("loadedObjectEnv.h") 
+                      else NULL)
   ## The C++ function loadedObjectEnv simply calls new.loadedObjectEnv in R
   returnLine <-  paste0("return(loadedObjectEnv(new_nCompiler_object<",
                         self$name,
@@ -151,6 +154,27 @@ buildSEXPgenerator_impl <- function(self) {
   invisible(NULL)
 }
 
+make_loadedObjectEnv_cppDef <- function() {
+  LOEfunDef <-
+    cppMacroCallClass$new(
+      cppContent = paste0("#ifndef _ONTHEFLY_LOADEDOBJECTENV\n",
+                          "#define _ONTHEFLY_LOADEDOBJECTENV\n",
+                          "SEXP loadedObjectEnv(SEXP Xptr) {\n",
+                          "Rcpp::Environment nc(\"package:nCompiler\");\n",
+                          "Rcpp::Function newLOE = nc[\"new.loadedObjectEnv\"];\n",
+                          "return newLOE(Xptr);\n",
+                          "}\n",
+                          "#endif\n"),
+      name = "loadedObjectEnv"
+    )
+  LOEfunDef
+}
+
+addLoadedObjectEnv_impl <- function(self) {
+  LOEfunDef <- make_loadedObjectEnv_cppDef()
+  self$neededCppDefs[["loadedObjectEnv"]] <- LOEfunDef
+}
+  
 addGenericInterface_impl <- function(self) {
   name <- self$name
   self$addInheritance(paste0("genericInterfaceC<",
@@ -305,6 +329,9 @@ cppClassClass <- R6::R6Class(
     },
     addSerialization = function(include_DLL_funs = FALSE) {
       addSerialization_impl(self, include_DLL_funs)
+    },
+    addLoadedObjectEnv = function() {
+      addLoadedObjectEnv_impl(self)
     }
   )
 )

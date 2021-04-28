@@ -478,10 +478,11 @@ buildPackage <- function(package.name,
       package.dir = file.path(dir, package.name), 
       roclets = c("rd")
   )
-  
-  if(!nCompiler:::requireLocalDLLpackage())
-    stop("There was a problem building nCompLocal.")
-  pkg_libs_entry <- nCompiler:::get_nCompLocal_PGK_LIBS_entry()
+
+  if(isTRUE(get_nOption("use_nCompLocal")))
+    if(!nCompiler:::requireLocalDLLpackage())
+      stop("There was a problem building nCompLocal.")
+  pkg_libs_entry <- nCompiler:::get_nCompLocal_PKG_LIBS_entry()
   staticLibLoc <- system.file('staticLib', package = 'nCompLocal')
   Sys.setenv("PKG_CXXFLAGS"="-std=c++11 -Wno-invalid-partial-specialization")
   Sys.setenv("PKG_LIBS"=pkg_libs_entry)

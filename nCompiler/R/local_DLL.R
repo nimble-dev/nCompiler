@@ -114,7 +114,7 @@ cleanupLocalDLLpackage <- function(dir = '.') {
 #' and is passed to, the \code{lib} argument of \link{install.packages}.
 #' @param source.dir directory where nCompLocal source is located.
 #' 
-#' @details This function is used internally by This function is called internally from \cite{\link{buildLocalDLLpackage}}.
+#' @details This function is called internally from \cite{\link{buildLocalDLLpackage}}.
 #' See there for explanation of the local DLL.
 #' 
 #' @seealso \cite{\link{buildLocalDLLpackage}}, \cite{\link{createLocalDLLpackage}}  
@@ -270,7 +270,9 @@ requireLocalDLLpackage <- function(lib, buildIfMissing = TRUE) {
 # This plugin is invoked by "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]" C++ source code that is compiled via Rcpp::sourceCpp.
 # The Rcpp plugin system allows packages to modify environment variables used as C++ compiler flags.
 # This function is also called by buildPackage
-get_nCompLocal_PGK_LIBS_entry <- function() {
+get_nCompLocal_PKG_LIBS_entry <- function() {
+  if(!isTRUE(get_nOption("use_nCompLocal")))
+    return("")
   loc <- system.file(file.path('staticLib'), package = 'nCompLocal')
   ans <- paste0("-L \"", loc, "\" -lnCompLocal")
   ans

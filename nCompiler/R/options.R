@@ -8,8 +8,9 @@ updateDefaults <- function(defaults, controls) {
 
 .nOptions <- as.environment(
   list(
-    check_nFunction = TRUE,  ## check syntax of nFunction fun
+    check_nFunction = TRUE,  ## check syntax of nFunction fun  
     showCompilerOutput = FALSE,
+    use_nCompLocal = FALSE,
     debugSizeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
     automaticDerivatives = FALSE,# if TRUE, include automatic differentiation code in generated C++

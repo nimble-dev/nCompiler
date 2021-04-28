@@ -3,25 +3,26 @@
 
 #include "shared_ptr_holder.h"
 #include "nCompiler_class_factory.h"
+#include "loadedObjectEnv.h"
 
 namespace Rcpp {
 namespace traits {
-template <typename T>
-class Exporter< std::shared_ptr< T > > {
-public:
-  std::shared_ptr<T> sp_;
-  Exporter(SEXP Sx) {
-    // std::cout<<"Got it!"<<std::endl;
-    Rcpp::Environment loadedObjEnv(Sx);
-    SEXP Xptr = PROTECT(loadedObjEnv["extptr"]);
-    sp_ = reinterpret_cast<shared_ptr_holder<T>* >(R_ExternalPtrAddr(Xptr))->sp();
-    UNPROTECT(1);
-  }
-  inline std::shared_ptr< T > get(){
-    //std::cout<<"Getting it!"<<std::endl;
-    return sp_;
-  }
-};
+  template <typename T>
+    class Exporter< std::shared_ptr< T > > {
+  public:
+    std::shared_ptr<T> sp_;
+    Exporter(SEXP Sx) {
+      // std::cout<<"Got it!"<<std::endl;
+      Rcpp::Environment new_loadedObjEnv(Sx);
+      SEXP Xptr = PROTECT(new_loadedObjEnv["extptr"]);
+      sp_ = reinterpret_cast<shared_ptr_holder<T>* >(R_ExternalPtrAddr(Xptr))->sp();
+      UNPROTECT(1);
+    }
+    inline std::shared_ptr< T > get(){
+      //std::cout<<"Getting it!"<<std::endl;
+      return sp_;
+    }
+  };
 }
 }
 
@@ -35,6 +36,5 @@ namespace Rcpp {
    return Sans;
  }
 }
-
 
 #endif

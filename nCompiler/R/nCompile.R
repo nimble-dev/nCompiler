@@ -48,9 +48,13 @@ nCompile <- function(...,
     }
   }
 
-  if(get_nOption('serialize')) {
+  if(isTRUE(get_nOption('serialize'))) {
     serial_cppDef <- make_serialization_cppDef()
     RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(serial_cppDef, "serialization_")
+  }
+  if(!isTRUE(get_nOption('use_nCompLocal'))) {
+    loadedObjectEnv_cppDef <- make_loadedObjectEnv_cppDef()
+    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(loadedObjectEnv_cppDef, "loadedObjectEnv_")
   }
   
   ## Write the results jointly, with one .cpp file and multiple .h files.

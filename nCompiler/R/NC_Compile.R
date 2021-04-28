@@ -52,10 +52,13 @@ nCompile_nClass <- function(NC,
   cppDef <- NC_Compiler$cppDef
   ##
   cppDef$buildSEXPgenerator()
-  if(get_nOption('serialize'))
+  if(isTRUE(get_nOption('serialize')))
     cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
-  if(get_nOption('automaticDerivatives'))
+  if(isTRUE(get_nOption('automaticDerivatives')))
     cppDef$addADclassContent()
+  if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
+    cppDef$addLoadedObjectEnv()
+  
   cppDef$addGenericInterface()
   if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
     return(NC_Compiler)
