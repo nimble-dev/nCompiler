@@ -3,7 +3,14 @@ make_serialization_cppDef <- function(funNames = c("nComp_serialize_", "nComp_de
                                       defName = "serialization") {
   ans <-
     cppMacroCallClass$new(
-      cppContent = paste0("//[[Rcpp::export]]\n",
+      Hincludes = nCompilerIncludeFile("nCompiler_serialization_mgr.h"),
+      cppContent = paste0(
+        "// [[Rcpp::export]]\n",
+        "SEXP new_serialization_mgr ( ) {\n",
+        "return(loadedObjectEnv(new_nCompiler_object<serialization_mgr>()));\n",
+        "}\n",
+        "\n",
+        "//[[Rcpp::export]]\n",
                           "RawVector ", funNames[1],
                           "(SEXP Sfrom) {\n",
                           "genericInterfaceBaseC *baseobj =\n",

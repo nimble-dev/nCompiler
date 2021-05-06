@@ -56,7 +56,7 @@ get_DLLenv <- function(obj) {
 
 setup_DLLenv <- function(ans, newDLLenv) {
   if(!is.list(ans)) return(ans)
-  namesForDLLenv <- c("nComp_serialize_", "nComp_deserialize_")
+  namesForDLLenv <- c("nComp_serialize_", "nComp_deserialize_", "new_serialization_mgr")
   keep <- rep(TRUE, length(ans))
   for(DLLname in namesForDLLenv) {
     found <- grepl(DLLname, names(ans))
