@@ -24,10 +24,36 @@ for (util_file in utils) source(util_file)
 # run testing
 #############
 
-## Gold file testing takes approx. 1 minute.
+## Overview of approach:
+## 
+## We generate a (very) large set of testing pemutations, involving number of dimensions,
+##   scalar element type, and opreators.  For example, even for "+", we want 
+##   double + double, integer + double, logical + double, logical + integer, etc.
+##   
+##   And we want all of those type combinations crossed with
+##   scalar + scalar, scalar + vector, scalar + matrix. vector + vector, etc.
+##   
+##   These configurations are contained in the math_test_params nested lists below.
+##
+##   These create an issue of efficiency.  To generate each test as a separate nFunction, compile and run it, takes a long time.
+##   We have two shortcuts:
+##        (i) We can combined multiple tests as different methods of an nClass.  
+##            This reduces the number of DLLs generated and is much faster.  We do this at 
+##            two scales: combine all the tests for one operator into an nClass, or combine *ALL* tests for all 
+##            operators into one very large (many method) nClass.  These three choices are controlled by 
+##            FULL_TESTING_GRANULARIY below
+##        (ii) If we have seen given generated C++ work correctly, and if any changes to our code do not result in 
+##             different generated C++, and if there are no changes to any hard-coded C++, we can test simply 
+##             whether generated C++ matches known, valid generated C++.  We do this by comparing to "gold files"
+##             that we trust give valid results.  This is called "gold file testing" as opposed to "full testing".
+##             Full testing includes compiling and running everything, comparing uncompiled to compiled results.
 
-WRITE_GOLD_FILES <- FALSE ## ignored if FULL_TESTING is TRUE
-FULL_TESTING <- FALSE
+## Gold file testing takes approx. 1 minute.
+WRITE_GOLD_FILES <- FALSE ## If FALSE, this run of the code will create what we consider correct "gold" files.
+                          ## If FALSE, then gold file testing will compare to existing gold files.
+                          ## This is ignored if FULL_TESTING is TRUE
+FULL_TESTING <- FALSE     ## If TRUE, run actual tests involving compiling and running code.
+                          ## If FALSE, only compare generated code to what is in the gold files, but don't actually run it.
 
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass (approx. 15-20 minutes)
