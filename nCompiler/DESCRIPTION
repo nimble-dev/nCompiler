@@ -62,6 +62,7 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
+    nSerialize.R
     nTry.R
     packaging.R
     RcppExports.R

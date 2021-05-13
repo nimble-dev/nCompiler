@@ -3,38 +3,74 @@
 
 #include "nCompiler_class_interface.h"
 
+using namespace std;
+
+
+/**
+   @brief Wraps pointer to C++ object.
+ */
+/*
+typedef PtrType int;
+struct CerealWrapper {
+  const PtrType cPointer; ///<
+  CerealWrapper(PtrType cPointer_) :
+    cPointer(cPointer_) {
+  }
+};
+
+
+class CerealUnique {
+  unordered_map<PtrType, size_t> indexMap;
+  vector<unique_ptr<CerealWrapper>> uniqueRef;
+
+public:
+  size_t addPtr(PtrType extPtr) {
+    unordered_map<PtrType, int>::iterator itr = indexMap.find(extPtr);
+    if (itr == indexMap.end()) {
+      size_t vecTop = uniqueRef.size();
+      indexMap.insert(make_pair(extPtr, vecTop))
+      uniqueRef.emplace_back(cPtr);
+      return vecTop;
+    }
+    else {
+      return itr->first;
+    }
+  }
+};
+*/
 
 /**
    @brief C++ serialization prototype, mimicking design of 'nClass' for simplicity and re-use.
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
+  //CerealUnique cerealUnique;
+
 public:
-  typedef std::unique_ptr<genericInterfaceBaseC> unique_base_ptr;
-  std::vector< unique_base_ptr > objects; ///< Core-side cached objects.
+  typedef unique_ptr<genericInterfaceBaseC> unique_base_ptr;
+  vector< unique_base_ptr > cSerialands; ///< Core-side cached objects.
 
   /**
      @brief Caches an object for serialization.
 
      @param Sextptr is a raw expression pointer to the object being cached.
 
-     @return index into vector of the serialized objects.
+     @return index into vector of the serialized cSerialands.
    */
   int add_extptr(SEXP Sextptr) {
-    std::cout<< "Greetings from add_extptr" << endl;
-    return 0;
+    //return cerealUnique.addPtr(R_ExternalPtrAddr(Sextptr)->get_ptr());
 
-    objects.emplace_back(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()));
+    cSerialands.emplace_back(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()));
 
-    return objects.size() - 1;
+    return cSerialands.size() - 1;
   }
 
   /**
      @brief Looks up serialized object by index.
 
-     @return R-style expression pointer to bserialized object.
+     @return R-style expression pointer to serialized object.
    */
   SEXP get_extptr(int i) {
-    SEXP Sans = PROTECT((objects[i].release())->make_deserialized_return_SEXP());
+    SEXP Sans = PROTECT((cSerialands[i].release())->make_deserialized_return_SEXP());
     UNPROTECT(1);
     return(Sans);
   }
@@ -45,6 +81,7 @@ public:
   SEXP make_deserialized_return_SEXP ( );
 };
 
+
 template void serialization_mgr::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
 template void serialization_mgr::_SERIALIZE_(cereal::BinaryInputArchive &archive);
 
@@ -52,16 +89,18 @@ CEREAL_FORCE_DYNAMIC_INIT(serialization_mgr)
 
 template<class Archive>
 void serialization_mgr::_SERIALIZE_ ( Archive & archive ) {
-archive(
-cereal::base_class<genericInterfaceC<serialization_mgr> >(this),
-CEREAL_NVP(objects)
-	);};
+  archive(
+	  cereal::base_class<genericInterfaceC<serialization_mgr> >(this),
+	  CEREAL_NVP(cSerialands)
+	);
+};
+
 
 SEXP  serialization_mgr::make_deserialized_return_SEXP (  )  {
-std::shared_ptr<serialization_mgr> shared(this);
-SEXP Sans = PROTECT(return_nCompiler_object<serialization_mgr>(shared));
-UNPROTECT(1);
-return Sans;
+  shared_ptr<serialization_mgr> shared(this);
+  SEXP Sans = PROTECT(return_nCompiler_object<serialization_mgr>(shared));
+  UNPROTECT(1);
+  return Sans;
 }
 
 // This needs to be in code-generated C++ for the Rcpp::export annotation to be picked up by Rcpp 
@@ -79,10 +118,8 @@ NCOMPILER_INTERFACE(
 		    NCOMPILER_FIELDS(
 				     ),
 		    NCOMPILER_METHODS(
-				      method("add_extptr",
-					     &serialization_mgr::add_extptr),
-				      method("get_extptr",
-					     &serialization_mgr::get_extptr)
+				      method("add_extptr", &serialization_mgr::add_extptr),
+				      method("get_extptr", &serialization_mgr::get_extptr)
 				      )
 		    )
 
