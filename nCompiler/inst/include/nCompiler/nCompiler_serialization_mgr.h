@@ -9,8 +9,8 @@ using namespace std;
 /**
    @brief Wraps pointer to C++ object.
  */
-/*
-typedef PtrType int;
+
+typedef genericInterfaceBaseC* PtrType;
 struct CerealWrapper {
   const PtrType cPointer; ///<
   CerealWrapper(PtrType cPointer_) :
@@ -24,26 +24,29 @@ class CerealUnique {
   vector<unique_ptr<CerealWrapper>> uniqueRef;
 
 public:
+  /**
+     @brief Appends an external pointer to the map, if new.
+   */
   size_t addPtr(PtrType extPtr) {
-    unordered_map<PtrType, int>::iterator itr = indexMap.find(extPtr);
+    unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
     if (itr == indexMap.end()) {
       size_t vecTop = uniqueRef.size();
-      indexMap.insert(make_pair(extPtr, vecTop))
-      uniqueRef.emplace_back(cPtr);
+      indexMap.insert(make_pair(extPtr, vecTop));
+      uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
       return vecTop;
     }
     else {
-      return itr->first;
+      return itr->second;
     }
   }
 };
-*/
+
 
 /**
    @brief C++ serialization prototype, mimicking design of 'nClass' for simplicity and re-use.
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
-  //CerealUnique cerealUnique;
+  CerealUnique cerealUnique;
 
 public:
   typedef unique_ptr<genericInterfaceBaseC> unique_base_ptr;
@@ -57,11 +60,7 @@ public:
      @return index into vector of the serialized cSerialands.
    */
   int add_extptr(SEXP Sextptr) {
-    //return cerealUnique.addPtr(R_ExternalPtrAddr(Sextptr)->get_ptr());
-
-    cSerialands.emplace_back(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()));
-
-    return cSerialands.size() - 1;
+    return cerealUnique.addPtr(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()));
   }
 
   /**
