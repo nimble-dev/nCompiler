@@ -9,21 +9,26 @@ using namespace std;
 /**
    @brief Wraps pointer to C++ object.
  */
-
 typedef genericInterfaceBaseC* PtrType;
 struct CerealWrapper {
-  const PtrType cPointer; ///<
+  const PtrType cPointer; ///< pointer to core c++ object.
+
   CerealWrapper(PtrType cPointer_) :
     cPointer(cPointer_) {
   }
 };
 
 
+  typedef unique_ptr<genericInterfaceBaseC> unique_base_ptr;
+
 class CerealUnique {
   unordered_map<PtrType, size_t> indexMap;
   vector<unique_ptr<CerealWrapper>> uniqueRef;
 
 public:
+
+  vector<unique_ptr<genericInterfaceBaseC>> auxRef; ///< mimics cSerialands, for now
+  
   /**
      @brief Appends an external pointer to the map, if new.
    */
@@ -33,6 +38,8 @@ public:
       size_t vecTop = uniqueRef.size();
       indexMap.insert(make_pair(extPtr, vecTop));
       uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
+      unique_base_ptr ubp(extPtr);
+      auxRef.push_back(move(ubp));
       return vecTop;
     }
     else {
@@ -49,7 +56,6 @@ class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRT
   CerealUnique cerealUnique;
 
 public:
-  typedef unique_ptr<genericInterfaceBaseC> unique_base_ptr;
   vector< unique_base_ptr > cSerialands; ///< Core-side cached objects.
 
   /**
@@ -69,7 +75,7 @@ public:
      @return R-style expression pointer to serialized object.
    */
   SEXP get_extptr(int i) {
-    SEXP Sans = PROTECT((cSerialands[i].release())->make_deserialized_return_SEXP());
+    SEXP Sans = PROTECT((cerealUnique.auxRef[i].release())->make_deserialized_return_SEXP());
     UNPROTECT(1);
     return(Sans);
   }
@@ -77,7 +83,13 @@ public:
   template<class Archive>
     void _SERIALIZE_ ( Archive & archive );
   
-  SEXP make_deserialized_return_SEXP ( );
+  SEXP make_deserialized_return_SEXP ( ) {
+    shared_ptr<serialization_mgr> shared(this);
+    SEXP Sans = PROTECT(return_nCompiler_object<serialization_mgr>(shared));
+    UNPROTECT(1);
+
+    return Sans;
+  }
 };
 
 
@@ -90,17 +102,9 @@ template<class Archive>
 void serialization_mgr::_SERIALIZE_ ( Archive & archive ) {
   archive(
 	  cereal::base_class<genericInterfaceC<serialization_mgr> >(this),
-	  CEREAL_NVP(cSerialands)
+	  CEREAL_NVP(cerealUnique.auxRef)
 	);
 };
-
-
-SEXP  serialization_mgr::make_deserialized_return_SEXP (  )  {
-  shared_ptr<serialization_mgr> shared(this);
-  SEXP Sans = PROTECT(return_nCompiler_object<serialization_mgr>(shared));
-  UNPROTECT(1);
-  return Sans;
-}
 
 // This needs to be in code-generated C++ for the Rcpp::export annotation to be picked up by Rcpp 
 /* // [[Rcpp::export]] */
