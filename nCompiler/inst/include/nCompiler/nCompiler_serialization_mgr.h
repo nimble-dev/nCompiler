@@ -9,8 +9,7 @@ using namespace std;
 /**
    @brief Wraps pointer to C++ object.
  */
-typedef genericInterfaceBaseC* PtrType;
-struct CerealWrapper {
+template<class PtrType> struct CerealWrapper {
   const PtrType cPointer; ///< pointer to core c++ object.
 
   CerealWrapper(PtrType cPointer_) :
@@ -19,9 +18,9 @@ struct CerealWrapper {
 };
 
 
-class CerealUnique {
+template<class PtrType> class CerealUnique {
   unordered_map<PtrType, size_t> indexMap;
-  vector<unique_ptr<CerealWrapper>> uniqueRef;
+  vector<unique_ptr<CerealWrapper<PtrType>>> uniqueRef;
 
 public:
 
@@ -37,7 +36,7 @@ public:
    @brief C++ serialization prototype, mimicking design of 'nClass' for simplicity and re-use.
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
-  CerealUnique cerealUnique;
+  CerealUnique<genericInterfaceBaseC*> cerealUnique;
   vector<unique_ptr<genericInterfaceBaseC>> cSerialand;
   
 
@@ -55,7 +54,7 @@ public:
   }
 
 
-  void addSerialand(PtrType extPtr) {
+  void addSerialand(genericInterfaceBaseC* extPtr) {
     //cSerialand.emplace_back(extPtr); // Precipitates memory violations.
   }
   
@@ -84,13 +83,13 @@ public:
 };
 
 
-size_t CerealUnique::addPtr(PtrType extPtr,
-			    serialization_mgr* mgr) {
-  unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
+template<typename PtrType> size_t CerealUnique<PtrType>::addPtr(PtrType extPtr,
+								serialization_mgr* mgr) {
+  typename unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
   if (itr == indexMap.end()) {
     size_t vecTop = uniqueRef.size();
     indexMap.insert(make_pair(extPtr, vecTop));
-    uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
+    uniqueRef.emplace_back(make_unique<CerealWrapper<PtrType>>(extPtr));
     mgr->addSerialand(extPtr);
     return vecTop;
   }
