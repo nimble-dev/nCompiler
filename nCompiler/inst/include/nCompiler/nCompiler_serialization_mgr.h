@@ -9,25 +9,25 @@ using namespace std;
 /**
    @brief Wraps pointer to C++ object.
  */
-template<class PtrType> struct CerealWrapper {
-  const PtrType cPointer; ///< pointer to core c++ object.
+template<class BaseType> struct CerealWrapper {
+  const BaseType* cPointer; ///< pointer to core c++ object.
 
-  CerealWrapper(PtrType cPointer_) :
+  CerealWrapper(const BaseType* cPointer_) :
     cPointer(cPointer_) {
   }
 };
 
 
-template<class PtrType> class CerealUnique {
-  unordered_map<PtrType, size_t> indexMap;
-  vector<unique_ptr<CerealWrapper<PtrType>>> uniqueRef;
+template<class BaseType> class CerealUnique {
+  unordered_map<const BaseType*, size_t> indexMap;
+  vector<unique_ptr<CerealWrapper<BaseType>>> uniqueRef;
 
 public:
 
   /**
      @brief Appends an external pointer to the map, if new.
    */
-  size_t addPtr(PtrType extPtr,
+  size_t addPtr(const BaseType* extPtr,
 		class serialization_mgr* mgr);
 };
 
@@ -36,7 +36,7 @@ public:
    @brief C++ serialization prototype, mimicking design of 'nClass' for simplicity and re-use.
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
-  CerealUnique<genericInterfaceBaseC*> cerealUnique;
+  CerealUnique<genericInterfaceBaseC> cerealUnique;
   vector<unique_ptr<genericInterfaceBaseC>> cSerialand;
   
 
@@ -54,7 +54,7 @@ public:
   }
 
 
-  void addSerialand(genericInterfaceBaseC* extPtr) {
+  void addSerialand(const genericInterfaceBaseC* extPtr) {
     //cSerialand.emplace_back(extPtr); // Precipitates memory violations.
   }
   
@@ -83,13 +83,13 @@ public:
 };
 
 
-template<typename PtrType> size_t CerealUnique<PtrType>::addPtr(PtrType extPtr,
-								serialization_mgr* mgr) {
-  typename unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
+template<typename BaseType> size_t CerealUnique<BaseType>::addPtr(const BaseType* extPtr,
+								  serialization_mgr* mgr) {
+  typename unordered_map<const BaseType*, size_t>::iterator itr = indexMap.find(extPtr);
   if (itr == indexMap.end()) {
     size_t vecTop = uniqueRef.size();
     indexMap.insert(make_pair(extPtr, vecTop));
-    uniqueRef.emplace_back(make_unique<CerealWrapper<PtrType>>(extPtr));
+    uniqueRef.emplace_back(make_unique<CerealWrapper<BaseType>>(extPtr));
     mgr->addSerialand(extPtr);
     return vecTop;
   }
