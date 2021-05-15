@@ -19,32 +19,17 @@ struct CerealWrapper {
 };
 
 
-  typedef unique_ptr<genericInterfaceBaseC> unique_base_ptr;
-
 class CerealUnique {
   unordered_map<PtrType, size_t> indexMap;
   vector<unique_ptr<CerealWrapper>> uniqueRef;
 
 public:
 
-  vector<unique_ptr<genericInterfaceBaseC>> auxRef; ///< mimics cSerialands, for now
-  
   /**
      @brief Appends an external pointer to the map, if new.
    */
-  size_t addPtr(PtrType extPtr) {
-    unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
-    if (itr == indexMap.end()) {
-      size_t vecTop = uniqueRef.size();
-      indexMap.insert(make_pair(extPtr, vecTop));
-      uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
-      auxRef.emplace_back(extPtr);
-      return vecTop;
-    }
-    else {
-      return itr->second;
-    }
-  }
+  size_t addPtr(PtrType extPtr,
+		class serialization_mgr* mgr);
 };
 
 
@@ -53,20 +38,27 @@ public:
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
   CerealUnique cerealUnique;
+  vector<unique_ptr<genericInterfaceBaseC>> cSerialand;
+  
 
 public:
-  vector< unique_base_ptr > cSerialands; ///< Core-side cached objects.
 
   /**
      @brief Caches an object for serialization.
 
      @param Sextptr is a raw expression pointer to the object being cached.
 
-     @return index into vector of the serialized cSerialands.
+     @return index into vector of the serializable references.
    */
   int add_extptr(SEXP Sextptr) {
-    return cerealUnique.addPtr(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()));
+    return cerealUnique.addPtr(reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_ptr()), this);
   }
+
+
+  void addSerialand(PtrType extPtr) {
+    //cSerialand.emplace_back(extPtr); // Precipitates memory violations.
+  }
+  
 
   /**
      @brief Looks up serialized object by index.
@@ -74,7 +66,7 @@ public:
      @return R-style expression pointer to serialized object.
    */
   SEXP get_extptr(int i) {
-    SEXP Sans = PROTECT((cerealUnique.auxRef[i].release())->make_deserialized_return_SEXP());
+    SEXP Sans = PROTECT((cSerialand[i].release())->make_deserialized_return_SEXP());
     UNPROTECT(1);
     return(Sans);
   }
@@ -92,6 +84,22 @@ public:
 };
 
 
+size_t CerealUnique::addPtr(PtrType extPtr,
+			    serialization_mgr* mgr) {
+  unordered_map<PtrType, size_t>::iterator itr = indexMap.find(extPtr);
+  if (itr == indexMap.end()) {
+    size_t vecTop = uniqueRef.size();
+    indexMap.insert(make_pair(extPtr, vecTop));
+    uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
+    mgr->addSerialand(extPtr);
+    return vecTop;
+  }
+  else {
+    return itr->second;
+  }
+}
+
+
 template void serialization_mgr::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
 template void serialization_mgr::_SERIALIZE_(cereal::BinaryInputArchive &archive);
 
@@ -101,7 +109,7 @@ template<class Archive>
 void serialization_mgr::_SERIALIZE_ ( Archive & archive ) {
   archive(
 	  cereal::base_class<genericInterfaceC<serialization_mgr> >(this),
-	  CEREAL_NVP(cerealUnique.auxRef)
+	  CEREAL_NVP(cSerialand)
 	);
 };
 
