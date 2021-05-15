@@ -38,8 +38,7 @@ public:
       size_t vecTop = uniqueRef.size();
       indexMap.insert(make_pair(extPtr, vecTop));
       uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
-      unique_base_ptr ubp(extPtr);
-      auxRef.push_back(move(ubp));
+      auxRef.emplace_back(extPtr);
       return vecTop;
     }
     else {
