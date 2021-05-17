@@ -5,6 +5,8 @@
 #include<Rinternals.h>
 #include "shared_ptr_holder.h"
 
+/** @brief Registers finalizer.
+ */
 inline void finalize_shared_ptr_holder(SEXP Xptr) {
   shared_ptr_holder_base *sph = reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr));
   if(sph) delete sph;
