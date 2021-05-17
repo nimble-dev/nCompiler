@@ -20,9 +20,11 @@ struct CerealWrapper {
 };
 
 
+/**
+   @brief Maintains unique map of pointer targets.
+ */
 class CerealUnique {
   unordered_map<const BaseType*, size_t> indexMap;
-  vector<unique_ptr<CerealWrapper>> uniqueRef;
 
 public:
 
@@ -56,7 +58,7 @@ public:
 
 
   void addSerialand(genericInterfaceBaseC* extPtr) {
-    cSerialand.push_back(unique_ptr<genericInterfaceBaseC>(extPtr));
+    cSerialand.emplace_back(unique_ptr<genericInterfaceBaseC>(extPtr));
   }
   
 
@@ -89,7 +91,6 @@ size_t CerealUnique::addPtr(BaseType* extPtr,
   typename unordered_map<const BaseType*, size_t>::iterator itr = indexMap.find(extPtr);
   if (itr == indexMap.end()) {
     indexMap.insert(make_pair(extPtr, indexMap.size()));
-    //    uniqueRef.emplace_back(make_unique<CerealWrapper>(extPtr));
     mgr->addSerialand(extPtr);
     return indexMap.size() - 1;
   }
