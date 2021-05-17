@@ -20,13 +20,39 @@ struct CerealWrapper {
 
   CerealWrapper() = default; ///< Needed by Cereal for vector construction.
 
+  // Forces move constructor to be employed for vector reallocation.
+  CerealWrapper(const CerealWrapper&) = delete; ///< No copy constructor.
+
+  CerealWrapper(CerealWrapper&&) = default;
+
   /**
      @brief Relinquishes temporary ownership.
    */
   ~CerealWrapper() {
     (void) uPtr.release();
   }
+
+
+  BaseType* getPtr() const {
+    uPtr.get();
+  }
+
+
+  template<class Archive> void _SERIALIZE_ ( Archive & archive );
 };
+
+
+template void CerealWrapper::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
+template void CerealWrapper::_SERIALIZE_(cereal::BinaryInputArchive &archive);
+
+CEREAL_FORCE_DYNAMIC_INIT(CerealWrapper)
+
+template<class Archive>
+void CerealWrapper::_SERIALIZE_ ( Archive & archive ) {
+  archive(
+	  CEREAL_NVP(uPtr)
+	);
+}
 
 
 /**
@@ -50,7 +76,7 @@ public:
  */
 class serialization_mgr : public genericInterfaceC<serialization_mgr> { ///< CRTP
   CerealUnique cerealUnique;
-  vector<unique_ptr<genericInterfaceBaseC>> cSerialand;
+  vector<CerealWrapper> cSerialand;
 
 public:
 
@@ -67,7 +93,7 @@ public:
 
 
   void addSerialand(genericInterfaceBaseC* extPtr) {
-    cSerialand.emplace_back(unique_ptr<genericInterfaceBaseC>(extPtr));
+    cSerialand.emplace_back(extPtr);
   }
   
 
@@ -77,7 +103,7 @@ public:
      @return R-style expression pointer to serialized object.
    */
   SEXP get_extptr(int i) {
-    SEXP Sans = PROTECT((cSerialand[i].release())->make_deserialized_return_SEXP());
+    SEXP Sans = PROTECT((cSerialand[i].getPtr())->make_deserialized_return_SEXP());
     UNPROTECT(1);
     return(Sans);
   }
