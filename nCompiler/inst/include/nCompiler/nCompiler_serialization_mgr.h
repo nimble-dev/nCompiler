@@ -38,6 +38,14 @@ struct CerealWrapper {
   }
 
 
+  /**
+     @brief Releases underlying pointer.
+   */
+  BaseType* release() {
+    return uPtr.release();
+  }
+
+  
   template<class Archive> void _SERIALIZE_ ( Archive & archive );
 };
 
@@ -103,7 +111,7 @@ public:
      @return R-style expression pointer to serialized object.
    */
   SEXP get_extptr(int i) {
-    SEXP Sans = PROTECT((cSerialand[i].getPtr())->make_deserialized_return_SEXP());
+    SEXP Sans = PROTECT((cSerialand[i].release())->make_deserialized_return_SEXP());
     UNPROTECT(1);
     return(Sans);
   }
