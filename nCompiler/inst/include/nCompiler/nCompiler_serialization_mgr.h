@@ -9,13 +9,22 @@ using namespace std;
 typedef genericInterfaceBaseC BaseType;
 
 /**
-   @brief Wraps pointer to C++ object.
+   @brief Wraps pointer to C++ object in smart pointer, as required by Cereal.
  */
 struct CerealWrapper {
-  BaseType* cPointer; ///< pointer to core c++ object.
+  unique_ptr<BaseType> uPtr; ///< smart pointer shares temporary ownership.
 
   CerealWrapper(BaseType* cPointer_) :
-    cPointer(cPointer_) {
+    uPtr(unique_ptr<BaseType>(cPointer_)) {
+  }
+
+  CerealWrapper() = default; ///< Needed by Cereal for vector construction.
+
+  /**
+     @brief Relinquishes temporary ownership.
+   */
+  ~CerealWrapper() {
+    (void) uPtr.release();
   }
 };
 
