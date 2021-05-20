@@ -70,9 +70,11 @@ nCompile <- function(...,
                               cacheDir = cacheDir,
                               env = resultEnv,
                               returnList = returnList)
-
+  #'ans' consists of all compiled function names and the corresponding environments.
+  
   newDLLenv <- make_DLLenv()
   ans <- setup_DLLenv(ans, newDLLenv)
+  #'ans' has been gleaned of any DLL-specific functions.
   
   setup_nClass_interface <- function(interfaceType,
                                      NC,

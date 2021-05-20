@@ -1,12 +1,20 @@
+
+# Returns the names of the internally-generated serialization helper functions.
+getSerialFunNames <- function() {
+  c("nComp_serialize_", "nComp_deserialize_", "new_serialization_mgr")
+}
+
+
+
 # This is called from nCompile or nCompile_nClass
-make_serialization_cppDef <- function(funNames = c("nComp_serialize_", "nComp_deserialize_"),
+make_serialization_cppDef <- function(funNames = getSerialFunNames(),
                                       defName = "serialization") {
   ans <-
     cppMacroCallClass$new(
       Hincludes = nCompilerIncludeFile("nCompiler_serialization_mgr.h"),
       cppContent = paste0(
         "// [[Rcpp::export]]\n",
-        "SEXP new_serialization_mgr ( ) {\n",
+        "SEXP ", funNames[3], " ( ) {\n",
         "return(loadedObjectEnv(new_nCompiler_object<serialization_mgr>()));\n",
         "}\n",
         "\n",
