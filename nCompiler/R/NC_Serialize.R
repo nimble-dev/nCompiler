@@ -46,8 +46,27 @@ deserialize_nComp_object <- function(obj, deserializer) {
   newXptr <- deserializer(obj$serial)
   newObj <- new.loadedObjectEnv(newXptr)
   parent.env(newObj) <- parent.env(obj)
+  loadDLLenv(newObj, parent.env(newObj))
   newObj
 }
+
+# TODO:  Merge with setup_DLLenv() 
+# 
+loadDLLenv <- function(loadands, newDLLenv) {
+  if (!is.list(loadands))
+    return(loadands)
+
+  for (DLLname in getSerialFunNames()) {
+    found <- grepl(DLLname, names(loadands))
+    if (any(found)) {
+      i <- which(found)
+      if (length(i) != 1)
+        stop(paste("Loading multiple instances of ", DLLname));
+      newDLLenv[[DLLname]] <- loadands[[i]]
+    }
+  }
+}
+
 
 #' @name save_nClass
 #' @title Save an instance of an nClass object across sessions

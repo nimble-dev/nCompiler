@@ -74,6 +74,8 @@ setup_DLLenv <- function(ans, newDLLenv) {
       newDLLenv[[DLLname]] <- ans[[i]]
     }
   }
+
+  # List-y stuff.
   if(!all(keep)) ans <- ans[keep]
   if(length(ans) == 1) ans[[1]]
   else ans

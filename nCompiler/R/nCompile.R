@@ -74,7 +74,7 @@ nCompile <- function(...,
   
   newDLLenv <- make_DLLenv()
   ans <- setup_DLLenv(ans, newDLLenv)
-  #'ans' has been gleaned of any DLL-specific functions.
+  #'ans' has been gleaned of any DLL-specific function/environment.
   
   setup_nClass_interface <- function(interfaceType,
                                      NC,
