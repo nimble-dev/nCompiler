@@ -54,7 +54,7 @@ deserialize_nComp_object <- function(obj, deserializer) {
 # 
 loadDLLenv <- function(loadands, newDLLenv) {
   if (!is.list(loadands))
-    return(loadands)
+    return
 
   for (DLLname in getSerialFunNames()) {
     found <- grepl(DLLname, names(loadands))
