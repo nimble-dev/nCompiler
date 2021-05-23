@@ -46,23 +46,18 @@ deserialize_nComp_object <- function(obj, deserializer) {
   newXptr <- deserializer(obj$serial)
   newObj <- new.loadedObjectEnv(newXptr)
   parent.env(newObj) <- parent.env(obj)
-  loadDLLenv(newObj, parent.env(newObj))
   newObj
 }
 
-# TODO:  Merge with setup_DLLenv() 
-# 
-loadDLLenv <- function(loadands, newDLLenv) {
-  if (!is.list(loadands))
-    return
 
+loadDLLenv <- function(newLOE, loadands) {
   for (DLLname in getSerialFunNames()) {
     found <- grepl(DLLname, names(loadands))
     if (any(found)) {
       i <- which(found)
       if (length(i) != 1)
         stop(paste("Loading multiple instances of ", DLLname));
-      newDLLenv[[DLLname]] <- loadands[[i]]
+      parent.env(newLOE)[[DLLname]] <- loadands[[i]]
     }
   }
 }
@@ -264,7 +259,8 @@ read_nClass <- function(file, lib = .libPaths()[1]) {
   }
   
   if (!is.null(savedObj$full)) {
-    serialized <- new.loadedObjectEnv(serialized = savedObj$CppObj)
+    # earlier version had argument (serialize = savedObj$CppObj)
+    serialized <- new.loadedObjectEnv(savedObj$CppObj)
     
     # library(savedObj$package.name, character.only = TRUE, lib = lib)
     # loadEnv <- new.env()
@@ -282,7 +278,8 @@ read_nClass <- function(file, lib = .libPaths()[1]) {
     return(rtnObjFull)
     
   } else {
-    serialized <- new.loadedObjectEnv(serialized = savedObj$CppObj)
+    # earlier version had argument (serialize = savedObj$CppObj)
+    serialized <- new.loadedObjectEnv(savedObj$CppObj)
     
     # library(savedObj$package.name, character.only = TRUE, lib = lib)
     # loadEnv <- new.env()

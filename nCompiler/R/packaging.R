@@ -1,4 +1,4 @@
-#' @name writePackage
+#' @name nWritePackage
 #' @title Create packages containing compiled elements
 #' @export
 #' @param ... One or more nClass constructor and nFunction objects to be
@@ -27,8 +27,8 @@
 #'
 #' @details
 #'
-#' `writePackage` is a function for adding compiled nFunctions and nClasses to
-#' an R package. `writePackage` handles compilation, documentation, and
+#' `nWritePackage` is a function for adding compiled nFunctions and nClasses to
+#' an R package. `nWritePackage` handles compilation, documentation, and
 #' exporting, so that the resulting R package can call the compiled nFunctions
 #' and instantiate members of the nClass without further compilation.
 #'
@@ -38,7 +38,7 @@
 #' the names of the objects in the R environment.
 #'
 #' If a nonexistent directory or nonexistent directory is indicated by the
-#' arguments \code{dir} and \code{package.name}, writePackage uses Rcpp's
+#' arguments \code{dir} and \code{package.name}, nWritePackage uses Rcpp's
 #' Rcpp.package.skeleton to initialize a directory.
 #'
 #' If the directory indicated by those two arguments does exist and
@@ -47,7 +47,7 @@
 #' objects with overlapping names, so can be used to edit and update package
 #' elements as well as add new elements.
 #' 
-#' If an uncompilable nFunction or nClass is passed, \code{writePackage} will
+#' If an uncompilable nFunction or nClass is passed, \code{nWitePackage} will
 #' not error. This will not be caught until the package is built, for example
 #' with \code{buildPackage}.
 #'
@@ -61,7 +61,7 @@
 #'                    }
 #'                  )
 #' # Write a package containing the compiled nFunction "foo"
-#' writePackage(foo,
+#' nWritePackage(foo,
 #'              dir = tempdir(),
 #'              package.name = "fooPackage",
 #'              control = list(export = TRUE))
@@ -72,10 +72,10 @@
 #' @seealso For more nCompiler packaging tools, see \code{\link{buildPackage}}
 #'   and \code{\link{erasePackage}}. For nCompiler roxygen utilities see
 #'   \code{\link{documentNClass}} and \code{\link{documentNFunction}}. For
-#'   package initialization tools on which \code{writePackage} depends see
+#'   package initialization tools on which \code{nWritePackage} depends see
 #'   \code{\link[Rcpp]{Rcpp.package.skeleton}} and
 #'   \code{\link[utils]{package.skeleton}}.
-writePackage <- function(...,
+nWritePackage <- function(...,
                          package.name, 
                          dir = ".",
                          control = list(),
@@ -105,7 +105,7 @@ writePackage <- function(...,
   # Handle roxygen input
   if (!is.list(roxygen)) {
     if (is.character(roxygen)) roxygen <- list(roxygen)
-    else stop("in writePackage: unknown roxygen type")
+    else stop("in nWritePackage: unknown roxygen type")
   }
   
   if (length(roxygen) == 0) {
@@ -129,7 +129,7 @@ writePackage <- function(...,
   #     "default" is used to control all elements.
   
   if (!is.list(control))
-    stop("In writePackage, argument 'control' must be a list with controls for all
+    stop("In nWritePackage, argument 'control' must be a list with controls for all
     or else a list of named lists with controls for each object")
   if (length(control) > 0 && !is.list(control[[1]])) control <- list(control)
   
@@ -157,10 +157,10 @@ writePackage <- function(...,
   objNames <- unlist(lapply(objs, function(x) {
     if (isNF(x)) return(NFinternals(x)$uniqueName)
     else if (isNCgenerator(x)) return(x$classname)
-    else stop(paste("In writePackage: only nFunctions and nClass generators are",
+    else stop(paste("In nWritePackage: only nFunctions and nClass generators are",
                     "allowed. Cannot compile object of class ", class(x)))}))
   if (length(unique(objNames)) < length(objNames)) stop(paste(
-    "in writePackage: Duplicate internal object names detected."
+    "in nWritePackage: Duplicate internal object names detected."
   ))
   
   # If options 1 or 2 were hit, we can just use the globalControl option set we
@@ -178,7 +178,7 @@ writePackage <- function(...,
     # for (i in 1:length(objs)) totalControl[[i]] <- globalControl
     
     if (length(unique(objNames)) < length(objNames)) {
-      stop("In writePackage: multiple objects with the same name were provided.")
+      stop("In nWritePackage: multiple objects with the same name were provided.")
     }
     
     # Iterate over each specified control list and add it. Throw an error (maybe
@@ -190,7 +190,7 @@ writePackage <- function(...,
           updateDefaults(globalControl, control[[i]])
       } else {
         if (!identical(names(control)[[i]], "default")) {
-          stop(paste0('In writePackage: Control specified for object named "', 
+          stop(paste0('In nWritePackage: Control specified for object named "', 
                       names(control)[[i]],
                       '"\n\t but no object with that name was provided.'))
         }
@@ -201,7 +201,7 @@ writePackage <- function(...,
   # Used to test if this works: return(totalControl)
     
   # if(length(objs) > 1)
-  #   stop("writePackage only supports one object as a first step of development")
+  #   stop("nWritePackage only supports one object as a first step of development")
   
   pkgDir <- file.path(dir, package.name)
   Rdir <- file.path(pkgDir, "R")
@@ -267,7 +267,7 @@ writePackage <- function(...,
       # }
       
     } else {
-      stop(paste("In writePackage: only nFunctions and nClass generators are",
+      stop(paste("In nWritePackage: only nFunctions and nClass generators are",
                  "allowed. Cannot compile object of class ", class(objs[[i]])))
     }
   }
@@ -352,7 +352,7 @@ writePackage <- function(...,
       }
       
       deparsed_full_interface <- c(
-        '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
+        '## Generated by nCompiler::nWritePackage() -> do not edit by hand\n',
         if (is.list(thisRox)) thisRox[["header"]] else thisRox,
         exportTag,
         deparsed_full_interface,
@@ -417,10 +417,10 @@ writePackage <- function(...,
 }
 
 #' @name buildPackage
-#' @title Build and install packages written by writePackage
+#' @title Build and install packages written by nWritePackage
 #' @export
 #' @param package.name Character string. The name of the package to be built,
-#'   corresponding to the argument of the same name in writePackages.
+#'   corresponding to the argument of the same name in nWritePackages.
 #' @param dir Character string. Path to the parent directory containing the main
 #'   package directory. By default, the current working directory is used.
 #' @param lib Character string, optional. Path to the directory where the
@@ -451,7 +451,7 @@ writePackage <- function(...,
 #'                      returnType(numericScalar())
 #'                  })
 #' # Write a package containing the compiled nFunction "foo"
-#' writePackage(foo,
+#' nWritePackage(foo,
 #'              dir = tempdir(),
 #'              package.name = "fooPackage",
 #'              control = list(export = TRUE))
@@ -459,12 +459,12 @@ writePackage <- function(...,
 #' buildPackage("fooPackage", dir = tempdir())
 #' # We can call "foo" from the new namespace
 #' fooPackage::foo(10)
-#' @seealso For other nCompiler packaging tools, see \code{\link{writePackage}}
+#' @seealso For other nCompiler packaging tools, see \code{\link{nWritePackage}}
 #'   and \code{\link{erasePackage}}. For nCompiler roxygen utilities see
 #'   \code{\link{documentNClass}} and \code{\link{documentNFunction}}. For
 #'   roxygen2 tools on which \code{buildPackage} depends see
 #'   \code{\link[roxygen2]{roxygenize}}.
-buildPackage <- function(package.name, 
+nBuildPackage <- function(package.name, 
                          dir = ".",
                          lib,
                          load = TRUE,
@@ -506,7 +506,7 @@ buildPackage <- function(package.name,
 #' @name erasePackage
 #' @title Erase packages generated by `nCompiler`.
 #' @description Erases all files associated with a package written out by the
-#'   `writePackage()` function in nCompiler.
+#'   `nWritePackage()` function in nCompiler.
 #' @param package.name The name of the package to be erased
 #' @param dir The directory containing the package to be erased
 #' @param nCompilerOnly Logical, default TRUE. If TRUE, extra checks are
@@ -520,7 +520,7 @@ buildPackage <- function(package.name,
 #'
 #' \code{erasePackage} is a utility function for erasing a written
 #' nCompiler-generated package. It is best thought of as the inverse of
-#' \code{writePackage}, not \code{buildPackage}, as it is intended for use with
+#' \code{nWritePackage}, not \code{buildPackage}, as it is intended for use with
 #' source code.
 #'
 #' If called on a package directory, all contents of the package and the
@@ -533,7 +533,7 @@ buildPackage <- function(package.name,
 #'
 #' If \code{nCompilerOnly} is \code{TRUE} (the default), the DESCRIPTION file
 #' will be checked to make sure it looks like one autogenerated by
-#' \code{writePackage}.
+#' \code{nWritePackage}.
 #' 
 #' @examples
 #' 
@@ -545,7 +545,7 @@ buildPackage <- function(package.name,
 #'                      returnType(numericScalar())
 #'                  })
 #' # Write a package containing the compiled nFunction "foo"
-#' writePackage(foo,
+#' nWritePackage(foo,
 #'              dir = tempdir(),
 #'              package.name = "fooPackage",
 #'              control = list(export = TRUE))
@@ -553,11 +553,11 @@ buildPackage <- function(package.name,
 #' erasePackage("fooPackage", dir = tempdir())
 #' dir.exists(file.path(tempdir(), "fooPackage")) # FALSE
 #' 
-#' @seealso For other nCompiler packaging tools, see \code{\link{writePackage}}
+#' @seealso For other nCompiler packaging tools, see \code{\link{nWritePackage}}
 #'   and \code{\link{buildPackage}}. For more info on deleting a directory see
 #'   \code{\link[base]{unlink}}.
 
-erasePackage <- function(package.name, dir, 
+nErasePackage <- function(package.name, dir, 
                          nCompilerOnly = TRUE, uninstall = FALSE) {
   pkgDir <- file.path(dir, package.name)
   if (!dir.exists(pkgDir)) 
@@ -629,7 +629,7 @@ erasePackage <- function(package.name, dir,
 #'   against the actual nClass generator to confirm that all elements have been
 #'   documented appropriately? (NOTE: not implemented yet, currently ignored)
 #' @seealso For documenting nFunctions see \link{documentNFunction}. For
-#'   nCompiler packaging tools see \link{writePackage}. To learn about roxygen
+#'   nCompiler packaging tools see \link{nWritePackage}. To learn about roxygen
 #'   documentation format see the package roxygen, e.g.
 #'   \link[roxygen2]{roxygenize}.
 #'
@@ -662,7 +662,7 @@ erasePackage <- function(package.name, dir,
 #'                       methodsComment = "#'")
 #' # Use the roxygen to write and build a package, which will include
 #' # documentation for foo
-#' writePackage(foo,
+#' nWritePackage(foo,
 #'              dir = tempdir(),
 #'              package.name = "fooPackageWriteDocnFunction",
 #'              roxygen = list(foo = rox))
@@ -674,7 +674,7 @@ erasePackage <- function(package.name, dir,
 
 # TODO: Be more thoughtful about when whitespace is and isn't addressed,
 #       incl. tabs and the like
-documentNClass <- function(obj = NULL, name, title, description = NULL, 
+nDocumentNClass <- function(obj = NULL, name, title, description = NULL, 
                            fields = list(),
                            CMethodsDescriptions = list(), 
                            CMethodsParams = list(),
@@ -803,7 +803,7 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 #'
 #' @export
 #' @seealso For documenting nFunctions see \link{documentNFunction}. For
-#'   nCompiler packaging tools see \link{writePackage}. To learn about roxygen
+#'   nCompiler packaging tools see \link{nWritePackage}. To learn about roxygen
 #'   documentation format see the package roxygen, e.g.
 #'   \link[roxygen2]{roxygenize}.
 #'
@@ -825,7 +825,7 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 #'                     otherRoxygen = "//' @export")
 #' # Use the roxygen to write and build a package, which will include
 #' # documentation for foo
-#' writePackage(foo,
+#' nWritePackage(foo,
 #'              dir = tempdir(),
 #'              package.name = "fooPackageWriteDocnFunction",
 #'              roxygen = list(foo = rox))
@@ -836,16 +836,16 @@ documentNClass <- function(obj = NULL, name, title, description = NULL,
 
 # TODO: Be more thoughtful about when whitespace is and isn't addressed,
 #       incl. tabs and the like
-documentNFunction <- function(obj = NULL, name, title, description = NULL, 
+nDocumentNFunction <- function(obj = NULL, name, title, description = NULL, 
                               params = list(), otherRoxygen = NULL, 
                               processWhitespace = TRUE, roxComment = "//'",
                               checkAgainstObj = FALSE){
   # Check sanity of inputs
   if (sum(nchar(names(params)) > 0) < length(params)) {
-    stop("in documentNClass: Some elements of list 'params' are unnamed.")
+    stop("in nDocumentNClass: Some elements of list 'params' are unnamed.")
   }
   if (checkAgainstObj && is.null(obj)) {
-    stop(paste("in documentNClass: checkAgainstObj is true but no nFunction",
+    stop(paste("in nDocumentNClass: checkAgainstObj is true but no nFunction",
                "object was provided"))
   }
   

@@ -57,8 +57,8 @@ get_DLLenv <- function(obj) {
 
 # Filters 'ans' for specified names of helper functions pertaining to DLL.
 # Returns filtered list or singleton.
-setup_DLLenv <- function(ans, newDLLenv) {
-  if(!is.list(ans)) return(ans)
+setup_DLLenv <- function(ans, newDLLenv, returnList = FALSE) {
+  if (!is.list(ans)) return(ans)
 
   # Serialization-specific:  should be initialized elsewhere, according to options.
   namesForDLLenv <- getSerialFunNames()
@@ -75,10 +75,13 @@ setup_DLLenv <- function(ans, newDLLenv) {
     }
   }
 
-  # List-y stuff.
-  if(!all(keep)) ans <- ans[keep]
-  if(length(ans) == 1) ans[[1]]
-  else ans
+  if (!all(keep)) # unneeded guard
+    ans <- ans[keep]
+
+  if (length(ans) != 1 || returnList)
+    ans
+  else
+    ans[[1]]
 }
 
 

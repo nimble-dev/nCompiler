@@ -20,6 +20,7 @@ Collate:
     distributions_implementations.R
     distributions_inputList.R
     distributions_processInputList.R
+    compileLoop.R
     compile_aaa_operatorLists.R
     compile_nParse.R
     compile_eigenization.R
