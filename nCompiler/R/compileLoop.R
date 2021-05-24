@@ -13,7 +13,6 @@ compileLoop <- function(units,
   unitTypes <- get_nCompile_types(units)
 
   ## names(units) should be fully populated and unique. TO-DO: check.
-  cpp_names <- character(length(units))
   RcppPacket_list <- vector(length = length(units), mode = "list")
   for(i in seq_along(units)) {
     if(unitTypes[i] == "nF") {

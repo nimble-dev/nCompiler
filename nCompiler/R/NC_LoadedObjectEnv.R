@@ -55,10 +55,12 @@ get_DLLenv <- function(obj) {
 }
 
 
-# Filters 'ans' for specified names of helper functions pertaining to DLL.
+# Filters compiled function list for specified names of helper functions pertaining to DLL.
+# Filtered-out functions moved to new DLL environment.
 # Returns filtered list or singleton.
 setup_DLLenv <- function(ans, newDLLenv, returnList = FALSE) {
-  if (!is.list(ans)) return(ans)
+  if (!is.list(ans))
+    return(ans) # Why return on singleton?
 
   # Serialization-specific:  should be initialized elsewhere, according to options.
   namesForDLLenv <- getSerialFunNames()
@@ -103,9 +105,9 @@ wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {
   wrappedNewObjFun
 }
 
-new.serialObjectEnv <- function(serial_data = NULL, parent_env) {
+new.serialObjectEnv <- function(serial_data = NULL, dll_env) {
   ans <- new.env()
-  if(!missing(parent_env)) parent.env(ans) <- parent_env
+  if(!missing(dll_env)) parent.env(ans) <- dll_env
   ans$serial <- serial_data
   class(ans) <- "serialObjectEnv"
   ans

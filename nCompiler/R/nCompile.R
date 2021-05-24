@@ -52,29 +52,28 @@ nCompile <- function(...,
                               returnList = returnList)
   #'ans' consists of all compiled function names and the corresponding environments.
   newDLLenv <- make_DLLenv()
-  ans <- setup_DLLenv(ans, newDLLenv, returnList)
-
-  #'ans' has been gleaned of any DLL-specific function/environment.
+  compiledFn <- setup_DLLenv(ans, newDLLenv, returnList)
+  #'compiledFn' now a list of functions been gleaned of any DLL-specific function/environment.
   
   setup_nClass_interface <- function(interfaceType,
                                      NC,
-                                     ans,
+                                     wrappedFn,
                                      env) {
-    ans <- wrapNCgenerator_for_DLLenv(ans, newDLLenv)
     if(interfaceType == "generic")
-      return(ans)
+      return(wrappedFn)
     fullInterface <- try(build_compiled_nClass(NC,
-                                               ans,
+                                               wrappedFn,
                                                env = env))
     if(inherits(fullInterface, "try-error")) {
       warning("There was a problem building a full nClass interface.\n",
               "Attempting to return a generic interface.\n")
-      return(ans)
+      return(wrappedFn)
     }
     if(interfaceType == "full")
       return(fullInterface)
     else if(interfaceType == "both")
-      return(list(full = fullInterface, generic = ans))
+      return(list(full = fullInterface, generic = wrappedFn))
+
     warning(paste0("Invalid interface type ", interfaceType, " requested.\n",
                    "Returning a full interface.\n"))
     fullInterface
@@ -86,36 +85,36 @@ nCompile <- function(...,
   ## cpp_names should be 1-to-1 with names(ans)
   ## We want to return with names(ans) changed to
   ## names(units) corresponding to cpp_names.
-  if(is.list(ans)) {
-    newNames <- names(ans)
+  if(is.list(compiledFn)) {
+    newNames <- names(compiledFn)
     cpp_names <- sapply(units, function(unit) { ifelse(isNF(unit), NFinternals(unit)$cpp_code_name, unit$classname) })
     SEXPgen_names <- paste0("new_", cpp_names)
     for(i in seq_along(units)) {
-      iRes <- which(SEXPgen_names[i] == names(ans))
+      iRes <- which(SEXPgen_names[i] == names(compiledFn))
       if(length(iRes) != 1) {
         warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
-        return(ans)
+        return(compiledFn)
       }
       newNames[iRes] <- names(units)[i]
 
       if (isNCgenerator(units[[i]])) {
         nClass_name <- cpp_names[i]
         interfaceType <- ifelse(is.null(interfaces[[nClass_name]]), "generic", interfaces[[nClass_name]])
-        ans[[iRes]] <- setup_nClass_interface(interfaceType,
+        compiledFn[[iRes]] <- setup_nClass_interface(interfaceType,
                                               units[[i]],
-                                              ans[[iRes]],
+                                              wrapNCgenerator_for_DLLenv(compiledFn[[iRes]], newDLLenv),
                                               env = resultEnv)        
       }
     }
-    names(ans) <- newNames
+    names(compiledFn) <- newNames
   } else {
     if (isNCgenerator(units[[1]])) {
       interfaceType <- ifelse(length(interfaces) == 0 || is.null(interfaces[[1]]), "full", interfaces[[1]])
-      ans <- setup_nClass_interface(interfaceType,
+      compiledFn <- setup_nClass_interface(interfaceType,
                                     units[[1]],
-                                    ans,
+                                    wrapNCgenerator_for_DLLenv(compiledFn, newDLLenv),
                                     env = resultEnv)
     }
   }
-  ans
+  compiledFn
 }
