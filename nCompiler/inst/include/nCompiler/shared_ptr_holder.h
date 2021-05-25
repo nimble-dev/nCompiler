@@ -1,7 +1,7 @@
 #ifndef __SHARED_PTR_HOLDER
 #define __SHARED_PTR_HOLDER
 
-// #define SHOW_SHARED_PTR_DESTRUCTORS
+#define SHOW_SHARED_PTR_DESTRUCTORS
 
 class shared_ptr_holder_base {
  public:

@@ -14,6 +14,7 @@
 
 #include<nCompiler/loadedObjectEnv.h>
 
+
 // These avoid the problem that a macro argument like "fields" below
 // can't contain comma-separated elements.
 #define NCOMPILER_FIELDS(...) { __VA_ARGS__ }

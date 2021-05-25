@@ -10,10 +10,14 @@ context("Testing of math functions in nCompiler code\n")
 ## * known_failures.R: updates operator definitions with info needed to catch
 ##                     failures of specific tests.
 ## * math_utils.R: utility functions that are specific to this test file.
+respect_known_failures <- TRUE
+# respect_known_failures <- FALSE
+
 utils <- system.file(
   file.path(
     'tests', 'testthat',
-    c('testing_utils.R', 'testing_operatorLists.R', 'known_failures.R',
+    c('testing_utils.R', 'testing_operatorLists.R',
+      if(respect_known_failures) 'known_failures.R' else character(),
       'math_utils.R')
   ),
   package = 'nCompiler'
@@ -101,12 +105,49 @@ math_test_params <- make_math_test_params(get_math_ops())
 ##      test_name = 'pmax', test_fun = test_math, suppress_err_msgs = FALSE
 ##    )
 
-### TODO: Fix the problem testing "round" ###
-math_test_params <- math_test_params[names(math_test_params) != "round"]
-# math_test_params <- math_test_params[names(math_test_params) == "round"]
-
 run_test_suite(
   math_test_params, 'math', test_math, FULL_TESTING,
   FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
   gold_file_dir
 )
+
+# Only current known failures are runtime failures for pmin and pmax in pmin(scalar, non-scalar) cases.
+
+# ## Here is code to see tests for every operator run in full mode.
+# ## Full mode means the code will actually be compiled and tested (checking compiled to uncompiled results).
+# for(opName in names(math_test_params)) {
+#   cat(paste0("Testing operator ", opName, " with ", length(math_test_params[[opName]]), " tests.\n"))
+#   known_compilation_failures <- lapply(math_test_params[[opName]], `[[`, 'compilation_failure')
+#   known_runtime_failures <- lapply(math_test_params[[opName]], `[[`, 'runtime_failure')
+#   cat(paste0("There are ", sum(unlist(known_compilation_failures)), " known compilation failures and ",
+#              sum(unlist(known_runtime_failures)), " known runtime failures.\n"))  
+#   run_test_suite(math_test_params[opName], 'math', test_math, TRUE, 1, FALSE, NA)
+# }
+# 
+# ## Here is code to run a single case, such op 11 in the math_test_params
+# run_test_suite(list(test = math_test_params[[opName]][11]), 'math', test_math, TRUE, 1, FALSE, NA)
+# 
+# ## Here is code to run each case within the list for an op, one by one
+# for(j in seq_along(math_test_params[[opName]])) {
+#   print(j)
+#   test_base(
+#     math_test_params[[opName]][j], verbose = TRUE,
+#     test_name = paste0('case_',j), test_fun = test_math, suppress_err_msgs = FALSE
+#   )
+# }
+
+
+# We fixed a problem giving crashes after lots of test cases.
+# The problem was:
+# 1. Id counters were reset each time
+# 2. This made file names re-used
+# 3. This made sourceCpp automatically unload DLLs from the previous version of the same name.
+# 4. This left finalizers hanging when garbage collection occurred for an object from an unloaded DLL.
+#
+# We fixed this in two ways:
+# 1. We only reset Id counters in gold file mode, when that is needed to ensure identical code
+# 2. We defensively gc() after each test to call finalizers while relevant DLL is loaded.
+
+# For logical operators, compilation tests come from (scalar, non-scalar) cases
+
+

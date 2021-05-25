@@ -108,13 +108,14 @@ compile_generateCpp <- function(code,
 }
 
 inGenCppEnv(
-  exprName2Cpp <- function(code, symTab, asArg = FALSE) {
+  exprName2Cpp <- function(code, symTab, asArg = FALSE, checkOp = FALSE) {
     if(!is.null(symTab)) {
       sym <- symTab$getSymbol(code$name, inherits = TRUE)
       if(!is.null(sym))
-        return(sym$generateUse(asArg = asArg))
-      
+        return(sym$generateUse(asArg = asArg))      
     }
+    if(checkOp)
+      return(getCppString(code))
     return(code$name)
   }
 )
@@ -129,7 +130,7 @@ inGenCppEnv(
 
 inGenCppEnv(
   AsIs <- function(code, symTab) {
-    paste0(exprName2Cpp(code, symTab),
+    paste0(exprName2Cpp(code, symTab, checkOp = TRUE),
            '(', paste0(unlist(lapply(code$args,
                                      compile_generateCpp,
                                      symTab,
@@ -400,5 +401,28 @@ inGenCppEnv(
     else
       paste0('static_cast<', compile_generateCpp(code$args[[2]]), '>(',
              compile_generateCpp(code$args[[1]], symTab), ')')
+  }
+)
+
+
+inGenCppEnv(
+  # Lambda (anonymous) function (expression) in C++/
+  # These are not part of the user-facing language for nCompiler
+  # but may be created as part of an implementation.
+  # Example: x is a vector.
+  #          cos(x) becomes x.unaryExpr( [](double x) {return cos(x);} );
+  # The part inside the unaryExpr is a C++ lambda function
+  #
+  # This has two arguments. The first is a literal whose
+  # character string gives
+  # the '[](double x)' or variants of it.
+  # The second is to be genreated as the code, with
+  # extra {} for good measure.
+  LambdaFun_ <- function(code, symTab) {
+    paste0(compile_generateCpp(code$args[[1]], symTab),
+           '{',
+           compile_generateCpp(code$args[[2]], symTab),
+           ';}'
+           )
   }
 )

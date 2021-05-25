@@ -17,11 +17,12 @@ using namespace Rcpp;
 #define R_NO_REMAP
 #endif
 #include <iostream>
+#include <nCompiler/nCompiler_core.h>
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
 #include <Rmath.h>
 #include <math.h>
-#include "..h"
+#include "nClass_1.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
@@ -80,6 +81,16 @@ SEXP  new_nClass_1 (  )  {
 return(loadedObjectEnv(new_nCompiler_object<nClass_1>()));
 }
 
+#ifndef _ONTHEFLY_LOADEDOBJECTENV
+#define _ONTHEFLY_LOADEDOBJECTENV
+SEXP loadedObjectEnv(SEXP Xptr) {
+Rcpp::Environment nc("package:nCompiler");
+Rcpp::Function newLOE = nc["new.loadedObjectEnv"];
+return newLOE(Xptr);
+}
+#endif
+
+
 NCOMPILER_INTERFACE(
 nClass_1,
 NCOMPILER_FIELDS(),
@@ -117,7 +128,9 @@ using namespace Rcpp;
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
+#include <nCompiler/nCompiler_core.h>
 #include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/loadedObjectEnv.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
 class nClass_1 : public genericInterfaceC<nClass_1> {
@@ -134,6 +147,8 @@ int  nFun_9_NFID_9 ( Eigen::Tensor<bool, 3> arg1 );
 };
 
 SEXP  new_nClass_1 (  );
+
+
 
 
 #endif

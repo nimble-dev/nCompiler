@@ -291,6 +291,7 @@ assignOperatorDef(
         returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       handler = 'Reduction',
+      removeForScalar = TRUE,
       method = TRUE),
     cppOutput = list()
   )
@@ -381,6 +382,7 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
       handler = 'Reduction',
+      removeForScalar = TRUE,
       method = TRUE
     ),
     cppOutput = list(
@@ -388,6 +390,8 @@ assignOperatorDef(
     )
   )
 )
+
+updateOperatorDef('squaredNorm', 'eigenImpl', 'removeForScalar', FALSE)
 
 assignOperatorDef(
   c('all', 'any'),
@@ -398,16 +402,16 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
       handler = 'Reduction',
+      removeForScalar = TRUE,
       method = TRUE
     ),
     cppOutput = list(
-      handler = ''
     )
   )
 )
 
 assignOperatorDef(
-  c('exp', 'lgamma', 'log', 'rsqrt', 'sqrt', 'tanh'),
+  c('exp', 'lgamma', 'log', 'sqrt', 'tanh'), # We had an 'rsqrt'.  What was the use case for it?
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
@@ -418,7 +422,6 @@ assignOperatorDef(
       method = TRUE
     ),
     cppOutput = list(
-      handler = ''
     )
   )
 )
@@ -435,10 +438,13 @@ assignOperatorDef(
       method = TRUE
     ),
     cppOutput = list(
-      handler = ''
+      handler = 'AsIs'
     )
   )
 )
+
+updateOperatorDef('cube', 'eigenImpl', 'scalarCall', 'nc_cube')
+updateOperatorDef('square', 'eigenImpl', 'scalarCall', 'nc_square')
 
 assignOperatorDef(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
@@ -455,7 +461,7 @@ assignOperatorDef(
       method = TRUE
     ),
     cppOutput = list(
-      handler = ''
+      handler = 'AsIs' # relevant only for scalar cases
     )
   )
 )
@@ -488,6 +494,15 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
+
+assignOperatorDef(
+  # This is for C++ Lambda expressions,
+  # which may be generated as part of implementation
+  # of some Eigen component-wise operations.
+  'LambdaFun_',
+  list(
+    cppOutput = list(handler = 'LambdaFun_')
+  ))
 
 assignOperatorDef(
   c('/'),
@@ -527,8 +542,8 @@ assignOperatorDef(
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
       method = TRUE),
     cppOutput = list(
-      cppString = 'pow',
-      handler = '')
+      cppString = 'pow'
+    )
   )
 )
 
@@ -541,8 +556,8 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
     cppOutput = list(
-      handler = 'MidOperator',
-      cppString = ' % ')
+      handler = 'AsIs',
+      cppString = 'nc_mod')
   )
 )
 
@@ -578,6 +593,7 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'Reduction',
       noPromotion = TRUE,
+      replaceForScalar = 1,
       method = TRUE
     ),
     cppOutput = list(

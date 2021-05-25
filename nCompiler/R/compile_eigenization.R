@@ -163,14 +163,16 @@ inEigenizeEnv(
       if(a2type == 'logical') {argID <- 1; newType <- 'logical'}
       if(a1type == 'logical') {argID <- 2; newType <- 'logical'}
     }
-    if(argID != 0) eigenCast(code, argID, newType)
-
-    NULL
+    if(argID != 0) 
+      eigenCast(code, argID, newType) # becomes static_cast<>() for scalars at generateCpp stage
+    invisible(NULL)
   }
 )
 
 inEigenizeEnv(
   eigenCast <- function(code, argIndex, newType) {
+    ## for a scalar, eigenCast(x) becomes static_cast<type>(x) at generateCpp stage
+    ## for a non-scalar, generateCpp uses eigen cast method.
     castExpr <- insertExprClassLayer(code, argIndex, 'eigencast')
     cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
                              name = scalarTypeToCppType(newType))
@@ -203,8 +205,8 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  convertToMethod <- function(code, handlingInfo) {
-    if(isTRUE(handlingInfo$method)) {
+  maybe_convertToMethod <- function(code, handlingInfo, force = FALSE) {
+    if(isTRUE(handlingInfo$method) || isTRUE(force)) {
       methodName <- code$name
       code$name <- '.method'
       if(length(code$args) > 1) {
@@ -221,8 +223,13 @@ inEigenizeEnv(
 inEigenizeEnv(
   ## could be combined with cWiseBinary and Reduction?
   cWiseUnary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(code$args[[1]]$type$nDim == 0) {
+      if(!is.null(handlingInfo$scalarCall))
+        code$name <- handlingInfo$scalarCall
+      return(invisible(NULL))
+    }
     promoteTypes(code)
-    convertToMethod(code, handlingInfo)
+    maybe_convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )
@@ -245,28 +252,43 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    promoteTypes(code)
-    inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
-    returnType <- scalarTypeToCppType(code$type$type)
     ## replace the operator name with the equivalent C++ method name if needed
     replaceCodeName(code, handlingInfo)    
-    convertToMethod(code, handlingInfo)
+    ## All other steps are only needed for non-scalars
+    if(code$args[[1]]$type$nDim == 0) return(invisible(NULL))
+    
+    promoteTypes(code)
+    ## Get C++ type strings, e.g. int for integer
+    inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
+    returnType <- scalarTypeToCppType(code$type$type)
     ## the operator name becomes the argument to std::ptr_fun
-    newName <- paste0('std::ptr_fun<', inputType, ', ',
-                      returnType, '>(', code$args[[2]]$name, ')')
-    newExpr <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
-                             name = newName)
+    ## Old version, using std::ptr_fun
+    ## newName <- paste0('std::ptr_fun<', inputType, ', ',
+    ##                   returnType, '>(', code$args[[2]]$name, ')')
+    ##
+    ## New version: Use C++11 lambda expression
+    ## [](double x)->double{return cos(x);}
+    ## We generate it as explicitly as possible (e.g. including return type)
+
+    lambdaContent <- copyExprClass(code)
+    setArg(lambdaContent, 1, exprClass$new(isName=TRUE, isCall=FALSE, isAssign=FALSE, name = 'x__'))
+    #     lambdaContent$args[[1]]$name <- 'x__'
+    lambdaContent$args[[1]]$type <- code$args[[1]]$type$clone(deep=TRUE)
+    lambdaContent$args[[1]]$type$nDim <- 0
+    lambdaContent$type <- lambdaContent$args[[1]]$type
+    
+    returnExpr <- nParse(quote(return(dummy)))
+    setArg(returnExpr, 1, lambdaContent)
+    
+    lambdaDecl <- nParse(as.name(paste0('[](', inputType, ' x__)->', returnType)))
+    newExpr <- nParse(quote(LambdaFun_(decl, def)))
+    setArg(newExpr, 1, lambdaDecl)
+    setArg(newExpr, 2, returnExpr)
+    
+    ## Convert foo(x) to x.foo(), i.e. .method(x, foo) 
+    maybe_convertToMethod(code, handlingInfo)
     code$args[[2]]$name <- 'unaryExpr'
     setArg(code, 3, newExpr)
-    invisible(NULL)
-  }
-)
-
-inEigenizeEnv(
-  cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))
-    promoteTypes(code)
-    convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )
@@ -340,7 +362,16 @@ inEigenizeEnv(
 inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
-    convertToMethod(code, handlingInfo)
+    if(code$args[[1]]$type$nDim == 0) {
+      if(isTRUE(handlingInfo$removeForScalar)) #used for mean(scalar) = scalar and similar cases.
+        removeExprClassLayer(code)
+      else if(!is.null(handlingInfo$replaceForScalar)) {## used for length(scalar)=1
+        setArg(code, 1, exprClass$new(isLiteral = TRUE, isName = FALSE, isCall=FALSE, isAssign=FALSE,
+                                      name = handlingInfo$replaceForScalar))
+        removeExprClassLayer(code)
+      }
+    } else
+      maybe_convertToMethod(code, handlingInfo) # used for mean(vector) = vector.mean() if method=TRUE
     invisible(NULL)
   }
 )
@@ -355,10 +386,59 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  convert_cWiseBinaryToUnaryExpr <- function(code, handlingInfo) {
+      input1Type <- scalarTypeToCppType(code$args[[1]]$type$type)
+      input2RawType <- code$args[[2]]$type$type
+      returnType <- scalarTypeToCppType(code$type$type)
+
+      lambdaContent <- copyExprClass(code)
+      setArg(lambdaContent, 1, exprClass$new(isName=TRUE, isCall=FALSE, isAssign=FALSE, name = 'x__'))
+#      lambdaContent$args[[1]]$name <- 'x__'
+      lambdaContent$args[[1]]$type <- code$args[[1]]$type$clone(deep=TRUE)
+      lambdaContent$args[[1]]$type$nDim <- 0
+      lambdaContent$type <- lambdaContent$args[[1]]$type
+      
+      eigenCast(lambdaContent, 2, input2RawType)
+
+      returnExpr <- nParse(quote(return(dummy)))
+      setArg(returnExpr, 1, lambdaContent)
+
+      lambdaDecl <- nParse(as.name(paste0('[&](', input1Type, ' x__)->', returnType)))
+      newExpr <- nParse(quote(LambdaFun_(decl, def)))
+      setArg(newExpr, 1, lambdaDecl)
+      setArg(newExpr, 2, returnExpr)
+
+      maybe_convertToMethod(code, handlingInfo, force=TRUE)
+      code$args[[2]]$name <- 'unaryExpr'
+      setArg(code, 3, newExpr)
+      invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   cWiseBinary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     promoteTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
-    convertToMethod(code, handlingInfo)
+    if(code$args[[1]]$type$nDim > 0) { # arg1 is non-scalar
+      if(code$args[[2]]$type$nDim == 0) # arg2 is scalar
+        convert_cWiseBinaryToUnaryExpr(code, handlingInfo)
+      else
+        maybe_convertToMethod(code, handlingInfo) # arg2 is non-scalar.
+    }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## key difference for ByScalar case:
+    ## The second argument must be scalar
+    if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))
+    promoteTypes(code)
+    if(code$args[[1]]$type$nDim > 0)
+      convert_cWiseBinaryToUnaryExpr(code, handlingInfo)
+    ## Are there any cases where a built-in Eigen method is sufficient:
+    ##maybe_convertToMethod(code, handlingInfo)
     invisible(NULL)
   }
 )
@@ -369,7 +449,12 @@ inEigenizeEnv(
     ## promote args to match each other, not logical return type
     promoteArgTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
-    convertToMethod(code, handlingInfo)
+    if(code$args[[1]]$type$nDim > 0) { # arg1 is non-scalar
+      if(code$args[[2]]$type$nDim == 0) # arg2 is scalar
+        convert_cWiseBinaryToUnaryExpr(code, handlingInfo)
+      else
+        maybe_convertToMethod(code, handlingInfo) # arg2 is non-scalar.
+    }
     invisible(NULL)
   }
 )

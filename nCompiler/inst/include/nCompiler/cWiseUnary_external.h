@@ -1,6 +1,10 @@
 #ifndef _CWISEUNARY_EXTERNAL
 #define _CWISEUNARY_EXTERNAL
 
+// This list includes functions that will be used in
+// an Eigen unaryExpr.  However they may also be used
+// for purely scalar code.
+
 inline double logit(double x) {return log(x/(1.-x));}
 inline double ilogit(double x) {return(1./(1. + exp(-x)));}
 inline double cloglog(double x) {return(log(-log(1.-x)));}

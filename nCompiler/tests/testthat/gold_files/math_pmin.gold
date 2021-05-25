@@ -17,11 +17,12 @@ using namespace Rcpp;
 #define R_NO_REMAP
 #endif
 #include <iostream>
+#include <nCompiler/nCompiler_core.h>
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
 #include <Rmath.h>
 #include <math.h>
-#include "..h"
+#include "nClass_1.h"
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(RcppEigenAD)]]
@@ -31,62 +32,62 @@ using namespace Rcpp;
 
 Eigen::Tensor<double, 1>  nClass_1::nFun_1_NFID_1 ( Eigen::Tensor<double, 1> arg1, double arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_2_NFID_2 ( Eigen::Tensor<int, 1> arg1, double arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_3_NFID_3 ( Eigen::Tensor<bool, 1> arg1, double arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_4_NFID_4 ( Eigen::Tensor<double, 1> arg1, int arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_5_NFID_5 ( Eigen::Tensor<int, 1> arg1, int arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_6_NFID_6 ( Eigen::Tensor<bool, 1> arg1, int arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = ((arg1).cast<int>()).cwiseMin(arg2);
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_7_NFID_7 ( Eigen::Tensor<double, 1> arg1, bool arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_8_NFID_8 ( Eigen::Tensor<int, 1> arg1, bool arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = (arg1).cwiseMin(static_cast<int>(arg2));
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_9_NFID_9 ( Eigen::Tensor<bool, 1> arg1, bool arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = ((arg1).cast<int>()).cwiseMin(static_cast<int>(arg2));
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_10_NFID_10 ( double arg1, Eigen::Tensor<double, 1> arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_11_NFID_11 ( int arg1, Eigen::Tensor<double, 1> arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_12_NFID_12 ( bool arg1, Eigen::Tensor<double, 1> arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_13_NFID_13 ( Eigen::Tensor<double, 1> arg1, Eigen::Tensor<double, 1> arg2 )  {
@@ -106,17 +107,17 @@ return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_16_NFID_16 ( double arg1, Eigen::Tensor<int, 1> arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_17_NFID_17 ( int arg1, Eigen::Tensor<int, 1> arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_18_NFID_18 ( bool arg1, Eigen::Tensor<int, 1> arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = (arg2).cwiseMin(static_cast<int>(arg1));
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_19_NFID_19 ( Eigen::Tensor<double, 1> arg1, Eigen::Tensor<int, 1> arg2 )  {
@@ -136,17 +137,17 @@ return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_22_NFID_22 ( double arg1, Eigen::Tensor<bool, 1> arg2 )  {
 Eigen::Tensor<double, 1> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_23_NFID_23 ( int arg1, Eigen::Tensor<bool, 1> arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = ((arg2).cast<int>()).cwiseMin(arg1);
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 1>  nClass_1::nFun_24_NFID_24 ( bool arg1, Eigen::Tensor<bool, 1> arg2 )  {
 Eigen::Tensor<int, 1> ans;
-ans = ((arg2).cast<int>()).cwiseMin(static_cast<int>(arg1));
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 1>  nClass_1::nFun_25_NFID_25 ( Eigen::Tensor<double, 1> arg1, Eigen::Tensor<bool, 1> arg2 )  {
@@ -256,182 +257,182 @@ return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_46_NFID_46 ( double arg1, Eigen::Tensor<double, 2> arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_47_NFID_47 ( int arg1, Eigen::Tensor<double, 2> arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_48_NFID_48 ( bool arg1, Eigen::Tensor<double, 2> arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_49_NFID_49 ( double arg1, Eigen::Tensor<int, 2> arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_50_NFID_50 ( int arg1, Eigen::Tensor<int, 2> arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_51_NFID_51 ( bool arg1, Eigen::Tensor<int, 2> arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = (arg2).cwiseMin(static_cast<int>(arg1));
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_52_NFID_52 ( double arg1, Eigen::Tensor<bool, 2> arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_53_NFID_53 ( int arg1, Eigen::Tensor<bool, 2> arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = ((arg2).cast<int>()).cwiseMin(arg1);
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_54_NFID_54 ( bool arg1, Eigen::Tensor<bool, 2> arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = ((arg2).cast<int>()).cwiseMin(static_cast<int>(arg1));
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_55_NFID_55 ( double arg1, Eigen::Tensor<double, 3> arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_56_NFID_56 ( int arg1, Eigen::Tensor<double, 3> arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_57_NFID_57 ( bool arg1, Eigen::Tensor<double, 3> arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg2).cwiseMin(static_cast<double>(arg1));
+ans = (arg2).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_58_NFID_58 ( double arg1, Eigen::Tensor<int, 3> arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_59_NFID_59 ( int arg1, Eigen::Tensor<int, 3> arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = (arg2).cwiseMin(arg1);
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_60_NFID_60 ( bool arg1, Eigen::Tensor<int, 3> arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = (arg2).cwiseMin(static_cast<int>(arg1));
+ans = (arg2).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_61_NFID_61 ( double arg1, Eigen::Tensor<bool, 3> arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = ((arg2).cast<double>()).cwiseMin(arg1);
+ans = ((arg2).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_62_NFID_62 ( int arg1, Eigen::Tensor<bool, 3> arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = ((arg2).cast<int>()).cwiseMin(arg1);
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg1)));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_63_NFID_63 ( bool arg1, Eigen::Tensor<bool, 3> arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = ((arg2).cast<int>()).cwiseMin(static_cast<int>(arg1));
+ans = ((arg2).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg1))));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_64_NFID_64 ( Eigen::Tensor<double, 2> arg1, double arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_65_NFID_65 ( Eigen::Tensor<int, 2> arg1, double arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_66_NFID_66 ( Eigen::Tensor<bool, 2> arg1, double arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_67_NFID_67 ( Eigen::Tensor<double, 3> arg1, double arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_68_NFID_68 ( Eigen::Tensor<int, 3> arg1, double arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_69_NFID_69 ( Eigen::Tensor<bool, 3> arg1, double arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = ((arg1).cast<double>()).cwiseMin(arg2);
+ans = ((arg1).cast<double>()).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_70_NFID_70 ( Eigen::Tensor<double, 2> arg1, int arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_71_NFID_71 ( Eigen::Tensor<int, 2> arg1, int arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_72_NFID_72 ( Eigen::Tensor<bool, 2> arg1, int arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = ((arg1).cast<int>()).cwiseMin(arg2);
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_73_NFID_73 ( Eigen::Tensor<double, 3> arg1, int arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_74_NFID_74 ( Eigen::Tensor<int, 3> arg1, int arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = (arg1).cwiseMin(arg2);
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_75_NFID_75 ( Eigen::Tensor<bool, 3> arg1, int arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = ((arg1).cast<int>()).cwiseMin(arg2);
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(arg2)));});
 return(ans);
 }
 Eigen::Tensor<double, 2>  nClass_1::nFun_76_NFID_76 ( Eigen::Tensor<double, 2> arg1, bool arg2 )  {
 Eigen::Tensor<double, 2> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_77_NFID_77 ( Eigen::Tensor<int, 2> arg1, bool arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = (arg1).cwiseMin(static_cast<int>(arg2));
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 2>  nClass_1::nFun_78_NFID_78 ( Eigen::Tensor<bool, 2> arg1, bool arg2 )  {
 Eigen::Tensor<int, 2> ans;
-ans = ((arg1).cast<int>()).cwiseMin(static_cast<int>(arg2));
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<double, 3>  nClass_1::nFun_79_NFID_79 ( Eigen::Tensor<double, 3> arg1, bool arg2 )  {
 Eigen::Tensor<double, 3> ans;
-ans = (arg1).cwiseMin(static_cast<double>(arg2));
+ans = (arg1).unaryExpr([&](double x__)->double{return(cwiseMin(x__, static_cast<double>(static_cast<double>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_80_NFID_80 ( Eigen::Tensor<int, 3> arg1, bool arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = (arg1).cwiseMin(static_cast<int>(arg2));
+ans = (arg1).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 Eigen::Tensor<int, 3>  nClass_1::nFun_81_NFID_81 ( Eigen::Tensor<bool, 3> arg1, bool arg2 )  {
 Eigen::Tensor<int, 3> ans;
-ans = ((arg1).cast<int>()).cwiseMin(static_cast<int>(arg2));
+ans = ((arg1).cast<int>()).unaryExpr([&](int x__)->int{return(cwiseMin(x__, static_cast<int>(static_cast<int>(arg2))));});
 return(ans);
 }
 
@@ -439,6 +440,16 @@ return(ans);
 SEXP  new_nClass_1 (  )  {
 return(loadedObjectEnv(new_nCompiler_object<nClass_1>()));
 }
+
+#ifndef _ONTHEFLY_LOADEDOBJECTENV
+#define _ONTHEFLY_LOADEDOBJECTENV
+SEXP loadedObjectEnv(SEXP Xptr) {
+Rcpp::Environment nc("package:nCompiler");
+Rcpp::Function newLOE = nc["new.loadedObjectEnv"];
+return newLOE(Xptr);
+}
+#endif
+
 
 NCOMPILER_INTERFACE(
 nClass_1,
@@ -549,7 +560,9 @@ using namespace Rcpp;
 #include <Rinternals.h>
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
+#include <nCompiler/nCompiler_core.h>
 #include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/loadedObjectEnv.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
 class nClass_1 : public genericInterfaceC<nClass_1> {
@@ -638,6 +651,8 @@ Eigen::Tensor<int, 3>  nFun_81_NFID_81 ( Eigen::Tensor<bool, 3> arg1, bool arg2 
 };
 
 SEXP  new_nClass_1 (  );
+
+
 
 
 #endif

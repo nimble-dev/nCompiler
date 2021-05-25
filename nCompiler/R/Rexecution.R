@@ -21,8 +21,8 @@ parallel_reduce <- function(f, x, init, ...) {
 square <- function(x) x*x
 #' @export
 cube <- function(x) x*x*x
-#' @export
-rsqrt <- function(x) 1/sqrt(x)
+## #' @export
+## rsqrt <- function(x) 1/sqrt(x)
 #' @export
 logit <- function(x) log(x/(1-x))
 #' @export

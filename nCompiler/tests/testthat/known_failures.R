@@ -116,27 +116,27 @@ nCompiler:::updateOperatorDef(
   )
 )
 
-nCompiler:::updateOperatorDef(
-  c('&', '|'),
-  'testing', 'known_failures',
-  list(
-    math = list(
-      compilation = c(
-        ## doesn't work when one arg is Eigen::Tensor and the other is scalar
-        make_argType_tuples('numericVector', 'integerVector', 'logicalVector',
-                            'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                            'numericArray(nDim=3)', 'integerArray(nDim=3)',
-                            'logicalArray(nDim=3)',
-                            rhs = c('numericScalar', 'integerScalar', 'logicalScalar')),
-        make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
-                            rhs = c('numericVector', 'integerVector', 'logicalVector',
-                                    'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                                    'numericArray(nDim=3)', 'integerArray(nDim=3)',
-                                    'logicalArray(nDim=3)'))
-      )
-    )
-  )
-)
+## nCompiler:::updateOperatorDef(
+##   c('&', '|'),
+##   'testing', 'known_failures',
+##   list(
+##     math = list(
+##       compilation = c(
+##         ## doesn't work when one arg is Eigen::Tensor and the other is scalar
+##         make_argType_tuples('numericVector', 'integerVector', 'logicalVector',
+##                             'numericMatrix', 'integerMatrix', 'logicalMatrix',
+##                             'numericArray(nDim=3)', 'integerArray(nDim=3)',
+##                             'logicalArray(nDim=3)',
+##                             rhs = c('numericScalar', 'integerScalar', 'logicalScalar')),
+##         make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
+##                             rhs = c('numericVector', 'integerVector', 'logicalVector',
+##                                     'numericMatrix', 'integerMatrix', 'logicalMatrix',
+##                                     'numericArray(nDim=3)', 'integerArray(nDim=3)',
+##                                     'logicalArray(nDim=3)'))
+##       )
+##     )
+##   )
+## )
 
 nCompiler:::updateOperatorDef(
   c('%%'),

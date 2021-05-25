@@ -182,12 +182,18 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
   compiles <- param_list[!compile_error]
 
   ## Ensure that generated strings for unique names
-  ## have counters that start at 1
-  nCompiler:::resetLabelFunctionCreators()
+  ## have counters that start at 1.
+  ## If this is not a gold_test, we do not reset these
+  ##  because, if we do, sourceCpp will dyn.unload previous DLLs with the same label,
+  ##  leaving finalizers that destruct shared_ptrs whose underlying object implementations
+  ##  are unloaded, giving a crash.
+  ## That is also the reason for the defensive gc() at the end of this function.
+  if(gold_test)
+    nCompiler:::resetLabelFunctionCreators()
 
   nFuns <- lapply(compiles, gen_nFunction)
 
-  if (length(nFuns) > 0) {
+  retVal <- if (length(nFuns) > 0) {
 
     nFun_names <- names(nFuns) ## for verbose output
     names(nFuns) <- paste0('nFun', 1:length(nFuns))
@@ -225,6 +231,8 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
         control = control, verbose = verbose, ...
       )
   }
+  gc() ## This is defensive, because a crash can arise from finalizing an object whose DLL has been unloaded, so we force finalizations here.
+  retVal
 }
 
 wrap_if_matches <- function(pattern, string, wrapper, expr) {

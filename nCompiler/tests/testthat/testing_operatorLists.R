@@ -43,7 +43,7 @@ nCompiler:::updateOperatorDef(
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
     'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum', 'exp', 'log',
-    'rsqrt', 'sqrt', 'abs', 'cube', 'square'),
+    'sqrt', 'abs', 'cube', 'square'), # 'rsqrt'
   'testing',
   val = list(
     ## derivatives currently only available for scalar and vector inputs  
@@ -56,18 +56,81 @@ nCompiler:::updateOperatorDef(
   )
 )
 
+# sin, cos and tan can take inputs on (-inf, inf): no special input_gen_funs
+# asin, acos, and atanh need inputs on [-1, 1]
+# acosh needs inputs on [1, inf)
+# asinh and atan can take any inputs
+#
+# cloglog, logit, and probit need inputs in (0, 1). On [0, 1] they give -Inf or Inf, which are "valid"
+# lgamma (same as loggam), and lfactorial (same as logfact) give Inf for negative integers, but we will let that be tested, so no special inputs and needed
+# log1p needs inputs in (-1, Inf)
+# log and sqrt (and rsqrt if we implement it) need inputs in [0, Inf), allowing log(0)=-Inf to be tested.
+
+
+input_gen_funs_zp1 <- function(arg_size, type) {
+  switch(type,
+         'double' = runif(prod(arg_size), 0, 1),
+         'integer' = sample(0:1, size = prod(arg_size), replace = TRUE),
+         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+         )
+}
+
+input_gen_funs_zinf <- function(arg_size, type) {
+  switch(type,
+         'double' = runif(prod(arg_size), 0, 100),
+         'integer' = sample(0:100, size = prod(arg_size), replace = TRUE),
+         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+         )
+}
+
+input_gen_funs_m1p1 <- function(arg_size, type) {
+  switch(type,
+         'double' = runif(prod(arg_size), -1, 1),
+         'integer' = sample(-1:1, size = prod(arg_size), replace = TRUE),
+         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+         )
+  }
+
+input_gen_funs_m1inf <- function(arg_size, type) {
+  switch(type,
+         'double' = runif(prod(arg_size), -1, 100),
+         'integer' = sample(-1:100, size = prod(arg_size), replace = TRUE),
+         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+         )
+  }
+
+input_gen_funs_p1inf <- function(arg_size, type) {
+  switch(type,
+         'double' = runif(prod(arg_size), 1, 100),
+         'integer' = sample(1:100, size = prod(arg_size), replace = TRUE),
+         'logical' = rep(TRUE, size = prod(arg_size))
+         )
+}
+
 nCompiler:::updateOperatorDef(
-  c('log', 'rsqrt', 'sqrt'), 'testing', 'input_gen_funs',
-  list(
-    arg1 = function(arg_size, type) {
-      switch(
-        type,
-        "double"  = abs(rnorm(prod(arg_size))), ## no negatives
-        "integer" = rgeom(prod(arg_size), 0.5),
-        "logical" = sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
-      )
-    }
-  )
+  c('log1p'), 'testing', 'input_gen_funs',
+  input_gen_funs_m1inf
+)
+
+nCompiler:::updateOperatorDef(
+  c('log', 'sqrt'), 'testing', 'input_gen_funs',
+  input_gen_funs_zinf
+)
+
+
+nCompiler:::updateOperatorDef(
+  c('cloglog', 'logit', 'probit'), 'testing', 'input_gen_funs',
+  input_gen_funs_zp1
+)
+
+nCompiler:::updateOperatorDef(
+  c('asin', 'acos', 'atanh'), 'testing', 'input_gen_funs',
+  input_gen_funs_m1p1
+)
+
+nCompiler:::updateOperatorDef(
+  c('acosh'), 'testing', 'input_gen_funs',
+  input_gen_funs_p1inf
 )
 
 nCompiler:::updateOperatorDef(
@@ -229,8 +292,25 @@ nCompiler:::updateOperatorDef(
                                                           'integerScalar',
                                                           'logicalScalar'))),
     alpha_name = 'mod',
-    ## use same input_gen_funs as for '/' so we don't divide by 0
-    input_gen_funs = nCompiler:::getOperatorDef('/', 'testing', 'input_gen_funs')
+    ## mod with negative input(s) can give a positive or negative result from R or C++,
+    ## and which it should give is undefined.  Therefore we give all positive inputs.
+    ## We also make the first argument larger than the second to make it more interesting.
+    input_gen_funs = list(
+      arg1 = function(arg_size, type) {
+        switch(type,
+               'double' = runif(prod(arg_size), 51, 100),
+               'integer' = 50 + floor(50 * runif(prod(arg_size))),
+               'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+               )
+      },
+      arg2 = function(arg_size, type) {
+        switch(type,
+               'double' = runif(prod(arg_size), 0.5, 19),
+               'integer' = 1 + floor(20 * runif(prod(arg_size))), # no zeros
+               'logical' = rep(TRUE, size = prod(arg_size)) # no zeros
+               )
+      }
+    )
   )
 )
 
