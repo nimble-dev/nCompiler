@@ -54,31 +54,49 @@ get_DLLenv <- function(obj) {
   parent.env(obj)
 }
 
-setup_DLLenv <- function(ans, newDLLenv) {
-  if(!is.list(ans)) return(ans)
-  namesForDLLenv <- c("nComp_serialize_", "nComp_deserialize_", "new_serialization_mgr")
+
+# Filters compiled function list for specified names of helper functions pertaining to DLL.
+# Filtered-out functions moved to new DLL environment.
+# Returns filtered list or singleton.
+setup_DLLenv <- function(ans, newDLLenv, returnList = FALSE) {
+  if (!is.list(ans))
+    return(ans) # Why return on singleton?
+
+  # Serialization-specific:  should be initialized elsewhere, according to options.
+  namesForDLLenv <- getSerialFunNames()
+
   keep <- rep(TRUE, length(ans))
   for(DLLname in namesForDLLenv) {
     found <- grepl(DLLname, names(ans))
     if(any(found)) {
       i <- which(found)
       if(length(i) != 1)
-        stop("Something is wrong with names returned from compilation.")
+        stop(paste("Compilation produces multiple instances of ", DLLname));
       keep[i] <- FALSE
       newDLLenv[[DLLname]] <- ans[[i]]
     }
   }
-  if(!all(keep)) ans <- ans[keep]
-  if(length(ans) == 1) ans[[1]]
-  else ans
+
+  if (!all(keep)) # unneeded guard
+    ans <- ans[keep]
+
+  if (length(ans) != 1 || returnList)
+    ans
+  else
+    ans[[1]]
 }
 
+
+## returns a wrapper function causing the LOE returned by 'newObjFun' to
+## receive 'newDLLenv' as its parent environment.
 wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {
   force(newDLLenv)
   force(newObjFun)
   if(!is.function(newObjFun))
     stop(paste0("newObjFun is not a function. It is a ", 
-                paste0(class(newObjFun), collase = " ")))
+                paste0(class(newObjFun), collapse = " ")))
+
+  # Wrapper function assigning the parent environment of the returned LOE to be 'newDLLenv'
   wrappedNewObjFun <- function() {
     ans <- newObjFun()
     parent.env(ans) <- newDLLenv
@@ -87,9 +105,9 @@ wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {
   wrappedNewObjFun
 }
 
-new.serialObjectEnv <- function(serial_data = NULL, parent_env) {
+new.serialObjectEnv <- function(serial_data = NULL, dll_env) {
   ans <- new.env()
-  if(!missing(parent_env)) parent.env(ans) <- parent_env
+  if(!missing(dll_env)) parent.env(ans) <- dll_env
   ans$serial <- serial_data
   class(ans) <- "serialObjectEnv"
   ans

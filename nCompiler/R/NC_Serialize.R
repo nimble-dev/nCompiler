@@ -25,9 +25,9 @@ serialize_nComp_object <- function(obj, serializer) {
         stop("Function for serializing not found not found.")
     }
     serial_data <- serializer(getExtptr(obj))
-    
-    newObj <- new.serialObjectEnv(serial_data, get_DLLenv(obj))
-    return(newObj)
+
+    soe <- new.serialObjectEnv(serial_data, get_DLLenv(obj))
+    return(soe)
   }
 }
 
@@ -44,10 +44,24 @@ deserialize_nComp_object <- function(obj, deserializer) {
       stop("Function for serializing not found not found.")
   }
   newXptr <- deserializer(obj$serial)
-  newObj <- new.loadedObjectEnv(newXptr)
-  parent.env(newObj) <- parent.env(obj)
-  newObj
+  newLOE <- new.loadedObjectEnv(newXptr)
+  parent.env(newLOE) <- parent.env(obj)
+  newLOE
 }
+
+
+loadDLLenv <- function(newLOE, loadands) {
+  for (DLLname in getSerialFunNames()) {
+    found <- grepl(DLLname, names(loadands))
+    if (any(found)) {
+      i <- which(found)
+      if (length(i) != 1)
+        stop(paste("Loading multiple instances of ", DLLname));
+      parent.env(newLOE)[[DLLname]] <- loadands[[i]]
+    }
+  }
+}
+
 
 #' @name save_nClass
 #' @title Save an instance of an nClass object across sessions
@@ -243,40 +257,27 @@ read_nClass <- function(file, lib = .libPaths()[1]) {
   if (!is.list(savedObj) || is.null(savedObj$CppObj)) {
     stop("Object in specified RDS file is not a saved nClass.")
   }
-  
+
+  deserialized <- deserialize_nComp_object(
+    new.loadedObjectEnv(savedObj$CppObj), # earlier invocation:  (serialized = savedObj$CppObj)
+    nComp_deserialize_fn = getDeserializerName(savedObj))
+
+  # library(savedObj$package.name, character.only = TRUE, lib = lib)
+  # loadEnv <- new.env()
+  # data(list = "classname", package = savedObj$package.name, envir = loadEnv)
   if (!is.null(savedObj$full)) {
-    serialized <- new.loadedObjectEnv(serialized = savedObj$CppObj)
-    
-    # library(savedObj$package.name, character.only = TRUE, lib = lib)
-    # loadEnv <- new.env()
-    # data(list = "classname", package = savedObj$package.name, envir = loadEnv)
-    deserialize_fn <- utils::getFromNamespace(
-      paste0("nComp_deserialize_", Rname2CppName(savedObj$classname)), 
-      savedObj$package.name
-    )
-    deserialized <- deserialize_nComp_object(
-      serialized, nComp_deserialize_fn = deserialize_fn)
-    
     rtnObjFull <- savedObj$full
     rtnObjFull$private$CppObj <- deserialized
-    
     return(rtnObjFull)
-    
   } else {
-    serialized <- new.loadedObjectEnv(serialized = savedObj$CppObj)
-    
-    # library(savedObj$package.name, character.only = TRUE, lib = lib)
-    # loadEnv <- new.env()
-    # data(list = "classname", package = savedObj$package.name, envir = loadEnv)
-    
-    deserialize_fn <- utils::getFromNamespace(
-      paste0("nComp_deserialize_", Rname2CppName(savedObj$classname)), 
-      savedObj$package.name
-    )
-    deserialized <- deserialize_nComp_object(
-      serialized, nComp_deserialize_fn = deserialize_fn)
     return(deserialized)
   }
 }
 
+
+#' Constructs the name of the deserializer from the package and class name.
+getDeserializerName <- function(loadedObj) {
+  utils::getFromNamespace(paste0("nComp_deserialize_", Rname2CppName(loadedObj$classname)),
+                          loadedObj$package.name)
+}
 

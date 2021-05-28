@@ -23,35 +23,13 @@ nCompile <- function(...,
   dotsDeparses[origIsList] <- ''
   names(origList)[boolNoName] <- dotsDeparses[boolNoName]
   units <- do.call('c', origList)
-  unitTypes <- get_nCompile_types(units)
-  if(is.null(names(units))) names(units) <- rep('', length(units))
-  if(length(units) == 0) stop('No objects for compilation provided')
-  unitResults <- list()
-  ## names(units) should be fully populated and unique. TO-DO: check.
-  cpp_names <- character(length(units))
-  RcppPacket_list <- vector(length = length(units), mode = "list")
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nF") {
-      unitResults[[i]] <- nCompile_nFunction(units[[i]],
-                                             stopAfterRcppPacket = TRUE,
-                                             env = env,
-                                             control = control)
-      cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
-      RcppPacket_list[[i]] <- NFinternals(unitResults[[i]])$RcppPacket
-    } else if(unitTypes[i] == "nCgen") {
-      unitResults[[i]] <- nCompile_nClass(units[[i]],
-                                          stopAfterRcppPacket = TRUE,
-                                          env = env,
-                                          control = control)
-      cpp_names[i] <- units[[i]]$classname
-      RcppPacket_list[[i]] <- NCinternals(unitResults[[i]])$RcppPacket
-    }
-  }
+  RcppPacket_list <- compileLoop(units, env, control)
 
   if(isTRUE(get_nOption('serialize'))) {
     serial_cppDef <- make_serialization_cppDef()
     RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(serial_cppDef, "serialization_")
   }
+
   if(!isTRUE(get_nOption('use_nCompLocal'))) {
     loadedObjectEnv_cppDef <- make_loadedObjectEnv_cppDef()
     RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(loadedObjectEnv_cppDef, "loadedObjectEnv_")
@@ -59,40 +37,43 @@ nCompile <- function(...,
   
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
-  cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
+  cppFile = paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
   writeCpp_nCompiler_combine(RcppPacket_list,
-                             cppfile = cppfile)
+                             cppfile = cppFile)
+
   if(isTRUE(get_nOption('pause_after_writing_files')))
     browser()
+
   resultEnv <- new.env()
-  ans <- compileCpp_nCompiler(cppfile,
+  ans <- compileCpp_nCompiler(cppFile,
                               dir = dir,
                               cacheDir = cacheDir,
                               env = resultEnv,
                               returnList = returnList)
-
+  #'ans' consists of all compiled function names and the corresponding environments.
   newDLLenv <- make_DLLenv()
-  ans <- setup_DLLenv(ans, newDLLenv)
+  compiledFn <- setup_DLLenv(ans, newDLLenv, returnList)
+  #'compiledFn' now a list of functions been gleaned of any DLL-specific function/environment.
   
   setup_nClass_interface <- function(interfaceType,
                                      NC,
-                                     ans,
+                                     wrappedFn,
                                      env) {
-    ans <- wrapNCgenerator_for_DLLenv(ans, newDLLenv)
     if(interfaceType == "generic")
-      return(ans)
+      return(wrappedFn)
     fullInterface <- try(build_compiled_nClass(NC,
-                                               ans,
+                                               wrappedFn,
                                                env = env))
     if(inherits(fullInterface, "try-error")) {
       warning("There was a problem building a full nClass interface.\n",
               "Attempting to return a generic interface.\n")
-      return(ans)
+      return(wrappedFn)
     }
     if(interfaceType == "full")
       return(fullInterface)
     else if(interfaceType == "both")
-      return(list(full = fullInterface, generic = ans))
+      return(list(full = fullInterface, generic = wrappedFn))
+
     warning(paste0("Invalid interface type ", interfaceType, " requested.\n",
                    "Returning a full interface.\n"))
     fullInterface
@@ -104,56 +85,36 @@ nCompile <- function(...,
   ## cpp_names should be 1-to-1 with names(ans)
   ## We want to return with names(ans) changed to
   ## names(units) corresponding to cpp_names.
-  if(is.list(ans)) {
-    newNames <- names(ans)
+  if(is.list(compiledFn)) {
+    newNames <- names(compiledFn)
+    cpp_names <- sapply(units, function(unit) { ifelse(isNF(unit), NFinternals(unit)$cpp_code_name, unit$classname) })
     SEXPgen_names <- paste0("new_", cpp_names)
     for(i in seq_along(units)) {
-      iRes <- which(SEXPgen_names[i] == names(ans))
+      iRes <- which(SEXPgen_names[i] == names(compiledFn))
       if(length(iRes) != 1) {
         warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
-        return(ans)
+        return(compiledFn)
       }
       newNames[iRes] <- names(units)[i]
 
-      if(unitTypes[i] == "nCgen") {
+      if (isNCgenerator(units[[i]])) {
         nClass_name <- cpp_names[i]
-        interfaceType <- interfaces[[ nClass_name ]]
-        if(is.null(interfaceType))
-          interfaceType <- "generic"
-        ans[[iRes]] <- setup_nClass_interface(interfaceType,
+        interfaceType <- ifelse(is.null(interfaces[[nClass_name]]), "generic", interfaces[[nClass_name]])
+        compiledFn[[iRes]] <- setup_nClass_interface(interfaceType,
                                               units[[i]],
-                                              ans[[iRes]],
+                                              wrapNCgenerator_for_DLLenv(compiledFn[[iRes]], newDLLenv),
                                               env = resultEnv)        
       }
     }
-    names(ans) <- newNames
+    names(compiledFn) <- newNames
   } else {
-    if(unitTypes[[1]] == "nCgen") {
-      interfaceType <- "full"
-      if(length(interfaces) > 0) {
-        interfaceType <- interfaces[[1]]
-        if(is.null(interfaceType))
-          interfaceType <- "full"
-      }
-      ans <- setup_nClass_interface(interfaceType,
+    if (isNCgenerator(units[[1]])) {
+      interfaceType <- ifelse(length(interfaces) == 0 || is.null(interfaces[[1]]), "full", interfaces[[1]])
+      compiledFn <- setup_nClass_interface(interfaceType,
                                     units[[1]],
-                                    ans,
+                                    wrapNCgenerator_for_DLLenv(compiledFn, newDLLenv),
                                     env = resultEnv)
     }
   }
-  ans
-}
-
-get_nCompile_types <- function(units) {
-  ans <- character(length(units))
-  for(i in seq_along(units)) {
-      if(isNF(units[[i]])) ans[i] <- 'nF'
-    else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
-    else if(isNC(units[[i]])) 
-      stop(paste0("The #", i, " object to be compiled is an nClass object.\n",
-                  "Only nClass generators (the class definition, not an object of the class) should be compiled."),
-           call.=FALSE)
-    else stop(paste0("The #", i, " object to be compiled is neither an nFunction nor an nClass generator (class definition).\n"))
-  }
-  ans
+  compiledFn
 }

@@ -20,7 +20,8 @@ class shared_ptr_holder: public shared_ptr_holder_base {
     return static_cast<void*>(sp_.get());
   }
   std::shared_ptr<T> &sp() {return sp_;}
- shared_ptr_holder(T *obj) : sp_(obj) {}
+
+  shared_ptr_holder(T *obj) : sp_(obj) {}
   shared_ptr_holder(std::shared_ptr<T> &sp_other) {sp_=  sp_other;}
   ~shared_ptr_holder() {
 #ifdef SHOW_SHARED_PTR_DESTRUCTORS
