@@ -7,6 +7,7 @@ nCompile <- function(...,
                      env = parent.frame(),
                      control = list(),
                      interfaces = list(),
+                     roxygen = list(),
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
@@ -23,7 +24,9 @@ nCompile <- function(...,
   dotsDeparses[origIsList] <- ''
   names(origList)[boolNoName] <- dotsDeparses[boolNoName]
   units <- do.call('c', origList)
-  RcppPacket_list <- compileLoop(units, env, control)
+  if (is.null(names(units)))
+    names(units) <- rep('', length(units))
+  RcppPacket_list <- compileLoop(units, names(units), env, control)
 
   if(isTRUE(get_nOption('serialize'))) {
     serial_cppDef <- make_serialization_cppDef()
@@ -85,9 +88,12 @@ nCompile <- function(...,
   ## cpp_names should be 1-to-1 with names(ans)
   ## We want to return with names(ans) changed to
   ## names(units) corresponding to cpp_names.
+  cpp_names <- sapply(units, function(unit) {
+    if (isNF(unit)) NFinternals(unit)$cpp_code_name
+    else unit$classname
+  })
   if(is.list(compiledFn)) {
     newNames <- names(compiledFn)
-    cpp_names <- sapply(units, function(unit) { ifelse(isNF(unit), NFinternals(unit)$cpp_code_name, unit$classname) })
     SEXPgen_names <- paste0("new_", cpp_names)
     for(i in seq_along(units)) {
       iRes <- which(SEXPgen_names[i] == names(compiledFn))
@@ -99,7 +105,7 @@ nCompile <- function(...,
 
       if (isNCgenerator(units[[i]])) {
         nClass_name <- cpp_names[i]
-        interfaceType <- ifelse(is.null(interfaces[[nClass_name]]), "generic", interfaces[[nClass_name]])
+        interfaceType <- if (is.null(interfaces[[nClass_name]])) "generic" else interfaces[[nClass_name]]
         compiledFn[[iRes]] <- setup_nClass_interface(interfaceType,
                                               units[[i]],
                                               wrapNCgenerator_for_DLLenv(compiledFn[[iRes]], newDLLenv),
@@ -109,7 +115,7 @@ nCompile <- function(...,
     names(compiledFn) <- newNames
   } else {
     if (isNCgenerator(units[[1]])) {
-      interfaceType <- ifelse(length(interfaces) == 0 || is.null(interfaces[[1]]), "full", interfaces[[1]])
+      interfaceType <- if (length(interfaces) == 0 || is.null(interfaces[[1]])) "full" else interfaces[[1]]
       compiledFn <- setup_nClass_interface(interfaceType,
                                     units[[1]],
                                     wrapNCgenerator_for_DLLenv(compiledFn, newDLLenv),

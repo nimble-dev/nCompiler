@@ -50,12 +50,12 @@ nc1 <- nClass(
 )
 package_dir <- tempdir() # Normally one would choose a local directory
 # A variety of output from pkgKitten and Rcpp is generated
-writePackage(
+nWritePackage(
   nc1,
   dir = package_dir,
   package.name = "nc1Package"
 )
-buildPackage("nc1Package",
+nBuildPackage("nc1Package",
              dir = package_dir)
 ```
 
@@ -70,7 +70,7 @@ The source code for nc1package could be erased, and the library uninstalled,
 with `erasePackage`.
 
 ```{r}
-if (FALSE) erasePackage(dir = package_dir, package.name = "nc1Package")
+if (FALSE) nErasePackage(dir = package_dir, package.name = "nc1Package")
 ```
 
 ## Documenting features
@@ -95,13 +95,13 @@ rox <- documentNFunction(
         otherRoxygen = "//' @export", 
         checkAgainstObj = FALSE)
 
-writePackage(foo, 
+nWritePackage(foo, 
              package.name = "nc1Package", 
              dir = package_dir,
              roxygen = list(foo = rox),
              modify = TRUE) # modify = TRUE lets us add content
 
-buildPackage("nc1Package",
+nBuildPackage("nc1Package",
              dir = package_dir)
 
 ```

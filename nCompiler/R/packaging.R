@@ -101,24 +101,8 @@ nWritePackage <- function(...,
       objs <- objs[[1]]
     }
   }
-  
-  # Handle roxygen input
-  if (!is.list(roxygen)) {
-    if (is.character(roxygen)) roxygen <- list(roxygen)
-    else stop("in nWritePackage: unknown roxygen type")
-  }
-  
-  if (length(roxygen) == 0) {
-    roxygenFlag <- "none"
-  } else if (sum(nchar(names(roxygen)) > 0) == length(roxygen)) { # Are all rox entries named?
-    roxygenFlag <- "names"
-  } else if (length(roxygen) == length(objs)) { # Are there as many rox entries as objs?
-    roxygenFlag <- "indices"
-  } else { # If neither, we don't know what to do about it
-    stop("If fewer roxygen entries are provided than objects, they must be named",
-         " in the input list to indicate the objects to which they correspond.")
-  }
-  
+
+
   # Check if control is specified properly.
   # The user has the following options:
   # 1) Provide nothing. Defaults are used for all NF/NC objects.
@@ -200,49 +184,6 @@ nWritePackage <- function(...,
     # options for every element in objs.
   # Used to test if this works: return(totalControl)
     
-  # if(length(objs) > 1)
-  #   stop("nWritePackage only supports one object as a first step of development")
-  
-  pkgDir <- file.path(dir, package.name)
-  Rdir <- file.path(pkgDir, "R")
-  srcDir <- file.path(pkgDir, "src")
-  instDir <- file.path(pkgDir, "inst")
-  codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
-  datDir <- file.path(pkgDir, "data")
-  
-  full_interface <- list(); RcppPackets <- list()
-  for (i in 1:length(objs)) {
-    if(isNF(objs[[i]])) {
-      if (!identical(nCompiler:::Rname2CppName(objNames[[i]]), objNames[[i]])) {
-        warning(paste0("The nFunction name ", objNames[[i]], " isn't valid for ",
-                       "C++.\n Using the modified name ", 
-                       Rname2CppName(objNames[[i]]), " instead."))
-      }
-      nCompile_nFunction(objs[[i]],
-                            control = list(endStage = "writeCpp",
-                                           useUniqueNameInCode = TRUE))
-      RcppPackets[[i]] <- NFinternals(objs[[i]])$RcppPacket
-      thisRox <- switch(roxygenFlag,
-                        none = NULL,
-                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                        names = if (objNames[[i]] %in% names(roxygen)) 
-                          roxygen[[ objNames[i] ]] 
-                        else NULL)
-      if (!is.null(thisRox)) {
-        exportIndex <- which(RcppPackets[[i]]$cppContent == "// [[Rcpp::export]]")
-        RcppPackets[[i]]$cppContent <-
-          c(RcppPackets[[i]]$cppContent[1:(exportIndex - 1)],
-            thisRox$header, 
-            RcppPackets[[i]]$cppContent[exportIndex:length(RcppPackets[[i]]$cppContent)])
-      }
-    } else if (isNCgenerator(objs[[i]])) {
-      writtenNC1 <- nCompile_nClass(objs[[i]],
-                                    control = list(endStage = "writeCpp"))
-      RcppPackets[[i]] <- NCinternals(objs[[i]])$RcppPacket
-      if (isTRUE(nClass_full_interface)) {
-        full_interface[[i]] <- build_compiled_nClass(objs[[i]], quoted = TRUE)
-      }
-      
       # I thought maybe I could put methods doc in C++ as follows but I had issues
       # thisRox <- switch(roxygenFlag,
       #                   none = NULL,
@@ -265,21 +206,30 @@ nWritePackage <- function(...,
       #         RcppPackets[[i]]$cppContent[(thisFnDefIndex):length(RcppPackets[[i]]$cppContent)])
       #   }
       # }
-      
-    } else {
-      stop(paste("In nWritePackage: only nFunctions and nClass generators are",
-                 "allowed. Cannot compile object of class ", class(objs[[i]])))
-    }
-  }
+
   
+  # if(length(objs) > 1)
+  #   stop("nWritePackage only supports one object as a first step of development")
+
+  RcppPacket_list <- compileLoop(objs, objNames, env, control, roxygen)
+  # May want to reconstitute elsewhere:
+  # if (!identical(nCompiler:::Rname2CppName(objNames[[i]]), objNames[[i]])) {
+  #     warning(paste0("The nFunction name ", objNames[[i]], " isn't valid for ",
+  #                    "C++.\n Using the modified name ", 
+  #                    Rname2CppName(objNames[[i]]), " instead."))
+
+  pkgDir <- file.path(dir, package.name)
   initializePkg <- FALSE
   if (dir.exists(pkgDir)) {
     if (!modify) stop(paste0("Package ", package.name, " already exists in directory ", dir ))
   } else initializePkg <- TRUE
+
   ## The following eval(substitute(...), ...) construction is necessary because
   ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
   ## directly as needed here from inside a function.
-  
+  instDir <- file.path(pkgDir, "inst")
+  codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
+  datDir <- file.path(pkgDir, "data")
   if (initializePkg) {
     nCompiler_placeholder <<- function() NULL
     suppressMessages(
@@ -300,32 +250,31 @@ nWritePackage <- function(...,
     dir.create(codeDir, recursive = TRUE)
   }
   
-  Rfilepath <- character(length(objs))
-  
+  roxygenFlag <- getRoxygenFlag(objs, roxygen)
+  Rdir <- file.path(pkgDir, "R")
+  srcDir <- file.path(pkgDir, "src")
+
   # Loop over each object again
   for (i in 1:length(objs)) {
-    
+
     ## We write the code once for the package's DLL...
-    nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
+    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
                                     dir = srcDir)
     ## ... and again for other packages that need to 
     ## compile against this package's source code.
     ## Otherwise, C++ source code is not present in an installed package.
     ## Compiling against source code is necessary because of
     ## heavy use of C++ templates.
-    nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
+    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
                                    dir = codeDir)
     if (isNCgenerator(objs[[i]]) && isTRUE(nClass_full_interface)) {
       ## Write the nClass full interface to the package's R directory
       generator_name <- objs[[i]]$classname
-      Rfile <- paste0(generator_name, '.R')
-      Rfilepath[i] <- file.path(Rdir, Rfile)
-      con <- file(Rfilepath[i], open = 'w')
-      deparsed_full_interface <- deparse(full_interface[[i]])
+      full_interface <- build_compiled_nClass(objs[[i]], quoted = TRUE)
+      deparsed_full_interface <- deparse(full_interface)
       deparsed_full_interface[1] <- paste0(
         generator_name, ' <- ', deparsed_full_interface[1]
       )
-      exportTag <- if (totalControl[[i]]$export) "#' @export\n" else NULL
       # Retrieve roxygen entry
       thisRox <- switch(roxygenFlag,
                         none = NULL,
@@ -340,7 +289,6 @@ nWritePackage <- function(...,
         for (m in 1:length(thisRox$methods)) {
           thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
                            deparsed_full_interface, fixed = TRUE)
-          targetStr <- deparsed_full_interface[thisDefn]
           deparsed_full_interface[thisDefn] <- 
             gsub(pattern = names(thisRox$methods)[m],
                  replacement = paste0(
@@ -354,11 +302,15 @@ nWritePackage <- function(...,
       deparsed_full_interface <- c(
         '## Generated by nCompiler::nWritePackage() -> do not edit by hand\n',
         if (is.list(thisRox)) thisRox[["header"]] else thisRox,
-        exportTag,
+        if (totalControl[[i]]$export) "#' @export\n" else NULL,
         deparsed_full_interface,
         paste0(generator_name, '$parent_env <- new.env()'),
         paste0(generator_name, '$.newCobjFun <- NULL')
       )
+
+      Rfile <- paste0(generator_name, '.R')
+      Rfilepath <- file.path(Rdir, Rfile)
+      con <- file(Rfilepath, open = 'w')
       writeLines(deparsed_full_interface, con)
       close(con)
     }
@@ -415,6 +367,7 @@ nWritePackage <- function(...,
   
   invisible(NULL)
 }
+
 
 #' @name buildPackage
 #' @title Build and install packages written by nWritePackage

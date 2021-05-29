@@ -3,13 +3,14 @@
 
 # Returns the Rcpp packet list.
 compileLoop <- function(units,
+                        unitName,
                         env,
-                        control) {
+                        control,
+                        roxygen = list()) {
   if (length(units) == 0)
     stop('No objects for compilation provided')
 
-  if (is.null(names(units)))
-      names(units) <- rep('', length(units))
+  roxygenFlag <- getRoxygenFlag(units, roxygen)
   unitTypes <- get_nCompile_types(units)
 
   ## names(units) should be fully populated and unique. TO-DO: check.
@@ -21,6 +22,7 @@ compileLoop <- function(units,
                                        env = env,
                                        control = control)
       RcppPacket_list[[i]] <- NFinternals(unitResult)$RcppPacket
+      RcppPacket_list[[i]]$cppContent <- roxify(unitName[[i]], RcppPacket_list[[i]], roxygenFlag, roxygen)
     }
     else if(unitTypes[i] == "nCgen") {
       unitResult <- nCompile_nClass(units[[i]],
