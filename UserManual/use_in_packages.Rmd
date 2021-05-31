@@ -32,6 +32,7 @@ of generated C++ code.
 Following is an example of how to do so for an `nClass`.
 ```{r}
 library(nCompiler)
+
 nc1 <- nClass(
   classname = "nc1",
   Rpublic = list(
@@ -86,7 +87,7 @@ foo <- nFunction(
     returnType(numericScalar())
   }
 )
-rox <- documentNFunction(
+rox <- nDocumentNFunction(
         name  = "foo",
         title = "A Test nFunction",
         description = "This nFunction just adds 1 to a 

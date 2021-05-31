@@ -239,7 +239,7 @@ cppClassClass <- R6::R6Class(
     
     initialize = function(...) {
       ##useGenerator <<- TRUE
-      Hincludes <<-	c(Hincludes, '<Rinternals.h>')	
+      Hincludes <<-	c(Hincludes, '<Rinternals.h>', nCompilerIncludeFile("nCompiler_core.h"))	
       CPPincludes <<-	c(CPPincludes, '<iostream>') 
       super$initialize(...)
     },
@@ -434,7 +434,8 @@ cppFunctionClass <- R6::R6Class(
                   self$name <- character()
                   self$CPPincludes <- as.list(
                     c(self$CPPincludes,
-                      '<iostream>')
+                      '<iostream>',
+                      nCompilerIncludeFile("nCompiler_core.h"))
                   )
                   dotsList <- list(...)
                   for(v in names(dotsList))

@@ -4,9 +4,10 @@
 # Returns the Rcpp packet list.
 compileLoop <- function(units,
                         unitName,
-                        env,
-                        control,
-                        roxygen = list()) {
+                        env = parent.frame(),
+                        control = list(),
+                        roxygen = list(),
+                        combined = FALSE) {
   if (length(units) == 0)
     stop('No objects for compilation provided')
 
@@ -16,20 +17,37 @@ compileLoop <- function(units,
   ## names(units) should be fully populated and unique. TO-DO: check.
   RcppPacket_list <- vector(length = length(units), mode = "list")
   for(i in seq_along(units)) {
-    if(unitTypes[i] == "nF") {
-      unitResult <- nCompile_nFunction(units[[i]],
-                                       stopAfterRcppPacket = TRUE,
-                                       env = env,
-                                       control = control)
+    if (unitTypes[i] == "nF") {
+      unitResult <-
+        if (combined)
+          nCompile_nFunction(units[[i]],
+                             stopAfterRcppPacket = TRUE,
+                             env = env,
+                             control = control
+                             )
+      else
+          nCompile_nFunction(units[[i]],
+                             stopAfterRcppPacket = FALSE,
+                             control = list(endStage = "writeCpp",
+                                            useUniqueNameInCode = TRUE)
+                             )
       RcppPacket_list[[i]] <- NFinternals(unitResult)$RcppPacket
       RcppPacket_list[[i]]$cppContent <- roxify(unitName[[i]], RcppPacket_list[[i]], roxygenFlag, roxygen)
     }
     else if(unitTypes[i] == "nCgen") {
-      unitResult <- nCompile_nClass(units[[i]],
-                                     stopAfterRcppPacket = TRUE,
-                                     env = env,
-                                     control = control)
-      RcppPacket_list[[i]] <- NCinternals(unitResult)$RcppPacket
+      unitResult <-
+        if (combined)
+          nCompile_nClass(units[[i]],
+                          stopAfterRcppPacket = TRUE,
+                          env = env,
+                          control = control)
+      else
+        nCompile_nClass(units[[i]],
+                        stopAfterRcppPacket = FALSE,
+                        control = list(endStage = "writeCpp")
+                        )
+      RcppPacket_list[[i]] <- NCinternals(if (combined) unitResult
+                                          else units[[i]])$RcppPacket
     }
   }
   RcppPacket_list

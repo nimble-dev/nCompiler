@@ -211,7 +211,10 @@ nWritePackage <- function(...,
   # if(length(objs) > 1)
   #   stop("nWritePackage only supports one object as a first step of development")
 
-  RcppPacket_list <- compileLoop(objs, objNames, env, control, roxygen)
+    RcppPacket_list <- compileLoop(objs,
+                                   objNames,
+                                   roxygen)
+
   # May want to reconstitute elsewhere:
   # if (!identical(nCompiler:::Rname2CppName(objNames[[i]]), objNames[[i]])) {
   #     warning(paste0("The nFunction name ", objNames[[i]], " isn't valid for ",
@@ -249,14 +252,13 @@ nWritePackage <- function(...,
     dir.create(datDir)
     dir.create(codeDir, recursive = TRUE)
   }
-  
+
   roxygenFlag <- getRoxygenFlag(objs, roxygen)
   Rdir <- file.path(pkgDir, "R")
   srcDir <- file.path(pkgDir, "src")
 
   # Loop over each object again
   for (i in 1:length(objs)) {
-
     ## We write the code once for the package's DLL...
     nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
                                     dir = srcDir)
@@ -269,9 +271,9 @@ nWritePackage <- function(...,
                                    dir = codeDir)
     if (isNCgenerator(objs[[i]]) && isTRUE(nClass_full_interface)) {
       ## Write the nClass full interface to the package's R directory
-      generator_name <- objs[[i]]$classname
       full_interface <- build_compiled_nClass(objs[[i]], quoted = TRUE)
       deparsed_full_interface <- deparse(full_interface)
+      generator_name <- objs[[i]]$classname
       deparsed_full_interface[1] <- paste0(
         generator_name, ' <- ', deparsed_full_interface[1]
       )

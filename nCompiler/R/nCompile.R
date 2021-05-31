@@ -26,23 +26,27 @@ nCompile <- function(...,
   units <- do.call('c', origList)
   if (is.null(names(units)))
     names(units) <- rep('', length(units))
-  RcppPacket_list <- compileLoop(units, names(units), env, control)
+  RcppPacket_list <- compileLoop(units,
+                                 names(units),
+                                 env = env,
+                                 control = control,
+                                 combined=TRUE)
 
   if(isTRUE(get_nOption('serialize'))) {
-    serial_cppDef <- make_serialization_cppDef()
-    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(serial_cppDef, "serialization_")
+    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(make_serialization_cppDef(), "serialization_")
   }
 
   if(!isTRUE(get_nOption('use_nCompLocal'))) {
-    loadedObjectEnv_cppDef <- make_loadedObjectEnv_cppDef()
-    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(loadedObjectEnv_cppDef, "loadedObjectEnv_")
+    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(make_loadedObjectEnv_cppDef(), "loadedObjectEnv_")
   }
+
   
+
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
-  cppFile = paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
+  cppFile = paste0(cppFileLabelFunction(),".cpp")  ## "nCompiler_multiple_units.cpp"
   writeCpp_nCompiler_combine(RcppPacket_list,
-                             cppfile = cppFile)
+                             cppfile=cppFile)
 
   if(isTRUE(get_nOption('pause_after_writing_files')))
     browser()
