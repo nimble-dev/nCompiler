@@ -1,3 +1,4 @@
+# not working - as of switch to github actions for CI testing
 context("Testing Automatic Differentiation")
 
 ## To add AD tests for a new operator, see instructions in
