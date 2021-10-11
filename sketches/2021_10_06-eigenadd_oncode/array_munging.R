@@ -14,7 +14,7 @@ Z = X + Y
 # error; R does not like that Y has more elements than X
 Z = as.matrix(X) + as.numeric(Y)
 
-# ok, but R warns that vector recyling is uneven (and array structure is lost)
+# ok, but R warns that vector recycling is uneven (and array structure is lost)
 Z = as.matrix(Y) + as.numeric(X)
 
 # *should* we implement a componentwise operation when the input tensors
