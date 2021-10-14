@@ -38,11 +38,22 @@ using std::endl;
  * @param o In practice, an object that subclasses 
  *   Eigen::internal::binary_op_base<LhsScalar,RhsScalar>.
  */
+
+
 template<typename OP_, typename A_, typename B_>
 auto R_op_chainable(const A_ &a, 
                     const B_&b, 
-                    const OP_&o) -> decltype(a.binaryExpr(b, o)) {
-  // Eigen uses the public member function binaryExpr to implement componentwise 
-  // binary operations, callable via member functions or overloaded operators.
-  return a.binaryExpr(b, o);
+                    const OP_&o) -> decltype(
+    a.binaryExpr(
+      b.reshape(
+        Eigen::TensorRef<Eigen::Tensor<typename A_::Scalar, A_::NumDimensions>>(a).dimensions()
+      ), 
+    o)
+  ) {
+                      
+  Eigen::TensorRef<Eigen::Tensor<typename A_::Scalar, A_::NumDimensions>> aEval(a);
+  auto aDim = aEval.dimensions();
+  auto y = b.reshape(aDim);
+  
+  return a.binaryExpr(y, o);
 }
