@@ -52,7 +52,7 @@ auto R_binaryOp_t1_t2(const A_ &a, const B_ &b, const OP_ &o) -> decltype(
   > bEval(b);
   // throw runtime error if number of elements differ
   if(aEval.size() != bEval.size()) {
-      throw std::range_error("R_binaryOp_t1_t2 :: Tensors have unequal size.");
+      throw std::range_error("R_binaryOp_t1_t2 :: Tensors have unequal size.\n");
   }
   // reshape b into a tensor with a's dimensions
   auto y = b.reshape(aDim);
