@@ -58,8 +58,11 @@ Eigen::Tensor<double, 2> R_add_test_2_2(
       b, 
       Eigen::internal::scalar_sum_op<Eigen::Tensor<double, 2>::Scalar>()
     );
-  } catch (...) { 
-    throw std::runtime_error("a + b failed\n");
+  } catch (const std::exception& e) { 
+    throw std::runtime_error(
+        "Operation a + b failed with internal error:\n    " + 
+          std::string(e.what())
+    );
   }
   return a;
 }
