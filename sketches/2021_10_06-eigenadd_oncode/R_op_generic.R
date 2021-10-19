@@ -76,6 +76,7 @@ R_add_test_2_2(M2, M1)
 #
 
 expect_identical((V1 + M1) * V1, R_add_mult_test_2_1(M1, V1))
+expect_identical((V1 + M1) * V1, R_add_mult_test_2_1_alt(M1, V1))
 
 
 #

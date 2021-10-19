@@ -7,6 +7,22 @@
  */
 
 // [[Rcpp::export]]
+Eigen::Tensor<double, 2> R_add_mult_test_2_1_alt(
+    Eigen::Tensor<double, 2> a,
+    Eigen::Tensor<double, 1> b
+) {
+  return R_binaryOp_t1_t2(
+    R_binaryOp_t1_t2(
+      a, 
+      b, 
+      Eigen::internal::scalar_sum_op<Eigen::Tensor<double, 2>::Scalar>()
+    ), 
+    b, 
+    Eigen::internal::scalar_product_op<Eigen::Tensor<double, 2>::Scalar>()
+  );
+}
+
+// [[Rcpp::export]]
 Eigen::Tensor<double, 2> R_add_mult_test_2_1(
     Eigen::Tensor<double, 2> a,
     Eigen::Tensor<double, 1> b
