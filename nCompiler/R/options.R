@@ -22,6 +22,7 @@ updateDefaults <- function(defaults, controls) {
       filebase = NULL,
       debug = FALSE,
       debugCpp = FALSE,
+      throwEigenErrors = TRUE,
       logging = FALSE,
       startStage = 'start',
       endStage = 'end',

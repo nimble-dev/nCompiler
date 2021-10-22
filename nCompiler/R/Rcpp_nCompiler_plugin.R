@@ -46,6 +46,13 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
                                        "")
     result$env$PKG_CXXFLAGS <- "-std=c++11"
     result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
+    if(isTRUE(get_nOption('compilerOptions')$throwEigenErrors)) {
+      # replace include directives to enable Eigen errors
+      preamble = system.file(file.path('include', 'nCompiler', 
+                                       'nCompiler_Eigen_EnableErrors.h'), 
+                             package = 'nCompiler')
+      result$includes = readChar(preamble, file.info(preamble)$size)
+    }
     result
   }
   ans
