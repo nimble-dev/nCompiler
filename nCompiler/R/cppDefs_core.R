@@ -506,7 +506,10 @@ cppFunctionClass <- R6::R6Class(
                       else
                         character(0),
                       '{'
-                    ), ## end paste
+                    ), ## end paste,
+                    'RESET_EIGEN_ERRORS'[
+                      isTRUE(nOptions('compilerOptions')$throwEigenErrors)
+                    ],
                     self$code$generate(...),
                     list('}')
                     )## end c()
