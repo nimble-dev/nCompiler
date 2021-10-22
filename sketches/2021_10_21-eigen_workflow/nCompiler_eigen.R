@@ -3,7 +3,7 @@ library(nCompiler)
 # setup_nCompLocal()
 
 compilerOptions = nOptions('compilerOptions')
-compilerOptions$throwEigenErrors = TRUE
+compilerOptions$throwEigenErrors = TRUE # this is the dev nCompiler package's default
 set_nOption('compilerOptions', compilerOptions)
 
 # test input
