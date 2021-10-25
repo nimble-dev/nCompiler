@@ -52,10 +52,45 @@ auto R_binaryOp_t1_t2(const A_ &a, const B_ &b, const OP_ &o) -> decltype(
   > bEval(b);
   // throw runtime error if number of elements differ
   if(aEval.size() != bEval.size()) {
-      throw std::range_error("R_binaryOp_t1_t2 :: Tensors have unequal size.\n");
+      throw std::range_error(
+          "nCompiler::binaryOp - Tensors have unequal size.\n"
+      );
   }
   // reshape b into a tensor with a's dimensions
   auto y = b.reshape(aDim);
   // perform a `op` b
   return a.binaryExpr(y, o);
+}
+
+// alternate implementation of R_binaryOp_t1_t2 that uses functors to trigger 
+// calls to overloaded binary operators instead of directly calling 
+// TensorBase::binaryExpr; provides an alternate path than macros to implement
+// arbitrary binary Eigen operations 
+template<typename OP_, typename A_, typename B_>
+auto R_binaryOp_t1_t2_alt(const A_ &a, const B_ &b) -> decltype(
+    OP_()(a,
+          b.reshape(
+            Eigen::TensorRef<
+              Eigen::Tensor<typename A_::Scalar, A_::NumDimensions>
+            >(a).dimensions()
+          )
+    )
+) {
+  // dimensions of a
+  Eigen::TensorRef<
+    Eigen::Tensor<typename A_::Scalar, A_::NumDimensions>
+  > aEval(a);
+  auto aDim = aEval.dimensions();
+  // dimensions of b
+  Eigen::TensorRef<
+    Eigen::Tensor<typename B_::Scalar, B_::NumDimensions>
+  > bEval(b);
+  // throw runtime error if number of elements differ
+  if(aEval.size() != bEval.size()) {
+    throw std::range_error(
+        "nCompiler::binaryOp - Tensors have unequal size.\n"
+    );
+  }
+  // perform a `op` b after reshaping b into a tensor with a's dimensions
+  return OP_()(a, b.reshape(aDim));
 }

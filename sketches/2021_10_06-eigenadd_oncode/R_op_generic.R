@@ -57,6 +57,8 @@ expect_error(M1 + A3)
 # matrix-vector addition
 expect_identical(V1 + M1, R_add_test_2_1(M1, V1))
 expect_identical(V1 + M2, R_add_test_2_1(M2, V1))
+expect_identical(V1 + M1, R_add_test_2_1_alt(M1, V1))
+expect_identical(V1 + M2, R_add_test_2_1_alt(M2, V1))
 
 # array-vector addition
 expect_identical(V1 + A1, R_add_test_3_1(A1, V1))
@@ -93,5 +95,6 @@ R_add_test_2_2_default_error(M1, M4)
 
 # "returns" error in scenarios where R would usually use recycling rule
 R_add_test_2_1(M3, V1)
+R_add_test_2_1_alt(M3, V1)
 R_add_test_3_1(A4, V1)
 
