@@ -7,23 +7,22 @@
  */
 
 // [[Rcpp::export]]
+Eigen::Tensor<double, 2> R_add_nested_test_2_1_alt(
+    Eigen::Tensor<double, 2> a,
+    Eigen::Tensor<double, 1> b
+) {
+  return R_binaryOp_t1_t2_alt<nCompiler_plus>(
+      R_binaryOp_t1_t2_alt<nCompiler_plus>(a, b), 
+      b
+  );
+}
+
+// [[Rcpp::export]]
 Eigen::Tensor<double, 2> R_add_test_2_1_alt(
     Eigen::Tensor<double, 2> a,
     Eigen::Tensor<double, 1> b
 ) {
-  // STL provides functors for basic operators, which we parameterize here via 
-  // the desired output class; use of functors provides an alternative to using 
-  // macros to define this binaryOp procedure for different operators.
-  //
-  // STL provides the following templated functors, and their implementation is 
-  // simple enough so we can easily make more of them:
-  //   std::plus
-  //   std::minus
-  //   std::divides
-  //   std::modulus
-  //   std::negate
-  //   std::equal_to
-  return R_binaryOp_t1_t2_alt<std::plus<Eigen::Tensor<double, 2>>>(a, b);
+  return R_binaryOp_t1_t2_alt<nCompiler_plus>(a, b);
 }
 
 // [[Rcpp::export]]

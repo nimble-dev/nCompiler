@@ -4,6 +4,19 @@ using Eigen::Tensor;
 using Eigen::DefaultDevice;
 
 /**
+ * Modification of std::plus s.t. the templated input types may differ, and the 
+ * output type is auto-generated.  Useful for ensuring use with Eigen will
+ * not accidentally trigger automatic casting to Eigen::Tensor objects, which 
+ * would cause Eigen operations to be evaluated prematurely.
+ */
+struct nCompiler_plus{
+  template<typename A_, typename B_>
+  auto operator()(const A_ &a, const B_ &b) -> decltype(a+b) { 
+    return a + b;
+  }
+};
+
+/**
  * Templated reshaping to use the Eigen library to lazily evaluate a `op` b 
  * when a and b are specializations of Eigen::TensorBase objects with
  * different dimensions

@@ -27,6 +27,7 @@ X = array(data = 1:prod(Xdim), dim = Xdim)
 Ydim = c(2,45,4)
 Y = array(data = 1:prod(Ydim), dim = Ydim)
 
+
 #
 # Merge arrays of arbitrarily different sizes, but with same number of elements
 #
@@ -79,6 +80,7 @@ R_add_test_2_2(M2, M1)
 
 expect_identical((V1 + M1) * V1, R_add_mult_test_2_1(M1, V1))
 expect_identical((V1 + M1) * V1, R_add_mult_test_2_1_alt(M1, V1))
+expect_identical((V1 + M1) + V1, R_add_nested_test_2_1_alt(M1, V1))
 
 
 #
