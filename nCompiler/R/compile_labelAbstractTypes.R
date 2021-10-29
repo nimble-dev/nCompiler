@@ -741,8 +741,8 @@ inLabelAbstractTypesEnv(
 
       nDim <- max(a1Type$nDim, a2Type$nDim)
       
-      # except for matrix-vector operations, tensor args must have same nDims
-      if(nDim > 2) {
+      # except for matrix-vector like ops, tensor args must have same nDims
+      if(all(c(a1Type$nDim, a2Type$nDim) > 1)) {
         if(a1Type$nDim != a2Type$nDim) {
           stop(exprClassProcessingErrorMsg(
             code,
