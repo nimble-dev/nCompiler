@@ -516,7 +516,11 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      handler = 'cWiseMultDiv'),
+      handler = 'cWiseMultDiv',
+      replacements = list(
+        '/' = 'nCompiler::binaryOpReshape<nCompiler::divide>'
+      )
+    ),
     cppOutput = list(
       handler = 'MidOperator')
   )
@@ -531,7 +535,11 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      handler = 'cWiseMultDiv'),
+      handler = 'cWiseMultDiv',
+      replacements = list(
+        '*' = 'nCompiler::binaryOpReshape<nCompiler::product>'
+      )
+    ),
     cppOutput = list(
       handler = 'MidOperator')
   )
