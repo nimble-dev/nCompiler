@@ -101,5 +101,6 @@ expect_error(add_m_m(x = M1, y = M4))
 expect_error(add_m_v(x = M3, y = V1))
 expect_error(add_v_a3(x = V1, y = A4))
 
-# Issue: This should fail, but doesn't.  Do runtime arg types get validated?
-add_v_m(x = V1, y = A3)
+# Issues: These should throw errors, but don't. Do runtime args get validated?
+add_v_m(x = V1, y = A3)  # essentially returns V1 + A3[1:3]
+add_v_a3(x = V1, y = M1) # crashes R
