@@ -19,7 +19,12 @@ NCOMPILER_BINOP(plus, +)
 NCOMPILER_BINOP(minus, -)
 NCOMPILER_BINOP(product, *)
 NCOMPILER_BINOP(divide, /)
-
+NCOMPILER_BINOP(gt, >)
+NCOMPILER_BINOP(geq, >=)
+NCOMPILER_BINOP(lt, <)
+NCOMPILER_BINOP(leq, <=)
+NCOMPILER_BINOP(logical_and, &&)
+NCOMPILER_BINOP(logical_or, ||)
 
 namespace nCompiler {
 

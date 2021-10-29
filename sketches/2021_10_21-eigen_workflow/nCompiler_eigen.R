@@ -24,10 +24,10 @@ nCompileOp <- function(xType, yType, retType, op) {
   nCompile(nf_op)
 }
 
-# only currently supporting commutative binary, componentwise operations
-optypes = c('+', '-', '*', '/')
+# %*% is not supported b/c it requires more specific reshaping rules
+optypes = c('+', '-', '*', '/', '<=', '>=', '<', '>', '&', '|')
 for(o in optypes) {
-  
+
   #
   # nCompiler units
   #

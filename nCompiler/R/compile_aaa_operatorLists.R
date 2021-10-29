@@ -505,6 +505,43 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
+updateOperatorDef('<=', 'eigenImpl', 'replacements', list(
+  '<=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::leq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::leq>'
+  )
+))
+updateOperatorDef('>=', 'eigenImpl', 'replacements', list(
+  '>=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::geq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::geq>'
+  )
+))
+updateOperatorDef('<', 'eigenImpl', 'replacements', list(
+  '<' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::lt>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::lt>'
+  )
+))
+updateOperatorDef('>', 'eigenImpl', 'replacements', list(
+  '>' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::gt>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::gt>'
+  )
+))
+updateOperatorDef('&', 'eigenImpl', 'replacements', list(
+  '&' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_and>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_and>'
+  )
+))
+updateOperatorDef('|', 'eigenImpl', 'replacements', list(
+  '|' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_or>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_or>'
+  )
+))
+
 
 assignOperatorDef(
   # This is for C++ Lambda expressions,

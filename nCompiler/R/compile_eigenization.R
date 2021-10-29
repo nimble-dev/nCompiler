@@ -485,6 +485,21 @@ inEigenizeEnv(
       else
         maybe_convertToMethod(code, handlingInfo) # arg2 is non-scalar.
     }
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
+    if(d1 != d2) {
+      # perform operation with reshaping, i.e., for matrix-vector operations
+      replacementName <- handlingInfo$replacements[[code$name]]
+      if(!is.null(replacementName)) {
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
+      }
+    }
     invisible(NULL)
   }
 )
