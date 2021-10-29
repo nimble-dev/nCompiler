@@ -100,3 +100,6 @@ expect_error(add_m_m(x = M1, y = M4))
 # nCompiler runtime errors where R would normally use recycling rule
 expect_error(add_m_v(x = M3, y = V1))
 expect_error(add_v_a3(x = V1, y = A4))
+
+# Issue: This should fail, but doesn't.  Do runtime arg types get validated?
+add_v_m(x = V1, y = A3)
