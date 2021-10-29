@@ -275,7 +275,12 @@ assignOperatorDef(
           handler = 'BinaryUnaryCwise',
           returnTypeCode = returnTypeCodes$promoteNoLogical),
         eigenImpl = list(
-          handler = 'cWiseAddSub'),
+          handler = 'cWiseAddSub',
+          replacements = list(
+            '+'= 'nCompiler::binaryOpReshape<nCompiler::plus>',
+            '-'= 'nCompiler::binaryOpReshape<nCompiler::minus>'
+          )
+        ),
         cppOutput = list(
           handler = 'BinaryOrUnary')
     )

@@ -298,6 +298,23 @@ inEigenizeEnv(
     if (length(code$args) == 1)
       return(cWiseUnary(code, symTab, auxEnv, workEnv, handlingInfo))
     promoteTypes(code)
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
+    if(d1 != d2) {
+      # perform operation with reshaping, i.e., for matrix-vector operations
+      replacementName <- handlingInfo$replacements[[code$name]]
+      if(!is.null(replacementName)) {
+        code$name <- replacementName
+      }
+      # if needed, swap arguments so the output will be the arg with larger dim
+      if(d2 > d1) {
+        tmpArg <- code$args[[1]]
+        setArg(code, 1, code$args[[2]])
+        setArg(code, 2, tmpArg)
+        if (!is.null(handlingInfo$swapOp))
+          code$name <- handlingInfo$swapOp ## op is noncommutative
+      }
+    }
     return(invisible(NULL))
   }
 )

@@ -740,6 +740,19 @@ inLabelAbstractTypesEnv(
       a2Type <- a2$type
 
       nDim <- max(a1Type$nDim, a2Type$nDim)
+      
+      # except for matrix-vector operations, tensor args must have same nDims
+      if(nDim > 2) {
+        if(a1Type$nDim != a2Type$nDim) {
+          stop(exprClassProcessingErrorMsg(
+            code,
+            paste('sizeBinaryCwise called with non-conformable tensors with ',
+                  'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
+          ),
+          call. = FALSE)
+        }
+      }
+      
       resultScalarType <- arithmeticOutputType(
         a1Type$type, a2Type$type, handlingInfo$returnTypeCode
       )
