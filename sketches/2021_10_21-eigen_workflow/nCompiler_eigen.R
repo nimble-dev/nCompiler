@@ -25,18 +25,25 @@ nCompileOp <- function(xType, yType, retType, op) {
 }
 
 # %*% is not supported b/c it requires more specific reshaping rules
-optypes = c('+', '-', '*', '/', '<=', '>=', '<', '>', '&', '|')
+logical_optypes <- c('<=', '>=', '<', '>', '&', '|')
+optypes <- c('+', '-', '*', '/', logical_optypes)
 for(o in optypes) {
 
   #
   # nCompiler units
   #
   
+  # return types
+  retMatrix <- ifelse(o %in% logical_optypes, 'logicalMatrix', 'numericMatrix')
+  retArray <- ifelse(o %in% logical_optypes, 
+                     'logicalArray(nDim = 3)', 
+                     'numericArray(nDim = 3)')
+  
   # vector first, then matrix
   op_v_m <- nCompileOp(
     xType = 'numericVector', 
     yType = 'numericMatrix', 
-    retType = 'numericMatrix',
+    retType = retMatrix,
     op = o
   )
   
@@ -44,21 +51,21 @@ for(o in optypes) {
   op_m_v <- nCompileOp(
     xType = 'numericMatrix', 
     yType = 'numericVector', 
-    retType = 'numericMatrix',
+    retType = retMatrix,
     op = o
   )
   
   op_m_m <- nCompileOp(
     xType = 'numericMatrix', 
     yType = 'numericMatrix', 
-    retType = 'numericMatrix',
+    retType = retMatrix,
     op = o
   )
   
   op_v_a3 <- nCompileOp(
     xType = 'numericVector', 
     yType = 'numericArray(nDim = 3)', 
-    retType = 'numericArray(nDim = 3)',
+    retType = retArray,
     op = o
   )
   
@@ -67,7 +74,7 @@ for(o in optypes) {
     op_a2_a3 <- nCompileOp(
       xType = 'numericArray(nDim = 2)', 
       yType = 'numericArray(nDim = 3)', 
-      retType = 'numericArray(nDim = 3)',
+      retType = retArray,
       op = o
     )
   )
@@ -77,7 +84,7 @@ for(o in optypes) {
     op_m_a3 <- nCompileOp(
       xType = 'numericMatrix', 
       yType = 'numericArray(nDim = 3)', 
-      retType = 'numericArray(nDim = 3)',
+      retType = retArray,
       op = o
     )
   )
