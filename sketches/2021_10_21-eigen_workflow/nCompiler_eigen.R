@@ -1,47 +1,102 @@
 library(nCompiler)
+library(testthat)
 
-# setup_nCompLocal()
+# wrapper to "nCompile" the operation x + y given input and return types
+nCompileAddition <- function(xType, yType, retType) {
 
-compilerOptions = nOptions('compilerOptions')
-compilerOptions$throwEigenErrors = TRUE # this is the dev nCompiler package's default
-set_nOption('compilerOptions', compilerOptions)
-
-# test input
-x = matrix(1:10, nrow = 1)
-y = runif(n = 10)
-y2 = runif(n = 12)
-
-# generic addition function
-nCAdd <- function(x, y) {
-  ans <- x + y
-  return(ans)
+  # R-based addition
+  nAdd <- function(x, y) {
+    ans <- x + y
+    return(ans)
+  }
+  
+  # nCompiler addition
+  nf_add <- nFunction(
+    fun = nAdd,
+    argTypes = list(x = xType, y = yType), 
+    returnType = retType
+  )
+  
+  nCompile(nf_add)
 }
 
-# matrix-vector addition
-nf_matVecAdd <- nFunction(
-  fun = nCAdd,
-  argTypes = list(x = 'numericMatrix', y = 'numericVector'),
-  returnType = 'numericMatrix'
+#
+# nCompiler units
+#
+
+# vector first, then matrix
+add_v_m <- nCompileAddition(
+  xType = 'numericVector', 
+  yType = 'numericMatrix', 
+  retType = 'numericMatrix'
 )
 
-# matrix-matrix addition
-nf_matMatAdd <- nFunction(
-  fun = nCAdd,
-  argTypes = list(x = 'numericMatrix', y = 'numericMatrix'),
-  returnType = 'numericMatrix'
+# reverse order of previous arguments
+add_m_v <- nCompileAddition(
+  xType = 'numericMatrix', 
+  yType = 'numericVector', 
+  retType = 'numericMatrix'
 )
 
-# compile functions
-Cnf_matVecAdd <- nCompile(nf_matVecAdd)
-Cnf_matMatAdd <- nCompile(nf_matMatAdd)
+add_m_m <- nCompileAddition(
+  xType = 'numericMatrix', 
+  yType = 'numericMatrix', 
+  retType = 'numericMatrix'
+)
 
-# return row/colvec as appropriate, no reshaping needed when eigen_assert is off
-Cnf_matVecAdd(x,y)
-Cnf_matVecAdd(t(x),y)
+add_v_a3 <- nCompileAddition(
+  xType = 'numericVector', 
+  yType = 'numericArray(nDim = 3)', 
+  retType = 'numericArray(nDim = 3)'
+)
 
-# same results when inputs are both matrices; output dims match first argument
-Cnf_matMatAdd(x,as.matrix(y))
-Cnf_matMatAdd(t(x),as.matrix(y))
+# nCompiler will not support ops for non-conformable arrays
+expect_error(
+  add_a2_a3 <- nCompileAddition(
+    xType = 'numericArray(nDim = 2)', 
+    yType = 'numericArray(nDim = 3)', 
+    retType = 'numericArray(nDim = 3)'
+  )
+)
 
-# same recycling issue; last elements pull from unallocated memory
-Cnf_matMatAdd(as.matrix(y2),x)
+# nCompiler will not support ops for non-conformable arrays
+expect_error(
+  add_m_a3 <- nCompileAddition(
+    xType = 'numericMatrix', 
+    yType = 'numericArray(nDim = 3)', 
+    retType = 'numericArray(nDim = 3)'
+  )
+)
+
+#
+# Demos 
+#
+
+# test data
+V1 <- as.numeric(1:3)
+M1 <- matrix(as.numeric(1:3), nrow = 1)
+M2 <- matrix(as.numeric(1:3), ncol = 1)
+M3 <- matrix(as.numeric(1:6), ncol = 2)
+M4 <- matrix(as.numeric(1:6), nrow = 1)
+A1 <- array(as.numeric(1:3), dim = c(1, 1, 3))
+A2 <- array(as.numeric(1:3), dim = c(1, 3, 1))
+A3 <- array(as.numeric(1:3), dim = c(3, 1, 1))
+A4 <- array(as.numeric(1:6), dim = c(1, 3, 2))
+
+# nCompiler supports R-like matrix-vector behavior
+expect_identical(V1 + M1, add_m_v(x = M1, y = V1))
+expect_identical(V1 + M1, add_v_m(y = M1, x = V1))
+expect_identical(V1 + M2, add_m_v(x = M2, y = V1))
+expect_identical(V1 + M2, add_v_m(y = M2, x = V1))
+expect_identical(V1 + A1, add_v_a3(x = V1, y = A1))
+expect_identical(V1 + A2, add_v_a3(x = V1, y = A2))
+expect_identical(V1 + A3, add_v_a3(x = V1, y = A3))
+
+# nCompiler runtime errors on non-conformable inputs
+expect_error(add_m_m(x = M1, y = M2))
+expect_error(add_m_m(x = M1, y = M3))
+expect_error(add_m_m(x = M1, y = M4))
+
+# nCompiler runtime errors where R would normally use recycling rule
+expect_error(add_m_v(x = M3, y = V1))
+expect_error(add_v_a3(x = V1, y = A4))
