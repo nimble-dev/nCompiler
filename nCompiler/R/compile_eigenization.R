@@ -304,15 +304,13 @@ inEigenizeEnv(
       # perform operation with reshaping, i.e., for matrix-vector operations
       replacementName <- handlingInfo$replacements[[code$name]]
       if(!is.null(replacementName)) {
-        code$name <- replacementName
-      }
-      # if needed, swap arguments so the output will be the arg with larger dim
-      if(d2 > d1) {
-        tmpArg <- code$args[[1]]
-        setArg(code, 1, code$args[[2]])
-        setArg(code, 2, tmpArg)
-        if (!is.null(handlingInfo$swapOp))
-          code$name <- handlingInfo$swapOp ## op is noncommutative
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
       }
     }
     return(invisible(NULL))
@@ -404,15 +402,13 @@ inEigenizeEnv(
       # perform operation with reshaping, i.e., for matrix-vector operations
       replacementName <- handlingInfo$replacements[[code$name]]
       if(!is.null(replacementName)) {
-        code$name <- replacementName
-      }
-      # if needed, swap arguments so the output will be the arg with larger dim
-      if(d2 > d1) {
-        tmpArg <- code$args[[1]]
-        setArg(code, 1, code$args[[2]])
-        setArg(code, 2, tmpArg)
-        if (!is.null(handlingInfo$swapOp))
-          code$name <- handlingInfo$swapOp ## op is noncommutative
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
       }
     }
     invisible(NULL)

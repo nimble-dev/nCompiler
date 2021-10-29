@@ -22,6 +22,7 @@ NCOMPILER_BINOP(divide, /)
 
 
 namespace nCompiler {
+
   /**
    * Templated reshaping to use the Eigen library to lazily evaluate a `op` b 
    * when a and b are specializations of Eigen::TensorBase objects with
@@ -50,7 +51,7 @@ namespace nCompiler {
    * @return a `op` b, with dimensions matching those of the argument a
    */
     template<typename OP_, typename A_, typename B_>
-    auto binaryOpReshape(const A_ &a, const B_ &b) -> decltype(
+    auto binaryOpReshapeRHS(const A_ &a, const B_ &b) -> decltype(
         OP_()(a,
               b.reshape(
                 Eigen::TensorRef<
@@ -77,6 +78,22 @@ namespace nCompiler {
       // perform a `op` b after reshaping b into a tensor with a's dimensions
       return OP_()(a, b.reshape(aDim));
     }
+    
+    template<typename OP_>
+    struct reverseOp {
+       template<typename A_, typename B_>
+       auto operator()(const A_ &a, const B_ &b) -> decltype(OP_()(b, a)) {
+          return OP_()(b, a);
+       }
+    };
+    
+    template<typename OP_, typename A_, typename B_>
+    auto binaryOpReshapeLHS(const A_ &a, const B_ &b) -> decltype(
+          binaryOpReshapeRHS<reverseOp<OP_>, B_, A_>(b, a)
+    ) {
+       return binaryOpReshapeRHS<reverseOp<OP_>, B_, A_>(b, a);
+    }
+    
 }
-
+  
 #endif

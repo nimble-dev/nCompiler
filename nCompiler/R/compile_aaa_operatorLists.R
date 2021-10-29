@@ -277,8 +277,14 @@ assignOperatorDef(
         eigenImpl = list(
           handler = 'cWiseAddSub',
           replacements = list(
-            '+'= 'nCompiler::binaryOpReshape<nCompiler::plus>',
-            '-'= 'nCompiler::binaryOpReshape<nCompiler::minus>'
+            '+' = list(
+              'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::plus>',
+              'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::plus>'
+            ),
+            '-' = list(
+              'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::minus>',
+              'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::minus>'
+            )
           )
         ),
         cppOutput = list(
@@ -518,7 +524,10 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseMultDiv',
       replacements = list(
-        '/' = 'nCompiler::binaryOpReshape<nCompiler::divide>'
+        '/' = list(
+          'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::divide>',
+          'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::divide>'
+        )
       )
     ),
     cppOutput = list(
@@ -537,7 +546,10 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'cWiseMultDiv',
       replacements = list(
-        '*' = 'nCompiler::binaryOpReshape<nCompiler::product>'
+        '*' = list(
+          'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::product>',
+          'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::product>'
+        )
       )
     ),
     cppOutput = list(
