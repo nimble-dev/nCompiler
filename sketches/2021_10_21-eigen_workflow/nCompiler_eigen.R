@@ -24,11 +24,57 @@ nCompileOp <- function(xType, yType, retType, op) {
   nCompile(nf_op)
 }
 
+# wrapper to "nCompile" the nested operations given input and return types
+nCompileTwoOp <- function(xType, yType, zType, retType, op1, op2) {
+  
+  # R-based operation
+  
+  nOp <- eval(parse(text = gsub(
+    pattern = 'op2', 
+    replacement = op2, 
+    x = gsub(
+      pattern = 'op1', 
+      replacement = op1, 
+      x = "function(x, y, z) {
+          ans <- (x op1 y) op2 z
+          return(ans)
+        }"
+    )
+  )))
+  
+  # nCompiler addition
+  nf_op <- nFunction(
+    fun = nOp,
+    argTypes = list(x = xType, y = yType, z = zType), 
+    returnType = retType
+  )
+  
+  nCompile(nf_op)
+}
+
+# test data
+set.seed(2021)
+V1 <- as.numeric(sample(1:100, size = 3))
+V2 <- as.numeric(sample(1:100, size = 3))
+M1 <- matrix(as.numeric(sample(1:100, size = 3)), nrow = 1)
+M2 <- matrix(as.numeric(sample(1:100, size = 3)), ncol = 1)
+M3 <- matrix(as.numeric(sample(1:100, size = 6)), ncol = 2)
+M4 <- matrix(as.numeric(sample(1:100, size = 6)), nrow = 1)
+A1 <- array(as.numeric(sample(1:100, size = 3)), dim = c(1, 1, 3))
+A2 <- array(as.numeric(sample(1:100, size = 3)), dim = c(1, 3, 1))
+A3 <- array(as.numeric(sample(1:100, size = 3)), dim = c(3, 1, 1))
+A4 <- array(as.numeric(sample(1:100, size = 6)), dim = c(1, 3, 2))
+
+
 # %*% is not supported b/c it requires more specific reshaping rules
-logical_optypes <- c('<=', '>=', '<', '>', '&', '|')
+logical_optypes <- c('<=', '>=', '<', '>', '&', '|', '==', '!=')
 optypes <- c('+', '-', '*', '/', logical_optypes)
+
+# testing single operations
 for(o in optypes) {
 
+  message(paste('testing:', 'A', o, 'B'))
+  
   #
   # nCompiler units
   #
@@ -93,24 +139,13 @@ for(o in optypes) {
   # Demos 
   #
   
-  # test data
-  V1 <- as.numeric(1:3)
-  M1 <- matrix(as.numeric(1:3), nrow = 1)
-  M2 <- matrix(as.numeric(1:3), ncol = 1)
-  M3 <- matrix(as.numeric(1:6), ncol = 2)
-  M4 <- matrix(as.numeric(1:6), nrow = 1)
-  A1 <- array(as.numeric(1:3), dim = c(1, 1, 3))
-  A2 <- array(as.numeric(1:3), dim = c(1, 3, 1))
-  A3 <- array(as.numeric(1:3), dim = c(3, 1, 1))
-  A4 <- array(as.numeric(1:6), dim = c(1, 3, 2))
-  
   opfun = match.fun(o)
   
   # nCompiler supports R-like matrix-vector behavior
-  expect_identical(opfun(V1, M1), op_m_v(x = M1, y = V1))
-  expect_identical(opfun(V1, M1), op_v_m(y = M1, x = V1))
-  expect_identical(opfun(V1, M2), op_m_v(x = M2, y = V1))
-  expect_identical(opfun(V1, M2), op_v_m(y = M2, x = V1))
+  expect_identical(opfun(M1, V1), op_m_v(x = M1, y = V1))
+  expect_identical(opfun(V1, M1), op_v_m(x = V1, y = M1))
+  expect_identical(opfun(M2, V1), op_m_v(x = M2, y = V1))
+  expect_identical(opfun(V1, M2), op_v_m(x = V1, y = M2))
   expect_identical(opfun(V1, A1), op_v_a3(x = V1, y = A1))
   expect_identical(opfun(V1, A2), op_v_a3(x = V1, y = A2))
   expect_identical(opfun(V1, A3), op_v_a3(x = V1, y = A3))
@@ -127,4 +162,53 @@ for(o in optypes) {
   # # Issues: These should throw errors, but don't. Are runtime args validated?
   # op_v_m(x = V1, y = A3)  # essentially returns V1 "op" A3[1:3]
   # op_v_a3(x = V1, y = M1) # crashes R
+  
 }
+
+# testing compositions of operations
+for(o in optypes) {
+  
+  opfun = match.fun(o)
+  
+  for(o2 in optypes) {
+    
+    message(paste('testing:', '(A', o, 'B)', o2, 'C'))
+    
+    retMatrix <- ifelse(
+      o2 %in% logical_optypes, 'logicalMatrix', 'numericMatrix'
+    )
+    
+    op_m_v_v <- nCompileTwoOp(
+      xType = 'numericMatrix',
+      yType = 'numericVector', 
+      zType = 'numericVector', 
+      retType = retMatrix, 
+      op1 = o, 
+      op2 = o2
+    )
+    
+    op_v_v_m <- nCompileTwoOp(
+      xType = 'numericVector',
+      yType = 'numericVector',
+      zType = 'numericMatrix',
+      retType = retMatrix, 
+      op1 = o, 
+      op2 = o2
+    )
+    
+    opfun2 = match.fun(o2)
+    
+    # nCompiler supports composition of R-like matrix-vector behavior
+    expect_identical(
+      opfun2(opfun(M1, V1), V2),
+      op_m_v_v(x = M1, y = V1, z = V2)
+    )
+    expect_identical(
+      opfun2(opfun(V1, V2), M1),
+      op_v_v_m(x = V1, y = V2, z = M1)
+    )
+    
+  }
+  
+}
+
