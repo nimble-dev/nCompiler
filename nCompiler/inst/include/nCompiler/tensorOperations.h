@@ -25,6 +25,8 @@ NCOMPILER_BINOP(lt, <)
 NCOMPILER_BINOP(leq, <=)
 NCOMPILER_BINOP(logical_and, &&)
 NCOMPILER_BINOP(logical_or, ||)
+NCOMPILER_BINOP(logical_eq, ==)
+NCOMPILER_BINOP(logical_neq, !=)
 
 namespace nCompiler {
 

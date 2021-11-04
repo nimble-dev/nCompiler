@@ -541,6 +541,18 @@ updateOperatorDef('|', 'eigenImpl', 'replacements', list(
     'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_or>'
   )
 ))
+updateOperatorDef('==', 'eigenImpl', 'replacements', list(
+  '==' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_eq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_eq>'
+  )
+))
+updateOperatorDef('!=', 'eigenImpl', 'replacements', list(
+  '!=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_neq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_neq>'
+  )
+))
 
 
 assignOperatorDef(
