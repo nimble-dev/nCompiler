@@ -53,6 +53,11 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
                              package = 'nCompiler')
       result$includes = readChar(preamble, file.info(preamble)$size)
     }
+    if(isTRUE(get_nOption('compilerOptions')$cppStacktrace)) {
+      # add include directives to add stack basic traces 
+      result$includes = paste0(result$includes, 
+                               '#include <nCompiler/nCompiler_stacktrace.h>')
+    }
     result
   }
   ans

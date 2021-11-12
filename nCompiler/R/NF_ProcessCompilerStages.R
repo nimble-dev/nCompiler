@@ -152,3 +152,15 @@ compileInfo_eigenize <- function(compileInfo,
                    compileInfo$auxEnv)
   invisible(NULL)
 }
+
+compilerStage_addDebug <- function(compileInfo, debug = FALSE) {
+  if(debug) browser()
+  workEnv <- new.env()
+  workEnv$name <- compileInfo$name
+  compile_addDebug(compileInfo$code,
+                   compileInfo$symbolTable,
+                   compileInfo$auxEnv,
+                   flowDepth = 0, 
+                   workEnv = workEnv)
+  invisible(NULL)
+}

@@ -139,7 +139,8 @@ processNFstages <- function(NFcompiler,
     control
   )
   debug <- controlFull$debug
-  debugCpp <- FALSE##controlFull$debugCpp
+  debugCpp <- FALSE
+  cppStacktrace <- controlFull$cppStacktrace
   logging <- controlFull$logging
 
   startStage <- controlFull$startStage
@@ -395,10 +396,13 @@ processNFstages <- function(NFcompiler,
   stageName <- 'addDebugging'
   if (logging) logBeforeStage(stageName)
   if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(debugCpp) {
+  if(cppStacktrace) {
     if(debug) writeLines('*** Inserting debugging')
-    exprClasses_addDebugMarks(NFcompiler$code,
-                              paste(debugCppLabel, name))
+    NFtry(
+      compilerStage_addDebug(NFcompiler, debug),
+      stageName,
+      use_nCompiler_error_handling
+    )
   }
   if(debug & debugCpp) {
     writeCode(
