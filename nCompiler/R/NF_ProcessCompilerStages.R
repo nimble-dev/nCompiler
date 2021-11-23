@@ -160,7 +160,6 @@ compilerStage_addDebug <- function(compileInfo, debug = FALSE) {
   compile_addDebug(compileInfo$code,
                    compileInfo$symbolTable,
                    compileInfo$auxEnv,
-                   flowDepth = 0, 
                    workEnv = workEnv)
   invisible(NULL)
 }
