@@ -127,3 +127,11 @@ expect_equal(
 # we can map to/from dense matrices
 expect_identical(M, asDense(M_sparse))
 expect_identical(M_sparse, asSparse(M))
+
+# we can mix sparse and dense operations
+addSparseDense(x = M_sparse, y = M)
+
+# Matrix package will automatically switch between sparse and dense 
+# representations depending on which has smaller memory footprint
+class(M_sparse + matrix(runif(m*n), nrow = m))
+class(M_sparse + M)

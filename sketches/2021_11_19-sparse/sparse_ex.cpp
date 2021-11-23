@@ -41,3 +41,11 @@ Eigen::SparseMatrix<double> asSparse(Eigen::MatrixXd x) {
     // Eigen::MatrixBase::sparseView can also accept a tolerance argument
     return x.sparseView();
 }
+
+// [[Rcpp::export]]
+Eigen::SparseMatrix<double> addSparseDense(Eigen::SparseMatrix<double> x,
+                                           Eigen::MatrixXd y) {
+    Eigen::SparseMatrix<double> res = x + y;
+    // prune 0's from sparse matrix on return, if any exist
+    return res.pruned();
+}
