@@ -134,6 +134,32 @@ cFun2$nFun_5_NFID_5(x, y)
 
 
 #
+# testing debugging marks for nClass member functions
+#
+
+add_class <- nClass(
+  classname = "add_class",
+  Rpublic = list(),
+  Cpublic = list(
+    data = 'numericVector', 
+    add = nFunction(
+      fun = function(v = numericVector()) {
+        ans <- v + data
+        return(ans)
+      },
+      returnType = 'numericVector')
+  )
+)
+
+Cadd_class <- nCompile(add_class)
+obj <- Cadd_class$new()
+obj$data <- x
+
+# demonstrate error for member function
+obj$add(y)
+
+
+#
 # recompile without stack trace
 #
 
