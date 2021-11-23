@@ -90,9 +90,9 @@ cFun_condensed$nFun_3_NFID_3(x, y, z)
 
 testfun2 <- function(x,y) {
   res <- x
-  for(i in 1:10) {
+  for(i in 1:10) 
     res <- res + y
-  }
+  
   return(res)
 }
 
