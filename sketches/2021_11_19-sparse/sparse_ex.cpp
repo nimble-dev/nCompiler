@@ -10,37 +10,65 @@ using namespace Rcpp;
 // [[Rcpp::depends(nCompiler)]]
 
 /**
- * Support binary addition between Eigen::Tensor and Eigen::SparseMatrix objects
- * by mapping the Tensor object's data to an Eigen::Matrix object.
+ * Evalaute binary operations between Eigen::Tensor and Eigen::SparseMatrix
+ * objects by mapping the Tensor object's data to an Eigen::Matrix object.
  *
  * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @tparam OP_ Functor wrapping a binary operator
  * @return Assume that x is properly dense, so that return type is also dense
  */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 2> operator+(
-    const Eigen::Tensor<Scalar, 2> &x,
-    const Eigen::SparseMatrix<Scalar> &y
+template<typename Scalar, typename OP_>
+Eigen::Tensor<Scalar, 2> binaryOp(
+    const Eigen::Tensor<Scalar, 2> &x, const Eigen::SparseMatrix<Scalar> &y
 ) {
+    // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // Dimensions of input tensor
     const typename Eigen::Tensor<Scalar, 2>::Dimensions& d = x.dimensions();
-    const Eigen::Map<const MatrixType> xmat(x.data(), d[0], d[1]);
+    // initialize return Tensor
     Eigen::Tensor<Scalar, 2> z(d[0], d[1]);
+    // Map Tensors to Matrix classes, for compatibility
+    const Eigen::Map<const MatrixType> xmat(x.data(), d[0], d[1]);
     Eigen::Map<MatrixType> zmat(z.data(), d[0], d[1]);
-    zmat = xmat + y;
+    // perform operation, return results
+    zmat = OP_()(xmat, y);
     return z;
 }
 
 /**
- * Finish supporting binary addition between Eigen::Tensor and
- * Eigen::SparseMatrix objects
+ * Globally overloaded operators to define x OP y where x (or y) is an
+ * Eigen::Tensor<Scalar, 2> object and y (or x) is an
+ * Eigen::SparseMatrix<Scalar> object, where Scalar is a template parameter.
+ *
+ * @param OP The operator to overload, i.e., +, -, /, *
+ * @param OP_FNCTR Functor that wraps the binary operation
  */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 2> operator+(
-        const Eigen::SparseMatrix<Scalar> &x,
-        const Eigen::Tensor<Scalar, 2> &y
-        ) {
-    return y + x;
+#define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
+template<typename Scalar>                                                      \
+Eigen::Tensor<Scalar, 2> operator OP(                                          \
+    const Eigen::Tensor<Scalar, 2> &x, const Eigen::SparseMatrix<Scalar> &y    \
+) {                                                                            \
+    return binaryOp<Scalar, OP_FNCTR>(x,y);                                    \
+}                                                                              \
+                                                                               \
+template<typename Scalar>                                                      \
+Eigen::Tensor<Scalar, 2> operator OP(                                          \
+    const Eigen::SparseMatrix<Scalar> &x, const Eigen::Tensor<Scalar, 2> &y    \
+) {                                                                            \
+    return binaryOp<Scalar, nCompiler::reverseOp<OP_FNCTR>>(y,x);              \
 }
+
+TENSOR_SPMAT_OP(+, nCompiler::plus)
+TENSOR_SPMAT_OP(-, nCompiler::minus)
+TENSOR_SPMAT_OP(*, nCompiler::product)
+TENSOR_SPMAT_OP(/, nCompiler::divide)
+TENSOR_SPMAT_OP(>, nCompiler::gt)
+TENSOR_SPMAT_OP(>=, nCompiler::geq)
+TENSOR_SPMAT_OP(<, nCompiler::lt)
+TENSOR_SPMAT_OP(<=, nCompiler::leq)
+TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
+TENSOR_SPMAT_OP(||, nCompiler::logical_or)
+TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 2> addTensorSpmat(
