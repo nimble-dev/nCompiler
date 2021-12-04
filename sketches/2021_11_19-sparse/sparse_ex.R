@@ -135,3 +135,13 @@ addSparseDense(x = M_sparse, y = M)
 # representations depending on which has smaller memory footprint
 class(M_sparse + matrix(runif(m*n), nrow = m))
 class(M_sparse + M)
+
+#
+# test globally overloaded operators
+#
+
+expect_identical(
+  addTensorSpmat(x = M, y = M2_sparse),
+  M + M2
+)
+
