@@ -9,16 +9,37 @@ using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(nCompiler)]]
 
-Eigen::Tensor<double, 2> operator+(
-    const Eigen::Tensor<double, 2> &x,
-    const Eigen::SparseMatrix<double> &y
+/**
+ * Support binary addition between Eigen::Tensor and Eigen::SparseMatrix objects
+ * by mapping the Tensor object's data to an Eigen::Matrix object.
+ *
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @return Assume that x is properly dense, so that return type is also dense
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> operator+(
+    const Eigen::Tensor<Scalar, 2> &x,
+    const Eigen::SparseMatrix<Scalar> &y
 ) {
-    const Eigen::Tensor<double, 2>::Dimensions& d = x.dimensions();
-    const Eigen::Map<const Eigen::MatrixXd> x_mtx(x.data(), d[0], d[1]);
-    Eigen::Tensor<double, 2> ans(d[0], d[1]);
-    Eigen::Map<Eigen::MatrixXd> ans_mtx(ans.data(), d[0], d[1]);
-    ans_mtx = x_mtx + y;
-    return ans;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    const typename Eigen::Tensor<Scalar, 2>::Dimensions& d = x.dimensions();
+    const Eigen::Map<const MatrixType> xmat(x.data(), d[0], d[1]);
+    Eigen::Tensor<Scalar, 2> z(d[0], d[1]);
+    Eigen::Map<MatrixType> zmat(z.data(), d[0], d[1]);
+    zmat = xmat + y;
+    return z;
+}
+
+/**
+ * Finish supporting binary addition between Eigen::Tensor and
+ * Eigen::SparseMatrix objects
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> operator+(
+        const Eigen::SparseMatrix<Scalar> &x,
+        const Eigen::Tensor<Scalar, 2> &y
+        ) {
+    return y + x;
 }
 
 // [[Rcpp::export]]
@@ -26,7 +47,7 @@ Eigen::Tensor<double, 2> addTensorSpmat(
     Eigen::Tensor<double, 2> x,
     Eigen::SparseMatrix<double> y
 ) {
-    return x + y;
+    return y + x;
 }
 
 // [[Rcpp::export]]
