@@ -180,6 +180,14 @@ cppEigenTensorRef <- function(name = character(),
   ans
 }
 
+cppEigenSparseRef <- function(name = character(),
+                              nDim,
+                              scalarType) {
+  ans <- cppEigenSparse(name, nDim, scalarType)
+  ans$ref <- TRUE
+  ans
+}
+
 cppADinfo <- function(name = character(),
                       ...) {
   cppVarFullClass$new(name = name,
@@ -232,6 +240,22 @@ cppEigenTensor <- function(name = character(),
                       baseType = "Eigen::Tensor",
                       templateArgs = list(scalarType, nDim)
                       )
+}
+
+cppEigenSparse <- function(name = character(),
+                           nDim,
+                           scalarType) {
+  if(nDim == 1) {
+    cppVarFullClass$new(name = name,
+                        baseType = "Eigen::SparseVector",
+                        templateArgs = list(scalarType))
+  } else if(nDim == 2) {
+    cppVarFullClass$new(name = name,
+                        baseType = "Eigen::SparseMatrix",
+                        templateArgs = list(scalarType))
+  } else {
+    stop('Cannot create a sparse Eigen object with more than 2 dimensions.')
+  }
 }
 
 cppRcppType <- function(name = character(0), baseType, ...)
