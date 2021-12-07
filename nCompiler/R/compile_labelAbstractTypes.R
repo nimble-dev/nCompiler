@@ -710,8 +710,9 @@ inLabelAbstractTypesEnv(
       resultScalarType <- arithmeticOutputType(
         argType$type, returnTypeCode = handlingInfo$returnTypeCode
       )
-      resultType <- symbolBasic$new(nDim = argType$nDim,
-                                    type = resultScalarType)
+      resultSymbolType <- arithmeticOutputSymbol(arg)
+      resultType <- resultSymbolType$new(nDim = argType$nDim,
+                                         type = resultScalarType)
       code$type <- resultType
       invisible(NULL)
 
@@ -756,12 +757,12 @@ inLabelAbstractTypesEnv(
       resultScalarType <- arithmeticOutputType(
         a1Type$type, a2Type$type, handlingInfo$returnTypeCode
       )
-      resultType <- symbolBasic$new(nDim = nDim,
-                                    type = resultScalarType)
+      resultSymbolType <- arithmeticOutputSymbol(a1, a2)
+      resultType <- resultSymbolType$new(nDim = nDim,
+                                         type = resultScalarType)
       code$type <- resultType
       ##code$typeName <- class(resultType)[1]
       invisible(NULL)
-      ## 
     }
 )
 
@@ -1046,4 +1047,14 @@ arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
   if (!is.null(t2) && t2 == 'integer') return('integer')
   if (!is.null(returnTypeCode) && returnTypeCode == 5L) return('integer')
   return('logical')
+}
+
+## promote symbol with the most dense storage type, symbolBasic > symbolSparse
+arithmeticOutputSymbol <- function(s1, s2 = NULL, returnTypeCodes) {
+  if(all(inherits(s1$type, 'symbolSparse'), 
+         inherits(s2$type, 'symbolSparse'))) {
+    return(symbolSparse)
+  } else {
+    return(symbolBasic)
+  }
 }
