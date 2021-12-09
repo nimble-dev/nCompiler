@@ -1081,8 +1081,7 @@ arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
 
 ## promote symbol with the most dense storage type, symbolBasic > symbolSparse
 arithmeticOutputSymbol <- function(s1, s2 = NULL, returnTypeCodes) {
-  if(all(inherits(s1$type, 'symbolSparse'), 
-         inherits(s2$type, 'symbolSparse'))) {
+  if(inherits(s1$type, 'symbolSparse') && inherits(s2$type, 'symbolSparse')) {
     return(symbolSparse)
   } else {
     return(symbolBasic)
