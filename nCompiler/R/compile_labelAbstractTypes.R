@@ -1012,6 +1012,36 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
       insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       code$type <- code$args[[1]]$type
+      # see if the returned object differs from the nFunction's return type
+      if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
+        warning(exprClassProcessingErrorMsg(
+          code,
+          "Object type for return() does not match the nFunction's return type."
+        ),
+        call. = FALSE)
+      }
+      if(auxEnv$returnSymbol$type != code$type$type) {
+        warning(exprClassProcessingErrorMsg(
+          code, 
+          paste0(
+            "Scalar type (", code$type$type, ") for return() does not match ",
+            "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
+            sep = ''
+          )
+        ),
+        call. = FALSE)
+      }
+      if(auxEnv$returnSymbol$nDim != code$type$nDim) {
+        warning(exprClassProcessingErrorMsg(
+          code, 
+          paste0(
+            "Dimension (", code$type$nDim, ") for return() does not match ",
+            "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
+            sep = ''
+          )
+        ),
+        call. = FALSE)
+      }
       invisible(insertions)
     }
 )
