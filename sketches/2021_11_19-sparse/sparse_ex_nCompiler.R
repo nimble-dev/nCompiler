@@ -9,6 +9,11 @@ add <- function(x, y) {
   return(ans)
 }
 
+add3 <- function(x, y, z) { 
+  ans <- x + y + z
+  return(ans)
+}
+
 nAdd <- nFunction(
   fun = add,
   argTypes = list(x = 'nSparseMatrix', 
@@ -23,7 +28,17 @@ nAdd2 <- nFunction(
   returnType = 'nMatrix'
 )
 
-nC <- nCompile(nAdd, nAdd2)
+nAdd3 <- nFunction(
+  fun = add3,
+  argTypes = list(x = 'nSparseMatrix', 
+                  y = 'nMatrix',
+                  z = 'nMatrix'),
+  returnType = 'nMatrix'
+)
+
+nCAdd <- nCompile(nAdd)
+nCAdd2 <- nCompile(nAdd2)
+nCAdd3 <- nCompile(nAdd3)
 
 #
 # generate demo objects
@@ -55,11 +70,17 @@ M2_sparse_spam = as.spam(M2)
 Msym = t(M_sparse) %*% M_sparse + diag(ncol(M_sparse))
 
 expect_identical(
-  nC$nFun_1_NFID_1(x = M_sparse, y = M2_sparse),
+  nCAdd(x = M_sparse, y = M2_sparse),
   M_sparse + M2_sparse
 )
 
 expect_equal(
-  max(abs(nC$nFun_2_NFID_2(x = M_sparse, y = M2) - as.matrix(M_sparse + M2))),
-  0
+  nCAdd2(x = M_sparse, y = M2),
+  matrix(M_sparse + M2, nrow = nrow(M_sparse))
 )
+
+expect_equal(
+  nCAdd3(x = M_sparse, y = M2, z = M),
+  matrix(M_sparse + M2 + M, nrow = nrow(M_sparse))
+)
+

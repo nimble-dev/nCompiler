@@ -106,27 +106,48 @@ namespace nCompiler {
 /**
  * Evalaute binary operations between Eigen::Tensor and Eigen::SparseMatrix
  * objects by mapping the Tensor object's data to an Eigen::Matrix object.
+ * Currently, only supported for rank 2 tensors.
  *
- * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
  * @tparam OP_ Functor wrapping a binary operator
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
  * @return Assume that x is properly dense, so that return type is also dense
  */
-template<typename Scalar, typename OP_>
+template<typename OP_, typename Scalar>
 Eigen::Tensor<Scalar, 2> binaryOp(
-        const Eigen::Tensor<Scalar, 2> &x, const Eigen::SparseMatrix<Scalar> &y
-        ) {
+    const Eigen::Tensor<Scalar, 2> &x, const Eigen::SparseMatrix<Scalar> &y
+) {
     // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
-    // Dimensions of input tensor
-    const typename Eigen::Tensor<Scalar, 2>::Dimensions& d = x.dimensions();
+    // input tensor dimensions
+    auto xDim = x.dimensions();
     // initialize return Tensor
-    Eigen::Tensor<Scalar, 2> z(d[0], d[1]);
+    Eigen::Tensor<Scalar, 2> z(xDim);
     // Map Tensors to Matrix classes, for compatibility
-    const Eigen::Map<const MatrixType> xmat(x.data(), d[0], d[1]);
-    Eigen::Map<MatrixType> zmat(z.data(), d[0], d[1]);
+    const Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    Eigen::Map<MatrixType> zmat(z.data(), xDim[0], xDim[1]);
     // perform operation, return results
     zmat = OP_()(xmat, y);
     return z;
+}
+
+/**
+ * Evalaute binary operations between Eigen tensor expression objects and
+ * Eigen::SparseMatrix objects by first evaluating the tensor epression into a
+ * concrete Eigen::Tensor object.
+ *
+ * @tparam OP_ Functor wrapping a binary operator
+ * @tparam TensorExpr type for an unevaluated tensor expression
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @return Assume that x is properly dense, so that return type is also dense
+ */
+template<typename OP_, typename TensorExpr, typename Scalar>
+Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
+    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y
+) {
+    // evaluate input tensor
+    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
+    // perform operation, return results
+    return binaryOp<OP_, Scalar>(xEval, y);
 }
 
 /**
@@ -138,18 +159,18 @@ Eigen::Tensor<Scalar, 2> binaryOp(
  * @param OP_FNCTR Functor that wraps the binary operation
  */
 #define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
-template<typename Scalar>                                                      \
-Eigen::Tensor<Scalar, 2> operator OP(                                          \
-const Eigen::Tensor<Scalar, 2> &x, const Eigen::SparseMatrix<Scalar> &y    \
+template<typename TensorExpr, typename Scalar>                                 \
+Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
+    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y                  \
 ) {                                                                            \
-return binaryOp<Scalar, OP_FNCTR>(x,y);                                    \
+    return binaryOp<OP_FNCTR>(x,y);                                            \
 }                                                                              \
-\
-template<typename Scalar>                                                      \
-Eigen::Tensor<Scalar, 2> operator OP(                                          \
-const Eigen::SparseMatrix<Scalar> &x, const Eigen::Tensor<Scalar, 2> &y    \
+                                                                               \
+template<typename TensorExpr, typename Scalar>                                 \
+Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
+    const Eigen::SparseMatrix<Scalar> &x, const TensorExpr &y                  \
 ) {                                                                            \
-return binaryOp<Scalar, nCompiler::reverseOp<OP_FNCTR>>(y,x);              \
+    return binaryOp<nCompiler::reverseOp<OP_FNCTR>>(y,x);                      \
 }
 
 TENSOR_SPMAT_OP(+, nCompiler::plus)

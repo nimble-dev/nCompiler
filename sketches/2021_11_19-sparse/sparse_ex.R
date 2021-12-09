@@ -145,3 +145,7 @@ expect_identical(
   M + M2
 )
 
+expect_equal(
+  addTensorSpmat_nest(x = M, y = M2, z = M2_sparse),
+  matrix(M + M2 + M2_sparse, nrow = nrow(M))
+)
