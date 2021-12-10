@@ -1058,7 +1058,7 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   asSparse <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 1) {
+    if(length(code$args) > 2) {
       stop(exprClassProcessingErrorMsg(
         code,
         'trying to make an ambiguous input sparse.'

@@ -34,6 +34,12 @@ M3 <- matrix(data = 0, nrow = m, ncol = n)
 M3[sample(x = length(M3), size = p * length(M3))] <- runif(n = p * length(M3))
 M3_sparse <- Matrix::Matrix(M3, sparse = TRUE)
 
+# sparse matrix with additional 0's stored explicitly
+Munpruned <- sparseMatrix(
+  i = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
+  j = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
+  x = c(runif(n = floor(m*n*p)), 0, 0)
+)
 
 #
 # basic R functions
@@ -54,6 +60,10 @@ add3 <- function(x, y, z) {
   return(ans)
 }
 
+prune <- function(x, prune) { 
+  ans <- asSparse(x, prune = prune)
+  return(ans)
+}
 
 # 
 # supporting nFunctions.  different combinations of argTypes are used for each 
@@ -114,9 +124,20 @@ nAdd3 <- nFunction(
   ),
   returnType = 'nMatrix'
 )
+
+# demonstrate pruning extra 0's from sparse matrix objects
+nPrune <- nFunction(
+  fun = prune, 
+  argTypes = list(x = 'nSparseMatrix', prune = 'logical'),
+  returnType = 'nSparseMatrix'
+)
   
 # verify asSparse works from R
 expect_equal(nAdd2_force(x = M, y = M2), M_sparse + M2_sparse)
+
+# verify pruning works from R
+expect_equal(nPrune(x = Munpruned, prune = TRUE), Matrix::drop0(Munpruned))
+expect_equal(nPrune(x = Munpruned, prune = FALSE), Munpruned)
 
 
 #
@@ -128,6 +149,7 @@ cAdd2_force_mixed <- nCompile(nAdd2_force_mixed)
 cAdd2_promote <- nCompile(nAdd2_promote)
 cAdd3 <- nCompile(nAdd3)
 cAdd2_sparse <- nCompile(nAdd2_sparse)
+cPrune <- nCompile(nPrune)
 
 # nFunction will not compile if return statement cannot be converted to an 
 # object of class returnType in C++; we should also get a type warning that 
@@ -148,3 +170,5 @@ expect_equal(cAdd2_force_mixed(x = M_sparse, y = M2), M_sparse + M2_sparse)
 expect_equal(cAdd2_promote(x = M, y = M2_sparse), M + M2)
 expect_equal(cAdd3(x = M_sparse, y = M2, z = M3), M + M2 + M3)
 expect_equal(cAdd2_sparse(x = M_sparse, y = M2_sparse), M_sparse + M2_sparse)
+expect_equal(cPrune(x = Munpruned, prune = TRUE), Matrix::drop0(Munpruned))
+expect_equal(cPrune(x = Munpruned, prune = FALSE), Munpruned)

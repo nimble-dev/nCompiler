@@ -208,8 +208,23 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
     return xmat.sparseView();
 }
 
-// TODO: make a version of asSparse that takes a sparse matrix as input and
-//  prunes it, if requested
+/**
+ * Remove additional 0's from Eigen::SparseMatrix<Scalar> object, if requested
+ * @tparam Scalar (primitive) type for SparseMatrix entries
+ * @param x SparseMatrix object to prune
+ * @param prune true to re-compress x by removing 0's from representation
+ * @return
+ */
+template<typename Scalar>
+Eigen::SparseMatrix<Scalar> asSparse(
+    Eigen::SparseMatrix<Scalar> &x, bool prune
+) {
+    if(prune) {
+        return x.pruned();
+    } else {
+        return x;
+    }
+}
 
 // TODO: add asDense conversion operations from Eigen::SparseMatrix<Scalar>
 // objects to Eigen::Tensor<Scalar, 2> objects

@@ -4,7 +4,13 @@
 \alias{asSparse}
 \title{Converts a dense matrix or vector to a sparse matrix or vector}
 \usage{
-asSparse(x)
+asSparse(x, prune = TRUE)
+}
+\arguments{
+\item{x}{object to convert to sparse representation}
+
+\item{prune}{TRUE to remove 0's from an object if it is already stored in a 
+sparse format}
 }
 \description{
 Converts a dense matrix or vector to a sparse matrix or vector
