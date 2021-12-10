@@ -1089,6 +1089,39 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  asDense <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to make an ambiguous input sparse.'
+      ), call. = FALSE)
+    }
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(!inherits(argType, 'symbolSparse')) {
+      code$type <- argType
+    } else if(inherits(argType, 'symbolSparse')) {
+      code$type = symbolBasic$new(
+        name = argType$name,
+        type = argType$type,
+        isArg = argType$isArg,
+        isRef = argType$isRef,
+        nDim = argType$nDim,
+        size = argType$size
+      )
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to determine dense type for input'
+      ), call. = FALSE)
+    }
+    invisible(NULL)
+  }
+)
+
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing

@@ -190,8 +190,7 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
  * Convert an Eigen::Tensor or Tensor expression object (i.e., an object derived
  * from Eigen::TensorBase) to an Eigen::SparseMatrix<Scalar> object.
  *
- * @tparam TensorExpr Eigen::Tensor or Tensor expression object (i.e., an
- *   object derived from Eigen::TensorBase)
+ * @tparam TensorExpr Eigen::Tensor or Tensor expression class
  * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
  * @param x Object to convert to an Eigen::SparseMatrix
  * @return
@@ -225,8 +224,25 @@ Eigen::SparseMatrix<Scalar> asSparse(
         return x;
     }
 }
-
-// TODO: add asDense conversion operations from Eigen::SparseMatrix<Scalar>
-// objects to Eigen::Tensor<Scalar, 2> objects
+/**
+ * Convert an Eigen::SparseMatrix or SparseMatrix expression object (i.e., an
+ * object derived from Eigen::SparseMatrixBase) to an Eigen::Tensor<Scalar, 2>
+ * object.
+ * @tparam SpMatExpr  Eigen::SparseMatrix or Sparse Matrix expression class
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @param x Object to convert to an Eigen::Tensor<Scalar, 2>
+ * @return
+ */
+template<typename SpMatExpr, typename Scalar = typename SpMatExpr::Scalar>
+Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // initialize return tensor
+    Eigen::Tensor<Scalar, 2> res(x.rows(), x.cols());
+    // Map tensor to matrix class, return results
+    Eigen::Map<MatrixType> tmp_mat(res.data(), x.rows(), x.cols());
+    tmp_mat = MatrixType(x);
+    return res;
+}
 
 #endif

@@ -801,7 +801,6 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   asSparse <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    # temporary: fail if argument has more than one argument
     if(length(code$args) > 2) {
       stop(exprClassProcessingErrorMsg(
         code, 'asSparse is expected to be called with at most two arguments'
@@ -819,3 +818,24 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  asDense <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code, 'asDense is expected to be called with at most one argument'
+      ), call. = FALSE)
+    }
+    if(length(code$args) == 1) {
+      if(!inherits(code$args[[1]]$type, 'symbolSparse')) {
+        # argument is already a dense type, so no work needs to be done; remove 
+        # code expression from AST as we prepare to gnerate C++ code to compile
+        setArg(
+          expr = code$caller, ID = code$callerArgID, value = code$args[[1]]
+        )
+      }
+    }
+    invisible(NULL)
+  }
+)
+
