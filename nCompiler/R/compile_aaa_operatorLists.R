@@ -676,6 +676,36 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'asSparse',
+  list(
+    labelAbstractTypes = list(
+      handler = 'asSparse'
+    ),
+    eigenImpl = list(
+      handler = 'asSparse'
+    )
+    # cppOutput = list(
+    #   handler = 'asSparse'
+    # )
+  )
+)
+
+assignOperatorDef(
+  'asDense',
+  list(
+    labelAbstractTypes = list(
+      handler = 'asDense'
+    ),
+    eigenImpl = list(
+      handler = 'asDense'
+    )
+    # cppOutput = list(
+    #   handler = 'asDense'
+    # )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(

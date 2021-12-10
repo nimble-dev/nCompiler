@@ -203,8 +203,8 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
     // evaluate input tensor
     const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
     // map to matrix, sparsify and return
-    auto xDim = x.dimensions();
-    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    auto xDim = xEval.dimensions();
+    Eigen::Map<const MatrixType> xmat(xEval.data(), xDim[0], xDim[1]);
     return xmat.sparseView();
 }
 

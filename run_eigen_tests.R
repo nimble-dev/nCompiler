@@ -9,10 +9,17 @@ help_message <-
 
 argv <- commandArgs(trailingOnly = TRUE)
 
+
+# path to test files if nCompiler is installed with "--install-tests" flag,
+# i.e., via R CMD INSTALL . --install-tests
 NCpath <- path.package("nCompiler")
 testpath <- file.path(NCpath,'tests','testthat')
 
-test_dir(
-  path = file.path(testpath),
-  filter = 'tensorOperations'
-)
+if(length(dir(testpath)) == 0) {
+  # asssume path to test files in local clone of github repo
+  testpath <- file.path(getwd(), 'nCompiler', 'tests', 'testthat')
+}
+
+test_dir(path = testpath, filter = 'tensorOperations_reshaping')
+test_dir(path = testpath, filter = 'tensorOperations_sparse')
+
