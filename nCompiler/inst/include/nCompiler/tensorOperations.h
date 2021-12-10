@@ -132,7 +132,7 @@ Eigen::Tensor<Scalar, 2> binaryOp(
 
 /**
  * Evalaute binary operations between Eigen tensor expression objects and
- * Eigen::SparseMatrix objects by first evaluating the tensor epression into a
+ * Eigen::SparseMatrix objects by first evaluating the tensor expression into a
  * concrete Eigen::Tensor object.
  *
  * @tparam OP_ Functor wrapping a binary operator
@@ -152,8 +152,9 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
 
 /**
  * Globally overloaded operators to define x OP y where x (or y) is an
- * Eigen::Tensor<Scalar, 2> object and y (or x) is an
- * Eigen::SparseMatrix<Scalar> object, where Scalar is a template parameter.
+ * Eigen::Tensor or Tensor expression object (i.e., an object derived from
+ * Eigen::TensorBase) and y (or x) is an Eigen::SparseMatrix<Scalar> object,
+ * where Scalar is a template parameter.
  *
  * @param OP The operator to overload, i.e., +, -, /, *
  * @param OP_FNCTR Functor that wraps the binary operation
@@ -184,5 +185,33 @@ TENSOR_SPMAT_OP(<=, nCompiler::leq)
 TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
 TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
-  
+
+/**
+ * Convert an Eigen::Tensor or Tensor expression object (i.e., an object derived
+ * from Eigen::TensorBase) to an Eigen::SparseMatrix<Scalar> object.
+ *
+ * @tparam TensorExpr Eigen::Tensor or Tensor expression object (i.e., an
+ *   object derived from Eigen::TensorBase)
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @param x Object to convert to an Eigen::SparseMatrix
+ * @return
+ */
+template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
+Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // evaluate input tensor
+    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
+    // map to matrix, sparsify and return
+    auto xDim = x.dimensions();
+    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    return xmat.sparseView();
+}
+
+// TODO: make a version of asSparse that takes a sparse matrix as input and
+//  prunes it, if requested
+
+// TODO: add asDense conversion operations from Eigen::SparseMatrix<Scalar>
+// objects to Eigen::Tensor<Scalar, 2> objects
+
 #endif
