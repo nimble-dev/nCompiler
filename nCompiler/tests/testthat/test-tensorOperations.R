@@ -1,3 +1,3 @@
 context("tensorOperations")
 
-expect_equal(0, 0)
+expect_equal(10, 10)
