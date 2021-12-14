@@ -136,6 +136,30 @@ addSparseDense(x = M_sparse, y = M)
 class(M_sparse + matrix(runif(m*n), nrow = m))
 class(M_sparse + M)
 
+
+#
+# document sparse row/col vec addition support from Matrix package
+#
+
+rowMat = Matrix(Msym[1,], sparse = TRUE, nrow = 1)
+v = runif(n = n)
+sparseV = Matrix(v * rbinom(n = length(v), size = 1, prob = .5), sparse = TRUE)
+
+# componentwise operations supported by Matrix
+rowMat + v
+rowMat - v
+rowMat * v
+rowMat / v
+rowMat > v
+rowMat >= v
+rowMat < v
+rowMat <= v
+rowMat & v
+rowMat | v
+rowMat == v
+rowMat != v
+
+
 #
 # test globally overloaded operators
 #
