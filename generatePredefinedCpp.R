@@ -3,6 +3,8 @@
 ## 2. Generates the .cpp and .h content in inst
 library(nCompiler)
 
+set_nOption("use_nCompLocal", TRUE)
+
 if(!("generatePredefinedCpp.R" %in% list.files()))
   stop("You need source generatePredefinedCpp.R with its directory as your working directory.")
 
