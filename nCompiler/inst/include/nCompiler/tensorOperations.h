@@ -12,7 +12,7 @@
       auto operator()(const A_ &a, const B_ &b) -> decltype(a OP b) {   \
         return a OP b;                                                  \
       }                                                                 \
-    };                                                                  \ 
+    };                                                                  \
   }                                                                     \
   
 NCOMPILER_BINOP(plus, +)
