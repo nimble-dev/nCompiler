@@ -810,9 +810,7 @@ inEigenizeEnv(
       if(inherits(code$args[[1]]$type, 'symbolSparse')) {
         # argument is already a sparse type, so no work needs to be done; remove 
         # code expression from AST as we prepare to gnerate C++ code to compile
-        setArg(
-          expr = code$caller, ID = code$callerArgID, value = code$args[[1]]
-        )
+        removeExprClassLayer(code)
       }
     }
     invisible(NULL)
@@ -830,9 +828,7 @@ inEigenizeEnv(
       if(!inherits(code$args[[1]]$type, 'symbolSparse')) {
         # argument is already a dense type, so no work needs to be done; remove 
         # code expression from AST as we prepare to gnerate C++ code to compile
-        setArg(
-          expr = code$caller, ID = code$callerArgID, value = code$args[[1]]
-        )
+        removeExprClassLayer(code)
       }
     }
     invisible(NULL)
