@@ -73,7 +73,6 @@ Collate:
     Rcpp_nCompiler_plugin.R
     Rexecution.R
     Rhooks.R
-    storageConversion.R
     symbolTable.R
     symbolTableClass.R
     symbolTable_utils.R
