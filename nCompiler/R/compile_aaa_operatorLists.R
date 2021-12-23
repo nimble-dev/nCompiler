@@ -685,9 +685,6 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'asSparse'
     )
-    # cppOutput = list(
-    #   handler = 'asSparse'
-    # )
   )
 )
 
@@ -700,9 +697,6 @@ assignOperatorDef(
     eigenImpl = list(
       handler = 'asDense'
     )
-    # cppOutput = list(
-    #   handler = 'asDense'
-    # )
   )
 )
 
