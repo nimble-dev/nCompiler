@@ -52,7 +52,7 @@ compile_labelAbstractTypes <- function(code,
                                          nDim = 0)
             symTab$addSymbol(newSymbol)
             code$type <- newSymbol
-            code$nDim <- 0
+            # code$nDim <- 0
             ##code$typeName <- 'double'
           } else {
             stop(paste0("variable '",
@@ -1052,6 +1052,39 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
     code$type <- symbolBasic$new(nDim = 1, type = returnType)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## recurse and set code type via setReturnType()
+  MatrixReturnType <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## recurse and use the nth argument's type as the return type
+  ArgReturnType <- function(code, symTab, auxEnv, handlingInfo) {
+    # determine which code$arg entry will be used to specify the return type
+    argTypeInd <- handlingInfo[['argTypeInd']]
+    if(is.null(argTypeInd)) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Need to specify the input argument to use as a return type.'
+      ), call. = FALSE)
+    }
+    # recurse to determine argument types
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # extract the return type
+    code$type <- code$args[[argTypeInd]]$type
     invisible(inserts)
   }
 )

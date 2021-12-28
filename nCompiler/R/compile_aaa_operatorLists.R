@@ -637,7 +637,11 @@ assignOperatorDef(
 
 assignOperatorDef(
   c('%*%'),
-  list()
+  list(
+    labelAbstractTypes = list(
+      handler = 'MatrixReturnType'
+    )
+  )
 )
 
 assignOperatorDef(
@@ -699,6 +703,65 @@ assignOperatorDef(
     )
   )
 )
+
+assignOperatorDef(
+  c('nrow', 'ncol'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RecurseAndLabel',
+      returnTypeCode = returnTypeCodes$integer
+    )
+  )
+)
+
+assignOperatorDef(
+  c('chol'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RecurseAndLabel',
+      returnTypeCode = returnTypeCodes$double
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nDiag'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('forwardsolve', 'backsolve'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ArgReturnType',
+      argTypeInd = 2
+    )
+  )
+)
+
+assignOperatorDef(
+  c('t'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ArgReturnType',
+      argTypeInd = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  'nEigen',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nEigen'
+    )
+  )
+)
+
 
 ## assignOperatorDef(
 ##   c('list'),

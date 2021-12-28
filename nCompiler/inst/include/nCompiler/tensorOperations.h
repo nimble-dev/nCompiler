@@ -193,7 +193,6 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
  * @tparam TensorExpr Eigen::Tensor or Tensor expression class
  * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
  * @param x Object to convert to an Eigen::SparseMatrix
- * @return
  */
 template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
 Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
@@ -209,10 +208,10 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
 
 /**
  * Remove additional 0's from Eigen::SparseMatrix<Scalar> object, if requested
+ *
  * @tparam Scalar (primitive) type for SparseMatrix entries
  * @param x SparseMatrix object to prune
  * @param prune true to re-compress x by removing 0's from representation
- * @return
  */
 template<typename Scalar>
 Eigen::SparseMatrix<Scalar> asSparse(
@@ -228,10 +227,10 @@ Eigen::SparseMatrix<Scalar> asSparse(
  * Convert an Eigen::SparseMatrix or SparseMatrix expression object (i.e., an
  * object derived from Eigen::SparseMatrixBase) to an Eigen::Tensor<Scalar, 2>
  * object.
+ *
  * @tparam SpMatExpr  Eigen::SparseMatrix or Sparse Matrix expression class
  * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
  * @param x Object to convert to an Eigen::Tensor<Scalar, 2>
- * @return
  */
 template<typename SpMatExpr, typename Scalar = typename SpMatExpr::Scalar>
 Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
@@ -243,6 +242,192 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     Eigen::Map<MatrixType> tmp_mat(res.data(), x.rows(), x.cols());
     tmp_mat = MatrixType(x);
     return res;
+}
+
+/**
+ * Compute the Cholesky decomposition for a symmetric matrix stored as an
+ * Eigen::Tensor<Scalar, 2> object.
+ *
+ * To be compatible with R's implementation of chol(), this function returns the
+ * upper-triangular Cholesky factor.
+ *
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> chol(const Eigen::Tensor<Scalar, 2> &x) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // map to matrix
+    auto xDim = x.dimensions();
+    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    // initialize Eigen::Tensor to store the decomposition
+    Eigen::Tensor<Scalar, 2> res(xDim[0], xDim[1]);
+    // decompose
+    Eigen::LLT<MatrixType> llt(xmat);
+    // extract upper Cholesky factor and return
+    Eigen::Map<MatrixType> resMat(res.data(), xDim[0], xDim[1]);
+    resMat = llt.matrixU();
+    return res;
+}
+
+/**
+ * Compute the Cholesky decomposition for a symmetric matrix stored as an
+ * Eigen::Tensor<Scalar, 2> object, or derived from a Tensor expression
+ * object (i.e., an object derived from Eigen::TensorBase).
+ *
+ * To be compatible with R's implementation of chol(), this function returns the
+ * upper-triangular Cholesky factor.
+ *
+ * @tparam TensorExpr type for an unevaluated tensor expression
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ */
+template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
+Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
+    // evaluate input tensor
+    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
+    // evaluate cholesky for evaluated tensor
+    return chol(xEval);
+}
+
+/**
+ * Extract the primary diagonal from an Eigen::Tensor object, or derived from
+ * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
+ *
+ * @tparam TensorExpr type for an unevaluated tensor expression
+ * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ */
+template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
+Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
+    // access elements of x without fully evaluating x if a tensor expression
+    Eigen::TensorRef<TensorExpr> ref(x);
+    // determine dimensions of x, and size of main diagonal
+    auto xDim = ref.dimensions();
+    auto nDiag = *(std::min_element(xDim.begin(), xDim.end()));
+    // initialize and fill output
+    Eigen::Tensor<Scalar, 1> res(nDiag);
+    Scalar *diagIt = res.data();
+    Scalar *diagEnd = diagIt + nDiag;
+    auto indexEnd = xDim.end();
+    unsigned long i = 0;
+    for(diagIt; diagIt != diagEnd; ++diagIt) {
+        for(auto index = xDim.begin(); index != indexEnd; ++index)
+            *index = i;
+        *diagIt = ref.coeff(xDim);
+        ++i;
+    }
+    return res;
+}
+
+/**
+ * Transpose a tensor by reversing the order of the dimensions via shuffling
+ *
+ * @tparam TensorExpr type for a tensor or an unevaluated tensor expression
+ */
+ template<typename TensorExpr>
+ auto t(const TensorExpr &x) -> decltype(
+     x.shuffle(x.dimensions()) // correct return type, but incorrect output
+ ){
+    typename TensorExpr::Index i = TensorExpr::NumDimensions;
+    typename TensorExpr::Dimensions o;
+    auto end = o.end();
+    for(auto it = o.begin(); it != end; ++it) {
+        *it = --i;
+    }
+    return x.shuffle(o);
+ }
+
+ /**
+  * Solve a lower-triangular system when RHS represents a matrix or a vector
+  *
+  * @tparam Scalar (primitive) type for Matrix entries
+  * @tparam RHSType A specialization of Eigen::Matrix<Scalar, xxx, yyy>
+  */
+template<typename Scalar, typename RHSType>
+RHSType forwardsolve(
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> & L,
+    const RHSType & b
+) {
+    return L.template triangularView<Eigen::Lower>().solve(b);
+}
+
+/**
+ * Solve an upper-triangular system when RHS represents a matrix or a vector
+ *
+ * @tparam Scalar (primitive) type for Matrix entries
+ * @tparam RHSType A specialization of Eigen::Matrix<Scalar, xxx, yyy>
+ */
+template<typename Scalar, typename RHSType>
+RHSType backsolve(
+    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> & U,
+    const RHSType & b
+) {
+    return U.template triangularView<Eigen::Upper>().solve(b);
+}
+
+/**
+  * Solve a lower-triangular system when RHS represents a vector,
+  * and the inputs are stored in Tensor objects
+  *
+  * @tparam Scalar (primitive) type for Matrix entries
+  */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> forwardsolve(
+    const Eigen::Tensor<Scalar, 2> & L , const Eigen::Tensor<Scalar, 1> & b
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorType;
+    // Map inputs to matrices
+    auto lDim = L.dimensions();
+    auto bDim = b.dimensions();
+    Eigen::Map<const MatrixType> lmat(L.data(), lDim[0], lDim[1]);
+    Eigen::Map<const VectorType> bvec(b.data(), bDim[0], 1);
+    // solve system and map to output
+    Eigen::Tensor<Scalar, 1> res(bDim[0]);
+    Eigen::Map<VectorType> resVec(res.data(), bDim[0]);
+    resVec = forwardsolve<Scalar, VectorType>(lmat, bvec);
+    return res;
+}
+
+/**
+  * Solve a lower-triangular system when RHS represents a matrix,
+  * and the inputs are stored in Tensor objects
+  *
+  * @tparam Scalar (primitive) type for Matrix entries
+  */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> forwardsolve(
+    const Eigen::Tensor<Scalar, 2> & L , const Eigen::Tensor<Scalar, 2> & b
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // Map inputs to matrices
+    auto lDim = L.dimensions();
+    auto bDim = b.dimensions();
+    Eigen::Map<const MatrixType> lmat(L.data(), lDim[0], lDim[1]);
+    Eigen::Map<const MatrixType> bmat(b.data(), bDim[0], bDim[1]);
+    // solve system and map to output
+    Eigen::Tensor<Scalar, 2> res(bDim[0], bDim[1]);
+    Eigen::Map<MatrixType> resMat(res.data(), bDim[0], bDim[1]);
+    resMat = forwardsolve<Scalar, MatrixType>(lmat, bmat);
+    return res;
+}
+
+/**
+  * Solve a lower-triangular system when RHS represents a matrix or vector,
+  * and the inputs are stored as Tensors or as the result of tensor operations
+  *
+  * @tparam Scalar (primitive) type for Matrix entries
+  */
+template<typename LHSExpr,
+        typename RHSExpr,
+        typename Scalar = typename LHSExpr::Scalar>
+Eigen::Tensor<Scalar, RHSExpr::NumDimensions> forwardsolve(
+    const LHSExpr & L, const RHSExpr & b
+) {
+    Eigen::Tensor<Scalar, LHSExpr::NumDimensions> lEval(L);
+    Eigen::Tensor<Scalar, RHSExpr::NumDimensions> bEval(b);
+    return forwardsolve(lEval, bEval);
 }
 
 #endif

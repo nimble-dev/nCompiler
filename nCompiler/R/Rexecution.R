@@ -183,6 +183,36 @@ makeReturnVector <- function(fillValue, length, recycle) {
     }
 }
 
+#' Spectral Decomposition of a Matrix
+#' 
+#' In a \code{nFunction}, \code{nEigen} is identical to \code{eigen}
+#'
+#' @details This function is similar to R's \code{\link{eigen}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a numeric or complex matrix whose spectral decomposition is to be 
+#'   computed. Logical matrices are coerced to numeric.
+#'
+#' @export
+#' 
+nEigen <- function(x) {
+  eigen(x)
+}
+
+#' Extract or replace the diagonal of matrix
+#' 
+#' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
+#'
+#' @details This function is similar to R's \code{\link{diag}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a numeric or complex matrix
+#'
+#' @export
+#' 
+nDiag <- function(x) {
+  diag(x)
+}
 
 #' Replicate Elements of Vectors and Lists
 #' 
