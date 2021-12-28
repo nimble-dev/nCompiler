@@ -186,6 +186,83 @@ TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
 TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
+
+/**
+ * Create an Eigen::Matrix map view into a constant Eigen::Tensor<Scalar, 1>
+ * object
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Map<const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>> matmap(
+    const Eigen::Tensor<Scalar, 1> & x
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> MatrixType;
+    // input tensor dimensions
+    auto xDim = x.dimensions();
+    // map tensor
+    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], 1);
+    return xmat;
+}
+
+/**
+ * Create an Eigen::Matrix map view into a non-const Eigen::Tensor<Scalar, 1>
+ * object
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, 1>> matmap(
+    Eigen::Tensor<Scalar, 1> & x
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> MatrixType;
+    // input tensor dimensions
+    auto xDim = x.dimensions();
+    // map tensor
+    Eigen::Map<MatrixType> xmat(x.data(), xDim[0], 1);
+    return xmat;
+}
+
+/**
+ * Create an Eigen::Matrix map view into a constant Eigen::Tensor<Scalar, 2>
+ * object
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Map<const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
+    const Eigen::Tensor<Scalar, 2> & x
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // input tensor dimensions
+    auto xDim = x.dimensions();
+    // map tensor
+    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    return xmat;
+}
+
+/**
+ * Create an Eigen::Matrix map view into a non-const Eigen::Tensor<Scalar, 1>
+ * object
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
+    Eigen::Tensor<Scalar, 2> & x
+) {
+    // Eigen::Matrix class compatible with function arguments
+    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
+    // input tensor dimensions
+    auto xDim = x.dimensions();
+    // map tensor
+    Eigen::Map<MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    return xmat;
+}
+
 /**
  * Convert an Eigen::Tensor or Tensor expression object (i.e., an object derived
  * from Eigen::TensorBase) to an Eigen::SparseMatrix<Scalar> object.
@@ -365,59 +442,64 @@ RHSType backsolve(
 }
 
 /**
-  * Solve a lower-triangular system when RHS represents a vector,
-  * and the inputs are stored in Tensor objects
-  *
-  * @tparam Scalar (primitive) type for Matrix entries
-  */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 1> forwardsolve(
-    const Eigen::Tensor<Scalar, 2> & L , const Eigen::Tensor<Scalar, 1> & b
+ * Solve a lower-triangular system when RHS represents a matrix or vector, and
+ * the inputs are stored as Eigen::Tensor objects.
+ *
+ * The function arguments seem unnecessarily verbose given the LHSTensor and
+ * RHSTensor template arguments, but help the compiler decide to call this
+ * version of the overloaded template function forwardsolve when both function
+ * arguments are Eigen::Tensor objects (vs. when one or both arguments may be an
+ * unevaluated Tensor object.)
+ *
+ * @tparam LHSTensor Specialized Eigen::Tensor class, intended to be an
+ *   Eigen::Tensor<Scalar, 2> object
+ * @tparam RHSTensor Specialized Eigen::Tensor class, intended to be either
+ *   an Eigen::Tensor<Scalar, 1> or Eigen::Tensor<Scalar, 2> object
+ * @param L lower-triangular matrix input
+ * @param b right-hand side of equation L %*% x = b
+ */
+template<typename LHSTensor, typename RHSTensor>
+Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> forwardsolve(
+  const Eigen::Tensor<typename LHSTensor::Scalar, LHSTensor::NumDimensions> & L,
+  const Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> & b
 ) {
-    // Eigen::Matrix class compatible with function arguments
-    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
-    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorType;
+    // Eigen::Matrix class compatible with RHS tensor argument
+    typedef typename Eigen::Matrix<
+        typename RHSTensor::Scalar, Eigen::Dynamic, 1
+    > Vec;
+    typedef typename Eigen::Matrix<
+        typename RHSTensor::Scalar, Eigen::Dynamic, Eigen::Dynamic
+    > Mat;
+    typedef typename std::conditional<
+        RHSTensor::NumDimensions == 1, Vec, Mat
+    >::type RHSType;
     // Map inputs to matrices
-    auto lDim = L.dimensions();
-    auto bDim = b.dimensions();
-    Eigen::Map<const MatrixType> lmat(L.data(), lDim[0], lDim[1]);
-    Eigen::Map<const VectorType> bvec(b.data(), bDim[0], 1);
+    auto lmat = matmap(L);
+    auto bmat = matmap(b);
+    // initialize return object to match the dimensions of RHS argument
+    Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> res(
+        b.dimensions()
+    );
     // solve system and map to output
-    Eigen::Tensor<Scalar, 1> res(bDim[0]);
-    Eigen::Map<VectorType> resVec(res.data(), bDim[0]);
-    resVec = forwardsolve<Scalar, VectorType>(lmat, bvec);
-    return res;
-}
-
-/**
-  * Solve a lower-triangular system when RHS represents a matrix,
-  * and the inputs are stored in Tensor objects
-  *
-  * @tparam Scalar (primitive) type for Matrix entries
-  */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 2> forwardsolve(
-    const Eigen::Tensor<Scalar, 2> & L , const Eigen::Tensor<Scalar, 2> & b
-) {
-    // Eigen::Matrix class compatible with function arguments
-    typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
-    // Map inputs to matrices
-    auto lDim = L.dimensions();
-    auto bDim = b.dimensions();
-    Eigen::Map<const MatrixType> lmat(L.data(), lDim[0], lDim[1]);
-    Eigen::Map<const MatrixType> bmat(b.data(), bDim[0], bDim[1]);
-    // solve system and map to output
-    Eigen::Tensor<Scalar, 2> res(bDim[0], bDim[1]);
-    Eigen::Map<MatrixType> resMat(res.data(), bDim[0], bDim[1]);
-    resMat = forwardsolve<Scalar, MatrixType>(lmat, bmat);
+    auto resMat = matmap(res);
+    resMat = forwardsolve<typename RHSTensor::Scalar, RHSType>(lmat, bmat);
     return res;
 }
 
 /**
   * Solve a lower-triangular system when RHS represents a matrix or vector,
-  * and the inputs are stored as Tensors or as the result of tensor operations
+  * and the inputs are stored as Tensors or as the result of tensor operations.
   *
-  * @tparam Scalar (primitive) type for Matrix entries
+  * Using this function will generally be inefficient if LHSExpr or RHSExpr
+  * actually represent evaluated Tensor objects because, in this use case, the
+  * function will create local copies of the inputs before solving the linear
+  * system.  If both LHSExpr and RHSExpr are evaluated Tensor objects (i.e.,
+  * specializations of Eigen::Tensor), then an overloaded implementation of
+  * forwardsolve will solve the linear system.
+  *
+  * @tparam LHSExpr type for a tensor or unevaluated tensor expression
+  * @tparam RHSExpr type for a tensor or unevaluated tensor expression
+  * @tparam Scalar (primitive) type for tensor entries
   */
 template<typename LHSExpr,
         typename RHSExpr,
@@ -425,9 +507,15 @@ template<typename LHSExpr,
 Eigen::Tensor<Scalar, RHSExpr::NumDimensions> forwardsolve(
     const LHSExpr & L, const RHSExpr & b
 ) {
-    Eigen::Tensor<Scalar, LHSExpr::NumDimensions> lEval(L);
-    Eigen::Tensor<Scalar, RHSExpr::NumDimensions> bEval(b);
-    return forwardsolve(lEval, bEval);
+    // evaluate tensor inputs
+    typedef Eigen::Tensor<Scalar, LHSExpr::NumDimensions> LHSTensor;
+    typedef Eigen::Tensor<Scalar, RHSExpr::NumDimensions> RHSTensor;
+    LHSTensor lEval(L);
+    RHSTensor bEval(b);
+    // pass to solver
+    return forwardsolve<LHSTensor, RHSTensor>(lEval, bEval);
 }
+
+
 
 #endif
