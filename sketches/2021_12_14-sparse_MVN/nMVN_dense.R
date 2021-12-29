@@ -64,6 +64,35 @@ dmvn <- function(x, mu, Sigma, log) {
   }
 }
 
+dmvn2 <- function(x, mu, Sigma, log) {
+  # Density for a multivariate normal random variable
+  #
+  # Parameters:
+  #  x - random vector
+  #  mu - mean vector
+  #  Sigma - covariance matrix
+  #  log - TRUE to return log-density
+  
+  # random vector dimension
+  n <- length(x)
+  
+  # cholesky decomposition Sigma = t(R) %*% R
+  R <- chol(Sigma)
+  
+  # log-determinant for chol(Sigma)
+  ldet_chol <- sum(log(diag(R)))
+  
+  # evaluate quadratic form t(x - mu) %*% solve(Sigma) %*% (x - mu)
+  y <- forwardsolve(t(R), x - mu)
+  
+  res <- -.5 * n * log(2*pi) - ldet_chol - .5 * t(y)%*%y
+  
+  if(log) {
+    return(res) 
+  } else {
+    return(exp(res))
+  }
+}
 
 #
 # nCompiler code
@@ -76,8 +105,15 @@ nDmvn <- nFunction(
   returnType = 'double'
 )
 
-cDmvn <- nCompile(nDmvn)
+nDmvn2 <- nFunction(
+  fun = dmvn2,
+  argTypes = list(x = 'numericVector', mu = 'numericVector', 
+                  Sigma = 'nMatrix', log = 'logical'),
+  returnType = 'double'
+)
 
+cDmvn <- nCompile(nDmvn)
+cDmvn2 <- nCompile(nDmvn2)
 
 #
 # demonstration
@@ -88,6 +124,9 @@ expect_equal(dmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
 
 # validate the nFunction
 expect_equal(nDmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
+expect_equal(as.numeric(nDmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)), 
+             ll.ref)
 
 # validate the compiled nFunction
 expect_equal(cDmvn(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)
+expect_equal(cDmvn2(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)

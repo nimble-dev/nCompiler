@@ -636,10 +636,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('%*%'),
+  c('nMul'),
   list(
     labelAbstractTypes = list(
-      handler = 'MatrixReturnType'
+      handler = 'nMul'
     )
   )
 )

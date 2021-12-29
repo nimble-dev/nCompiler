@@ -1071,6 +1071,37 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  ## recurse and set code type via setReturnType()
+  nMul <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # get dimensions of inputs
+    arg1Dim <- code$args[[1]]$type$nDim
+    arg2Dim <- code$args[[2]]$type$nDim
+    # determine if output is matrix, vector, or scalar
+    if(arg1Dim == 1) {
+      if(arg2Dim == 1) {
+        resDim <- 0
+      } else {
+        resDim <- 1
+      }
+    } else {
+      if(arg2Dim == 1) {
+        resDim <- 1
+      } else {
+        resDim <- 2
+      }
+    }
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   ## recurse and use the nth argument's type as the return type
   ArgReturnType <- function(code, symTab, auxEnv, handlingInfo) {
     # determine which code$arg entry will be used to specify the return type

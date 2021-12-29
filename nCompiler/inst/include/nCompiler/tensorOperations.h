@@ -189,7 +189,7 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
 /**
  * Create an Eigen::Matrix map view into a constant Eigen::Tensor<Scalar, 1>
- * object
+ * object.  The Eigen::Matrix is assumed to be a column vector.
  *
  * @tparam Scalar (primitive) type for tensor entries
  */
@@ -208,7 +208,7 @@ Eigen::Map<const Eigen::Matrix<Scalar, Eigen::Dynamic, 1>> matmap(
 
 /**
  * Create an Eigen::Matrix map view into a non-const Eigen::Tensor<Scalar, 1>
- * object
+ * object.  The Eigen::Matrix is assumed to be a column vector.
  *
  * @tparam Scalar (primitive) type for tensor entries
  */
@@ -516,6 +516,125 @@ Eigen::Tensor<Scalar, RHSExpr::NumDimensions> forwardsolve(
     return forwardsolve<LHSTensor, RHSTensor>(lEval, bEval);
 }
 
+/**
+ * Matrix multiplication between two vectors, implemented as an inner product,
+ * when inputs are stored as Tensor objects.
+ *
+ * (1 x n) x (n x 1) = (1 x 1)
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Scalar nMul(
+    const Eigen::Tensor<Scalar, 1> & x, const Eigen::Tensor<Scalar, 1> & y
+) {
+    Eigen::Tensor<Scalar, 0> res = (x * y).sum();
+    return *res.data();
+}
 
+/**
+ * Vector-matrix multiplication x %*% y, where y is assumed to be a
+ * column-vector and inputs are stored as Tensor objects.
+ *
+ * (m x n) x (n x 1) = (m x 1)
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> nMul(
+    const Eigen::Tensor<Scalar, 2> & x, const Eigen::Tensor<Scalar, 1> & y
+) {
+    // initialize output
+    auto xDim = x.dimensions();
+    Eigen::Tensor<Scalar, 1> res(xDim[0]);
+    // map inputs to matrices
+    auto xmat = matmap(x);
+    auto ymat = matmap(y);
+    auto resMat = matmap(res);
+    // implement multiplication
+    resMat = xmat * ymat;
+    return res;
+}
+
+/**
+ * Vector-matrix multiplication x %*% y, where x is assumed to be a row-vector
+ * and inputs are stored as Tensor objects.
+ *
+ * (1 x n) x (n x p) = (1 x p)
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> nMul(
+    const Eigen::Tensor<Scalar, 1> & x, const Eigen::Tensor<Scalar, 2> & y
+) {
+    // initialize output
+    auto yDim = y.dimensions();
+    Eigen::Tensor<Scalar, 1> res(yDim[1]);
+    // map inputs to matrices
+    auto xmat = matmap(x);  // matmap only maps 1-dim tensors to column vectors
+    auto ymat = matmap(y);
+    auto resMat = matmap(res);
+    // implement multiplication
+    resMat = xmat.transpose() * ymat;
+    return res;
+}
+
+/**
+ * Multiply two matrices when the inputs are stored as Tensor objects.
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> nMul(
+    const Eigen::Tensor<Scalar, 2> & x, const Eigen::Tensor<Scalar, 2> & y
+) {
+    // initialize output
+    auto xDim = x.dimensions();
+    auto yDim = y.dimensions();
+    Eigen::Tensor<Scalar, 2> res(xDim[0], yDim[1]);
+    // map inputs to matrices
+    auto xmat = matmap(x);
+    auto ymat = matmap(y);
+    auto resMat = matmap(res);
+    // implement multiplication
+    resMat = xmat * ymat;
+    return res;
+}
+
+/**
+  * Multiply two matrices when the inputs are stored as Tensors or as the
+  * result of tensor operations.
+  *
+  * Using this function will generally be inefficient if XExpr or YExpr
+  * actually represent evaluated Tensor objects because, in this use case, the
+  * function will create local copies of the inputs before evaluating the matrix
+  * multiplication.  If both XExpr and YExpr are evaluated Tensor objects
+  * (i.e., specializations of Eigen::Tensor), then an overloaded implementation
+  * of nMul will implement the matrix multiplication.
+  *
+  * @tparam XExpr type for a tensor or unevaluated tensor expression
+  * @tparam YExpr type for a tensor or unevaluated tensor expression
+  * @tparam Scalar (primitive) type for tensor entries
+  */
+template<typename XExpr,
+         typename YExpr,
+         typename Scalar = typename XExpr::Scalar>
+auto nMul(
+    const XExpr & x, const YExpr & y
+) -> decltype(
+    nMul<Scalar>(
+        Eigen::Tensor<Scalar, XExpr::NumDimensions>(x),
+        Eigen::Tensor<Scalar, YExpr::NumDimensions>(y)
+    )
+){
+    // evaluate tensor inputs
+    typedef Eigen::Tensor<Scalar, XExpr::NumDimensions> XTensor;
+    typedef Eigen::Tensor<Scalar, YExpr::NumDimensions> YTensor;
+    XTensor xEval(x);
+    YTensor yEval(y);
+    // pass to implementation
+    return nMul<Scalar>(xEval, yEval);
+}
 
 #endif

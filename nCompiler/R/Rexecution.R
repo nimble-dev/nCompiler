@@ -271,3 +271,10 @@ asDense <- function(x) {
     stop('Attempting to convert to dense format from unknown type')
   }
 }
+
+#' Wrapper for matrix multiplication
+#' 
+#' @export
+nMul <- function(x, y) {
+  x %*% y
+}
