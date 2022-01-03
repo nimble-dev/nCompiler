@@ -328,7 +328,7 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
  * To be compatible with R's implementation of chol(), this function returns the
  * upper-triangular Cholesky factor.
  *
- * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @tparam Scalar (primitive) type for Tensor entries
  */
 template<typename Scalar>
 Eigen::Tensor<Scalar, 2> chol(const Eigen::Tensor<Scalar, 2> &x) {
@@ -356,7 +356,7 @@ Eigen::Tensor<Scalar, 2> chol(const Eigen::Tensor<Scalar, 2> &x) {
  * upper-triangular Cholesky factor.
  *
  * @tparam TensorExpr type for an unevaluated tensor expression
- * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @tparam Scalar (primitive) type for Tensor entries
  */
 template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
 Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
@@ -371,7 +371,7 @@ Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
  * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
  *
  * @tparam TensorExpr type for an unevaluated tensor expression
- * @tparam Scalar (primitive) type for Tensor and SparseMatrix entries
+ * @tparam Scalar (primitive) type for Tensor entries
  */
 template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
 Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
