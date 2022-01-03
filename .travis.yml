@@ -1,19 +1,12 @@
 language: r
 
-cache: packages
-
-# specify Partner Queue Solution to use free build minutes
-# see: https://docs.travis-ci.com/user/billing-overview/#partner-queue-solution
-os: linux
-arch:
-  - arm64
-  - ppc64le
-  - s390x
+os: osx
 
 notifications:
   email:
     recipients:
-      - joshua.hewitt@duke.edu
+      - pdevalpine@berkeley.edu
+    on_success: always
     on_failure: always
 
 # branches:
@@ -29,4 +22,4 @@ install:
   - Rscript -e 'library(nCompiler); setup_nCompLocal()'
 
 script:
-  - ./run_eigen_tests.R
+  - ./run_tests.R
