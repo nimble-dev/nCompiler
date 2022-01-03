@@ -109,7 +109,10 @@ compile_addDebug <- function(code,
       # that associates the C++ code generated for [code] with its 
       # representation in R.
       setExpr <- wrapExprClassOperator(code = code, funName = 'SET_DEBUG_MSG')
-      labelExpr <- exprClass$new(name = nDeparse(code), isName = FALSE, 
+      escapedName <- gsub(
+        pattern = '"', replacement = '\\\\"', x = nDeparse(code)
+      )
+      labelExpr <- exprClass$new(name = escapedName, isName = FALSE, 
                                  isCall = FALSE, isAssign = FALSE, 
                                  isLiteral = TRUE)
       insertArg(setExpr, 2, labelExpr)

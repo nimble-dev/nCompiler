@@ -92,6 +92,10 @@ dmvn2 <- function(x, mu, Sigma, log) {
 # nCompiler code
 #
 
+opt <- nOptions()
+opt$compilerOptions$cppStacktrace <- TRUE
+nOptions(opt)
+
 nDmvn <- nFunction(
   fun = dmvn,
   argTypes = list(x = 'numericVector', mu = 'numericVector', 
@@ -115,7 +119,8 @@ cDmvn2 <- nCompile(nDmvn2)
 
 # validate the R implementations
 expect_equal(dmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
-expect_equal(dmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
+expect_equal(as.numeric(dmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)), 
+             ll.ref)
 
 # validate the nFunctions
 expect_equal(nDmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
@@ -125,3 +130,9 @@ expect_equal(as.numeric(nDmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)),
 # validate the compiled nFunctions
 expect_equal(cDmvn(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)
 expect_equal(cDmvn2(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)
+
+# validate that stack tracing occurs on linear algebra errors, such as being 
+# unable to compute the Cholesky decomposition for a non-square matrix
+expect_error(
+  cDmvn(x = x, mu = mu, Sigma = matrix(1, nrow = 3, ncol = 2), ARG_log_ = TRUE)
+)
