@@ -2,7 +2,7 @@ context("tensorOperations: interoperability with dense linear algebra methods")
 
 
 #
-# base functions, parameters, and data
+# base functions, parameters, and data for multivariate normal test
 #
 
 set.seed(2021)
@@ -136,3 +136,70 @@ expect_equal(cDmvn2(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)
 expect_error(
   cDmvn(x = x, mu = mu, Sigma = matrix(1, nrow = 3, ncol = 2), ARG_log_ = TRUE)
 )
+
+
+#
+# additional functions for triangular solver tests
+#
+
+# forwardsolve wrapper
+fsolve <- function(L, b) {
+  x <- forwardsolve(L, b)
+  return(x)
+}
+
+# backsolve wrapper
+bsolve <- function(U, b) {
+  x <- backsolve(U, b)
+  return(x)
+}
+
+# nCompiler implementation of forward solve with unknown matrix
+nFsolve <- nFunction(
+  fun = fsolve,
+  argTypes = list(L = 'numericMatrix', b = 'numericVector'),
+  returnType = 'numericVector'
+)
+
+# nCompiler implementation of forward solve with unknown matrix
+nFsolveMat <- nFunction(
+  fun = fsolve,
+  argTypes = list(L = 'numericMatrix', b = 'numericMatrix'),
+  returnType = 'numericMatrix'
+)
+
+# nCompiler implementation of backward solve with unknown matrix
+nBsolve <- nFunction(
+  fun = bsolve,
+  argTypes = list(U = 'numericMatrix', b = 'numericVector'),
+  returnType = 'numericVector'
+)
+
+# nCompiler implementation of backward solve with unknown matrix
+nBsolveMat <- nFunction(
+  fun = bsolve,
+  argTypes = list(U = 'numericMatrix', b = 'numericMatrix'),
+  returnType = 'numericMatrix'
+)
+
+# compile nFunctions
+cFsolve <- nCompile(nFsolve)
+cFsolveMat <- nCompile(nFsolveMat)
+cBsolve <- nCompile(nBsolve)
+cBsolveMat <- nCompile(nBsolveMat)
+
+# test data
+L <- structure(c(1, 2, 3, 0, 1, 1, 0, 0, 2), .Dim = c(3L, 3L))
+U <- t(L)
+x <- c(-1, 3, 1)
+x2 <- cbind(x, x)
+b <- L %*% x
+b2 <- L %*% x2
+bU <- U %*% x
+b2U <- U %*% x2
+
+# validate results (lower triangular system)
+expect_equal(as.numeric(cFsolve(L = L, b = b)), x)
+expect_equal(cFsolveMat(L = L, b = b2), unname(x2))
+expect_equal(as.numeric(cBsolve(U = U, b = bU)), x)
+expect_equal(cBsolveMat(U = U, b = b2U), unname(x2))
