@@ -186,6 +186,92 @@ TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
 TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
+/**
+ * Implicitly convert an arbitrary input to an Eigen::Tensor object, as needed
+ *
+ * The compiler uses implicit conversion to decide how to convert the TensorXpr
+ * input x to an Eigen::Tensor<Scalar, NumDimensions> object. Naturally, the
+ * conversion process allocates memory for the Tensor, then populates the
+ * Tensor's entries.
+ *
+ * Uses SFINAE to restrict the template function (nominally) to only work with
+ * Tensor expression inputs vs. with evaluated, concrete Eigen::Tensor objects.
+ *
+ * If the input is already an Eigen::Tensor object, the desired behavior is to
+ * return a reference to the object (implemented in an overloaded function)
+ * because the input is already an Eigen::Tensor object, which is the desired
+ * output class.  Calling this function on an Eigen::Tensor object (i.e., if
+ * SFINAE restriction is removed) only consumes memory and time, creating a
+ * copy of an otherwise reasonable input.
+ *
+ * @tparam TensorXpr Nominally, an unevaluated tensor expression
+ */
+template<
+    typename TensorXpr,
+    typename std::enable_if<
+        !std::is_base_of<
+            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
+            TensorXpr
+        >::value,
+        TensorXpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions> eval(
+    TensorXpr & x
+) {
+    return x;
+}
+
+/**
+ * Return a reference to an Eigen::Tensor object, avoiding copying the input
+ *
+ * Uses SFINAE to restrict the template function to only work with Eigen::Tensor
+ * inputs vs. with Tensor expression objects.
+ *
+ * If the input is a Tensor expression object, the desired behavior is to return
+ * an Eigen::Tensor object with the results of the evaluated Tensor expression
+ * (implemented in an overloaded function).  Calling this function on a Tensor
+ * expression object (i.e., if SFINAE restriction is removed) will cause type
+ * errors when eval() is nested within other functions that use Tensors, but
+ * require evaluated inputs, such as wrappers for matrix multiplication and
+ * linear solvers.
+ *
+ * @tparam TensorXpr An Eigen::Tensor object type
+ */
+template<
+    typename TensorXpr,
+    typename std::enable_if<
+        std::is_base_of<
+            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
+            TensorXpr
+        >::value,
+        TensorXpr
+    >::type* = nullptr
+>
+TensorXpr& eval(TensorXpr & x) {
+    return x;
+}
+
+/**
+ * Constant version of eval() with Eigen::Tensor inputs.
+ *
+ * See documentation for eval() with Eigen::Tensor inputs for more details.
+ *
+ * @tparam TensorXpr An Eigen::Tensor object type
+ */
+template<
+    typename TensorXpr,
+    typename std::enable_if<
+        std::is_base_of<
+            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
+            TensorXpr
+        >::value,
+        TensorXpr
+    >::type* = nullptr
+>
+const TensorXpr& eval(const TensorXpr & x) {
+    return x;
+}
 
 /**
  * Create an Eigen::Matrix map view into a constant Eigen::Tensor<Scalar, 1>
@@ -323,20 +409,24 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
 
 /**
  * Compute the Cholesky decomposition for a symmetric matrix stored as an
- * Eigen::Tensor<Scalar, 2> object.
+ * Eigen::Tensor<Scalar, 2> object, or derived from a Tensor expression object
+ * (i.e., an object derived from Eigen::TensorBase).
  *
  * To be compatible with R's implementation of chol(), this function returns the
  * upper-triangular Cholesky factor.
  *
+ * @tparam TensorExpr An Eigen::Tensor or tensor expression object type
  * @tparam Scalar (primitive) type for Tensor entries
  */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 2> chol(const Eigen::Tensor<Scalar, 2> &x) {
+template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
+Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
+    // evaluate arguments, if necessary
+    const auto & x_eval = eval(x);
     // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
     // map to matrix
-    auto xDim = x.dimensions();
-    Eigen::Map<const MatrixType> xmat(x.data(), xDim[0], xDim[1]);
+    auto xDim = x_eval.dimensions();
+    Eigen::Map<const MatrixType> xmat(x_eval.data(), xDim[0], xDim[1]);
     // initialize Eigen::Tensor to store the decomposition
     Eigen::Tensor<Scalar, 2> res(xDim[0], xDim[1]);
     // decompose
@@ -345,25 +435,6 @@ Eigen::Tensor<Scalar, 2> chol(const Eigen::Tensor<Scalar, 2> &x) {
     Eigen::Map<MatrixType> resMat(res.data(), xDim[0], xDim[1]);
     resMat = llt.matrixU();
     return res;
-}
-
-/**
- * Compute the Cholesky decomposition for a symmetric matrix stored as an
- * Eigen::Tensor<Scalar, 2> object, or derived from a Tensor expression
- * object (i.e., an object derived from Eigen::TensorBase).
- *
- * To be compatible with R's implementation of chol(), this function returns the
- * upper-triangular Cholesky factor.
- *
- * @tparam TensorExpr type for an unevaluated tensor expression
- * @tparam Scalar (primitive) type for Tensor entries
- */
-template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
-Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
-    // evaluate input tensor
-    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
-    // evaluate cholesky for evaluated tensor
-    return chol(xEval);
 }
 
 /**
@@ -386,7 +457,7 @@ Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
     Scalar *diagEnd = diagIt + nDiag;
     auto indexEnd = xDim.end();
     unsigned long i = 0;
-    for(diagIt; diagIt != diagEnd; ++diagIt) {
+    for(; diagIt != diagEnd; ++diagIt) {
         for(auto index = xDim.begin(); index != indexEnd; ++index)
             *index = i;
         *diagIt = ref.coeff(xDim);
@@ -413,108 +484,7 @@ Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
     return x.shuffle(o);
  }
 
- /**
-  * Solve a lower-triangular system when RHS represents a matrix or a vector
-  *
-  * @tparam Scalar (primitive) type for Matrix entries
-  * @tparam RHSType A specialization of Eigen::Matrix<Scalar, xxx, yyy>
-  */
-template<typename Scalar, typename RHSType>
-RHSType forwardsolve(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> & L,
-    const RHSType & b
-) {
-    return L.template triangularView<Eigen::Lower>().solve(b);
-}
 
-/**
- * Solve an upper-triangular system when RHS represents a matrix or a vector
- *
- * @tparam Scalar (primitive) type for Matrix entries
- * @tparam RHSType A specialization of Eigen::Matrix<Scalar, xxx, yyy>
- */
-template<typename Scalar, typename RHSType>
-RHSType backsolve(
-    const Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> & U,
-    const RHSType & b
-) {
-    return U.template triangularView<Eigen::Upper>().solve(b);
-}
-
-/**
- * Solve a lower-triangular system when RHS represents a matrix or vector, and
- * the inputs are stored as Eigen::Tensor objects.
- *
- * The function arguments seem unnecessarily verbose given the LHSTensor and
- * RHSTensor template arguments, but help the compiler decide to call this
- * version of the overloaded template function forwardsolve when both function
- * arguments are Eigen::Tensor objects (vs. when one or both arguments may be an
- * unevaluated Tensor object.)
- *
- * @tparam LHSTensor Specialized Eigen::Tensor class, intended to be an
- *   Eigen::Tensor<Scalar, 2> object
- * @tparam RHSTensor Specialized Eigen::Tensor class, intended to be either
- *   an Eigen::Tensor<Scalar, 1> or Eigen::Tensor<Scalar, 2> object
- * @param L lower-triangular matrix input
- * @param b right-hand side of equation L %*% x = b
- */
-template<typename LHSTensor, typename RHSTensor>
-Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> forwardsolve(
-  const Eigen::Tensor<typename LHSTensor::Scalar, LHSTensor::NumDimensions> & L,
-  const Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> & b
-) {
-    // Eigen::Matrix class compatible with RHS tensor argument
-    typedef typename Eigen::Matrix<
-        typename RHSTensor::Scalar, Eigen::Dynamic, 1
-    > Vec;
-    typedef typename Eigen::Matrix<
-        typename RHSTensor::Scalar, Eigen::Dynamic, Eigen::Dynamic
-    > Mat;
-    typedef typename std::conditional<
-        RHSTensor::NumDimensions == 1, Vec, Mat
-    >::type RHSType;
-    // Map inputs to matrices
-    auto lmat = matmap(L);
-    auto bmat = matmap(b);
-    // initialize return object to match the dimensions of RHS argument
-    Eigen::Tensor<typename RHSTensor::Scalar, RHSTensor::NumDimensions> res(
-        b.dimensions()
-    );
-    // solve system and map to output
-    auto resMat = matmap(res);
-    resMat = forwardsolve<typename RHSTensor::Scalar, RHSType>(lmat, bmat);
-    return res;
-}
-
-/**
-  * Solve a lower-triangular system when RHS represents a matrix or vector,
-  * and the inputs are stored as Tensors or as the result of tensor operations.
-  *
-  * Using this function will generally be inefficient if LHSExpr or RHSExpr
-  * actually represent evaluated Tensor objects because, in this use case, the
-  * function will create local copies of the inputs before solving the linear
-  * system.  If both LHSExpr and RHSExpr are evaluated Tensor objects (i.e.,
-  * specializations of Eigen::Tensor), then an overloaded implementation of
-  * forwardsolve will solve the linear system.
-  *
-  * @tparam LHSExpr type for a tensor or unevaluated tensor expression
-  * @tparam RHSExpr type for a tensor or unevaluated tensor expression
-  * @tparam Scalar (primitive) type for tensor entries
-  */
-template<typename LHSExpr,
-        typename RHSExpr,
-        typename Scalar = typename LHSExpr::Scalar>
-Eigen::Tensor<Scalar, RHSExpr::NumDimensions> forwardsolve(
-    const LHSExpr & L, const RHSExpr & b
-) {
-    // evaluate tensor inputs
-    typedef Eigen::Tensor<Scalar, LHSExpr::NumDimensions> LHSTensor;
-    typedef Eigen::Tensor<Scalar, RHSExpr::NumDimensions> RHSTensor;
-    LHSTensor lEval(L);
-    RHSTensor bEval(b);
-    // pass to solver
-    return forwardsolve<LHSTensor, RHSTensor>(lEval, bEval);
-}
 
 /**
  * Matrix multiplication between two vectors, implemented as an inner product,
@@ -635,6 +605,119 @@ auto nMul(
     YTensor yEval(y);
     // pass to implementation
     return nMul<Scalar>(xEval, yEval);
+}
+
+/*
+ * Furthermore, the transpose function should promote Eigen::Tensor<Scalar, 1>
+ * objects to proper row vectors as Eigen::Tensor<Scalar, 2>; we may also want
+ * to consider defining the templates s.t. transpose only works for 1 and 2-dim
+ * input tensor objects.
+ */
+
+/**
+ * Initialize an Eigen::Tensor object to store the unknown x in the linear
+ * system A %*% x = b
+ *
+ * In this implementation, x is assumed to be a vector because b is templated to
+ * be a vector.
+ *
+ * Assume all matrix/vector dimensions are conformable, s.t. A has dimensions
+ * (m x n), x has dimensions (n x p), and b has dimensions (m x p), with p = 1.
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> initSolveX(
+    Eigen::Tensor<Scalar, 2> const & L,
+    Eigen::Tensor<Scalar, 1> const & b
+) {
+    auto Ldim = L.dimensions();
+    return Eigen::Tensor<Scalar, 1>(Ldim[1]);
+}
+
+/**
+ * Initialize an Eigen::Tensor object to store the unknown x in the linear
+ * system A %*% x = b
+ *
+ * In this implementation, x is assumed to be a matrix because b is templated to
+ * be a matrix.
+ *
+ * Assume all matrix/vector dimensions are conformable, s.t. A has dimensions
+ * (m x n), x has dimensions (n x p), and b has dimensions (m x p), with p = 1.
+ *
+ * @tparam Scalar (primitive) type for tensor entries
+ */
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> initSolveX(
+    Eigen::Tensor<Scalar, 2> const & L,
+    Eigen::Tensor<Scalar, 2> const & b
+) {
+    auto Ldim = L.dimensions();
+    auto bdim = b.dimensions();
+    return Eigen::Tensor<Scalar, 2>(Ldim[1], bdim[1]);
+}
+
+/**
+*
+* Solve the linear system A %*% x = b when RHS represents a matrix or
+* a vector, and A is either a lower or upper-triangular matrix
+*
+* @tparam UPLO Eigen::Lower is A is a lower-triangular matrix, o/w Eigen::Upper
+* @tparam LHS An Eigen::Tensor or tensor expression object type
+* @tparam RHS An Eigen::Tensor or tensor expression object type
+*/
+template<int UPLO, typename LHS, typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> triangularsolve(
+    const LHS & A,
+    const RHS & b
+) {
+    // explicit Eigen::Tensor types for inputs
+    typedef Eigen::Tensor<typename LHS::Scalar, LHS::NumDimensions> LTensor;
+    typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
+    // evaluate arguments, if necessary
+    const auto & A_eval = eval(A);
+    const auto & b_eval = eval(b);
+    // initialize storage for solution, given problem dimensions
+    bTensor res = initSolveX(A_eval, b_eval);
+    // map tensor objects to Eigen::Matrix types
+    auto Amap = matmap(A_eval);
+    auto bmap = matmap(b_eval);
+    auto resMap = matmap(res);
+    // solve linear system
+    resMap = Amap.template triangularView<UPLO>().solve(bmap);
+    return res;
+}
+
+/**
+*
+* Solve the lower-triangular system L %*% x = b when RHS represents a matrix or
+* a vector
+ *
+* @tparam LHS An Eigen::Tensor or tensor expression object type
+* @tparam RHS An Eigen::Tensor or tensor expression object type
+*/
+template<typename LHS, typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> forwardsolve(
+    const LHS & L,
+    const RHS & b
+) {
+    return triangularsolve<Eigen::Lower>(L, b);
+}
+
+/**
+*
+* Solve the upper-triangular system U %*% x = b when RHS represents a matrix or
+* a vector
+ *
+* @tparam LHS An Eigen::Tensor or tensor expression object type
+* @tparam RHS An Eigen::Tensor or tensor expression object type
+*/
+template<typename LHS, typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
+    const LHS & U,
+    const RHS & b
+) {
+    return triangularsolve<Eigen::Upper>(U, b);
 }
 
 #endif
