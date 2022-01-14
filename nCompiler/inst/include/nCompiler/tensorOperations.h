@@ -484,136 +484,6 @@ Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
     return x.shuffle(o);
  }
 
-
-
-/**
- * Matrix multiplication between two vectors, implemented as an inner product,
- * when inputs are stored as Tensor objects.
- *
- * (1 x n) x (n x 1) = (1 x 1)
- *
- * @tparam Scalar (primitive) type for tensor entries
- */
-template<typename Scalar>
-Scalar nMul(
-    const Eigen::Tensor<Scalar, 1> & x, const Eigen::Tensor<Scalar, 1> & y
-) {
-    Eigen::Tensor<Scalar, 0> res = (x * y).sum();
-    return *res.data();
-}
-
-/**
- * Vector-matrix multiplication x %*% y, where y is assumed to be a
- * column-vector and inputs are stored as Tensor objects.
- *
- * (m x n) x (n x 1) = (m x 1)
- *
- * @tparam Scalar (primitive) type for tensor entries
- */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 1> nMul(
-    const Eigen::Tensor<Scalar, 2> & x, const Eigen::Tensor<Scalar, 1> & y
-) {
-    // initialize output
-    auto xDim = x.dimensions();
-    Eigen::Tensor<Scalar, 1> res(xDim[0]);
-    // map inputs to matrices
-    auto xmat = matmap(x);
-    auto ymat = matmap(y);
-    auto resMat = matmap(res);
-    // implement multiplication
-    resMat = xmat * ymat;
-    return res;
-}
-
-/**
- * Vector-matrix multiplication x %*% y, where x is assumed to be a row-vector
- * and inputs are stored as Tensor objects.
- *
- * (1 x n) x (n x p) = (1 x p)
- *
- * @tparam Scalar (primitive) type for tensor entries
- */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 1> nMul(
-    const Eigen::Tensor<Scalar, 1> & x, const Eigen::Tensor<Scalar, 2> & y
-) {
-    // initialize output
-    auto yDim = y.dimensions();
-    Eigen::Tensor<Scalar, 1> res(yDim[1]);
-    // map inputs to matrices
-    auto xmat = matmap(x);  // matmap only maps 1-dim tensors to column vectors
-    auto ymat = matmap(y);
-    auto resMat = matmap(res);
-    // implement multiplication
-    resMat = xmat.transpose() * ymat;
-    return res;
-}
-
-/**
- * Multiply two matrices when the inputs are stored as Tensor objects.
- *
- * @tparam Scalar (primitive) type for tensor entries
- */
-template<typename Scalar>
-Eigen::Tensor<Scalar, 2> nMul(
-    const Eigen::Tensor<Scalar, 2> & x, const Eigen::Tensor<Scalar, 2> & y
-) {
-    // initialize output
-    auto xDim = x.dimensions();
-    auto yDim = y.dimensions();
-    Eigen::Tensor<Scalar, 2> res(xDim[0], yDim[1]);
-    // map inputs to matrices
-    auto xmat = matmap(x);
-    auto ymat = matmap(y);
-    auto resMat = matmap(res);
-    // implement multiplication
-    resMat = xmat * ymat;
-    return res;
-}
-
-/**
-  * Multiply two matrices when the inputs are stored as Tensors or as the
-  * result of tensor operations.
-  *
-  * Using this function will generally be inefficient if XExpr or YExpr
-  * actually represent evaluated Tensor objects because, in this use case, the
-  * function will create local copies of the inputs before evaluating the matrix
-  * multiplication.  If both XExpr and YExpr are evaluated Tensor objects
-  * (i.e., specializations of Eigen::Tensor), then an overloaded implementation
-  * of nMul will implement the matrix multiplication.
-  *
-  * @tparam XExpr type for a tensor or unevaluated tensor expression
-  * @tparam YExpr type for a tensor or unevaluated tensor expression
-  * @tparam Scalar (primitive) type for tensor entries
-  */
-template<typename XExpr,
-         typename YExpr,
-         typename Scalar = typename XExpr::Scalar>
-auto nMul(
-    const XExpr & x, const YExpr & y
-) -> decltype(
-    nMul<Scalar>(
-        Eigen::Tensor<Scalar, XExpr::NumDimensions>(x),
-        Eigen::Tensor<Scalar, YExpr::NumDimensions>(y)
-    )
-){
-    // evaluate tensor inputs
-    typedef Eigen::Tensor<Scalar, XExpr::NumDimensions> XTensor;
-    typedef Eigen::Tensor<Scalar, YExpr::NumDimensions> YTensor;
-    XTensor xEval(x);
-    YTensor yEval(y);
-    // pass to implementation
-    return nMul<Scalar>(xEval, yEval);
-}
-
-/*
- * Furthermore, the transpose function should promote Eigen::Tensor<Scalar, 1>
- * objects to proper row vectors as Eigen::Tensor<Scalar, 2>; we may also want
- * to consider defining the templates s.t. transpose only works for 1 and 2-dim
- * input tensor objects.
- */
-
 /**
  * Initialize an Eigen::Tensor object to store the unknown x in the linear
  * system A %*% x = b
@@ -718,6 +588,159 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
     const RHS & b
 ) {
     return triangularsolve<Eigen::Upper>(U, b);
+}
+
+/**
+ * Matrix multiplication x %*% y when both inputs are matrix-like objects, i.e.,
+ * rank 2 Eigen::Tensor objects, or Tensor expressions
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        (Xpr::NumDimensions == 2) &&
+        (Ypr::NumDimensions == 2),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // initialize output
+    auto xdim = xeval.dimensions();
+    auto ydim = yeval.dimensions();
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(xdim[0], ydim[1]);
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    auto resmap = matmap(res);
+    // multiply!
+    resmap = xmap * ymap;
+    return res;
+}
+
+/**
+ * Matrix multiplication x %*% y representing an inner-product when both inputs
+ * are vector-like objects, i.e., rank 1 Eigen::Tensor objects, or Tensor
+ * expressions
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        (Xpr::NumDimensions == 1) &&
+        (Ypr::NumDimensions == 1),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // initialize output
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    auto resmap = matmap(res);
+    // multiply!
+    resmap = xmap.transpose() * ymap;
+    return res;
+}
+
+/**
+ * Matrix multiplication x %*% y when x represents a matrix-like object, i.e.,
+ * a rank 2 Eigen::Tensor object, or Tensor expression; and y represents a
+ * vector-like object , i.e., a rank 1 Eigen::Tensor object, or Tensor
+ * expression.
+ *
+ * The implementation will treat y as a row/col vector, as appropriate, to make
+ * the matrix multiplication conformable.
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        (Xpr::NumDimensions == 2) &&
+        (Ypr::NumDimensions == 1),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    // initialize and map output
+    bool as_col_vec = xmap.cols() > 1;
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(
+        xmap.rows() ,
+        as_col_vec ? 1 : ymap.rows()
+    );
+    auto resmap = matmap(res);
+    // multiply!
+    if(as_col_vec) {
+        resmap = xmap * ymap;
+    } else {
+        resmap = xmap * ymap.transpose();
+    }
+    return res;
+}
+
+/**
+ * Matrix multiplication x %*% y when x represents a vector-like object, i.e.,
+ * a rank 1 Eigen::Tensor object, or Tensor expression; and y represents a
+ * matrix-like object , i.e., a rank 2 Eigen::Tensor object, or Tensor
+ * expression.
+ *
+ * The implementation will treat x as a row/col vector, as appropriate, to make
+ * the matrix multiplication conformable.
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        (Xpr::NumDimensions == 1) &&
+        (Ypr::NumDimensions == 2),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    // initialize and map output
+    bool as_col_vec = ymap.rows() == 1;
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(
+        as_col_vec ? xmap.rows() : 1,
+        ymap.cols()
+    );
+    auto resmap = matmap(res);
+    // multiply!
+    if(as_col_vec) {
+        resmap = xmap * ymap;
+    } else {
+        resmap = xmap.transpose() * ymap;
+    }
+    return res;
 }
 
 #endif
