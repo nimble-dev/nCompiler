@@ -200,9 +200,9 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
  * If the input is already an Eigen::Tensor object, the desired behavior is to
  * return a reference to the object (implemented in an overloaded function)
  * because the input is already an Eigen::Tensor object, which is the desired
- * output class.  Calling this function on an Eigen::Tensor object (i.e., if
- * SFINAE restriction is removed) only consumes memory and time, creating a
- * copy of an otherwise reasonable input.
+ * output class.  If we were to call this function on an Eigen::Tensor object
+ * (i.e., if SFINAE restriction is removed), it would only consume memory and
+ * time by creating a copy of an otherwise reasonable input.
  *
  * @tparam TensorXpr Nominally, an unevaluated tensor expression
  */
