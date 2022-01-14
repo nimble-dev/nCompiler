@@ -1075,23 +1075,10 @@ inLabelAbstractTypesEnv(
   nMul <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
-    # get dimensions of inputs
-    arg1Dim <- code$args[[1]]$type$nDim
-    arg2Dim <- code$args[[2]]$type$nDim
-    # determine if output is matrix, vector, or scalar
-    if(arg1Dim == 1) {
-      if(arg2Dim == 1) {
-        resDim <- 0
-      } else {
-        resDim <- 1
-      }
-    } else {
-      if(arg2Dim == 1) {
-        resDim <- 1
-      } else {
-        resDim <- 2
-      }
-    }
+    # R's matrix-multiplication promotes all output types to matrices; also 
+    # important b/c matrix multiplication could be used to implement an outer 
+    # product between two input vectors, which returns a matrix
+    resDim <- 2
     # TODO: double check the assumption that output will always be a 
     # symbolBasic type as it is understood today.  Is a Vector always a dense 
     # vector?  Or do we really need a separate handler for vectors stored in 
@@ -1183,6 +1170,36 @@ inLabelAbstractTypesEnv(
       ), call. = FALSE)
     }
     invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Transpose <- function(code, symTab, auxEnv, handlingInfo) {
+    # validate usage of transpose function
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to take the transpose of an ambiguous input.'
+      ), call. = FALSE)
+    }
+    # determine argument's type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # validate input of transpose function
+    if(argType$nDim > 2) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'cannot transpose an object with more than two dimensions.'
+      ), call. = FALSE)
+    }
+    # create type object
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    invisible(insertions)
   }
 )
 
