@@ -864,4 +864,74 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(
     return res;
 }
 
+/**
+ * Sparse matrix multiplication x %*% y when first input is matrix-like, i.e.,
+ * a rank 2 Eigen::Tensor object, or Tensor expression
+ *
+ * @tparam Ypr
+ */
+template<
+    typename Ypr,
+    typename std::enable_if<
+        Ypr::NumDimensions == 2,
+        Ypr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(
+    const Eigen::SparseMatrix<typename Ypr::Scalar> & x, const Ypr & y
+) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // initialize output
+    auto ydim = yeval.dimensions();
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(x.rows(), ydim[1]);
+    // map tensor objects to Eigen::Matrix types
+    auto ymap = matmap(yeval);
+    auto resmap = matmap(res);
+    // multiply!
+    resmap = x * ymap;
+    return res;
+}
+
+/**
+ * Matrix multiplication x %*% y when x represents a matrix-like object, i.e.,
+ * a rank 2 Eigen::Tensor object, or Tensor expression; and y represents a
+ * vector-like object , i.e., a rank 1 Eigen::Tensor object, or Tensor
+ * expression.
+ *
+ * The implementation will treat y as a row/col vector, as appropriate, to make
+ * the matrix multiplication conformable.
+ *
+ * @tparam Ypr
+ */
+template<
+    typename Ypr,
+    typename std::enable_if<
+        (Ypr::NumDimensions == 1),
+        Ypr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(
+    const Eigen::SparseMatrix<typename Ypr::Scalar> & x, const Ypr & y
+) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // map tensor objects to Eigen::Matrix types
+    auto ymap = matmap(yeval);
+    // initialize and map output
+    bool as_col_vec = x.cols() > 1;
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(
+        x.rows() ,
+        as_col_vec ? 1 : ymap.rows()
+    );
+    auto resmap = matmap(res);
+    // multiply!
+    if(as_col_vec) {
+        resmap = x * ymap;
+    } else {
+        resmap = x * ymap.transpose();
+    }
+    return res;
+}
+
 #endif
