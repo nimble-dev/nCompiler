@@ -214,6 +214,21 @@ nDiag <- function(x) {
   diag(x)
 }
 
+#' Compute the cholesky decomposition of a matrix
+#' 
+#' In a \code{nFunction}, \code{nChol} is identical to \code{chol}
+#'
+#' @details This function is similar to R's \code{\link{diag}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a symmetric matrix
+#'
+#' @export
+#' 
+nChol <- function(x) {
+  chol(x)
+}
+
 #' Replicate Elements of Vectors and Lists
 #' 
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}

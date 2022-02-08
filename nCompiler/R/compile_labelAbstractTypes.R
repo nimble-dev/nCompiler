@@ -336,6 +336,24 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nChol <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    if(inherits(argType, 'symbolSparse')) {
+      # Cholesky factor of a sparse matrix is a collection of matrices
+      # TODO: do we need to specify arguments for the initializer?
+      code$type <- symbolSparseCholesky$new(name = code$name)
+    } else {
+      # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
+      type <- setReturnType(handlingInfo, argType$type)
+      nDim <- setReturn_nDim(handlingInfo, argType$nDim)
+      code$type <- symbolBasic$new(type = type, nDim = nDim)
+    }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   InitData <- function(code, symTab, auxEnv, handlingInfo) {
     ## TODO: handle 'init' arg
     ## defaults:
@@ -972,6 +990,10 @@ inLabelAbstractTypesEnv(
       setArg(code, 'drop', drop_arg, add = TRUE)
     }
 
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  this is handling for the
+    # subsetting operator, [], but will it always be subsetted to a symbolBasic
+    # type?
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }
@@ -1031,16 +1053,18 @@ inLabelAbstractTypesEnv(
         ),
         call. = FALSE)
       }
-      if(auxEnv$returnSymbol$nDim != code$type$nDim) {
-        warning(exprClassProcessingErrorMsg(
-          code, 
-          paste0(
-            "Dimension (", code$type$nDim, ") for return() does not match ",
-            "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
-            sep = ''
-          )
-        ),
-        call. = FALSE)
+      if((!is.null(auxEnv$returnSymbol$nDim)) || !(is.null(code$type$nDim))) {
+        if(auxEnv$returnSymbol$nDim != code$type$nDim) {
+          warning(exprClassProcessingErrorMsg(
+            code, 
+            paste0(
+              "Dimension (", code$type$nDim, ") for return() does not match ",
+              "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
+              sep = ''
+            )
+          ),
+          call. = FALSE)
+        }
       }
       invisible(insertions)
     }
@@ -1051,6 +1075,10 @@ inLabelAbstractTypesEnv(
   VectorReturnType <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
     code$type <- symbolBasic$new(nDim = 1, type = returnType)
     invisible(inserts)
   }
@@ -1200,6 +1228,36 @@ inLabelAbstractTypesEnv(
     # different datastructures, such as SparseVectors, hashmaps, or lists?
     code$type <- symbolBasic$new(nDim = 2, type = returnType)
     invisible(insertions)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  nEigen <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to eigen decompose an ambiguous input.'
+      ), call. = FALSE)
+    }
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(!inherits(argType, 'symbolSparse')) {
+      browser()
+      code$type <- xxx # TODO: instantiate a new EigenDecomp object
+    } else if(inherits(argType, 'symbolSparse')) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'eigendecompositions not supported for sparse matrices.'
+      ), call. = FALSE)
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to handle input type.'
+      ), call. = FALSE)
+    }
+    invisible(NULL)
   }
 )
 

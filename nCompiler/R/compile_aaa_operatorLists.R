@@ -715,10 +715,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('chol'),
+  c('nChol'),
   list(
     labelAbstractTypes = list(
-      handler = 'RecurseAndLabel',
+      handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
     )
   )

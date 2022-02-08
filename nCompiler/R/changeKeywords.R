@@ -18,6 +18,7 @@ nKeyWords <- list(copy = 'nCopy',
                   diag = 'nDiag',
                   '%*%' = 'nMul',
                   svd = 'nSvd',
+                  chol = 'nChol',
                   optim = 'nOptim',
                   optimDefaultControl = 'nOptimDefaultControl',
                   derivs = 'nDerivs')

@@ -407,6 +407,20 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     return res;
 }
 
+class SparseCholesky;
+
+template<typename SparseCholType = SparseCholesky, typename Scalar>
+SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(x);
+    SparseCholType res;
+    res.R = llt.matrixU();
+    Eigen::Tensor<int, 1> P(x.rows());
+    auto pmap = matmap(P);
+    pmap = llt.permutationP().indices();
+    res.P = P;
+    return res;
+}
+
 /**
  * Compute the Cholesky decomposition for a symmetric matrix stored as an
  * Eigen::Tensor<Scalar, 2> object, or derived from a Tensor expression object
@@ -418,8 +432,18 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
  * @tparam TensorExpr An Eigen::Tensor or tensor expression object type
  * @tparam Scalar (primitive) type for Tensor entries
  */
-template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
-Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
+template<
+    typename TensorExpr,
+    typename Scalar = typename TensorExpr::Scalar,
+    typename std::enable_if<
+        !std::is_base_of<
+            Eigen::SparseMatrix<Scalar>,
+            TensorExpr
+        >::value,
+        TensorExpr
+    >::type* = nullptr
+>
+Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
     // evaluate arguments, if necessary
     const auto & x_eval = eval(x);
     // Eigen::Matrix class compatible with function arguments
@@ -444,10 +468,20 @@ Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
  * @tparam TensorExpr type for an unevaluated tensor expression
  * @tparam Scalar (primitive) type for Tensor entries
  */
-template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
-Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
+template<
+    typename TensorXpr,
+    typename Scalar = typename TensorXpr::Scalar,
+    typename std::enable_if<
+        std::is_base_of<
+            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
+            TensorXpr
+        >::value,
+        TensorXpr
+    >::type* = nullptr
+>
+Eigen::Tensor<Scalar, 1> nDiag(const TensorXpr &x) {
     // access elements of x without fully evaluating x if a tensor expression
-    Eigen::TensorRef<TensorExpr> ref(x);
+    Eigen::TensorRef<TensorXpr> ref(x);
     // determine dimensions of x, and size of main diagonal
     auto xDim = ref.dimensions();
     auto nDiag = *(std::min_element(xDim.begin(), xDim.end()));
@@ -464,6 +498,28 @@ Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
         ++i;
     }
     return res;
+}
+
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> nDiag(const Eigen::SparseMatrix<Scalar> &x) {
+    Eigen::Tensor<Scalar, 1> res(x.rows());
+    auto diagmap = matmap(res);
+    diagmap = x.diagonal();
+    return(res);
+}
+
+template<
+    typename SparseCholType = SparseCholesky,
+    typename std::enable_if<
+        std::is_base_of<
+            SparseCholesky,
+            SparseCholType
+        >::value,
+        SparseCholType
+    >::type* = nullptr
+>
+Eigen::Tensor<double, 1> nDiag(const SparseCholType &x) {
+    return nDiag(x.R);
 }
 
 /**
@@ -739,6 +795,71 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
         resmap = xmap * ymap;
     } else {
         resmap = xmap.transpose() * ymap;
+    }
+    return res;
+}
+
+/**
+ * Sparse matrix multiplication x %*% y when first input is matrix-like, i.e.,
+ * a rank 2 Eigen::Tensor object, or Tensor expression
+ *
+ * @tparam Xpr
+ */
+template<
+    typename Xpr,
+    typename std::enable_if<
+        Xpr::NumDimensions == 2,
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(
+    const Xpr & x, const Eigen::SparseMatrix<typename Xpr::Scalar> & y
+) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    // initialize output
+    auto xdim = xeval.dimensions();
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(xdim[0], y.cols());
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    auto resmap = matmap(res);
+    // multiply!
+    resmap = xmap * y;
+    return res;
+}
+
+/**
+ * Sparse matrix multiplication x %*% y when first input is vector-like, i.e.,
+ * a rank 1 Eigen::Tensor object, or Tensor expression
+ *
+ * @tparam Xpr
+ */
+template<
+    typename Xpr,
+    typename std::enable_if<
+        Xpr::NumDimensions == 1,
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> nMul(
+    const Xpr & x, const Eigen::SparseMatrix<typename Xpr::Scalar> & y
+) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    // map tensor objects to Eigen::Matrix types
+    auto xmap = matmap(xeval);
+    // initialize and map output
+    bool as_col_vec = y.rows() == 1;
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(
+        as_col_vec ? xmap.rows() : 1,
+        y.cols()
+    );
+    auto resmap = matmap(res);
+    // multiply!
+    if(as_col_vec) {
+        resmap = xmap * y;
+    } else {
+        resmap = xmap.transpose() * y;
     }
     return res;
 }
