@@ -54,8 +54,8 @@ get_DLLenv <- function(obj) {
   parent.env(obj)
 }
 
-setup_DLLenv <- function(ans, newDLLenv) {
-  if(!is.list(ans)) return(ans)
+setup_DLLenv <- function(ans, newDLLenv, returnList = FALSE) {
+  if(!is.list(ans)) return(ans) # If there is any serialization etc., it must be a list.
   namesForDLLenv <- c("nComp_serialize_", "nComp_deserialize_", "new_serialization_mgr")
   keep <- rep(TRUE, length(ans))
   for(DLLname in namesForDLLenv) {
@@ -69,7 +69,9 @@ setup_DLLenv <- function(ans, newDLLenv) {
     }
   }
   if(!all(keep)) ans <- ans[keep]
-  if(length(ans) == 1) ans[[1]]
+  if(!returnList)
+      if(length(ans) == 1) ans[[1]]
+      else ans
   else ans
 }
 

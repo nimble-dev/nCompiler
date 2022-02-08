@@ -76,3 +76,14 @@ nClass <- function(classname,
   ## include the generator, to keep saving light.
   result
 }
+
+# Provenance of names for an nClass:
+#
+# classname is provided by the user or generated automatically.
+#   This is used as the R6 classname.
+#
+# NC_InternalsClass does not keep track of the name.
+#
+# In nCompile, the classname is used as the cpp_name
+
+# See nCompile comments for more.

@@ -51,7 +51,7 @@ nCompile_nClass <- function(NC,
   ## Get the cppDef
   cppDef <- NC_Compiler$cppDef
   ##
-  cppDef$buildSEXPgenerator()
+  ## cppDef$buildSEXPgenerator()
   if(isTRUE(get_nOption('serialize')))
     cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
   if(isTRUE(get_nOption('automaticDerivatives')))
