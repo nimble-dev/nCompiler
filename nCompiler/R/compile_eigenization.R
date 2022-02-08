@@ -298,6 +298,21 @@ inEigenizeEnv(
     if (length(code$args) == 1)
       return(cWiseUnary(code, symTab, auxEnv, workEnv, handlingInfo))
     promoteTypes(code)
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
+    if(d1 != d2) {
+      # perform operation with reshaping, i.e., for matrix-vector operations
+      replacementName <- handlingInfo$replacements[[code$name]]
+      if(!is.null(replacementName)) {
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
+      }
+    }
     return(invisible(NULL))
   }
 )
@@ -381,6 +396,21 @@ inEigenizeEnv(
     if (isEigScalar(code$args[[1]]) && isEigScalar(code$args[[2]]))
       return(invisible(NULL))
     promoteTypes(code)
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
+    if(d1 != d2) {
+      # perform operation with reshaping, i.e., for matrix-vector operations
+      replacementName <- handlingInfo$replacements[[code$name]]
+      if(!is.null(replacementName)) {
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
+      }
+    }
     invisible(NULL)
   }
 )
@@ -454,6 +484,21 @@ inEigenizeEnv(
         convert_cWiseBinaryToUnaryExpr(code, handlingInfo)
       else
         maybe_convertToMethod(code, handlingInfo) # arg2 is non-scalar.
+    }
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
+    if(d1 != d2) {
+      # perform operation with reshaping, i.e., for matrix-vector operations
+      replacementName <- handlingInfo$replacements[[code$name]]
+      if(!is.null(replacementName)) {
+        if(d2 > d1) {
+          # perform operation w/reshaping the LHS argument
+          code$name <- replacementName$LHS
+        } else {
+          # perform operation w/reshaping the RHS argument
+          code$name <- replacementName$RHS
+        }
+      }
     }
     invisible(NULL)
   }
@@ -753,3 +798,40 @@ inEigenizeEnv(
     invisible(NULL)
   }
 )
+
+inEigenizeEnv(
+  asSparse <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(length(code$args) > 2) {
+      stop(exprClassProcessingErrorMsg(
+        code, 'asSparse is expected to be called with at most two arguments'
+      ), call. = FALSE)
+    }
+    if(length(code$args) == 1) {
+      if(inherits(code$args[[1]]$type, 'symbolSparse')) {
+        # argument is already a sparse type, so no work needs to be done; remove 
+        # code expression from AST as we prepare to gnerate C++ code to compile
+        removeExprClassLayer(code)
+      }
+    }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  asDense <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code, 'asDense is expected to be called with at most one argument'
+      ), call. = FALSE)
+    }
+    if(length(code$args) == 1) {
+      if(!inherits(code$args[[1]]$type, 'symbolSparse')) {
+        # argument is already a dense type, so no work needs to be done; remove 
+        # code expression from AST as we prepare to gnerate C++ code to compile
+        removeExprClassLayer(code)
+      }
+    }
+    invisible(NULL)
+  }
+)
+

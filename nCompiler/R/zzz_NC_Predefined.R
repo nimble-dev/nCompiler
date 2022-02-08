@@ -26,4 +26,15 @@ nC_derivClass <- nClass(
 C_nC_derivClass <- build_compiled_nClass(nC_derivClass,
                                              function() new_nC_derivClass())
 
+#' @export
+EigenDecomp <- nClass(
+  classname = 'EigenDecomp',
+  Cpublic = list(
+    values = 'numericVector',
+    vectors = 'numericMatrix'
+  )
+)
 
+#' @export
+C_EigenDecomp <- build_compiled_nClass(EigenDecomp,
+                                         function() new_EigenDecomp())

@@ -52,7 +52,7 @@ compile_labelAbstractTypes <- function(code,
                                          nDim = 0)
             symTab$addSymbol(newSymbol)
             code$type <- newSymbol
-            code$nDim <- 0
+            # code$nDim <- 0
             ##code$typeName <- 'double'
           } else {
             stop(paste0("variable '",
@@ -710,8 +710,9 @@ inLabelAbstractTypesEnv(
       resultScalarType <- arithmeticOutputType(
         argType$type, returnTypeCode = handlingInfo$returnTypeCode
       )
-      resultType <- symbolBasic$new(nDim = argType$nDim,
-                                    type = resultScalarType)
+      resultSymbolType <- arithmeticOutputSymbol(arg)
+      resultType <- resultSymbolType$new(nDim = argType$nDim,
+                                         type = resultScalarType)
       code$type <- resultType
       invisible(NULL)
 
@@ -740,15 +741,28 @@ inLabelAbstractTypesEnv(
       a2Type <- a2$type
 
       nDim <- max(a1Type$nDim, a2Type$nDim)
+      
+      # except for matrix-vector like ops, tensor args must have same nDims
+      if(all(c(a1Type$nDim, a2Type$nDim) > 1)) {
+        if(a1Type$nDim != a2Type$nDim) {
+          stop(exprClassProcessingErrorMsg(
+            code,
+            paste('sizeBinaryCwise called with non-conformable tensors with ',
+                  'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
+          ),
+          call. = FALSE)
+        }
+      }
+      
       resultScalarType <- arithmeticOutputType(
         a1Type$type, a2Type$type, handlingInfo$returnTypeCode
       )
-      resultType <- symbolBasic$new(nDim = nDim,
-                                    type = resultScalarType)
+      resultSymbolType <- arithmeticOutputSymbol(a1, a2)
+      resultType <- resultSymbolType$new(nDim = nDim,
+                                         type = resultScalarType)
       code$type <- resultType
       ##code$typeName <- class(resultType)[1]
       invisible(NULL)
-      ## 
     }
 )
 
@@ -998,6 +1012,36 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
       insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       code$type <- code$args[[1]]$type
+      # see if the returned object differs from the nFunction's return type
+      if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
+        warning(exprClassProcessingErrorMsg(
+          code,
+          "Object type for return() does not match the nFunction's return type."
+        ),
+        call. = FALSE)
+      }
+      if(auxEnv$returnSymbol$type != code$type$type) {
+        warning(exprClassProcessingErrorMsg(
+          code, 
+          paste0(
+            "Scalar type (", code$type$type, ") for return() does not match ",
+            "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
+            sep = ''
+          )
+        ),
+        call. = FALSE)
+      }
+      if(auxEnv$returnSymbol$nDim != code$type$nDim) {
+        warning(exprClassProcessingErrorMsg(
+          code, 
+          paste0(
+            "Dimension (", code$type$nDim, ") for return() does not match ",
+            "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
+            sep = ''
+          )
+        ),
+        call. = FALSE)
+      }
       invisible(insertions)
     }
 )
@@ -1009,6 +1053,153 @@ inLabelAbstractTypesEnv(
     returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
     code$type <- symbolBasic$new(nDim = 1, type = returnType)
     invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## recurse and set code type via setReturnType()
+  MatrixReturnType <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## recurse and set code type via setReturnType()
+  nMul <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # R's matrix-multiplication promotes all output types to matrices; also 
+    # important b/c matrix multiplication could be used to implement an outer 
+    # product between two input vectors, which returns a matrix
+    resDim <- 2
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## recurse and use the nth argument's type as the return type
+  ArgReturnType <- function(code, symTab, auxEnv, handlingInfo) {
+    # determine which code$arg entry will be used to specify the return type
+    argTypeInd <- handlingInfo[['argTypeInd']]
+    if(is.null(argTypeInd)) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Need to specify the input argument to use as a return type.'
+      ), call. = FALSE)
+    }
+    # recurse to determine argument types
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # extract the return type
+    code$type <- code$args[[argTypeInd]]$type
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  asSparse <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) > 2) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to make an ambiguous input sparse.'
+      ), call. = FALSE)
+    }
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(inherits(argType, 'symbolSparse')) {
+      code$type <- argType
+    } else if(inherits(argType, 'symbolBasic')) {
+      code$type = symbolSparse$new(
+        name = argType$name,
+        type = argType$type,
+        isArg = argType$isArg,
+        isRef = argType$isRef,
+        nDim = argType$nDim,
+        size = argType$size
+      )
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to determine sparse type for input'
+      ), call. = FALSE)
+    }
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  asDense <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to make an ambiguous input sparse.'
+      ), call. = FALSE)
+    }
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(!inherits(argType, 'symbolSparse')) {
+      code$type <- argType
+    } else if(inherits(argType, 'symbolSparse')) {
+      code$type = symbolBasic$new(
+        name = argType$name,
+        type = argType$type,
+        isArg = argType$isArg,
+        isRef = argType$isRef,
+        nDim = argType$nDim,
+        size = argType$size
+      )
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to determine dense type for input'
+      ), call. = FALSE)
+    }
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Transpose <- function(code, symTab, auxEnv, handlingInfo) {
+    # validate usage of transpose function
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to take the transpose of an ambiguous input.'
+      ), call. = FALSE)
+    }
+    # determine argument's type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # validate input of transpose function
+    if(argType$nDim > 2) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'cannot transpose an object with more than two dimensions.'
+      ), call. = FALSE)
+    }
+    # create type object
+    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
+    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    invisible(insertions)
   }
 )
 
@@ -1033,4 +1224,13 @@ arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
   if (!is.null(t2) && t2 == 'integer') return('integer')
   if (!is.null(returnTypeCode) && returnTypeCode == 5L) return('integer')
   return('logical')
+}
+
+## promote symbol with the most dense storage type, symbolBasic > symbolSparse
+arithmeticOutputSymbol <- function(s1, s2 = NULL, returnTypeCodes) {
+  if(inherits(s1$type, 'symbolSparse') && inherits(s2$type, 'symbolSparse')) {
+    return(symbolSparse)
+  } else {
+    return(symbolBasic)
+  }
 }

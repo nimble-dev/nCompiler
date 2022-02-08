@@ -183,5 +183,98 @@ makeReturnVector <- function(fillValue, length, recycle) {
     }
 }
 
+#' Spectral Decomposition of a Matrix
+#' 
+#' In a \code{nFunction}, \code{nEigen} is identical to \code{eigen}
+#'
+#' @details This function is similar to R's \code{\link{eigen}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a numeric or complex matrix whose spectral decomposition is to be 
+#'   computed. Logical matrices are coerced to numeric.
+#'
+#' @export
+#' 
+nEigen <- function(x) {
+  eigen(x)
+}
 
+#' Extract or replace the diagonal of matrix
+#' 
+#' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
+#'
+#' @details This function is similar to R's \code{\link{diag}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a numeric or complex matrix
+#'
+#' @export
+#' 
+nDiag <- function(x) {
+  diag(x)
+}
 
+#' Replicate Elements of Vectors and Lists
+#' 
+#' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}
+#'
+#' @details This function is similar to R's \code{\link{rep}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a vector (of any mode including a list) or a factor or 
+#'   (for rep only) a POSIXct or POSIXlt or Date object; or an S4 object 
+#'   containing such an object.
+#'
+#' @param ... further arguments to be passed to or from other methods.
+#'
+#' @export
+#' 
+nRep <- function(x, ...) {
+  base::rep(x, ...)
+}
+
+#' Converts a dense matrix or vector to a sparse matrix or vector
+#'
+#' @importFrom Matrix Matrix as
+#' @param x object to convert to sparse representation
+#' @param prune TRUE to remove 0's from an object if it is already stored in a 
+#'   sparse format
+#' @export
+asSparse <- function(x, prune = TRUE) {
+  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector', 
+                   'lsparseVector', 'zsparseVector'))) {
+    if(prune) {
+      return(drop0(x))
+    } else {
+      return(x)
+    }
+  } else if(inherits(x, 'matrix')) {
+    as(x, 'sparseMatrix')
+  } else if(inherits(x, c('numeric', 'integer', 'logical', 'complex'))) {
+    as(x, 'sparseVector')
+  } else {
+    stop('Attempting to convert to sparse format from unknown type')
+  }
+}
+
+#' Converts a sparse matrix or vector to a dense sparse matrix or vector
+#' 
+#' @export
+asDense <- function(x) {
+  if(inherits(x, c('matrix', 'numeric', 'integer', 'logical', 'complex'))) {
+    return(x)
+  } else if(inherits(x, 'sparseMatrix')) {
+    return(as(x, 'matrix'))
+  } else if(inherits(x, 'sparseVector')) {
+    return(as(x, 'vector'))
+  } else {
+    stop('Attempting to convert to dense format from unknown type')
+  }
+}
+
+#' Wrapper for matrix multiplication
+#' 
+#' @export
+nMul <- function(x, y) {
+  x %*% y
+}

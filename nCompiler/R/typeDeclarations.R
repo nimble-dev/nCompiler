@@ -24,6 +24,13 @@ nType <- function(scalarType, nDim, isRef = FALSE, ...) {
                   ...)
 }
 
+nSparseType <- function(scalarType, nDim, isRef = FALSE, ...) {
+  symbolSparse$new(type = scalarType,
+                   nDim = nDim,
+                   isRef = isRef,
+                   ...)
+}
+
 typeDeclarationList <- list(
   ref = function(internalType) {
     ans <- argType2symbol(substitute(internalType),
@@ -212,6 +219,18 @@ typeDeclarationList <- list(
   },
   RcppEigenVectorXcd = function(...) {
     symbolRcppType$new(RcppType = "Eigen::VectorXcd", ...)
+  },
+  
+  ## Sparse types
+  nSparseMatrix = function(value,
+                           ...,
+                           type = "double") {
+    nSparseType(scalarType = type, nDim = 2)
+  },
+  nSparseVector = function(value,
+                           ...,
+                           type = "double") {
+    nSparseType(scalarType = type, nDim = 1)
   },
   
   ## determine type from an evaluated object

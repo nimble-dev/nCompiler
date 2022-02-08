@@ -139,7 +139,7 @@ symbolNF <- R6::R6Class(
   )
 )
 
-# Symbol for names that will be looked up via R scoping 
+# Symbol for names that will be looked up via R scoping
 # during compiler stage labelAbstractTypes.
 # This includes nClass types.
 symbolTBD <- R6::R6Class(
@@ -152,11 +152,11 @@ symbolTBD <- R6::R6Class(
     },
     print = function() {
       writeLines(paste0(self$name,
-                        ": symbolTBD of type '", 
+                        ": symbolTBD of type '",
                         self$type, "'"))
     },
     genCppVar = function() {
-      stop("Trying to generate a C++ type from a TBD type ('", 
+      stop("Trying to generate a C++ type from a TBD type ('",
            self$name,
            "' of type '",
            self$type, "'.")
@@ -386,6 +386,80 @@ symbolRcppEigenMatrixXd <- R6::R6Class(
   )
 )
 
+symbolSparse <- R6::R6Class(
+  classname = "symbolSparse",
+  inherit = symbolBasic,
+  portable = TRUE,
+  public = list(
+    initialize = function(...,
+                          nDim = 0,
+                          size = if(nDim == 0) 1 else NA) {
+      super$initialize(...)
+      self$nDim <- nDim
+      self$size <- size
+      self
+    },
+    shortPrint = function() {
+      paste0('sp',
+             switch(self$type,
+                    double = 'D',
+                    integer = 'I',
+                    logical = 'L',
+                    'Other'),
+             self$nDim)
+    },
+    print = function() {
+      if(is.null(self$size)) {
+        writeLines(paste0(self$name, ': sparse ', self$type,
+                          ' sizes = (uninitialized),',
+                          ' nDim = ', self$nDim)
+                   )
+      } else {
+        writeLines(paste0(self$name, ': sparse ', self$type,
+                          ' sizes = (', paste(self$size, collapse = ', '), '),',
+                          ' nDim = ', self$nDim)
+                   )
+      }
+    },
+    genCppVar = function() {
+      isArg <- self$isArg
+      type <- self$type
+      if(type == 'void') return(cppVoid())
+      else if(type == 'integer') cType <- 'int'
+      else if(type == 'double') cType <- 'double'
+      else if(type == 'logical') cType <- 'bool'
+      else warning(paste("in genCppVar method for",
+                         self$name,
+                         "in symbolSparse class,",
+                         "type", type,"unrecognized\n"),
+                   FALSE)
+      if(self$nDim == 0) {
+        return(if(!(identical(self$name, "pi")))
+          cppVarClass$new(baseType = cType,
+                          name = self$name,
+                          ptr = 0,
+                          ref = FALSE)
+          else
+            cppVarFullClass$new(baseType = cType,
+                                name = self$name,
+                                ptr = 0,
+                                ref = FALSE,
+                                constructor = "(M_PI)")
+          )
+      }
+      if(self$isRef) {
+        return(cppEigenSparseRef(name = self$name,
+                                 nDim = self$nDim,
+                                 scalarType = cType))
+      } else {
+        return(cppEigenSparse(name = self$name,
+                              nDim = self$nDim,
+                              scalarType = cType))
+      }
+    }
+  )
+)
+
 
 
 ## This was an exercise in conversion from the old system.
@@ -395,7 +469,7 @@ symbolEigenMap <- R6::R6Class(
   inherit = symbolBase,
   portable = TRUE,
   public = list(
-    eigMatrix = NULL, 	#'logical', 
+    eigMatrix = NULL, 	#'logical',
     strides = NULL, 		# 'numeric'
     initialize = function(..., eigMatrix = NULL, strides = NULL) {
       self$eigMatrix <- eigMatrix

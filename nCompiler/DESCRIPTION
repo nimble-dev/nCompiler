@@ -9,6 +9,8 @@ Description: Provides nFunction and nClass for function and class definitions fo
 Depends: R (>= 3.3.0)
 Imports:
     methods,R6,Rcpp,pkgKitten,roxygen2
+Suggests:
+    Matrix, spam, SparseM, testthat
 LinkingTo: Rcpp,Rcereal,RcppEigen,RcppParallel,RcppEigenAD
 License: BSD_3_clause + file LICENSE | GPL (>= 2)
 Encoding: UTF-8
@@ -21,6 +23,7 @@ Collate:
     distributions_inputList.R
     distributions_processInputList.R
     compile_aaa_operatorLists.R
+    compile_addDebug.R
     compile_nParse.R
     compile_eigenization.R
     compile_exprClass.R
@@ -76,4 +79,4 @@ Collate:
     testingTools.R
     typeDeclarations.R
     zzz_NC_Predefined.R
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
