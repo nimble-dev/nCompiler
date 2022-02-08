@@ -110,3 +110,11 @@ nFunction <- function(fun,
   else
     internals
 }
+
+# Provenance of names
+#
+# nFunction creates a name either from the user or from a label maker.
+# This name goes in the NF_InternalsClass object, where it is also copied to uniqueName
+#
+# The NF_InternalsClass object makes a cpp_code_name by pasting the name to a unique ID separated by "_"
+# 

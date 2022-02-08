@@ -1,5 +1,35 @@
 cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 
+# How names are handled through nCompile
+#
+# When nCompile is called with an nClass generator (as an argument):
+#   - names are taken either from named arguments in the ... or from deparsing the ... elements
+#   - These become the names of origList and then of the units list
+#
+# nClass
+# Each unit that is an nClass is passed to nCompile_nClass to create C++ code.
+#   - This makes an NC_Compiler object, which has a name <<- Rname2CppName(NCgenerator$classname)
+#   - The NC_Compiler$createCpp method is called to create a cppDef with name = name of NC_Compiler object
+#   - The SEXPgenerator C++ function in the cppDef is named paste0("new_", name)
+#   - This then is used to create an RcppPacket.
+#   - In nCompile, the cpp_name for that unitResult is the class name for the nClass generator
+#
+# compileCpp_nCompiler calls sourceCpp_nCompiler, which calls Rcpp::sourceCpp
+# compileCpp_nCompiler arranges the results into a named list of the [[Rcpp::export]] functions
+# This will include the SEXPgenerator C++ functtion named  paste0("new_", name)
+# 
+# nFunction
+# Each unit that is an nFunction is passed to nCompile_nFunction to create C++ code
+# The nFunction already has an NFinternals with a name, uniqueName, and cpp_code_name
+#    - That function determines which name to use based on useUniqueNameInCpp,
+#       which will have been pulled from get_nOption('compilerOptions')
+#    - The NF_CompilerClass uses an origName (the uniqueName) and
+#          a name, which defaults to the NFinternals$cpp_code_name, otherwise uniqueName.
+#    - NF_CompilerClass$createCpp is called to create the C++ code.
+#          The cppDef$name is same as name (and NFinternals$cpp_code_name).
+#    - That becomes the name in C++ code.
+#    - In nCompile, the cpp_name for that unitResult is the cpp_code_name
+
 #' @export
 nCompile <- function(...,
                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -10,19 +40,30 @@ nCompile <- function(...,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
-  if(!is.list(interfaces))
-    interfaces <- as.list(interfaces)
   if(is.null(names(origList))) 
     names(origList) <- rep('', length(origList))
   boolNoName <- names(origList)==''
   origIsList <- unlist(lapply(origList, is.list))
   for(i in which(origIsList)) {
     if(is.null(names(origList[[i]])) || any(names(origList[[i]])==""))
-      stop("If you provide a list of compilation units, it must be named.")
+      stop("If you provide a list of compilation units, all list elements must be named.")
   }
   dotsDeparses[origIsList] <- ''
-  names(origList)[boolNoName] <- dotsDeparses[boolNoName]
+  names(origList)[boolNoName] <- dotsDeparses[boolNoName] # This puts default names from deparsing ... entries into list
   units <- do.call('c', origList)
+
+  # Unpack interfaces argument from various formats.
+  # Remember interface is only needed for nClass compilation units
+  if(!is.list(interfaces)) {
+    if(is.character(interfaces)) {
+      if(length(interfaces) == 1) {
+        interfaces <- rep(interfaces, length(units))
+        names(interfaces) <- names(units) # nFunction units will just be ignored
+      }
+    }
+    interfaces <- as.list(interfaces)
+  }
+
   unitTypes <- get_nCompile_types(units)
   if(is.null(names(units))) names(units) <- rep('', length(units))
   if(length(units) == 0) stop('No objects for compilation provided')
@@ -72,7 +113,7 @@ nCompile <- function(...,
                               returnList = returnList)
 
   newDLLenv <- make_DLLenv()
-  ans <- setup_DLLenv(ans, newDLLenv)
+  ans <- setup_DLLenv(ans, newDLLenv, returnList = returnList)
   
   setup_nClass_interface <- function(interfaceType,
                                      NC,
@@ -103,12 +144,17 @@ nCompile <- function(...,
   ## does not match order of units.
   ## cpp_names should be 1-to-1 with names(ans)
   ## We want to return with names(ans) changed to
-  ## names(units) corresponding to cpp_names.
+  ## names(units), in the order corresponding to cpp_names.
   if(is.list(ans)) {
     newNames <- names(ans)
-    SEXPgen_names <- paste0("new_", cpp_names)
     for(i in seq_along(units)) {
-      iRes <- which(SEXPgen_names[i] == names(ans))
+      if(unitTypes[i] == "nF") {
+        iRes <- which(cpp_names[i] == names(ans))
+      } else if(unitTypes[i] == "nCgen") {
+        iRes <- which( paste0("new_", cpp_names[i]) == names(ans))
+      } else {
+        iRes <- integer()
+      }
       if(length(iRes) != 1) {
         warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
         return(ans)
@@ -116,7 +162,7 @@ nCompile <- function(...,
       newNames[iRes] <- names(units)[i]
 
       if(unitTypes[i] == "nCgen") {
-        nClass_name <- cpp_names[i]
+        nClass_name <- newNames[iRes]
         interfaceType <- interfaces[[ nClass_name ]]
         if(is.null(interfaceType))
           interfaceType <- "generic"
