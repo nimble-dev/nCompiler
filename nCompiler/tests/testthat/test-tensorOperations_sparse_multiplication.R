@@ -12,6 +12,17 @@ mmult <- function(x, y) {
   return(ans)
 }
 
+addmult <- function(x, y, z) {
+  ans <- (x + y) %*% z
+  return(ans)
+}
+
+nAddMultMMS <- nFunction(
+  fun = addmult,
+  argTypes = list(x = 'numericMatrix', y = 'numericMatrix', z = 'nSparseMatrix'),
+  returnType = 'numericMatrix'
+)
+
 nMultMS <- nFunction(
   fun = mmult,
   argTypes = list(x = 'numericMatrix', y = 'nSparseMatrix'),
@@ -41,6 +52,8 @@ cMultMS <- nCompile(nMultMS)
 cMultSM <- nCompile(nMultSM)
 cMultVS <- nCompile(nMultVS)
 cMultSV <- nCompile(nMultSV)
+cAddMultMMS <- nCompile(nAddMultMMS)
+
 
 # vector dimensions
 m = 3
@@ -61,10 +74,29 @@ Ysparse = Ydense
 Ysparse[sample(1:length(Ysparse), size = .6 * length(Ysparse))] = 0
 Ysparse = Matrix::Matrix(Ysparse, sparse = TRUE)
 
+# sparse vectors
+XsparseV = as.numeric(Xsparse[1,])
+XsparseV = Matrix::sparseVector(
+  x = XsparseV[which(XsparseV != 0)], 
+  i = which(XsparseV != 0), 
+  length = length(XsparseV)
+)
+YsparseV = as.numeric(Ysparse[,1])
+YsparseV = Matrix::sparseVector(
+  x = YsparseV[which(YsparseV != 0)], 
+  i = which(YsparseV != 0), 
+  length = length(YsparseV)
+)
+
 #
 # matrix multiplication tests
 #
 
+
+expect_identical(
+  unname(as.matrix((Xdense + 2 * Xdense) %*% Ysparse)), 
+  cAddMultMMS(x = Xdense, y = Xdense * 2, z = Ysparse)
+)
 expect_identical(
   unname(as.matrix(Xdense %*% Ysparse)), 
   cMultMS(x = Xdense, y = Ysparse)
@@ -81,3 +113,4 @@ expect_identical(
   unname(as.matrix(Xsparse %*% Ydense[1:n])), 
   cMultSV(x = Xsparse, y = Ydense[1:n])
 )
+

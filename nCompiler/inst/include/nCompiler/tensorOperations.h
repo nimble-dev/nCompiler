@@ -187,7 +187,7 @@ TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
 /**
- * Implicitly convert an arbitrary input to an Eigen::Tensor object, as needed
+ * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
  * The compiler uses implicit conversion to decide how to convert the TensorXpr
  * input x to an Eigen::Tensor<Scalar, NumDimensions> object. Naturally, the
@@ -209,10 +209,18 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 template<
     typename TensorXpr,
     typename std::enable_if<
-        !std::is_base_of<
+        !(std::is_base_of<
             Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
             TensorXpr
-        >::value,
+        >::value ||
+        std::is_base_of<
+            Eigen::SparseMatrix<typename TensorXpr::Scalar>,
+            TensorXpr
+        >::value ||
+        std::is_base_of<
+            Eigen::SparseVector<typename TensorXpr::Scalar>,
+            TensorXpr
+        >::value),
         TensorXpr
     >::type* = nullptr
 >
@@ -270,6 +278,49 @@ template<
     >::type* = nullptr
 >
 const TensorXpr& eval(const TensorXpr & x) {
+    return x;
+}
+
+/**
+ * Return a reference to an Eigen::SparseMatrix object, avoiding copying the
+ * input
+ *
+ * Uses SFINAE to restrict the template function to only work with
+ * Eigen::SparseMatrix vs. other types used with nCompiler.
+ *
+ */
+template<
+    typename Spmat,
+    typename std::enable_if<
+        std::is_base_of<
+            Eigen::SparseMatrix<
+                typename Eigen::internal::traits<Spmat>::Scalar
+            >,
+            Spmat
+        >::value,
+        Spmat
+    >::type* = nullptr
+>
+Spmat& eval(Spmat & x) {
+    return x;
+}
+
+/**
+ * Constant version of eval with Eigen::SparseMatrix inputs
+ */
+template<
+    typename Spmat,
+    typename std::enable_if<
+        std::is_base_of<
+            Eigen::SparseMatrix<
+                typename Eigen::internal::traits<Spmat>::Scalar
+            >,
+            Spmat
+        >::value,
+        Spmat
+    >::type* = nullptr
+>
+const Spmat& eval(const Spmat & x) {
     return x;
 }
 
@@ -348,6 +399,28 @@ Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
     Eigen::Map<MatrixType> xmat(x.data(), xDim[0], xDim[1]);
     return xmat;
 }
+
+/**
+ * "Passthrough" for a const Eigen::SparseMatrix object
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ */
+ template<typename Scalar>
+ Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
+     return x;
+ }
+
+ /**
+ * Constant "passthrough" for a const Eigen::SparseMatrix object
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ */
+ template<typename Scalar>
+ const Eigen::SparseMatrix<Scalar>& matmap(
+     const Eigen::SparseMatrix<Scalar> & x
+ ) {
+     return x;
+ }
 
 /**
  * Convert an Eigen::Tensor or Tensor expression object (i.e., an object derived
@@ -647,6 +720,41 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
 }
 
 /**
+ * Returns true if template Class has N dimensions
+ *
+ * Intended to be used as a template metaprogramming aid.
+ *
+ * @tparam Class Type to inspect, implicitly restricted to Eigen::Tensor or
+ *   TensorExpression types by SFINAE by checking for a NumDimensions member
+ * @tparam N Number of dimensions to test for
+ */
+template<typename Class, int N>
+constexpr typename std::enable_if<Class::NumDimensions != 0, bool>::type
+HasNumDimensionsN() {
+    return N == Class::NumDimensions;
+}
+
+/**
+ * Returns true if template Class has N dimensions
+ *
+ * Intended to be used as a template metaprogramming aid.
+ *
+ * @tparam Class Type to inspect, restricted to Eigen::SparseMatrix by SFINAE
+ * @tparam N Number of dimensions to test for
+ */
+template<typename Class, int N>
+constexpr typename std::enable_if<
+    std::is_base_of<
+        Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
+        Class
+    >::value,
+    bool
+>::type
+HasNumDimensionsN() {
+    return N == 2;  // matrices are inherently 2-dimensional
+}
+
+/**
  * Matrix multiplication x %*% y when both inputs are matrix-like objects, i.e.,
  * rank 2 Eigen::Tensor objects, or Tensor expressions
  *
@@ -657,8 +765,7 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 2) &&
-        (Ypr::NumDimensions == 2),
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
     >::type* = nullptr
 >
@@ -666,13 +773,10 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // initialize output
-    auto xdim = xeval.dimensions();
-    auto ydim = yeval.dimensions();
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(xdim[0], ydim[1]);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(xmap.rows(), ymap.cols());
     auto resmap = matmap(res);
     // multiply!
     resmap = xmap * ymap;
@@ -691,8 +795,7 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 1) &&
-        (Ypr::NumDimensions == 1),
+        HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 1>(),
         Xpr
     >::type* = nullptr
 >
@@ -700,11 +803,10 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // initialize output
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
     auto resmap = matmap(res);
     // multiply!
     resmap = xmap.transpose() * ymap;
@@ -727,8 +829,7 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 2) &&
-        (Ypr::NumDimensions == 1),
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr,1>(),
         Xpr
     >::type* = nullptr
 >
@@ -736,10 +837,10 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    // initialize and map output
+    // initialize output
     bool as_col_vec = xmap.cols() > 1;
     Eigen::Tensor<typename Xpr::Scalar, 2> res(
         xmap.rows() ,
@@ -771,8 +872,7 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 1) &&
-        (Ypr::NumDimensions == 2),
+        HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
     >::type* = nullptr
 >
@@ -780,7 +880,7 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
     // initialize and map output
@@ -795,141 +895,6 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
         resmap = xmap * ymap;
     } else {
         resmap = xmap.transpose() * ymap;
-    }
-    return res;
-}
-
-/**
- * Sparse matrix multiplication x %*% y when first input is matrix-like, i.e.,
- * a rank 2 Eigen::Tensor object, or Tensor expression
- *
- * @tparam Xpr
- */
-template<
-    typename Xpr,
-    typename std::enable_if<
-        Xpr::NumDimensions == 2,
-        Xpr
-    >::type* = nullptr
->
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(
-    const Xpr & x, const Eigen::SparseMatrix<typename Xpr::Scalar> & y
-) {
-    // evaluate arguments, if necessary
-    const auto & xeval = eval(x);
-    // initialize output
-    auto xdim = xeval.dimensions();
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(xdim[0], y.cols());
-    // map tensor objects to Eigen::Matrix types
-    auto xmap = matmap(xeval);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap * y;
-    return res;
-}
-
-/**
- * Sparse matrix multiplication x %*% y when first input is vector-like, i.e.,
- * a rank 1 Eigen::Tensor object, or Tensor expression
- *
- * @tparam Xpr
- */
-template<
-    typename Xpr,
-    typename std::enable_if<
-        Xpr::NumDimensions == 1,
-        Xpr
-    >::type* = nullptr
->
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(
-    const Xpr & x, const Eigen::SparseMatrix<typename Xpr::Scalar> & y
-) {
-    // evaluate arguments, if necessary
-    const auto & xeval = eval(x);
-    // map tensor objects to Eigen::Matrix types
-    auto xmap = matmap(xeval);
-    // initialize and map output
-    bool as_col_vec = y.rows() == 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        as_col_vec ? xmap.rows() : 1,
-        y.cols()
-    );
-    auto resmap = matmap(res);
-    // multiply!
-    if(as_col_vec) {
-        resmap = xmap * y;
-    } else {
-        resmap = xmap.transpose() * y;
-    }
-    return res;
-}
-
-/**
- * Sparse matrix multiplication x %*% y when first input is matrix-like, i.e.,
- * a rank 2 Eigen::Tensor object, or Tensor expression
- *
- * @tparam Ypr
- */
-template<
-    typename Ypr,
-    typename std::enable_if<
-        Ypr::NumDimensions == 2,
-        Ypr
-    >::type* = nullptr
->
-Eigen::Tensor<typename Ypr::Scalar, 2> nMul(
-    const Eigen::SparseMatrix<typename Ypr::Scalar> & x, const Ypr & y
-) {
-    // evaluate arguments, if necessary
-    const auto & yeval = eval(y);
-    // initialize output
-    auto ydim = yeval.dimensions();
-    Eigen::Tensor<typename Ypr::Scalar, 2> res(x.rows(), ydim[1]);
-    // map tensor objects to Eigen::Matrix types
-    auto ymap = matmap(yeval);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = x * ymap;
-    return res;
-}
-
-/**
- * Matrix multiplication x %*% y when x represents a matrix-like object, i.e.,
- * a rank 2 Eigen::Tensor object, or Tensor expression; and y represents a
- * vector-like object , i.e., a rank 1 Eigen::Tensor object, or Tensor
- * expression.
- *
- * The implementation will treat y as a row/col vector, as appropriate, to make
- * the matrix multiplication conformable.
- *
- * @tparam Ypr
- */
-template<
-    typename Ypr,
-    typename std::enable_if<
-        (Ypr::NumDimensions == 1),
-        Ypr
-    >::type* = nullptr
->
-Eigen::Tensor<typename Ypr::Scalar, 2> nMul(
-    const Eigen::SparseMatrix<typename Ypr::Scalar> & x, const Ypr & y
-) {
-    // evaluate arguments, if necessary
-    const auto & yeval = eval(y);
-    // map tensor objects to Eigen::Matrix types
-    auto ymap = matmap(yeval);
-    // initialize and map output
-    bool as_col_vec = x.cols() > 1;
-    Eigen::Tensor<typename Ypr::Scalar, 2> res(
-        x.rows() ,
-        as_col_vec ? 1 : ymap.rows()
-    );
-    auto resmap = matmap(res);
-    // multiply!
-    if(as_col_vec) {
-        resmap = x * ymap;
-    } else {
-        resmap = x * ymap.transpose();
     }
     return res;
 }
