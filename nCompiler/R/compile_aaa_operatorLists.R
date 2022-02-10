@@ -275,7 +275,18 @@ assignOperatorDef(
           handler = 'BinaryUnaryCwise',
           returnTypeCode = returnTypeCodes$promoteNoLogical),
         eigenImpl = list(
-          handler = 'cWiseAddSub'),
+          handler = 'cWiseAddSub',
+          replacements = list(
+            '+' = list(
+              'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::plus>',
+              'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::plus>'
+            ),
+            '-' = list(
+              'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::minus>',
+              'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::minus>'
+            )
+          )
+        ),
         cppOutput = list(
           handler = 'BinaryOrUnary')
     )
@@ -494,6 +505,55 @@ updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
 updateOperatorDef('>', 'eigenImpl', 'swapOp', '<')
 updateOperatorDef('&', 'cppOutput', 'cppString', ' && ')
 updateOperatorDef('|', 'cppOutput', 'cppString', ' || ')
+updateOperatorDef('<=', 'eigenImpl', 'replacements', list(
+  '<=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::leq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::leq>'
+  )
+))
+updateOperatorDef('>=', 'eigenImpl', 'replacements', list(
+  '>=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::geq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::geq>'
+  )
+))
+updateOperatorDef('<', 'eigenImpl', 'replacements', list(
+  '<' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::lt>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::lt>'
+  )
+))
+updateOperatorDef('>', 'eigenImpl', 'replacements', list(
+  '>' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::gt>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::gt>'
+  )
+))
+updateOperatorDef('&', 'eigenImpl', 'replacements', list(
+  '&' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_and>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_and>'
+  )
+))
+updateOperatorDef('|', 'eigenImpl', 'replacements', list(
+  '|' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_or>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_or>'
+  )
+))
+updateOperatorDef('==', 'eigenImpl', 'replacements', list(
+  '==' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_eq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_eq>'
+  )
+))
+updateOperatorDef('!=', 'eigenImpl', 'replacements', list(
+  '!=' = list(
+    'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::logical_neq>',
+    'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::logical_neq>'
+  )
+))
+
 
 assignOperatorDef(
   # This is for C++ Lambda expressions,
@@ -511,7 +571,14 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$double),
     eigenImpl = list(
-      handler = 'cWiseMultDiv'),
+      handler = 'cWiseMultDiv',
+      replacements = list(
+        '/' = list(
+          'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::divide>',
+          'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::divide>'
+        )
+      )
+    ),
     cppOutput = list(
       handler = 'MidOperator')
   )
@@ -526,7 +593,14 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      handler = 'cWiseMultDiv'),
+      handler = 'cWiseMultDiv',
+      replacements = list(
+        '*' = list(
+          'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::product>',
+          'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::product>'
+        )
+      )
+    ),
     cppOutput = list(
       handler = 'MidOperator')
   )
@@ -562,8 +636,12 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('%*%'),
-  list()
+  c('nMul'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'nMul'
+    )
+  )
 )
 
 assignOperatorDef(
@@ -601,6 +679,89 @@ assignOperatorDef(
     )
   )
 )
+
+assignOperatorDef(
+  'asSparse',
+  list(
+    labelAbstractTypes = list(
+      handler = 'asSparse'
+    ),
+    eigenImpl = list(
+      handler = 'asSparse'
+    )
+  )
+)
+
+assignOperatorDef(
+  'asDense',
+  list(
+    labelAbstractTypes = list(
+      handler = 'asDense'
+    ),
+    eigenImpl = list(
+      handler = 'asDense'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nrow', 'ncol'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RecurseAndLabel',
+      returnTypeCode = returnTypeCodes$integer
+    )
+  )
+)
+
+assignOperatorDef(
+  c('chol'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RecurseAndLabel',
+      returnTypeCode = returnTypeCodes$double
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nDiag'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'VectorReturnType'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('forwardsolve', 'backsolve'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ArgReturnType',
+      argTypeInd = 2
+    )
+  )
+)
+
+assignOperatorDef(
+  c('t'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'ArgReturnType',
+      argTypeInd = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  'nEigen',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nEigen'
+    )
+  )
+)
+
 
 ## assignOperatorDef(
 ##   c('list'),

@@ -195,6 +195,19 @@ insertExprClassLayer <- function(code, argID, funName, isName = FALSE, isCall = 
   newExpr
 }
 
+## Sometimes we have an expr foo(a, b) and we want to make it g(foo(a, b))
+## We do that by wrapExprClassOperator(code, 'g'), where code is the 'foo' expClass.
+wrapExprClassOperator <- function(code, funName, isName = FALSE, isCall = TRUE, 
+                                  isAssign = FALSE, ...) {
+  newExpr <- exprClass$new(name = funName, isName = isName, isCall = isCall, 
+                           isAssign = isAssign, args = list(code), ...)  
+  if(!is.null(code$caller)) {
+    setArg(code$caller, code$callerArgID, newExpr)
+  }
+  setCaller(code, newExpr, 1)
+  newExpr
+}
+
 insertIndexingBracket <- function(code, argID, index) {
   insertExprClassLayer(code, argID, 'index[')
   setArg(code$args[[argID]], 2, index)

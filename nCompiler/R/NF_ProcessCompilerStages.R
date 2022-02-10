@@ -111,6 +111,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
 compilerStage_labelAbstractTypes <-
   function(compileInfo,
            debug = FALSE) {
+    compileInfo$auxEnv$returnSymbol = compileInfo$returnSymbol
     if(debug) {
       browser()
       labelAbstractTypesEnv$.debug <- TRUE
@@ -150,5 +151,16 @@ compileInfo_eigenize <- function(compileInfo,
   compile_eigenize(compileInfo$code,
                    compileInfo$symbolTable,
                    compileInfo$auxEnv)
+  invisible(NULL)
+}
+
+compilerStage_addDebug <- function(compileInfo, debug = FALSE) {
+  if(debug) browser()
+  workEnv <- new.env()
+  workEnv$name <- compileInfo$name
+  compile_addDebug(compileInfo$code,
+                   compileInfo$symbolTable,
+                   compileInfo$auxEnv,
+                   workEnv = workEnv)
   invisible(NULL)
 }

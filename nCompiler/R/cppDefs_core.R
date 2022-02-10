@@ -506,8 +506,17 @@ cppFunctionClass <- R6::R6Class(
                       else
                         character(0),
                       '{'
-                    ), ## end paste
+                    ), ## end paste,
+                    'RESET_EIGEN_ERRORS'[
+                      isTRUE(nOptions('compilerOptions')$throwEigenErrors)
+                    ],
+                    'BEGIN_NC_ERRORTRAP'[
+                      isTRUE(nOptions('compilerOptions')$cppStacktrace)
+                    ],
                     self$code$generate(...),
+                    'END_NC_ERRORTRAP'[
+                      isTRUE(nOptions('compilerOptions')$cppStacktrace)
+                    ],
                     list('}')
                     )## end c()
                 }

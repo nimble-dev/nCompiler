@@ -16,7 +16,7 @@ and is passed to, the \code{lib} argument of \link{install.packages}.}
 Install the nCompLocal package, whose purpose is to hold a static library for linking from on-the-fly compilations.
 }
 \details{
-This function is used internally by This function is called internally from \cite{\link{buildLocalDLLpackage}}.
+This function is called internally from \cite{\link{buildLocalDLLpackage}}.
 See there for explanation of the local DLL.
 }
 \seealso{
