@@ -2,6 +2,7 @@ context("tensorOperations: interoperability with sparse matrix multiplication")
 
 # library(testthat)
 # library(nCompiler)
+# library(Matrix)
 
 ##
 ## matrix multiplication
@@ -54,7 +55,6 @@ cMultVS <- nCompile(nMultVS)
 cMultSV <- nCompile(nMultSV)
 cAddMultMMS <- nCompile(nAddMultMMS)
 
-
 # vector dimensions
 m = 3
 n = 2
@@ -91,7 +91,6 @@ YsparseV = Matrix::sparseVector(
 #
 # matrix multiplication tests
 #
-
 
 expect_identical(
   unname(as.matrix((Xdense + 2 * Xdense) %*% Ysparse)), 

@@ -187,6 +187,56 @@ TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
 /**
+ * Template meta programming check to see if Class is an Eigen::SparseMatrix
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseMatrix : std::is_base_of<
+    Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::Tensor type.
+ *
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not have a member named NumDimensions.  SFINAE is used because
+ * Eigen::Tensor is an incomplete type, requiring a scalar type and number of
+ * number of dimensions, which may in general be arbitrary.
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename Scalar = typename Class::Scalar,
+         typename HasNumDimensionsMember = int>
+struct IsTensor : std::false_type { };
+
+// partial specialization
+template<typename Class>
+struct IsTensor<Class,
+                typename Class::Scalar,
+                decltype(Class::NumDimensions, 0)> :
+std::is_base_of<
+  Eigen::Tensor<typename Class::Scalar, Class::NumDimensions>,
+  Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen object for which
+ * coefficients are immediately accessible, unlike unevaluated Tensor
+ * operations.
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsEvaluatedType : std::conditional<
+    IsSparseMatrix<Class>::value || IsTensor<Class>::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
  * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
  * The compiler uses implicit conversion to decide how to convert the TensorXpr
@@ -195,32 +245,22 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
  * Tensor's entries.
  *
  * Uses SFINAE to restrict the template function (nominally) to only work with
- * Tensor expression inputs vs. with evaluated, concrete Eigen::Tensor objects.
+ * Tensor expression inputs vs. with evaluated, concrete Eigen::Tensor objects
+ * and other concrete types.
  *
- * If the input is already an Eigen::Tensor object, the desired behavior is to
- * return a reference to the object (implemented in an overloaded function)
- * because the input is already an Eigen::Tensor object, which is the desired
- * output class.  If we were to call this function on an Eigen::Tensor object
- * (i.e., if SFINAE restriction is removed), it would only consume memory and
- * time by creating a copy of an otherwise reasonable input.
+ * If the input is already an Eigen::Tensor object, for example, the desired
+ * behavior is to return a reference to the object (implemented in an overloaded
+ * function) because the input is already an Eigen::Tensor object, which is the
+ * desired output class.  If we were to call this function on an Eigen::Tensor
+ * object (i.e., if SFINAE restriction is removed), it would only consume memory
+ * and time by creating a copy of an otherwise reasonable input.
  *
  * @tparam TensorXpr Nominally, an unevaluated tensor expression
  */
 template<
     typename TensorXpr,
     typename std::enable_if<
-        !(std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value ||
-        std::is_base_of<
-            Eigen::SparseMatrix<typename TensorXpr::Scalar>,
-            TensorXpr
-        >::value ||
-        std::is_base_of<
-            Eigen::SparseVector<typename TensorXpr::Scalar>,
-            TensorXpr
-        >::value),
+        !IsEvaluatedType<TensorXpr>::value,
         TensorXpr
     >::type* = nullptr
 >
@@ -231,10 +271,12 @@ Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions> eval(
 }
 
 /**
- * Return a reference to an Eigen::Tensor object, avoiding copying the input
+ * Return a reference to an Eigen::Tensor object, or concrete Eigen type,
+ * avoiding copying the input
  *
  * Uses SFINAE to restrict the template function to only work with Eigen::Tensor
- * inputs vs. with Tensor expression objects.
+ * inputs and other types with concrete data storage, vs. with Tensor expression
+ * objects.
  *
  * If the input is a Tensor expression object, the desired behavior is to return
  * an Eigen::Tensor object with the results of the evaluated Tensor expression
@@ -244,83 +286,34 @@ Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions> eval(
  * require evaluated inputs, such as wrappers for matrix multiplication and
  * linear solvers.
  *
- * @tparam TensorXpr An Eigen::Tensor object type
+ * @tparam Xpr An Eigen::Tensor or other concrete object type
  */
 template<
-    typename TensorXpr,
+    typename Xpr,
     typename std::enable_if<
-        std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
-        TensorXpr
+    IsEvaluatedType<Xpr>::value,
+        Xpr
     >::type* = nullptr
 >
-TensorXpr& eval(TensorXpr & x) {
+Xpr& eval(Xpr & x) {
     return x;
 }
 
 /**
- * Constant version of eval() with Eigen::Tensor inputs.
+ * Constant version of eval() with Eigen::Tensor and other concrete inputs.
  *
  * See documentation for eval() with Eigen::Tensor inputs for more details.
  *
- * @tparam TensorXpr An Eigen::Tensor object type
+ * @tparam Xpr An Eigen::Tensor or other concrete object type
  */
 template<
-    typename TensorXpr,
+    typename Xpr,
     typename std::enable_if<
-        std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
-        TensorXpr
+        IsEvaluatedType<Xpr>::value,
+        Xpr
     >::type* = nullptr
 >
-const TensorXpr& eval(const TensorXpr & x) {
-    return x;
-}
-
-/**
- * Return a reference to an Eigen::SparseMatrix object, avoiding copying the
- * input
- *
- * Uses SFINAE to restrict the template function to only work with
- * Eigen::SparseMatrix vs. other types used with nCompiler.
- *
- */
-template<
-    typename Spmat,
-    typename std::enable_if<
-        std::is_base_of<
-            Eigen::SparseMatrix<
-                typename Eigen::internal::traits<Spmat>::Scalar
-            >,
-            Spmat
-        >::value,
-        Spmat
-    >::type* = nullptr
->
-Spmat& eval(Spmat & x) {
-    return x;
-}
-
-/**
- * Constant version of eval with Eigen::SparseMatrix inputs
- */
-template<
-    typename Spmat,
-    typename std::enable_if<
-        std::is_base_of<
-            Eigen::SparseMatrix<
-                typename Eigen::internal::traits<Spmat>::Scalar
-            >,
-            Spmat
-        >::value,
-        Spmat
-    >::type* = nullptr
->
-const Spmat& eval(const Spmat & x) {
+const Xpr& eval(const Xpr & x) {
     return x;
 }
 
@@ -435,7 +428,7 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
     // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
     // evaluate input tensor
-    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
+    const auto xEval = eval(x);
     // map to matrix, sparsify and return
     auto xDim = xEval.dimensions();
     Eigen::Map<const MatrixType> xmat(xEval.data(), xDim[0], xDim[1]);
@@ -743,13 +736,7 @@ HasNumDimensionsN() {
  * @tparam N Number of dimensions to test for
  */
 template<typename Class, int N>
-constexpr typename std::enable_if<
-    std::is_base_of<
-        Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
-        Class
-    >::value,
-    bool
->::type
+constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
 HasNumDimensionsN() {
     return N == 2;  // matrices are inherently 2-dimensional
 }
