@@ -91,6 +91,7 @@ cpp_nClassBaseClass <- R6::R6Class(
     },
     buildAll = function(where = where) {
       buildSEXPgenerator()
+      build_set_nClass_env()
     },
     makeCppNames = function() {
       Rnames2CppNames <<- as.list(Rname2CppName(symbolTable$getSymbolNames()))
