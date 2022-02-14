@@ -15,7 +15,9 @@
 
 new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
   ans <- new.env()
-  if(!is.null(parentEnv)) parent.env(ans) <- parentEnv
+  if(!is.null(parentEnv)) 
+    if(!identical(parentEnv, .GlobalEnv)) #.GlobalEnv is default of an Rcpp::Environment object
+      parent.env(ans) <- parentEnv
   ans$extptr <- extptr
   class(ans) <- "loadedObjectEnv"
   ans
@@ -55,6 +57,39 @@ get_DLLenv <- function(obj) {
   parent.env(obj)
 }
 
+setup_CnC_environments <- function(compiledFuns,
+                                   newDLLenv,
+                                   nC_names = character(),
+                                   R6interfaces,
+                                   returnList = FALSE) {
+  compiledFuns <- setup_DLLenv(compiledFuns, newDLLenv, returnList = FALSE)
+  for(nC_name in nC_names) {
+    compiledFuns <- setup_CnClass_env(nC_name, compiledFuns, R6interfaces, newDLLenv)
+  }
+  if(is.list(compiledFuns)) compiledFuns
+  else if(returnList) list(compiledFuns)
+  else compiledFuns
+}
+
+setup_CnClass_env <- function(nC_name,
+                              compiledFuns,
+                              R6interfaces,
+                              DLLenv) {
+  set_nClass_env_name <- paste0("set_CnClass_env_", nC_name)
+  fun_names <- c(set_nClass_env_name)
+  
+  CnClass_env <- new.env(parent = DLLenv)
+  class(CnClass_env) <- "CnClass_env"
+  
+  compiledFuns <- move_funs_from_list_to_env(fun_names, compiledFuns,
+                                             CnClass_env)
+  if(exists(set_nClass_env_name, envir = CnClass_env, inherits=FALSE)) {
+    CnClass_env[[set_nClass_env_name]](CnClass_env)
+  }
+  CnClass_env$.R6interface <- R6interfaces[[nC_name]]
+  compiledFuns
+}
+
 # This function takes as input the results of a call to sourceCpp (compiledFuns)
 # and an environment to use as the DLL environment.
 # 
@@ -83,33 +118,42 @@ setup_DLLenv <- function(compiledFuns,
   namesForDLLenv <- c("nComp_serialize_",
                       "nComp_deserialize_",
                       "new_serialization_mgr")
-  keep <- rep(TRUE, length(compiledFuns))
-  for(DLLname in namesForDLLenv) {
-    found <- grepl(DLLname, names(compiledFuns))
-    if(any(found)) {
-      i <- which(found)
-      if(length(i) != 1)
-        stop("Something is wrong with names returned from compilation.")
-      keep[i] <- FALSE
-      newDLLenv[[DLLname]] <- compiledFuns[[i]]
-    }
-  }
-  if(!all(keep)) compiledFuns <- compiledFuns[keep]
+  
+  compiledFuns <- move_funs_from_list_to_env(namesForDLLenv,
+                                             compiledFuns, newDLLenv)
+  
+  # keep <- rep(TRUE, length(compiledFuns))
+  # for(DLLname in namesForDLLenv) {
+  #   found <- grepl(DLLname, names(compiledFuns))
+  #   if(any(found)) {
+  #     i <- which(found)
+  #     if(length(i) != 1)
+  #       stop("Something is wrong with names returned from compilation.")
+  #     keep[i] <- FALSE
+  #     newDLLenv[[DLLname]] <- compiledFuns[[i]]
+  #   }
+  # }
+  # if(!all(keep)) compiledFuns <- compiledFuns[keep]
   if(!returnList)
       if(length(compiledFuns) == 1) compiledFuns[[1]]
       else compiledFuns
   else compiledFuns
 }
 
-setup_CnClass_env <- function(compiledFuns,
-                              nClass_names,
-                              DLLenv) {
-  CnClass_env <- new.env(parent = DLLenv)
-  class(CnClass_env) <- "CnClass_env"
-  # For a vector of nClass names,
-  # move nClass-level functions to the CnClass_env
-  # register the CnClass_env with the C++.
-  
+move_funs_from_list_to_env <- function(funNames, funList, env) {
+  keep <- rep(TRUE, length(funList))
+  for(funName in funNames) {
+    found <- grepl(funName, names(funList))
+    if(any(found)) {
+      i <- which(found)
+      if(length(i) != 1)
+        stop("Something is wrong with names returned from compilation.")
+      keep[i] <- FALSE
+      env[[funName]] <- funList[[i]]
+    }
+  }
+  if(!all(keep)) funList <- funList[keep]
+  funList
 }
 
 wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {

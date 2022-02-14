@@ -1020,28 +1020,52 @@ inLabelAbstractTypesEnv(
         ),
         call. = FALSE)
       }
-      if(auxEnv$returnSymbol$type != code$type$type) {
-        warning(exprClassProcessingErrorMsg(
-          code, 
-          paste0(
-            "Scalar type (", code$type$type, ") for return() does not match ",
-            "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
-            sep = ''
-          )
-        ),
-        call. = FALSE)
+      if(inherits(auxEnv$returnSymbol, "symbolBasic")) {
+        # problem if number of dimensions differs
+        if(auxEnv$returnSymbol$nDim != code$type$nDim) {
+          warning(exprClassProcessingErrorMsg(
+            code, 
+            paste0(
+              "Dimension (", code$type$nDim, ") for return() does not match ",
+              "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
+              sep = ''
+            )
+          ),
+          call. = FALSE)
+        }
+        type_mismatch <- FALSE
+        # if returnType is a scalar, do more checks
+        if(auxEnv$returnSymbol$nDim==0) {
+          # if the return is a literal, check for a case like return(2) <integer> with return type "double"
+          if(code$args[[1]]$isLiteral) {
+            # What other cases are there here?
+            # returning anything to a logical is ok
+            type_mismatch <- FALSE
+            if(auxEnv$returnSymbol$type == "integer" && code$type$type == "double")
+              if(code$args[[1]]$name != round(code$args[[1]]$name))
+                warning(paste0(
+                  "It looks like you are returning a non-integer literal in a function with integer return type.",
+                  sep = ''
+                ))
+          } else {
+            # if the return type is not a literal, check if the returnType has richer information (e.g. double > integer)
+            type_mismatch <- type_mismatch ||
+              !(identical(arithmeticOutputType(auxEnv$returnSymbol$type, code$type$type), auxEnv$returnSymbol$type))
+          }
+        }
+        if(type_mismatch) {
+          warning(exprClassProcessingErrorMsg(
+            code, 
+            paste0(
+              "Scalar type (", code$type$type, ") for return() does not perfectly match ",
+              "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
+              sep = ''
+            )
+          ),
+          call. = FALSE)
+        }
       }
-      if(auxEnv$returnSymbol$nDim != code$type$nDim) {
-        warning(exprClassProcessingErrorMsg(
-          code, 
-          paste0(
-            "Dimension (", code$type$nDim, ") for return() does not match ",
-            "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
-            sep = ''
-          )
-        ),
-        call. = FALSE)
-      }
+
       invisible(insertions)
     }
 )
