@@ -48,8 +48,7 @@ NCvirtual_CompilerClass <- R6::R6Class(
     },
     setupMethodSymbolTables = function() {
       for(i in seq_along(NFcompilers)) {
-        NFcompilers[[i]]$setupSymbolTable(parentSymbolTable = symbolTable,
-                                          neededTypes = list())
+        NFcompilers[[i]]$setupSymbolTable(parentSymbolTable = symbolTable)
       }
     },
     createCppMethods = function(control,

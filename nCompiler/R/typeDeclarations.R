@@ -484,20 +484,25 @@ argTypeList2symbolTable <- function(argTypeList,
   symTab
 }
 
+resolveOneTBDsymbol <- function(symbol, env = parent.frame()) {
+  if(inherits(symbol, "symbolTBD")) {
+    candidate <- nGet(symbol$type,
+                      where = env)
+    if(isNCgenerator(candidate)) {
+      newSym <- symbolNC$new(name = symbol$name,
+                             type = symbol$type,
+                             isArg = symbol$isArg,
+                             NCgenerator = candidate)
+      return(newSym)
+    }
+  }
+  symbol #return unmodified symbol if nothing to do
+}
+
 resolveTBDsymbols <- function(symTab, 
                               env = parent.frame()) {
   for(i in seq_along(symTab$symbols)) {
-    if(inherits(symTab$symbols[[i]], "symbolTBD")) {
-      candidate <- nGet(symTab$symbols[[i]]$type,
-                        where = env)
-      if(isNCgenerator(candidate)) {
-        newSym <- symbolNC$new(name = symTab$symbols[[i]]$name,
-                               type = symTab$symbols[[i]]$type,
-                               isArg = symTab$symbols[[i]]$isArg,
-                               NCgenerator = candidate)
-        symTab$symbols[[i]] <- newSym
-      }
-    }
+    symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env)
   }
   invisible(NULL)
 }

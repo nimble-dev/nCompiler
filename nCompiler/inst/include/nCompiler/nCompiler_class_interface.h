@@ -218,6 +218,29 @@ class genericInterfaceC : public genericInterfaceBaseC {
 			);
     }
   };
+
+  /* Partial specialization on void return type avoids Rcpp::wrap<void>, which doesn't work. */
+  /* There might be a slightly more compact way to refactor just the Rcpp::wrap step, but */
+  /* this is a quick and simple solution:*/
+  template<typename ...ARGS>
+    class method_class<void, ARGS...> : public method_base {
+  public:
+    typedef void (T::*ptrtype)(ARGS...);
+    ptrtype ptr;
+  method_class(ptrtype ptr) : ptr(ptr) {};
+    
+    SEXP call(genericInterfaceBaseC *intBasePtr, SEXP Sargs) {
+#ifdef SHOW_METHODS
+      std::cout<<"in derived call"<<std::endl;
+#endif
+      if(LENGTH(Sargs) != sizeof...(ARGS)) {
+	std::cout<<"Incorrect number of arguments"<<std::endl;
+	return R_NilValue;
+      }
+      expand_call_method_narg<void, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs);
+      return R_NilValue;
+    }
+  };
   
   typedef std::map<std::string, std::shared_ptr<method_base> > name2method_type;
   typedef std::pair<std::string, std::shared_ptr<method_base> > name_method_pair;

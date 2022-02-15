@@ -51,7 +51,7 @@ assignOperatorDef(
   )
 )
 
-assignOperatorDef(
+assignOperatorDef( # c()
   c('nC'),
   list(
     labelAbstractTypes = list(
@@ -59,6 +59,14 @@ assignOperatorDef(
       return_nDim = 1,
       returnTypeCodes$promote),
     eigenImpl = list()
+  )
+)
+
+assignOperatorDef(
+  c('construct_new_nClass'),
+  list(
+    cppOutput = list(
+      handler = 'nClass_constructor')
   )
 )
 

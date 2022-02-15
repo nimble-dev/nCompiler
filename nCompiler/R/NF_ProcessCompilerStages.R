@@ -91,6 +91,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                                            debug = FALSE) {
   nameSubList <- NFcompiler$nameSubList
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
+  NFcompiler$auxEnv[['needed_nClasses']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()
   NFcompiler$auxEnv[['.AllowUnknowns']] <- TRUE ## will be FALSE for RHS recursion in setSizes
   NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.

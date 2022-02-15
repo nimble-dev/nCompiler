@@ -300,3 +300,6 @@ cppSEXP <- function(name = character(0),
                   baseType = 'SEXP',
                   ptr = 0,
                   ...)
+
+cppNCgenerator <- function(name = character(0), baseType, ...)
+    cppVarClass$new(name = name, baseType = baseType, ...)

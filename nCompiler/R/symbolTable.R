@@ -185,13 +185,37 @@ symbolNC <- R6::R6Class(
       self$implementation <- implementation
     },
     print = function() {
-      writeLines(paste0(self$name, ': symbolNC of type', self$type))
+      writeLines(paste0(self$name, ': symbolNC of type ', self$type))
     },
     genCppVar = function() {
       cppSharedPtrToNC(name = self$name,
                        NCtype = self$NCgenerator$classname)
     }
   )
+)
+
+symbolNCgenerator <- R6::R6Class(
+  classname = "symbolNCgenerator",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    NCgenerator = NULL,
+    initialize = function(name,
+                          type,
+                          NCgenerator,
+                          implementation = NULL) {
+      self$name <- name
+      self$type <- type
+      self$NCgenerator <- NCgenerator
+      self$implementation <- implementation
+    },
+    print = function() {
+      writeLines(paste0(self$name, ': symbolNCgenerator of type ', self$type))
+    },
+    genCppVar = function() {
+      cppNCgenerator(name = self$name,
+                     baseType = self$NCgenerator$classname)
+    })
 )
 
 symbolList <- R6::R6Class(

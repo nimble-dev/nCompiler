@@ -6,21 +6,19 @@ NFvirtual_CompilerClass <- R6::R6Class(
   public = list(
     name = NULL,
     origName = NULL,
-    NFinternals = NULL,    ## formerly RCfun
+    NFinternals = NULL,
     stageCompleted = 'start',
     nameSubList = NULL,
-    ## formerly compilationInfoClass from here...
     origRcode = NULL,
     newRcode = NULL,
-    ##        origLocalSymTab = NULL,
-    ##        newLocalSymTab = NULL,
     symbolTable = NULL,
     returnSymbol = NULL,
     code = NULL,
     auxEnv = new.env(),
     ##... to here
     const = NULL,
-    needed_nFunctions = list(), ## formerly neededRCfuns
+    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
+    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
                           ## funName,
@@ -49,8 +47,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
         compile_generateCpp(code, symbolTable)
       )
     },
-    setupSymbolTable = function(parentSymbolTable = NULL,
-                                neededTypes = NULL) {
+    setupSymbolTable = function(parentSymbolTable = NULL) {
       argNames <- NFinternals$argSymTab$getSymbolNames()
       symbolTable <<- NFinternals$argSymTab$clone(deep = TRUE)
       mangledArgumentNames <- mangleArgumentNames( argNames )
@@ -243,8 +240,6 @@ processNFstages <- function(NFcompiler,
 
   }
 
-
-
   stageName <- 'initializeAuxiliaryEnvironment'
   if (logging) logBeforeStage(stageName)
   if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
@@ -259,6 +254,8 @@ processNFstages <- function(NFcompiler,
     use_nCompiler_error_handling)
     resolveTBDsymbols(NFcompiler$symbolTable,
                       env = NFcompiler$auxEnv[['where']])
+    NFcompiler$returnSymbol <- resolveOneTBDsymbol(NFcompiler$returnSymbol,
+                                                   env = NFcompiler$auxEnv[['where']])
     NFcompiler$stageCompleted <- stageName
     if (logging) logAfterStage(stageName)
   }
@@ -312,7 +309,14 @@ processNFstages <- function(NFcompiler,
     NFtry({
       compilerStage_labelAbstractTypes(NFcompiler,
                                        debug)
-
+      
+      # This will only collect nClasses from classGenerator$new()
+      # Other nClasses will end up in the symbolTable and be 
+      # collected later.
+      NFcompiler$needed_nClasses <-
+        c(NFcompiler$needed_nClasses,
+          NFcompiler$auxEnv[['needed_nClasses']])
+      
       NFcompiler$needed_nFunctions <-
         c(NFcompiler$needed_nFunctions,
           NFcompiler$auxEnv[['needed_nFunctions']])

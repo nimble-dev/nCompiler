@@ -35,4 +35,15 @@ SEXP return_nCompiler_object(std::shared_ptr<T> &sp_other ) {
   return(Sans);  
 }
 
+// support syntax like this: nClass_chained_builder<nc1>()(x, y)
+template<class NCLASS>
+class nClass_builder {
+ public:
+  template<typename... ARGS>
+    std::shared_ptr<NCLASS> operator()(ARGS... x) {
+    return std::shared_ptr<NCLASS>(new NCLASS(x...));
+  }
+};
+
+
 #endif

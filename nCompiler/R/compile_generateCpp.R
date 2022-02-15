@@ -152,19 +152,25 @@ inGenCppEnv(
   }
 )
 
-## inGenCppEnv(
-##   chainedCall <- function(code, symTab) {
-##     firstCall <- compile_generateCpp(code$args[[1]], symTab)
-##     paste0(firstCall, 
-##            '(',
-##            paste0(unlist(lapply(code$args[-1],
-##                                 compile_generateCpp, 
-##                                 symTab, 
-##                                 asArg = TRUE) ),
-##                   collapse = ', '), ')' 
-##            )
-##   }
-## )
+inGenCppEnv(
+  nClass_constructor <- function(code, symTab) {
+    paste0("nClass_builder<" , code$type$name ,">()")
+  }
+)
+
+inGenCppEnv(
+  chainedCall <- function(code, symTab) {
+    firstCall <- compile_generateCpp(code$args[[1]], symTab)
+    paste0(firstCall, 
+           '(',
+           paste0(unlist(lapply(code$args[-1],
+                                compile_generateCpp, 
+                                symTab, 
+                                asArg = TRUE) ),
+                  collapse = ', '), ')' 
+           )
+  }
+)
 
 inGenCppEnv(
   MidOperator <- function(code, symTab) {

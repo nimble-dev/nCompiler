@@ -40,8 +40,18 @@ compile_labelAbstractTypes <- function(code,
         ##code$typeName <- class(thisSymbolObject)[1]
         code$type <- thisSymbolObject
       } else {
-        ## TO-DO: Look up NCgenerators
-        ##        and add to needed_[types? nClasses?]
+        ## Look up NCgenerators
+        obj <- nGet(code$name, where = auxEnv$where)
+        if(!is.null(obj)) {
+          if(isNCgenerator(obj)) {
+            newSym <- symbolNCgenerator$new(name = code$name,
+                                            type = code$name,
+                                            NCgenerator = obj)
+            code$type <- newSym
+            auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, obj)
+            return(NULL)
+          }
+        }
         if(!auxEnv$.AllowUnknowns)
           if(identical(code$name, 'pi')) {
             ## unique because it may be encountered anew on a RHS
@@ -61,8 +71,8 @@ compile_labelAbstractTypes <- function(code,
                  call.=FALSE) 
           }
       }
-      return(NULL)
     }
+    return(NULL)
   }
 
   if(code$isCall) {
@@ -213,11 +223,29 @@ inLabelAbstractTypesEnv(
   DollarSign <-
     function(code, symTab, auxEnv, handlingInfo) {
       ## TO-DO: Check for exactly 2 arguments
+      # Special handling for "new"
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo,
                                             useArgs = c(TRUE, FALSE))
       ## TO-DO: Check that LHS type is symbolNC or symbolNCgenerator
       ## TO-DO: Improve these error messages
+      if(inherits(code$args[[1]]$type, "symbolNCgenerator")) {
+        if(code$args[[2]]$name != "new")
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'left-hand-side of `$new( )` is not an nClass generator (i.e. returned by a call to nClass).'
+          ), call. = FALSE)
+        returnSym <- symbolNC$new(name = '',
+                                  type = code$args[[1]]$type$name,
+                                  isArg = FALSE,
+                                  NCgenerator = code$args[[1]]$type$NCgenerator)
+        newSym <- symbolNF$new(name = code$args[[1]]$type$NCgenerator$classname,
+                               returnSym = returnSym)
+        code$name <- 'construct_new_nClass'
+        code$type <- newSym
+        return(if(length(inserts) == 0) NULL else inserts)
+      }
+      
       if(!inherits(code$args[[1]]$type, 'symbolNC'))
         stop(exprClassProcessingErrorMsg(
           code,
@@ -247,7 +275,7 @@ inLabelAbstractTypesEnv(
         code$args[[2]]$name <- NFinternals(method)$cpp_code_name
           
       } else {  ## Is RHS a field?
-        symbol <- NCinternals(code$args[[1]]$type$generator)$symbolTable$getSymbol(code$args[[2]]$name)
+        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(code$args[[2]]$name)
         if(is.null(symbol))
           stop(exprClassProcessingErrorMsg(
             code,

@@ -36,6 +36,20 @@ public:
   Exporter(SEXP Sx) {
     Rcpp::Environment Sx_env(Sx); // Sx is an environment, so initialize an Rcpp:Environment from it.
     SEXP Xptr = PROTECT(Sx_env["extptr"]); // Get the extptr element of it.
+    bool ok(false);
+    if(Xptr != R_NilValue) {
+      ok = true;
+    } else {
+      UNPROTECT(1);
+      Nullable<Rcpp::Environment> private_env = Sx_env["private"];
+      if(private_env.isNotNull()) {
+	Nullable<Rcpp::Environment> CppObj = Rcpp::Environment(private_env)["CppObj"];
+	if(CppObj.isNotNull()) {
+	  Xptr = PROTECT(Rcpp::Environment(CppObj)["extptr"]);
+	  if(Xptr != R_NilValue) {
+	    ok=true;}}}
+    }
+    if(!ok) {stop("An argument that should be an nClass object is not valid.");}
     sp_ = reinterpret_cast<shared_ptr_holder<T>* >(R_ExternalPtrAddr(Xptr))->sp();
     UNPROTECT(1);
   }
