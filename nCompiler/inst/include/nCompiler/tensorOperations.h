@@ -186,6 +186,20 @@ TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
 TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
+// forward declaration of nCompiler struct to store Sparse Chol. decompositions
+class SparseCholesky;
+
+/**
+ * Template meta programming check to see if Class is an Eigen::SparseCholesky
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseCholesky : std::is_base_of<
+    SparseCholesky,
+    Class
+> { };
+
 /**
  * Template meta programming check to see if Class is an Eigen::SparseMatrix
  *
@@ -231,7 +245,8 @@ std::is_base_of<
  */
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
-    IsSparseMatrix<Class>::value || IsTensor<Class>::value,
+    IsSparseMatrix<Class>::value || IsTensor<Class>::value ||
+    IsSparseCholesky<Class>::value,
     std::true_type,
     std::false_type
 >::type { };
@@ -473,8 +488,6 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     return res;
 }
 
-class SparseCholesky;
-
 template<typename SparseCholType = SparseCholesky, typename Scalar>
 SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(x);
@@ -531,23 +544,26 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
  * Extract the primary diagonal from an Eigen::Tensor object, or derived from
  * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
  *
- * @tparam TensorExpr type for an unevaluated tensor expression
+ * Uses SFINAE to restrict input to a non-evaluated type (i.e., an unevaluated
+ * Eigen Tensor expression type) or to an Eigen::Tensor type.
+ *
+ * @tparam TensorExpr type for an un/evaluated tensor expression
  * @tparam Scalar (primitive) type for Tensor entries
  */
 template<
     typename TensorXpr,
     typename Scalar = typename TensorXpr::Scalar,
     typename std::enable_if<
-        std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
+        !IsEvaluatedType<TensorXpr>::value || IsTensor<TensorXpr>::value,
         TensorXpr
     >::type* = nullptr
 >
 Eigen::Tensor<Scalar, 1> nDiag(const TensorXpr &x) {
+    // tensor type associated with TensorXpr input
+    typedef Eigen::Tensor<typename TensorXpr::Scalar,
+                          TensorXpr::NumDimensions> TensorType;
     // access elements of x without fully evaluating x if a tensor expression
-    Eigen::TensorRef<TensorXpr> ref(x);
+    Eigen::TensorRef<TensorType> ref(x);
     // determine dimensions of x, and size of main diagonal
     auto xDim = ref.dimensions();
     auto nDiag = *(std::min_element(xDim.begin(), xDim.end()));
@@ -575,16 +591,13 @@ Eigen::Tensor<Scalar, 1> nDiag(const Eigen::SparseMatrix<Scalar> &x) {
 }
 
 template<
-    typename SparseCholType = SparseCholesky,
+    typename Xpr,
     typename std::enable_if<
-        std::is_base_of<
-            SparseCholesky,
-            SparseCholType
-        >::value,
-        SparseCholType
+        IsSparseCholesky<Xpr>::value,
+        Xpr
     >::type* = nullptr
 >
-Eigen::Tensor<double, 1> nDiag(const SparseCholType &x) {
+Eigen::Tensor<double, 1> nDiag(const Xpr &x) {
     return nDiag(x.R);
 }
 
