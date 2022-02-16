@@ -13,6 +13,7 @@
 ## but we do it simply with environments to keep it as light
 ## and low-level as possible for speed and memory efficiency.
 
+#' @export
 new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
   ans <- new.env()
   if(!is.null(parentEnv)) 
@@ -20,6 +21,29 @@ new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
       parent.env(ans) <- parentEnv
   ans$extptr <- extptr
   class(ans) <- "loadedObjectEnv"
+  ans
+}
+
+#' @export
+to_full_interface <- function(LOE) {
+  parentEnv <- parent.env(LOE)
+  if(exists('.R6interface', parentEnv)) {
+    fullAns <- parentEnv$.R6interface$new(LOE)
+    return(fullAns)
+  }
+  LOE # default to non-full
+}
+
+#' @export
+new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL) {
+  # This will be true if called from an nFunction (or nClass method) returning an object
+  ans <- new.loadedObjectEnv(extptr, parentEnv)
+  if(!is.null(parentEnv)) { # This doesn't really do anything
+    if(exists('.R6interface', parentEnv)) {
+      fullAns <- parentEnv$.R6interface$new(ans)
+      return(fullAns)
+    }
+  }
   ans
 }
 

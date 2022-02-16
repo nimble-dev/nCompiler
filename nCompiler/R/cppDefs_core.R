@@ -96,7 +96,7 @@ cppNamespaceClass <- R6::R6Class(
     },
     addSym = function(newName, newObj) {
       stop("figure out how objects or symbols should be added to cppNamespaceClass")
-      objectDefs[[newName]] <<- newObj
+      objectDefs[[newName]] <<- newObj # this looks deprecated.
     },
     addFunction = function(newName, newFun) {
       cppFunctionDefs[[newName]] <<- newFun

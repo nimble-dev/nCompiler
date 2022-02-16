@@ -4,9 +4,8 @@
 #include<Rinternals.h>
 
 class loadedObjectHookBaseC {
-public:
-  
-  virtual SEXP base_setup_R_return_object(SEXP Xptr)=0;
+ public:
+  //  virtual SEXP base_setup_R_return_object(SEXP Xptr)=0;
 };
 
 template <class T>
@@ -14,17 +13,21 @@ class loadedObjectHookC : public loadedObjectHookBaseC {
 public:
   static Rcpp::Environment CnClass_env;
   static void set_CnClass_env(Rcpp::Environment env) {CnClass_env = env;}
+  static SEXP setup_R_return_object_full(SEXP Xptr) {
+    Rcpp::Environment nc("package:nCompiler");
+    Rcpp::Function newLOE(nc["new.loadedObjectEnv_full"]);
+    return newLOE(Xptr, CnClass_env);
+  };
   static SEXP setup_R_return_object(SEXP Xptr) {
     Rcpp::Environment nc("package:nCompiler");
-    Rcpp::Function newLOE = nc["new.loadedObjectEnv"];
+    Rcpp::Function newLOE(nc["new.loadedObjectEnv"]);
     return newLOE(Xptr, CnClass_env);
-  };
-  
-  SEXP base_setup_R_return_object(SEXP Xptr) {
-    Rcpp::Environment nc("package:nCompiler");
-    Rcpp::Function newLOE = nc["new.loadedObjectEnv"];
-    return newLOE(Xptr, CnClass_env);
-  };
+  };  
+  /* SEXP base_setup_R_return_object(SEXP Xptr) { */
+  /*   Rcpp::Environment nc("package:nCompiler"); */
+  /*   Rcpp::Function newLOE = nc["new.loadedObjectEnv"]; */
+  /*   return newLOE(Xptr, CnClass_env); */
+  /* }; */
 };
 
 template<class T>

@@ -9,6 +9,10 @@
 #' @export
 isNC <- function(x) inherits(x, 'nClass')
 
+#' @export
+isCNC <- function(x) inherits(x, 'CnClass')
+
+
 #' Determine if an object is a nClass generator
 #'
 #' Determine if an object is a nClass generator, returned by a call to \link{nClass}.

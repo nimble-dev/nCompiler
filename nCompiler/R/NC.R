@@ -5,6 +5,12 @@ nClassClass <- R6::R6Class(
   portable = FALSE
 )
 
+CnClassClass <- R6::R6Class(
+  classname = "CnClass",
+  inherit = nClassClass,
+  portable = FALSE
+)
+
 #' Create a nClass definition
 #'
 #' A nClass is like an R6 class, but it allows some data and
@@ -63,6 +69,9 @@ nClass <- function(classname,
   ## 1. in an environment layer around every instance
   new_env <- new.env(parent = env)
   new_env$.NCinternals <- internals
+  # Uncompiled behavior for Cpublic fields needs to be handled.
+  # Right now a type string like 'numericScalar' just becomes a
+  # default value.
   result <- R6::R6Class(
     classname = classname,
     public = c(Rpublic, Cpublic),

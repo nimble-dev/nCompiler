@@ -73,7 +73,7 @@ namespace Rcpp {
 template<typename T>
 SEXP wrap( std::shared_ptr< T > obj ) {
   SEXP Sans;
-  Sans = PROTECT(T::setup_R_return_object( PROTECT(return_nCompiler_object< T >(obj) ) ) );
+  Sans = PROTECT(T::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
   //   Sans = PROTECT(loadedObjectEnv(PROTECT(return_nCompiler_object< T >(obj))));
   UNPROTECT(2);
   return Sans;

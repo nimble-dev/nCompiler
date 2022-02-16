@@ -95,7 +95,7 @@ cpp_nFunctionClass <- R6::R6Class(
                                   NF_Compiler,
                                   parentST)
       cpp_include_needed_nFunctions(self, NF_Compiler)
-      cpp_include_nClasses(self, NF_Compiler)
+      cpp_include_nClasses(self, NF_Compiler$symbolTable)
       cpp_include_aux_content(self, NF_Compiler)
     }
   )
@@ -125,10 +125,10 @@ cpp_include_needed_nFunctions <- function(cppDef,
 }
 
 cpp_include_nClasses <- function(cppDef,
-                                 NF_Compiler) {
-  for(i in seq_along(NF_Compiler$symbolTable$symbols)) {
-    if(inherits(NF_Compiler$symbolTable$symbols[[i]], "symbolNC")) {
-      needed_nClass_cppname <- NF_Compiler$symbolTable$symbols[[i]]$NCgenerator$classname
+                                 symTab) {
+  for(i in seq_along(symTab$symbols)) {
+    if(inherits(symTab$symbols[[i]], "symbolNC")) {
+      needed_nClass_cppname <- symTab$symbols[[i]]$NCgenerator$classname
       cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
     }
   }

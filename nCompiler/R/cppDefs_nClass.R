@@ -85,7 +85,8 @@ cpp_nClassBaseClass <- R6::R6Class(
                                 fromModel = FALSE) {
       ##ncp$cppDef <- .self
       Compiler <<- InputCompiler
-      ##genNeededTypes(debugCpp = debugCpp, fromModel = fromModel)
+        ##genNeededTypes(debugCpp = debugCpp, fromModel = fromModel)
+      cpp_include_nClasses(self, Compiler$symbolTable)
       symbolTable <<- symbolTable2cppSymbolTable(Compiler$symbolTable)
       variableNamesForInterface <<- symbolTable$getSymbolNames()
     },

@@ -54,6 +54,7 @@ export(loggam)
 export(logit)
 export(method)
 export(new.loadedObjectEnv) ## needed for Rcpp::Function access in loadedObjectEnv.h
+export(new.loadedObjectEnv_full) ## ditto
 export(nC) ## c()
 export(nC_derivClass)
 export(nCompile_nClass)

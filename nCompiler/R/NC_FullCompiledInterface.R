@@ -76,8 +76,12 @@ build_compiled_nClass <- function(NCgenerator,
   CfieldNames <- NCI$fieldNames
   RfieldNames <- setdiff(names(NCgenerator$public_fields),
                          CfieldNames)
-  activeBindings <- lapply(CfieldNames,
-                           buildActiveBinding_for_compiled_nClass)
+  activeBindingResults <- buildActiveBinding_for_compiled_nClass(NCI)
+  activeBindings <- activeBindingResults$activeBindings
+  internal_fields <- activeBindingResults$newFields
+  ## activeBindings <- lapply(CfieldNames,
+  ##                          buildActiveBinding_for_compiled_nClass,
+  ##                          NCI$symbolTable)
   names(activeBindings) = CfieldNames
   classname <- paste0(NCgenerator$classname, '_compiled')
 
@@ -102,7 +106,7 @@ build_compiled_nClass <- function(NCgenerator,
         CINTERFACE),
       active = ACTIVEBINDINGS,
       portable = FALSE,
-      inherit = nCompiler:::nClassClass,
+      inherit = nCompiler:::CnClassClass,
       parent_env = NULL ## when quoted = TRUE, env argument is not used
     ),
     env = list(
@@ -113,7 +117,7 @@ build_compiled_nClass <- function(NCgenerator,
         NCgenerator$public_methods[RmethodNames]
       ), keep.source = FALSE)[[1]],
       RFIELDS = parse(text = deparse(
-        NCgenerator$public_fields[RfieldNames]
+        c(NCgenerator$public_fields[RfieldNames], internal_fields)
       ), keep.source = FALSE)[[1]],
       CINTERFACE = parse(text = deparse(
         CinterfaceMethods
@@ -157,18 +161,58 @@ build_compiled_nClass <- function(NCgenerator,
   ans
 }
 
-buildActiveBinding_for_compiled_nClass <- function(name) {
-  ans <- function(value) {}
-  body(ans) <- substitute(
-  {
-    if(missing(value))
-      nCompiler:::get_value(nCompiler:::getExtptr(private$CppObj), NAME)
-    else
-      nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
-  },
-  list(NAME = name)
-  )
-  ans
+buildActiveBinding_for_compiled_nClass <- function(NCI) {
+  fieldNames <- NCI$fieldNames
+  symTab <- NCI$symbolTable
+  activeBindings <- list()
+  newFields <- list()
+  for(name in fieldNames) {
+    ans <- function(value) {}
+    sym <- symTab$getSymbol(name)
+    if(is.null(sym)) {
+      warning(paste0("Could not find a way to build active binding for field ", name, "."))
+      return(ans)
+    }
+    
+    if(inherits(sym, "symbolTBD")) { # This is a putative nClass type
+      internal_name <- paste0(name, "_internal")
+      body(ans) <- substitute(
+      {
+        if(missing(value))
+          self$INTERNAL_NAME
+        else {
+          if(!isCNC(value)) {
+            if(nCompiler:::is.loadedObjectEnv(value)) {
+              value <- nCompiler:::to_full_interface(value)
+            } else if(isNC(value))
+              stop("Assigning an uncompiled nClass object to a Cpublic field, where a compiled object is needed.")
+            else
+              stop("Assigning an invalid object to a Cpublic nClass field")          
+          }
+          self$INTERNAL_NAME <- value
+          nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value$private$CppObj)
+        }
+      },
+      list(NAME = name, INTERNAL_NAME = as.name(internal_name))
+      )
+      activeBindings[[name]] <- ans
+      newFields[internal_name] <- list(NULL)
+      next
+    }
+    
+    body(ans) <- substitute(
+    {
+      if(missing(value))
+        nCompiler:::get_value(nCompiler:::getExtptr(private$CppObj), NAME)
+      else
+        nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
+    },
+    list(NAME = name)
+    )
+    activeBindings[[name]] <- ans
+  }
+  list(activeBindings = activeBindings,
+       newFields = newFields)
 }
 
 buildMethod_for_compiled_nClass <- function(fun, name) {
