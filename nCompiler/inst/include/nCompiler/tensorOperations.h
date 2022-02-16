@@ -252,6 +252,28 @@ struct IsEvaluatedType : std::conditional<
 >::type { };
 
 /**
+ * Template meta programming check to see if Class is an unevaluated Eigen
+ * Tensor expression, such as the result of operations like
+ * "Eigen::Tensor + Eigen::Tensor".
+ *
+ * Unevaluated Eigen Tensor expressions are difficult to explicitly identify
+ * in template meta programming because unevaluated expressions are template
+ * classes which are specialized according to the arguments of the operators.
+ * As a result, it is difficult to design a meta programming function that
+ * checks Class against explicit Eigen types that represent Tensor expressions.
+ * Instead, we deduce that Class is an unevaluated Tensor expression if Class
+ * does not match a known, evaluated type used with nCompiler.
+ *
+ * @tparam Class type to inspect
+ */
+ template<typename Class>
+ struct IsTensorExpression : std::conditional<
+     IsEvaluatedType<Class> :: value,
+     std::false_type,
+     std::true_type
+ >:: type { };
+
+/**
  * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
  * The compiler uses implicit conversion to decide how to convert the TensorXpr
@@ -275,7 +297,7 @@ struct IsEvaluatedType : std::conditional<
 template<
     typename TensorXpr,
     typename std::enable_if<
-        !IsEvaluatedType<TensorXpr>::value,
+        IsTensorExpression<TensorXpr>::value,
         TensorXpr
     >::type* = nullptr
 >
@@ -515,10 +537,7 @@ template<
     typename TensorExpr,
     typename Scalar = typename TensorExpr::Scalar,
     typename std::enable_if<
-        !std::is_base_of<
-            Eigen::SparseMatrix<Scalar>,
-            TensorExpr
-        >::value,
+        IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,
         TensorExpr
     >::type* = nullptr
 >
@@ -554,7 +573,7 @@ template<
     typename TensorXpr,
     typename Scalar = typename TensorXpr::Scalar,
     typename std::enable_if<
-        !IsEvaluatedType<TensorXpr>::value || IsTensor<TensorXpr>::value,
+        IsTensorExpression<TensorXpr>::value || IsTensor<TensorXpr>::value,
         TensorXpr
     >::type* = nullptr
 >
@@ -735,7 +754,10 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
  * @tparam N Number of dimensions to test for
  */
 template<typename Class, int N>
-constexpr typename std::enable_if<Class::NumDimensions != 0, bool>::type
+constexpr typename std::enable_if<
+    IsTensorExpression<Class>::value || IsTensor<Class>::value,
+    bool
+>::type
 HasNumDimensionsN() {
     return N == Class::NumDimensions;
 }
