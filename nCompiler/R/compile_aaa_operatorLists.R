@@ -715,10 +715,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('chol'),
+  c('nChol'),
   list(
     labelAbstractTypes = list(
-      handler = 'RecurseAndLabel',
+      handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
     )
   )
@@ -728,7 +728,10 @@ assignOperatorDef(
   c('nDiag'),
   list(
     labelAbstractTypes = list(
-      handler = 'VectorReturnType'
+      handler = 'Diag'
+    ),
+    eigenImpl = list(
+      handler = 'Diag'
     )
   )
 )
