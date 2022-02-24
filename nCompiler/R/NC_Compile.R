@@ -56,8 +56,8 @@ nCompile_nClass <- function(NC,
     cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
   if(isTRUE(get_nOption('automaticDerivatives')))
     cppDef$addADclassContent()
-  if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
-    cppDef$addLoadedObjectEnv()
+  # if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
+  #   cppDef$addLoadedObjectEnv()
   
   cppDef$addGenericInterface()
   if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
@@ -84,20 +84,27 @@ nCompile_nClass <- function(NC,
     return(newCobjFun)
   }
   
-  newDLLenv <- make_DLLenv()
-  newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
-  if(length(newCobjFun) != 1) 
-    warning("There may be a problem with number of returned functions in nCompile_nClass.")
-  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
+  R6interface <- list(build_compiled_nClass(NC, newCobjFun, env = env))
+  names(R6interface) <- filebase
   
   interface <- match.arg(interface)
+  
+  newDLLenv <- make_DLLenv()
+  # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
+  newCobjFun <- setup_CnC_environments(newCobjFun,
+                                       newDLLenv,
+                                       nC_names = filebase,
+                                       R6interface)
+  
+  if(length(newCobjFun) != 1)
+    warning("There may be a problem with number of returned functions in nCompile_nClass.")
+  #  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
+  
   if(interface == "generic")
     return(newCobjFun)
-  ## To Do: Only "generic" works when more than one function will be returned from sourceCpp in cpp_nCompiler.  That occurs with serialization turned on.
-  fullInterface <- build_compiled_nClass(NC, newCobjFun, env = env)
   if(interface == "full")
-    return(fullInterface)
+    return(R6interface[[1]])
   ## interface is "both"
-  return(list(full = fullInterface, generic = newCobjFun))
+  return(list(full = R6interface[[1]], generic = newCobjFun))
 }
 

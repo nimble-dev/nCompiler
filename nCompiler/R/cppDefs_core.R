@@ -125,15 +125,10 @@ cppNamespaceClass <- R6::R6Class(
 ## The generator can be called via .Call to return an external pointer to a new object of the class
 ## The finalizer is the finalizer assigned to the object when the external pointer is made
 buildSEXPgenerator_impl <- function(self) {
-  self$Hincludes <- c(self$Hincludes,
-                      nCompilerIncludeFile("nCompiler_class_factory.h")
-                     ,if(!isTRUE(get_nOption("use_nCompLocal"))) 
-                       nCompilerIncludeFile("loadedObjectEnv.h") 
-                      else NULL)
-  ## The C++ function loadedObjectEnv simply calls new.loadedObjectEnv in R
-  returnLine <-  paste0("return(loadedObjectEnv(new_nCompiler_object<",
-                        self$name,
-                        ">()));")
+  self$Hincludes <- c(self$Hincludes
+                      # , nCompilerIncludeFile("nCompiler_class_factory.h")
+                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+  returnLine <- paste0("return CREATE_NEW_NCOMP_OBJECT(",self$name,");")
   allCodeList <-
     list(
       substitute(cppLiteral(RETURNLINE),
@@ -154,25 +149,58 @@ buildSEXPgenerator_impl <- function(self) {
   invisible(NULL)
 }
 
-make_loadedObjectEnv_cppDef <- function() {
-  LOEfunDef <-
-    cppMacroCallClass$new(
-      cppContent = paste0("#ifndef _ONTHEFLY_LOADEDOBJECTENV\n",
-                          "#define _ONTHEFLY_LOADEDOBJECTENV\n",
-                          "SEXP loadedObjectEnv(SEXP Xptr) {\n",
-                          "Rcpp::Environment nc(\"package:nCompiler\");\n",
-                          "Rcpp::Function newLOE = nc[\"new.loadedObjectEnv\"];\n",
-                          "return newLOE(Xptr);\n",
-                          "}\n",
-                          "#endif\n"),
-      name = "loadedObjectEnv"
+build_set_nClass_env_impl <- function(self) {
+  self$Hincludes <- c(self$Hincludes
+                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+  setterLine <- paste0("SET_CNCLASS_ENV(",self$name,", env);")
+  allCodeList <-
+    list(
+      substitute(cppLiteral(SETTERLINE),
+                 list(SETTERLINE = as.character(setterLine)))
     )
-  LOEfunDef
+  
+  allCode <- putCodeLinesInBrackets(allCodeList)
+  allCode <- nParse(allCode)
+  args <- symbolTableClass$new()
+  args$addSymbol(cppSEXP(name = "env"))
+  self$set_nClass_envDef <-
+    cppFunctionClass$new(name = paste0('set_CnClass_env_',self$name),
+                         args = args,
+                         code = cppCodeBlockClass$new(code = allCode,
+                                                      symbolTable = symbolTableClass$new(),
+                                                      skipBrackets = TRUE),
+                         returnType = cppVoid(),
+                         commentsAbove = '// [[Rcpp::export]]'
+    )
+  invisible(NULL)
 }
 
-addLoadedObjectEnv_impl <- function(self) {
-  LOEfunDef <- make_loadedObjectEnv_cppDef()
-  self$neededCppDefs[["loadedObjectEnv"]] <- LOEfunDef
+# make_loadedObjectEnv_cppDef <- function() {
+#   LOEfunDef <-
+#     cppMacroCallClass$new(
+#       cppContent = paste0("#ifndef _ONTHEFLY_LOADEDOBJECTENV\n",
+#                           "#define _ONTHEFLY_LOADEDOBJECTENV\n",
+#                           "SEXP loadedObjectEnv(SEXP Xptr) {\n",
+#                           "Rcpp::Environment nc(\"package:nCompiler\");\n",
+#                           "Rcpp::Function newLOE = nc[\"new.loadedObjectEnv\"];\n",
+#                           "return newLOE(Xptr);\n",
+#                           "}\n",
+#                           "#endif\n"),
+#       name = "loadedObjectEnv"
+#     )
+#   LOEfunDef
+# }
+
+# addLoadedObjectEnv_impl <- function(self) {
+#   LOEfunDef <- make_loadedObjectEnv_cppDef()
+#   self$neededCppDefs[["loadedObjectEnv"]] <- LOEfunDef
+# }
+
+add_obj_hooks_impl <- function(self) {
+  name <- self$name
+  self$addInheritance(paste0("loadedObjectHookC<",
+                             name,
+                             ">"))
 }
   
 addGenericInterface_impl <- function(self) {
@@ -232,6 +260,7 @@ cppClassClass <- R6::R6Class(
     ##private = 'list',		# 'list'. This field is a placeholder for future functionality.  Currently everything is generated as public
     useGenerator = TRUE,		#'logical', ## not clear if or how this is needed in new system. ## toggled whether to include a SEXPgeneratorFun in old system
     SEXPgeneratorDef = NULL,
+    set_nClass_envDef = NULL,
     functionNamesForInterface = character(),
     variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
@@ -247,6 +276,8 @@ cppClassClass <- R6::R6Class(
       Hinc <- c(Hincludes,
                 if(!is.null(SEXPgeneratorDef))
                   SEXPgeneratorDef$getHincludes(),
+                if(!is.null(set_nClass_envDef))
+                  set_nClass_envDef$getHincludes(),
                 unlist(lapply(cppFunctionDefs,
                               function(x)
                                 x$getHincludes()),
@@ -257,6 +288,8 @@ cppClassClass <- R6::R6Class(
       CPPinc <- c(CPPincludes,
                   if(!is.null(SEXPgeneratorDef))
                     SEXPgeneratorDef$getCPPincludes(),
+                  if(!is.null(set_nClass_envDef))
+                    set_nClass_envDef$getCPPincludes(),
                   unlist(lapply(cppFunctionDefs,
                                 function(x)
                                   x$getCPPincludes()),
@@ -267,6 +300,8 @@ cppClassClass <- R6::R6Class(
       CPPuse <- unique(c(CPPusings,
                          if(!is.null(SEXPgeneratorDef))
                            SEXPgeneratorDef$getCPPusings(),
+                         if(!is.null(set_nClass_envDef))
+                           set_nClass_envDef$getCPPusings(),
                          unlist(lapply(cppFunctionDefs,
                                        function(x)
                                          x$getCPPusings()))
@@ -277,9 +312,9 @@ cppClassClass <- R6::R6Class(
       ans <- if(isTRUE(useGenerator)) {
         if(is.null(SEXPgeneratorDef))
           stop('Trying to getDefs from a CppClassClass with useGenerator==TRUE but SEXPgeneratorDef not defined')
-        list(self, SEXPgeneratorDef)
+        list(self, SEXPgeneratorDef, set_nClass_envDef)
       } else {
-        list(self)
+        list(self, set_nClass_envDef)
       }
       if(length(neededCppDefs) > 0)
         ans <- c(ans, 
@@ -324,15 +359,19 @@ cppClassClass <- R6::R6Class(
     buildSEXPgenerator = function() {
       buildSEXPgenerator_impl(self)
     },
+    build_set_nClass_env = function() {
+      build_set_nClass_env_impl(self)
+    },
     addGenericInterface = function() {
       addGenericInterface_impl(self)
+      add_obj_hooks_impl(self)
     },
     addSerialization = function(include_DLL_funs = FALSE) {
       addSerialization_impl(self, include_DLL_funs)
-    },
-    addLoadedObjectEnv = function() {
-      addLoadedObjectEnv_impl(self)
     }
+    # , addLoadedObjectEnv = function() {
+    #   addLoadedObjectEnv_impl(self)
+    # }
   )
 )
 

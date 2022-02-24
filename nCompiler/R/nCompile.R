@@ -36,7 +36,7 @@ nCompile <- function(...,
                      cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                      env = parent.frame(),
                      control = list(),
-                     interfaces = list(),
+                     interfaces = "full",
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
@@ -93,10 +93,10 @@ nCompile <- function(...,
     serial_cppDef <- make_serialization_cppDef()
     RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(serial_cppDef, "serialization_")
   }
-  if(!isTRUE(get_nOption('use_nCompLocal'))) {
-    loadedObjectEnv_cppDef <- make_loadedObjectEnv_cppDef()
-    RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(loadedObjectEnv_cppDef, "loadedObjectEnv_")
-  }
+  # if(!isTRUE(get_nOption('use_nCompLocal'))) {
+  #   loadedObjectEnv_cppDef <- make_loadedObjectEnv_cppDef()
+  #   RcppPacket_list[[ length(RcppPacket_list) + 1]] <- cppDefs_2_RcppPacket(loadedObjectEnv_cppDef, "loadedObjectEnv_")
+  # }
   
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
@@ -106,37 +106,44 @@ nCompile <- function(...,
   if(isTRUE(get_nOption('pause_after_writing_files')))
     browser()
   resultEnv <- new.env()
-  ans <- compileCpp_nCompiler(cppfile,
-                              dir = dir,
-                              cacheDir = cacheDir,
-                              env = resultEnv,
-                              returnList = returnList)
+  compiledFuns <- compileCpp_nCompiler(cppfile,
+                                       dir = dir,
+                                       cacheDir = cacheDir,
+                                       env = resultEnv,
+                                       returnList = TRUE)
 
-  newDLLenv <- make_DLLenv()
-  ans <- setup_DLLenv(ans, newDLLenv, returnList = returnList)
-  
-  setup_nClass_interface <- function(interfaceType,
-                                     NC,
-                                     ans,
-                                     env) {
-    ans <- wrapNCgenerator_for_DLLenv(ans, newDLLenv)
-    if(interfaceType == "generic")
-      return(ans)
-    fullInterface <- try(build_compiled_nClass(NC,
-                                               ans,
-                                               env = env))
-    if(inherits(fullInterface, "try-error")) {
-      warning("There was a problem building a full nClass interface.\n",
-              "Attempting to return a generic interface.\n")
-      return(ans)
+  # Build full interfaces for everything, even if generic is requested in the return object.
+  unit_is_nClass <- unitTypes=="nCgen"
+  num_nClasses <- sum(unit_is_nClass)
+  R6interfaces <- vector(mode="list", length = length(units) ) # will remain null for nFunctions
+  if(num_nClasses > 0) {
+    for(i in seq_along(units)) {
+      if(unit_is_nClass[i]) {
+        nClass_name <- names(units)[i]
+        iRes <- which( paste0("new_", cpp_names[i]) == names(compiledFuns))
+        if(length(iRes) != 1) {
+          warning(paste0("Building R6 inteface classes: Name matching of results had a problem for ", nClass_name, "."))
+        } else {
+          R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
+                                                         compiledFuns[[iRes]],
+                                                         env = resultEnv))
+          if(inherits(R6interfaces[[i]], "try-error")) {
+            warning(paste0("There was a problem building a full nClass interface. for ", nClass_name, "."))
+            R6interfaces[[i]] <- NULL
+          }
+        }
+      }
     }
-    if(interfaceType == "full")
-      return(fullInterface)
-    else if(interfaceType == "both")
-      return(list(full = fullInterface, generic = ans))
-    warning(paste0("Invalid interface type ", interfaceType, " requested.\n",
-                   "Returning a full interface.\n"))
-    fullInterface
+  }
+  names(R6interfaces) <- cpp_names
+  
+  if(any(unitTypes == "nCgen")) {
+    newDLLenv <- make_DLLenv()
+    compiledFuns <- setup_CnC_environments(compiledFuns,
+                                           newDLLenv,
+                                           nC_names = cpp_names[unitTypes=="nCgen"],
+                                           R6interfaces = R6interfaces,
+                                           returnList = TRUE)
   }
   
   ## Next we re-order results using input names,
@@ -145,49 +152,44 @@ nCompile <- function(...,
   ## cpp_names should be 1-to-1 with names(ans)
   ## We want to return with names(ans) changed to
   ## names(units), in the order corresponding to cpp_names.
-  if(is.list(ans)) {
-    newNames <- names(ans)
-    for(i in seq_along(units)) {
-      if(unitTypes[i] == "nF") {
-        iRes <- which(cpp_names[i] == names(ans))
-      } else if(unitTypes[i] == "nCgen") {
-        iRes <- which( paste0("new_", cpp_names[i]) == names(ans))
-      } else {
-        iRes <- integer()
-      }
-      if(length(iRes) != 1) {
-        warning("Name matching of results had a problem.  Returning list of compiled results with internal C++ names.")
-        return(ans)
-      }
-      newNames[iRes] <- names(units)[i]
-
-      if(unitTypes[i] == "nCgen") {
-        nClass_name <- newNames[iRes]
-        interfaceType <- interfaces[[ nClass_name ]]
-        if(is.null(interfaceType))
-          interfaceType <- "generic"
-        ans[[iRes]] <- setup_nClass_interface(interfaceType,
-                                              units[[i]],
-                                              ans[[iRes]],
-                                              env = resultEnv)        
-      }
+  ans <- vector(mode="list", length = length(units))
+  ans_names <- character(length = length(units))
+  for(i in seq_along(units)) {
+    if(unitTypes[i] == "nF") {
+      iRes <- which(cpp_names[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
+    } else if(unitTypes[i] == "nCgen") {
+      iRes <- which( paste0("new_", cpp_names[i]) == names(compiledFuns))
+    } else {
+      iRes <- integer()
     }
-    names(ans) <- newNames
-  } else {
-    if(unitTypes[[1]] == "nCgen") {
-      interfaceType <- "full"
-      if(length(interfaces) > 0) {
-        interfaceType <- interfaces[[1]]
-        if(is.null(interfaceType))
-          interfaceType <- "full"
-      }
-      ans <- setup_nClass_interface(interfaceType,
-                                    units[[1]],
-                                    ans,
-                                    env = resultEnv)
+    if(length(iRes) != 1) {
+      warning(paste0("Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
+                     "  Returning list of compiled results with internal C++ names."))
+      return(compiledFuns)
+    }
+    ans_names[i] <- names(units)[i]
+    
+    if(unitTypes[i] == "nF") {
+      ans[[i]] <- compiledFuns[[iRes]]
+    } else if(unitTypes[i] == "nCgen") {
+      interfaceType <- interfaces[[ ans_names[i] ]]
+      if(is.null(interfaceType))
+        interfaceType <- "full"
+      if(interfaceType == "full")
+        ans[[i]] <- R6interfaces[[cpp_names[i] ]]
+      else
+        ans[[i]] <- compiledFuns[[iRes]]
     }
   }
-  ans
+  names(ans) <- ans_names
+  
+  if(is.list(ans)) { # ans should always be a list but this handles if it isn't
+    if(!returnList) {
+      if(length(ans) == 1) ans[[1]]
+      else ans
+    } else ans
+  } else if(returnList) list(ans)
+  else ans
 }
 
 get_nCompile_types <- function(units) {

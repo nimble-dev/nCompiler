@@ -118,17 +118,18 @@ test_that("nCompile naming and interface choices work in various ways",
   )
 
   # Basic use
+  #nOptions(showCompilerOutput = TRUE)
   comp <- nCompile(nc1, nc2)
   expect_identical(names(comp), c("nc1", "nc2"))
-  expect_true(class(comp$nc1())=="loadedObjectEnv")
-  expect_true(class(comp$nc2())=="loadedObjectEnv")
-
+  expect_true(inherits(comp$nc1$new(), "nClass"))
+  expect_true(inherits(comp$nc2$new(), "nClass"))
+ 
   # One named element in the ..., and full interface for ALL
   comp <- nCompile(nc1x = nc1, nc2,
-                   interfaces = "full")
+                   interfaces = "generic")
   expect_identical(names(comp), c("nc1x", "nc2"))
-  expect_true(inherits(comp$nc1x$new(), "nClass"))
-  expect_true(inherits(comp$nc2$new(), "nClass"))
+  expect_true(class(comp$nc1())=="loadedObjectEnv")
+  expect_true(class(comp$nc2())=="loadedObjectEnv")
 
   # One named element in the ..., and different interface choices
   comp <- nCompile(nc1x = nc1, nc2,
@@ -143,10 +144,10 @@ test_that("nCompile naming and interface choices work in various ways",
 
   # Option to return a list with a singleton
   comp <- nCompile(nc1, returnList = TRUE)
-  expect_true(class(comp$nc1())=="loadedObjectEnv")
+  expect_true(inherits(comp$nc1$new(), "nClass"))
 
   # Provide compilation units as a named list
-  comp <- nCompile(list(nc1 = nc1, nc2 = nc2))
+  comp <- nCompile(list(nc1 = nc1, nc2 = nc2), interfaces = "generic")
   expect_identical(names(comp), c("nc1", "nc2"))
   expect_true(class(comp$nc1())=="loadedObjectEnv")
   expect_true(class(comp$nc2())=="loadedObjectEnv")
@@ -155,7 +156,7 @@ test_that("nCompile naming and interface choices work in various ways",
   expect_error(comp <- nCompile(list(nc1 = nc1, nc2))) ## expect error due to only partial naming in list
 
   # Mix of named list and individual unit, both in ...
-  comp <- nCompile(list(nc1 = nc1, nc3 = nc3), nc2)
+  comp <- nCompile(list(nc1 = nc1, nc3 = nc3), nc2, interfaces = "generic")
   expect_identical(names(comp), c("nc1", "nc3", "nc2"))
   expect_true(class(comp$nc1())=="loadedObjectEnv")
   expect_true(class(comp$nc2())=="loadedObjectEnv")
@@ -182,6 +183,7 @@ test_that("nCompile naming and interface choices work in various ways",
     })
 
   # Basic use
+  #debug(nCompile)
   comp <- nCompile(nfB, nfA)
   expect_identical(names(comp), c("nfB", "nfA"))
   expect_true(is.function(comp$nfB))
@@ -222,6 +224,5 @@ test_that("nCompile naming and interface choices work in various ways",
   comp <- nCompile(nfA, nc1)
   expect_identical(names(comp), c("nfA", "nc1"))
   expect_true(is.function(comp$nfA))
-  expect_true(class(comp$nc1())=="loadedObjectEnv")
-  
+  expect_true(inherits(comp$nc1$new(), "nClass"))
 })
