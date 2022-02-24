@@ -11,6 +11,8 @@ inline void finalize_shared_ptr_holder(SEXP Xptr) {
   if(sph) delete sph;
 }
 
+/* This takes care of creating an R external pointer with a registered finalizer
+   for a new object. */
 template<typename T>
 SEXP new_nCompiler_object (  )  {
   shared_ptr_holder<T> *sph = new shared_ptr_holder<T>(new T);
@@ -21,6 +23,8 @@ SEXP new_nCompiler_object (  )  {
   return(Sans);
 }
 
+/* This takes care of creating an R external pointer with a registered finalizer
+   for an existing object. */
 template<typename T>
 SEXP return_nCompiler_object(std::shared_ptr<T> &sp_other ) {
   shared_ptr_holder<T> *sph = new shared_ptr_holder<T>(sp_other);

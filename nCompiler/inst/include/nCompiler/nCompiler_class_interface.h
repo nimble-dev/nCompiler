@@ -9,11 +9,9 @@
 #include<iostream>
 #include<memory>
 #include<nCompiler/nCompiler_cereal.h>
-
 #include<nCompiler/expand_call_method.h>
 
-#include<nCompiler/loadedObjectEnv.h>
-
+// #include<nCompiler/loadedObjectEnv.h>
 
 // These avoid the problem that a macro argument like "fields" below
 // can't contain comma-separated elements.
