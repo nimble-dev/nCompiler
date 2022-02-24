@@ -728,7 +728,10 @@ assignOperatorDef(
   c('nDiag'),
   list(
     labelAbstractTypes = list(
-      handler = 'VectorReturnType'
+      handler = 'Diag'
+    ),
+    eigenImpl = list(
+      handler = 'Diag'
     )
   )
 )

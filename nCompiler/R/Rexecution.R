@@ -210,8 +210,8 @@ nEigen <- function(x) {
 #'
 #' @export
 #' 
-nDiag <- function(x) {
-  diag(x)
+nDiag <- function(x, ...) {
+  diag(x, ...)
 }
 
 #' Compute the cholesky decomposition of a matrix

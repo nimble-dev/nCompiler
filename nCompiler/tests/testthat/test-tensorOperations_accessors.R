@@ -15,9 +15,15 @@ library(Matrix)
 
 set.seed(2022)
 
+# diagonal matrix creation data
+nr <- 10
+nc <- 3
+xv <- runif(n = min(nr, nc))
+xv_nr <- runif(n = nr)
+
 # random dense matrices
-X <- matrix(runif(n = 100), nrow = 10)
-Y <- matrix(runif(n = 100), nrow = 10)
+X <- matrix(runif(n = 100), nrow = nr)
+Y <- matrix(runif(n = 100), nrow = nr)
 
 # random sparse matrix
 Xsp <- X
@@ -29,35 +35,160 @@ diag(Xsp)[sample(x = nrow(Xsp), size = .1 * nrow(Xsp))] <- 3
 # diag as a creation operator
 #
 
-# TODO: use nCompiler to fill in all of the arguments required for creation at 
-# the C++ level... diagonal entries, nrow, ncol, sparse/dense.  will also need 
-# some reasoning to decide how to interpret the first argument, "x".
+# Documenting many of R's behaviors for diag().  There are a few other cases 
+# where x may be either a scalar or a vector, expanding upon the ideas 
+# documented here.
 # 
-# as an additional design question, do these reasoning steps need to be done 
-# at compile-time or at run time?  my hunch, for nCompiler, is that compile-time
-# is appropriate since the goal is to generate c++ code for specific use cases,
-# rather than for completely arbitrary user inputs... the idea is that users 
-# are writing nCompiler to generate and compile c++ code for well defined, 
-# specific scenarios
+# FN. ARGS.         NROW      NCOL        DIAG  EIGENIZED
+#
+# (x, nrow, ncol)   nrow      ncol        x     (x, nrow, ncol)
+# (nrow, ncol)      nrow      ncol        1     (1, nrow, ncol)
+# (x)               x         x           1     (1, x, x)
+# (x)               length(x) length(x)   x     (x, length(x), length(x))
+# (x, nrow)         nrow      nrow        x     (x, nrow, nrow)
+# (x, ncol)         1         ncol        x     (x, 1, ncol)
+# (nrow)            nrow      nrow        1     (1, nrow, nrow)
+# (ncol)            ---     ---           -     Error, stop processing!
 
-# non-square diagonal matrix, all arguments
-diag(x = 1:10, nrow = 10, ncol = 20)
+diagXRC <- function(x, nrow, ncol) {
+  ans <- diag(x = x, nrow = nrow, ncol = ncol)
+  return(ans)
+}
 
-# non-square diagonal matrix, with recycling rule for main diagonal creation
-diag(x = 5, nrow = 10, ncol = 20)
+diagXR <- function(x, nrow) {
+  ans <- diag(x = x, nrow = nrow)
+  return(ans)
+}
 
-# non-square diagonal matrix
-diag(nrow = 10, ncol = 5)
+diagXC <- function(x, ncol) {
+  ans <- diag(x = x, ncol = ncol)
+  return(ans)
+}
 
-# square diagonal matrix
-diag(x = 1:10)
+diagRC <- function(nrow, ncol) {
+  ans <- diag(nrow = nrow, ncol = ncol)
+  return(ans)
+}
 
-# identity matrix
-diag(x = 10)
+diagX <- function(x) {
+  ans <- diag(x = x)
+  return(ans)
+}
 
-# TODO: yes, in the below we do want to write a custom c++ function vs. writing 
-#  nCompiler code to implement via asSparse(diag(...)) b/c creating a dense 
-#  diagonal matrix will cause lots of wasted space.
+diagR <- function(nrow) {
+  ans <- diag(nrow = nrow)
+  return(ans)
+}
+
+diagC <- function(ncol) {
+  ans <- diag(ncol = ncol)
+  return(ans)
+}
+
+nDiagXRCv <- nFunction(
+  fun = diagXRC,
+  argTypes = list(x = 'numericVector', nrow = 'integer', ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXRC <- nFunction(
+  fun = diagXRC,
+  argTypes = list(x = 'double', nrow = 'integer', ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXRv <- nFunction(
+  fun = diagXR,
+  argTypes = list(x = 'numericVector', nrow = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXR <- nFunction(
+  fun = diagXR,
+  argTypes = list(x = 'double', nrow = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXCv <- nFunction(
+  fun = diagXC,
+  argTypes = list(x = 'numericVector', ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXC <- nFunction(
+  fun = diagXC,
+  argTypes = list(x = 'double', ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagRC <- nFunction(
+  fun = diagRC,
+  argTypes = list(nrow = 'integer', ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagXv <- nFunction(
+  fun = diagX,
+  argTypes = list(x = 'numericVector'),
+  returnType = 'nMatrix'
+)
+
+nDiagX <- nFunction(
+  fun = diagX,
+  argTypes = list(x = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagR <- nFunction(
+  fun = diagR,
+  argTypes = list(nrow = 'integer'),
+  returnType = 'nMatrix'
+)
+
+nDiagC <- nFunction(
+  fun = diagC,
+  argTypes = list(ncol = 'integer'),
+  returnType = 'nMatrix'
+)
+
+cDiagXRCv <- nCompile(nDiagXRCv)
+cDiagXRC <- nCompile(nDiagXRC)
+cDiagXRv <- nCompile(nDiagXRv)
+cDiagXR <- nCompile(nDiagXR)
+cDiagXCv <- nCompile(nDiagXCv)
+cDiagXC <- nCompile(nDiagXC)
+cDiagRC <- nCompile(nDiagRC)
+cDiagXv <- nCompile(nDiagXv)
+cDiagX <- nCompile(nDiagX)
+cDiagR <- nCompile(nDiagR)
+
+#
+# creation usage tests
+#
+
+expect_error(nCompile(nDiagC)) # don't support behavior R doesn't support
+expect_identical(diag(x = xv, nrow = nr, ncol = nc),
+                 cDiagXRCv(x = xv, nrow = nr, ncol = nc))
+expect_error(cDiagXRCv(x = 4, nrow = nr, ncol = nc))
+expect_error(cDiagXRCv(x = runif(nr), nrow = nr, ncol = nc))
+expect_identical(cDiagXRC(x = 3, nrow = nr, ncol = nc),
+                 diag(x = 3, nrow = nr, ncol = nc))
+expect_identical(cDiagXRv(x = xv_nr, nrow = nr), diag(x = xv_nr, nrow = nr))
+expect_error(cDiagXRv(x = xv, nrow = nr))
+expect_identical(cDiagXR(x = 3, nrow = nr), diag(x = 3, nrow = nr))
+expect_identical(cDiagXCv(x = 3, ncol = nc), diag(x = 3, ncol = nc))
+expect_identical(cDiagXC(x = 3, ncol = nc), diag(x = 3, ncol = nc))
+expect_identical(cDiagRC(nrow = nr, ncol = nc), diag(nrow = nr, ncol = nc))
+expect_identical(cDiagXv(x = xv), diag(x = xv))
+expect_identical(cDiagX(x = 3), diag(x = 3))
+expect_identical(cDiagR(nrow = nr), diag(nrow = nr))
+
+
+
+# TODO: sparse creation operator
+
+# sparse diagonal matrices are specified via Matrix::Diagonal, as a very general
+# rule.
 
 # sparse identity matrix
 Matrix::Diagonal(n = 5)

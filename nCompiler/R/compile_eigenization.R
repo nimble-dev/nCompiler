@@ -835,3 +835,126 @@ inEigenizeEnv(
   }
 )
 
+inEigenizeEnv(
+  
+  Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    
+    # handle "diag(x)" when x is a matrix and goal is to extract diagonal
+    if(length(code$args) == 1) {
+      if(code$args[[1]]$type$nDim == 2) {
+        return(invisible(NULL)) # no action necessary for eigenization
+      }
+    }
+    
+    #
+    # handle "diag()" when used to create dense matrices
+    #
+    
+    # goal: specify all arguments for c++ implementation of the diagonal matrix
+    # creation operator "nDiag(x, nrow, ncol)"
+    
+    # define complete set of function arguments in canonical order
+    canonicalArgs <- c('x', 'nrow', 'ncol')
+    
+    # extract existing argument names
+    argNames <- names(code$args)
+    
+    # check if input is a condition that is not supported by base::diag()
+    if(identical(argNames, 'ncol')) {
+      stop(exprClassProcessingErrorMsg(
+        code, 'Use of nDiag is not supported when ncol is the only argument'
+      ))
+    }
+    
+    # make sure all arguments make sense
+    if(!all(argNames %in% canonicalArgs)) {
+      badArgs <- argNames[!(argNames %in% canonicalArgs)]
+      stop(exprClassProcessingErrorMsg(
+        code, 
+        paste('Unexpected arguments to nDiag:', paste(badArgs, collapse = ', '))
+      ))
+    }
+    
+    # handle "nDiag(x)"
+    if(identical(argNames, 'x')) {
+      
+      # extract argument
+      xArg <- code$args[[1]]
+      
+      # scalar input yields identity matrix with dimensions provided by "x"
+      if(xArg$type$nDim == 0) {
+        removeArg(expr = code, ID = 1)
+        diagValue <- literalDoubleExpr(1.0)
+        insertArg(expr = code, ID = 1, value = diagValue, name = 'x')
+        insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'nrow')
+        insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'ncol')
+        argNames <- names(code$args)
+      } 
+      # vector input yields arbitrary diagonal matrix
+      else if(xArg$type$nDim == 1) {
+        nrowValue <- wrapExprClassOperator(
+          code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
+                               isLiteral = FALSE, name = xArg$name, 
+                               type = xArg$type),
+          funName = 'length'
+        )
+        ncolValue <- wrapExprClassOperator(
+          code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
+                               isLiteral = FALSE, name = xArg$name, 
+                               type = xArg$type),
+          funName = 'length'
+        )
+        insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
+        insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')
+        argNames <- names(code$args)
+      } 
+      else {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'The argument x in nDiag(x) must be a scalar or vector'
+        ))
+      }
+      
+    } # handle "nDiag(x)"
+    
+    # fill in default arguments if needed: processing order is important!
+    if(length(argNames) < 3) {
+      
+      # default diagonal value is 1 if x is missing
+      if(!('x' %in% argNames)) {
+        diagValue <- literalDoubleExpr(1.0)
+        insertArg(expr = code, ID = 1, value = diagValue, name = 'x')
+        argNames <- names(code$args)
+      }
+      
+      # create square matrix for "nDiag(x, nrow)"
+      if(!('ncol' %in% argNames)) {
+        nrowArg <- code$args[[which(argNames == 'nrow')]]
+        insertArg(expr = code, ID = 1, value = nrowArg$clone(), name = 'ncol')
+        argNames <- names(code$args)
+      }
+      
+      # create 1-row matrix for "nDiag(x, ncol)"
+      if(!('nrow' %in% argNames)) {
+        rowValue <- exprClass$new(isLiteral = TRUE, isName = FALSE, 
+                                  isCall = FALSE, isAssign = FALSE, name = 1)
+        insertArg(expr = code, ID = 1, value = rowValue, name = 'nrow')
+        argNames <- names(code$args)
+      }
+      
+    } # default arguments
+    
+    # permute arguments so they appear in canonical order for C++ calls
+    o = as.numeric(factor(x = argNames, levels = canonicalArgs))
+    reorderArgs(expr = code, perm = o)
+    
+    # recursively eigenize function arguments, for example, to properly eigenize
+    # automatically generated "length(x)" default arguments
+    for(i in 1:3) {
+      compile_eigenize(code = code$args[[i]], symTab = symTab, auxEnv = auxEnv,
+                       workEnv = workEnv)
+    }
+    
+    invisible(NULL)
+  }
+)

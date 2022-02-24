@@ -273,6 +273,39 @@ struct IsEvaluatedType : std::conditional<
      std::true_type
  >:: type { };
 
+
+ /**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, implicitly restricted to Eigen::Tensor or
+  *   TensorExpression types by SFINAE by checking for a NumDimensions member
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<
+   IsTensorExpression<Class>::value || IsTensor<Class>::value,
+   bool
+ >::type
+   HasNumDimensionsN() {
+     return N == Class::NumDimensions;
+   }
+
+ /**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to Eigen::SparseMatrix by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
+   HasNumDimensionsN() {
+     return N == 2;  // matrices are inherently 2-dimensional
+   }
+
 /**
  * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
@@ -560,6 +593,82 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
 }
 
 /**
+ * Generate a rank-2 Eigen::Tensor object (i.e., a matrix) with constant
+ * diagonal.  Uses SFINAE to restrict usage to template arguments Scalar, which
+ * are a basic numeric type.
+ *
+ * @tparam Scalar (primitive) type for Tensor entries
+ * @tparam Index (primitive) type for Tensor dimension values
+ *
+ * @param x Constant value for diagonal entries
+ * @param nrow Number of rows for Tensor output
+ * @param ncol Number of columns for Tensor output
+ */
+ template<
+   typename Scalar,
+   typename Index,
+   typename std::enable_if<
+     std::is_arithmetic<Scalar>::value
+   >::type* = nullptr
+ >
+ Eigen::Tensor<Scalar, 2> nDiag(Scalar x, Index nrow, Index ncol) {
+    // initialize output
+    Eigen::Tensor<Scalar, 2> res(nrow, ncol);
+    // zero-initialize tensor contents
+    res.setZero();
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res(i,i) = x;
+    }
+    return res;
+ }
+
+ /**
+ * Generate a rank-2 Eigen::Tensor object (i.e., a matrix) with non-constant
+ * diagonal
+ *
+ * @tparam Xpr Eigen::Tensor or Tensor expression type with diagonal entries
+ * @tparam Scalar (primitive) type for Tensor entries
+ * @tparam Index (primitive) type for Tensor dimension values
+ *
+ * @param x Vector of values for diagonal entries
+ * @param nrow Number of rows for Tensor output
+ * @param ncol Number of columns for Tensor output
+ */
+ template<
+    typename Xpr,
+    typename Index,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        (IsTensor<Xpr>::value || IsTensorExpression<Xpr>::value) &&
+        HasNumDimensionsN<Xpr, 1>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
+    // evaluate input if needed
+    auto xEval = eval(x);
+    // initialize output
+    Eigen::Tensor<Scalar, 2> res(nrow, ncol);
+    // zero-initialize tensor contents
+    res.setZero();
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    if(x.size() != nEntries) {
+        throw std::range_error(
+            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+        );
+    }
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res(i,i) = xEval(i);
+    }
+    return res;
+ }
+
+/**
  * Extract the primary diagonal from an Eigen::Tensor object, or derived from
  * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
  *
@@ -742,38 +851,6 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
     const RHS & b
 ) {
     return triangularsolve<Eigen::Upper>(U, b);
-}
-
-/**
- * Returns true if template Class has N dimensions
- *
- * Intended to be used as a template metaprogramming aid.
- *
- * @tparam Class Type to inspect, implicitly restricted to Eigen::Tensor or
- *   TensorExpression types by SFINAE by checking for a NumDimensions member
- * @tparam N Number of dimensions to test for
- */
-template<typename Class, int N>
-constexpr typename std::enable_if<
-    IsTensorExpression<Class>::value || IsTensor<Class>::value,
-    bool
->::type
-HasNumDimensionsN() {
-    return N == Class::NumDimensions;
-}
-
-/**
- * Returns true if template Class has N dimensions
- *
- * Intended to be used as a template metaprogramming aid.
- *
- * @tparam Class Type to inspect, restricted to Eigen::SparseMatrix by SFINAE
- * @tparam N Number of dimensions to test for
- */
-template<typename Class, int N>
-constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
-HasNumDimensionsN() {
-    return N == 2;  // matrices are inherently 2-dimensional
 }
 
 /**

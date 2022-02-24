@@ -1261,6 +1261,82 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  Diag <- function(code, symTab, auxEnv, handlingInfo) {
+    
+    # recurse arguments
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    
+    # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
+    if(length(code$args) == 1) {
+      if(code$args[[1]]$type$nDim == 2) {
+        returnType <- code$args[[1]]$type$type
+        code$type <- symbolBasic$new(nDim = 1, type = returnType)
+        return(invisible(inserts))
+      }
+    }
+    
+    #
+    # handle "diag()" when used to create dense matrices
+    #
+    
+    # validate type for argument
+    valArg <- function(argName, maxDim, missingAllowed) {
+      # validate type for argument argName. validation fails if the argument
+      # does not inherit from symbolBasic, or if the argument has nDim > maxDim.  
+      # skips validation if arg is missing and missingAllowed = TRUE
+      
+      # extract argument
+      arg <- code$args[[argName]]
+      
+      # make sure argument exists if required, or skip processing
+      if(missingAllowed == TRUE) {
+        if(is.null(arg)) {
+          return(NULL)
+        }
+      } else if(missingAllowed == FALSE) {
+        if(is.null(arg)) {
+          stop(exprClassProcessingErrorMsg(
+            code,
+            paste('Required argument', argName, 'is missing from function call')
+          ))
+        }
+      }
+      
+      # check inheritance - make sure object has dense storage
+      if(!inherits(arg$type, 'symbolBasic')) {
+        stop(exprClassProcessingErrorMsg(
+          code, paste('Argument', argName, 'must be a symbolBasic type')
+        ))
+      }
+      
+      # check dimensions
+      if(arg$type$nDim > maxDim) {
+        stop(exprClassProcessingErrorMsg(
+          code, paste('Argument', argName, 'must have nDim less than', maxDim)
+        ))
+      }
+      
+      NULL
+    } # valArg
+    
+    # validate arguments
+    valArg(argName = 'x', maxDim = 1, missingAllowed = TRUE)
+    valArg(argName = 'nrow', maxDim = 0, missingAllowed = TRUE)
+    valArg(argName = 'ncol', maxDim = 0, missingAllowed = TRUE)
+    
+    # base::diag() always returns matrices with double entries
+    returnType <- 'double'
+    
+    # output will always be a symbolBasic type as it is understood today, i.e., 
+    # a dense matrix.  a sparse diagonal matrix is created via the nDiagonal 
+    # operator, which adds nCompiler support for Matrix::Diagonal.
+    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    
+    invisible(inserts)
+  }
+)
+
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing

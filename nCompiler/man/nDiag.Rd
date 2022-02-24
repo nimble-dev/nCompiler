@@ -4,7 +4,7 @@
 \alias{nDiag}
 \title{Extract or replace the diagonal of matrix}
 \usage{
-nDiag(x)
+nDiag(x, ...)
 }
 \arguments{
 \item{x}{a numeric or complex matrix}
