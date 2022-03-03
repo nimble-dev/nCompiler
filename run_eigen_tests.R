@@ -22,5 +22,7 @@ if(length(dir(testpath)) == 0) {
 
 test_dir(path = testpath, filter = 'tensorOperations_reshaping')
 test_dir(path = testpath, filter = 'tensorOperations_sparse')
+test_dir(path = testpath, filter = 'tensorOperations_accessors')
+test_dir(path = testpath, filter = 'tensorOperations_sparse_multiplication')
 test_dir(path = testpath, filter = 'tensorOperations_linear_algebra')
 

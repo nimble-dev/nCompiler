@@ -1,13 +1,12 @@
 context("tensorOperations: interoperability with sparse matrices/vectors")
 
+library(Matrix)
+
 #
 # test error trapping and generated C++ code that implements nCompiler's support 
 # for evaluating binary operations and conversion between between sparse and 
 # dense matrices and vectors.
 #
-
-library(Matrix)
-library(testthat)
 
 #
 # generate demo objects
@@ -35,7 +34,7 @@ M3[sample(x = length(M3), size = p * length(M3))] <- runif(n = p * length(M3))
 M3_sparse <- Matrix::Matrix(M3, sparse = TRUE)
 
 # sparse matrix with additional 0's stored explicitly
-Munpruned <- sparseMatrix(
+Munpruned <- Matrix::sparseMatrix(
   i = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
   j = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
   x = c(runif(n = floor(m*n*p)), 0, 0)

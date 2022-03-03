@@ -321,6 +321,37 @@ removeArg <- function(expr, ID) {
   invisible(value)
 }
 
+reorderArgs <- function(expr, perm) {
+  # Change the order of an exprClass object's arguments.  Useful for placing
+  # arguments into canonical order for dispatch via associated C calls.
+  # 
+  # Parameters:
+  #  expr - exprClass object whose arguments should be reordered
+  #  perm - vector of integers indicating where each argument should be moved to
+  
+  # extract arguments
+  args <- expr$args
+  argNames <- names(args)
+  nArgs <- length(args)
+  
+  # temporarily remove arguments from expr
+  for(i in 1:nArgs) {
+    removeArg(expr = expr, ID = 1)
+  }
+  
+  # insert arguments in new order
+  #   Note: use insertArg vs. setArg b/c insertArg lets us rename the arguments
+  #         in addition to changing the argument values
+  for(i in 1:nArgs) {
+    # figure out which argument should be in the i^th position after reordering
+    tgt <- which(perm == i)
+    # add that argument
+    insertArg(expr = expr, ID = i, value = args[[tgt]], name = argNames[tgt])
+  }
+  
+  invisible(expr)
+}
+
 checkArgDims <- function(expr, ID, nDimRange) {
   if (expr$args[[ID]]$type$nDim < nDimRange[1] ||
         expr$args[[ID]]$type$nDim > nDimRange[2])
