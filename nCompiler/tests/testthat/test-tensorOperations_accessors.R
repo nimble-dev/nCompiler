@@ -247,8 +247,53 @@ expect_identical(as.numeric(cDiagAccessorSp(Xsp)), diag(Xsp))
 # diag as assignment operator
 #
 
-# dense assignment
-diag(X) = 1:nrow(X)
+diagExprAssignment <- function(x, y, z) {
+  diag(x) <- y + z
+  return(ans)
+}
+
+diagAssignment <- function(x, y) {
+  diag(x) <- y
+  return(x)
+}
+
+nDiagExprAssignment <- nFunction(
+  fun = diagExprAssignment, 
+  argTypes = list(x = 'nMatrix', y = 'numericVector', z = 'numericVector'),
+  returnType = 'nMatrix'
+)
+
+nDiagAssignmentv <- nFunction(
+  fun = diagAssignment,
+  argTypes = list(x = 'nMatrix', y = 'numericVector'),
+  returnType = 'nMatrix'
+)
+
+nDiagAssignment <- nFunction(
+  fun = diagAssignment,
+  argTypes = list(x = 'nMatrix', y = 'double'),
+  returnType = 'nMatrix'
+)
+
+cDiagExprAssignment <- nCompile(nDiagExprAssignment)
+cDiagAssignmentv <- nCompile(nDiagAssignmentv)
+cDiagAssignment <- nCompile(nDiagAssignment)
+
+# system(paste('open',tempdir()))
+# Rcpp::sourceCpp(file.path(tempdir(),'nCompiler_generatedCode','nCompiler_units_8.cpp'))
+# system.file(package = 'nCompiler')
+
+# dense assignment to vector
+X1 <- X
+X2 <- X
+diag(X1) <- 1:nrow(X)
+expect_identical(X1, cDiagAssignmentv(x = X2, y = 1:nrow(X)))
+
+# dense assignment to constant
+X1 <- X
+X2 <- X
+diag(X1) <- pi
+expect_identical(X1, cDiagAssignment(x = X2, y = pi))
 
 # sparse assignment
 diag(Xsp) = 1:nrow(Xsp)

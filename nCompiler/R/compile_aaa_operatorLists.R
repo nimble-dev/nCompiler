@@ -336,6 +336,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'StaticCast',
+  list(
+    help = 'StaticCast(A, type) is for static_cast<type>(A).',
+    cppOutput = list(
+      handler = 'StaticCast'
+    )
+  )
+)
+
+assignOperatorDef(
   '->method',
   list(
     help = '->method(A, foo, b) is for A->foo(b)',

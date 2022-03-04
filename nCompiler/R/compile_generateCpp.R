@@ -404,6 +404,18 @@ inGenCppEnv(
   }
 )
 
+inGenCppEnv(
+  ## StaticCast(A, type) -> static_cast<type>(A)
+  StaticCast <- function(code, symTab) {
+    # remove argument name, if any, so that we can extract the variable's type
+    code$args[[2]]$type$name <- ""
+    # generate c++ variable for type
+    cpp_var <- code$args[[2]]$type$genCppVar()
+    # generate a c++ static_cast call
+    paste0('static_cast<', trimws(cpp_var$generate()), '>(',
+           compile_generateCpp(code$args[[1]], symTab), ')')
+  }
+)
 
 inGenCppEnv(
   # Lambda (anonymous) function (expression) in C++/
