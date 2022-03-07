@@ -283,6 +283,12 @@ cDiagAssignment <- nCompile(nDiagAssignment)
 # Rcpp::sourceCpp(file.path(tempdir(),'nCompiler_generatedCode','nCompiler_units_8.cpp'))
 # system.file(package = 'nCompiler')
 
+# dense assignment via an expression
+X1 <- X
+X2 <- X
+diag(X1) <- diag(Y) + diag(X)
+expect_identical(X1, cDiagExprAssignment(x = X2, y = diag(Y), z = diag(X)))
+  
 # dense assignment to vector
 X1 <- X
 X2 <- X
