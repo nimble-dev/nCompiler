@@ -676,12 +676,12 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
  }
 
  /**
-  * DiagIO is a templated class designed to use partial specialization and
-  * SFINAE to implement a family of specialized template classes that facilitate
+  * DiagIO is a templated class that uses partial specialization and
+  * SFINAE to implement a family of specialized template classes facilitating
   * assignment and extraction of diagonal entries for object types that
-  * nCompiler uses to store matrix-like data, i.e., Eigen::Tensor<Scalar, 2>
-  * types, Eigen Tensor expressions of such objects, Eigen::SparseMatrix
-  * types, and others.
+  * nCompiler uses to store matrix-like data.  For example, I/O is supported for
+  * Eigen::Tensor<Scalar, 2> types, Eigen Tensor expressions of such objects,
+  * Eigen::SparseMatrix types, and others.
   *
   * The design goal is that the target object will be wrapped by a specialized
   * DiagIO class that uses conversion operators and overloaded
