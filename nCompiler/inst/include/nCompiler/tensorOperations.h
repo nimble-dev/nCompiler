@@ -210,9 +210,10 @@ template<typename Class,
 struct IsSparseMatrix : std::false_type { };
 
 template<typename Class>
-struct IsSparseMatrix<Class,
-                      decltype(sizeof(Class::Scalar), 0)> :
-std::is_base_of<
+struct IsSparseMatrix<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
     Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
     Class
 > { };
