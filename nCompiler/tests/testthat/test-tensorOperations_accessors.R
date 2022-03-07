@@ -249,7 +249,7 @@ expect_identical(as.numeric(cDiagAccessorSp(Xsp)), diag(Xsp))
 
 diagExprAssignment <- function(x, y, z) {
   diag(x) <- y + z
-  return(ans)
+  return(x)
 }
 
 diagAssignment <- function(x, y) {
