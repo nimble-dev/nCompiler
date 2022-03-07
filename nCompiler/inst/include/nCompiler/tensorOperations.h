@@ -253,7 +253,7 @@ std::is_base_of<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseMatrix<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value,
+    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
     std::true_type,
     std::false_type
 >::type { };
@@ -275,10 +275,9 @@ struct IsEvaluatedType : std::conditional<
  */
  template<typename Class>
  struct IsTensorExpression : std::conditional<
-     (!IsEvaluatedType<Class>::value) &&
-     (!std::is_arithmetic<Class>::value),
-     std::true_type,
-     std::false_type
+     IsEvaluatedType<Class>::value,
+     std::false_type,
+     std::true_type
  >:: type { };
 
 
