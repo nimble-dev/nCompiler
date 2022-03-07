@@ -280,7 +280,6 @@ struct IsEvaluatedType : std::conditional<
      std::true_type
  >:: type { };
 
-
  /**
   * Returns true if template Class has N dimensions
   *
@@ -720,7 +719,7 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
     private:
 
         // wrapped object
-        const xType &x;
+        xType &x;
 
         // data storage type
         typedef typename xType::Scalar Scalar;
@@ -749,7 +748,7 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
 
     public:
 
-        explicit DiagIO(const xType & tgt) : x(tgt), xref(x),
+        explicit DiagIO(xType & tgt) : x(tgt), xref(x),
             xcoord(xref.dimensions()),
             nDiag(*(std::min_element(xcoord.begin(), xcoord.end()))) { };
 
@@ -790,7 +789,6 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
          * use explicit conversion to extract diagonal from wrapped object
          */
         explicit operator Eigen::Tensor<Scalar, 1> ()  {
-            // initialize and fill output
             Eigen::Tensor<Scalar, 1> res(nDiag);
             Scalar *diagIt = res.data();
             for(auto i = 0; i < nDiag; ++i)
@@ -809,15 +807,60 @@ template<typename xType>
  > {
 
     private:
-        const xType &x;
+
+        // wrapped object
+        xType &x;
+
+        // data storage type
         typedef typename xType::Scalar Scalar;
+        // type associate with tensor indices and coordinate objects
+        typedef typename xType::StorageIndex StorageIndex;
+
+        // number of elements in main diagonal
+        StorageIndex nDiag;
 
     public:
-        explicit DiagIO(const xType & tgt) : x(tgt) { };
+
+        explicit DiagIO(xType & tgt) : x(tgt),
+            nDiag(std::min(x.rows(), x.cols())) { };
+
         /**
-        * implicit conversion to extract diagonal from an Eigen::SparseMatrix type
+         * replace diagonal of wrapped object with contents of a tensor
+         */
+         template<
+             typename Xpr,
+             typename std::enable_if<
+                 (IsTensorExpression<Xpr>::value || IsTensor<Xpr>::value) &&
+                 HasNumDimensionsN<Xpr, 1>(),
+                 Xpr
+             >::type* = nullptr
+         >
+         DiagIO& operator=(const Xpr& v) {
+             auto veval = eval(v);
+             if(veval.size() != nDiag) {
+                 throw std::range_error(
+                     "nCompiler::DiagIO - Replacement diagonal entry vector length does not match matrix size"
+                 );
+             }
+             Scalar *vScalar = veval.data();
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = *(vScalar++);
+            return *this;
+         }
+
+        /**
+         * replace diagonal of wrapped object with a constant value
+         */
+         DiagIO& operator=(const Scalar& cst) {
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = cst;
+             return *this;
+         }
+
+        /**
+        * explicit conversion to extract diagonal from an Eigen::SparseMatrix
         */
-        operator Eigen::Tensor<Scalar, 1> ()  {
+        explicit operator Eigen::Tensor<Scalar, 1> ()  {
          Eigen::Tensor<Scalar, 1> res(x.rows());
          auto diagmap = matmap(res);
          diagmap = x.diagonal();
@@ -825,22 +868,13 @@ template<typename xType>
      }
 };
 
-// TODO: replace nDiag entirely with a class-based definition since, in general,
-// we need nDiag to be a valid c++ identifier whether it is on the LHS or RHS.
-// this current application, with DiagIO, is fine for RHS, but won't provide a
-// mechanism for LHS stuff.
-//
-// goal is actually not to replace nDiag entirely b/c if we did then we'd run
-// into issues where we need templated class constructors and other default
-// parameter type issues if we want to support both diagonal entry I/O and
-// diagonal matrix creation.  instead, strategy is to use function overloading
-// to handle creation and I/O separately.  The I/O, however, will be handled via
-// the DiagIO class, which uses the overloaded operator= and implicit conversion
-// operators to function.  again, the challenge is in being able to write C++
-// code that will know how to process nDiag when it appears either on the LHS
-// or RHS of an assignment operator.
+/**
+ * Pass assignment and extraction of diagonal entries to instantiations of a
+ * partial specialization of the template class DiagIO.  SFINAE will determine
+ * which partial specialization to use during compilation.
+ */
 template<typename xType>
-auto nDiag(const xType &x) -> decltype(
+auto nDiag(xType &x) -> decltype(
     DiagIO<xType>(x)
 ) {
     return DiagIO<xType>(x);

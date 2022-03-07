@@ -263,6 +263,12 @@ nDiagExprAssignment <- nFunction(
   returnType = 'nMatrix'
 )
 
+nSpDiagExprAssignment <- nFunction(
+  fun = diagExprAssignment, 
+  argTypes = list(x = 'nSparseMatrix', y = 'numericVector', z = 'numericVector'),
+  returnType = 'nSparseMatrix'
+)
+
 nDiagAssignmentv <- nFunction(
   fun = diagAssignment,
   argTypes = list(x = 'nMatrix', y = 'numericVector'),
@@ -275,13 +281,24 @@ nDiagAssignment <- nFunction(
   returnType = 'nMatrix'
 )
 
+nSpDiagAssignmentv <- nFunction(
+  fun = diagAssignment,
+  argTypes = list(x = 'nSparseMatrix', y = 'numericVector'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagAssignment <- nFunction(
+  fun = diagAssignment,
+  argTypes = list(x = 'nSparseMatrix', y = 'double'),
+  returnType = 'nSparseMatrix'
+)
+
 cDiagExprAssignment <- nCompile(nDiagExprAssignment)
 cDiagAssignmentv <- nCompile(nDiagAssignmentv)
 cDiagAssignment <- nCompile(nDiagAssignment)
-
-# system(paste('open',tempdir()))
-# Rcpp::sourceCpp(file.path(tempdir(),'nCompiler_generatedCode','nCompiler_units_8.cpp'))
-# system.file(package = 'nCompiler')
+cSpDiagAssignmentv <- nCompile(nSpDiagAssignmentv)
+cSpDiagAssignment <- nCompile(nSpDiagAssignment)
+cSpDiagExprAssignment <- nCompile(nSpDiagExprAssignment)
 
 # dense assignment via an expression
 X1 <- X
@@ -301,5 +318,20 @@ X2 <- X
 diag(X1) <- pi
 expect_identical(X1, cDiagAssignment(x = X2, y = pi))
 
-# sparse assignment
-diag(Xsp) = 1:nrow(Xsp)
+# sparse assignment to vector
+X1 <- Xsp
+X2 <- Xsp
+diag(X1) = 1:nrow(X1)
+expect_identical(X1, cSpDiagAssignmentv(x = X2, y = 1:nrow(X1)))
+
+# sparse assignment to constant
+X1 <- Xsp
+X2 <- Xsp
+diag(X1) = pi
+expect_identical(X1, cSpDiagAssignment(x = X2, y = pi))
+
+# sparse assignment via an expression
+X1 <- Xsp
+X2 <- Xsp
+diag(X1) <- diag(Y) + diag(X)
+expect_identical(X1, cSpDiagExprAssignment(x = X2, y = diag(Y), z = diag(X)))
