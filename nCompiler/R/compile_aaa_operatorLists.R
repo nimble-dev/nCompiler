@@ -735,7 +735,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('nDiag'),
+  c('nDiag', 'nDiagonal'),
   list(
     labelAbstractTypes = list(
       handler = 'Diag'

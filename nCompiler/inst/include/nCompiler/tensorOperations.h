@@ -675,6 +675,76 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
  }
 
  /**
+ * Generate a Sparse matrix with constant diagonal.  Uses SFINAE to restrict
+ * usage to template arguments Scalar, which are a basic numeric type.
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
+ *
+ * @param x Constant value for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
+ */
+ template<
+   typename Scalar,
+   typename Index,
+   typename std::enable_if<
+     std::is_arithmetic<Scalar>::value
+   >::type* = nullptr
+ >
+ Eigen::SparseMatrix<Scalar> nDiagonal(Scalar x, Index nrow, Index ncol) {
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = x;
+    }
+    return res;
+ }
+
+ /**
+ * Generate a Sparse matrix with non-constant diagonal
+ *
+ * @tparam Xpr Eigen::Tensor or Tensor expression type with diagonal entries
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
+ *
+ * @param x Vector of values for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
+ */
+ template<
+    typename Xpr,
+    typename Index,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        (IsTensor<Xpr>::value || IsTensorExpression<Xpr>::value) &&
+        HasNumDimensionsN<Xpr, 1>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
+    // evaluate input if needed
+    auto xEval = eval(x);
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    if(x.size() != nEntries) {
+        throw std::range_error(
+            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+        );
+    }
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = xEval(i);
+    }
+    return res;
+ }
+
+ /**
   * DiagIO is a templated class that uses partial specialization and
   * SFINAE to implement a family of specialized template classes facilitating
   * assignment and extraction of diagonal entries for object types that

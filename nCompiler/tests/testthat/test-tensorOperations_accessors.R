@@ -183,18 +183,146 @@ expect_identical(cDiagXv(x = xv), diag(x = xv))
 expect_identical(cDiagX(x = 3), diag(x = 3))
 expect_identical(cDiagR(nrow = nr), diag(nrow = nr))
 
+#
+# sparse creation tests
+#
 
+diagXRC <- function(x, nrow, ncol) {
+  ans <- Diagonal(x = x, nrow = nrow, ncol = ncol)
+  return(ans)
+}
 
-# TODO: sparse creation operator
+diagXR <- function(x, nrow) {
+  ans <- Diagonal(x = x, nrow = nrow)
+  return(ans)
+}
 
-# sparse diagonal matrices are specified via Matrix::Diagonal, as a very general
-# rule.
+diagXC <- function(x, ncol) {
+  ans <- Diagonal(x = x, ncol = ncol)
+  return(ans)
+}
 
-# sparse identity matrix
-Matrix::Diagonal(n = 5)
+diagRC <- function(nrow, ncol) {
+  ans <- Diagonal(nrow = nrow, ncol = ncol)
+  return(ans)
+}
 
-# sparse, square diagonal matrix
-Matrix::Diagonal(x = 1:10)
+diagX <- function(x) {
+  ans <- Diagonal(x = x)
+  return(ans)
+}
+
+diagR <- function(nrow) {
+  ans <- Diagonal(nrow = nrow)
+  return(ans)
+}
+
+diagC <- function(ncol) {
+  ans <- Diagonal(ncol = ncol)
+  return(ans)
+}
+
+nSpDiagXRCv <- nFunction(
+  fun = diagXRC,
+  argTypes = list(x = 'numericVector', nrow = 'integer', ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXRC <- nFunction(
+  fun = diagXRC,
+  argTypes = list(x = 'double', nrow = 'integer', ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXRv <- nFunction(
+  fun = diagXR,
+  argTypes = list(x = 'numericVector', nrow = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXR <- nFunction(
+  fun = diagXR,
+  argTypes = list(x = 'double', nrow = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXCv <- nFunction(
+  fun = diagXC,
+  argTypes = list(x = 'numericVector', ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXC <- nFunction(
+  fun = diagXC,
+  argTypes = list(x = 'double', ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagRC <- nFunction(
+  fun = diagRC,
+  argTypes = list(nrow = 'integer', ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagXv <- nFunction(
+  fun = diagX,
+  argTypes = list(x = 'numericVector'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagX <- nFunction(
+  fun = diagX,
+  argTypes = list(x = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagR <- nFunction(
+  fun = diagR,
+  argTypes = list(nrow = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+nSpDiagC <- nFunction(
+  fun = diagC,
+  argTypes = list(ncol = 'integer'),
+  returnType = 'nSparseMatrix'
+)
+
+cSpDiagXRCv <- nCompile(nSpDiagXRCv)
+cSpDiagXRC <- nCompile(nSpDiagXRC)
+cSpDiagXRv <- nCompile(nSpDiagXRv)
+cSpDiagXR <- nCompile(nSpDiagXR)
+cSpDiagXCv <- nCompile(nSpDiagXCv)
+cSpDiagXC <- nCompile(nSpDiagXC)
+cSpDiagRC <- nCompile(nSpDiagRC)
+cSpDiagXv <- nCompile(nSpDiagXv)
+cSpDiagX <- nCompile(nSpDiagX)
+cSpDiagR <- nCompile(nSpDiagR)
+
+expect_error(nCompile(nSpDiagC)) # don't support behavior R doesn't support
+expect_identical(as(diag(x = xv, nrow = nr, ncol = nc), 'dgCMatrix'),
+                 cSpDiagXRCv(x = xv, nrow = nr, ncol = nc))
+expect_error(cSpDiagXRCv(x = 4, nrow = nr, ncol = nc))
+expect_error(cSpDiagXRCv(x = runif(nr), nrow = nr, ncol = nc))
+expect_identical(cSpDiagXRC(x = 3, nrow = nr, ncol = nc),
+                 as(diag(x = 3, nrow = nr, ncol = nc), 'dgCMatrix'))
+expect_identical(cSpDiagXRv(x = xv_nr, nrow = nr), 
+                 as(diag(x = xv_nr, nrow = nr), 'dgCMatrix'))
+expect_error(cSpDiagXRv(x = xv, nrow = nr))
+expect_identical(cSpDiagXR(x = 3, nrow = nr), 
+                 as(diag(x = 3, nrow = nr), 'dgCMatrix'))
+expect_identical(cSpDiagXCv(x = 3, ncol = nc), 
+                 as(diag(x = 3, ncol = nc), 'dgCMatrix'))
+expect_identical(cSpDiagXC(x = 3, ncol = nc), 
+                 as(diag(x = 3, ncol = nc), 'dgCMatrix'))
+expect_identical(cSpDiagRC(nrow = nr, ncol = nc), 
+                 as(diag(nrow = nr, ncol = nc), 'dgCMatrix'))
+expect_identical(cSpDiagXv(x = xv), 
+                 as(diag(x = xv), 'dgCMatrix'))
+expect_identical(cSpDiagX(x = 3), 
+                 as(diag(x = 3), 'dgCMatrix'))
+expect_identical(cSpDiagR(nrow = nr), 
+                 as(diag(nrow = nr), 'dgCMatrix'))
 
 
 #

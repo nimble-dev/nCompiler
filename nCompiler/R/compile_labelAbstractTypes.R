@@ -1347,13 +1347,20 @@ inLabelAbstractTypesEnv(
     valArg(argName = 'nrow', maxDim = 0, missingAllowed = TRUE)
     valArg(argName = 'ncol', maxDim = 0, missingAllowed = TRUE)
     
-    # base::diag() always returns matrices with double entries
     returnType <- 'double'
     
-    # output will always be a symbolBasic type as it is understood today, i.e., 
-    # a dense matrix.  a sparse diagonal matrix is created via the nDiagonal 
-    # operator, which adds nCompiler support for Matrix::Diagonal.
-    code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    if(code$name == 'nDiag') {
+      # output will be a symbolBasic type, representing a dense matrix
+      code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    } else if(code$name == 'nDiagonal') {
+      # output will be a sparse matrix
+      code$type <- symbolSparse$new(type = returnType, nDim = 2)
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code, paste('Not sure what symbol type should be returned for', 
+                    code$name)
+      ))
+    }
     
     invisible(inserts)
   }
