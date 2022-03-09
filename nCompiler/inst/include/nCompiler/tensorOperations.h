@@ -219,6 +219,36 @@ struct IsSparseMatrix<
 > { };
 
 /**
+ * Template meta programming check to see if Class is an Eigen::SparseVector
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename HasScalarType = int>
+struct IsSparseVector : std::false_type { };
+
+template<typename Class>
+struct IsSparseVector<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
+    Eigen::SparseVector<typename Eigen::internal::traits<Class>::Scalar>,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is a sparse Eigen object
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseType : std::conditional<
+    IsSparseMatrix<Class>::value || IsSparseVector<Class>::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
  * Template meta programming check to see if Class is an Eigen::Tensor type.
  *
  * Implementation strategy uses partial specialization with SFINAE in case type
@@ -252,7 +282,7 @@ std::is_base_of<
  */
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
-    IsSparseMatrix<Class>::value || IsTensor<Class>::value ||
+    IsSparseType<Class>::value || IsTensor<Class>::value ||
     IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
     std::true_type,
     std::false_type
@@ -310,6 +340,20 @@ struct IsEvaluatedType : std::conditional<
  constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
    HasNumDimensionsN() {
      return N == 2;  // matrices are inherently 2-dimensional
+   }
+
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to Eigen::SparseVector by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<IsSparseVector<Class>::value, bool>::type
+   HasNumDimensionsN() {
+     return N == 1;  // vectors are inherently 1-dimensional
    }
 
 /**
@@ -475,9 +519,9 @@ Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
  * @tparam Scalar (primitive) type for matrix entries
  */
  template<typename Scalar>
- Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
-     return x;
- }
+Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
+    return x;
+}
 
  /**
  * Constant "passthrough" for a const Eigen::SparseMatrix object
@@ -1087,19 +1131,23 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(xmap.rows(), ymap.cols());
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap * ymap;
+    ResultType res(xmap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = xmap * ymap;
     return res;
 }
 
@@ -1117,19 +1165,23 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap.transpose() * ymap;
+    ResultType res(1, 1);
+    // map and multiply!
+    matmap(res) = xmap.transpose() * ymap;
     return res;
 }
 
@@ -1151,9 +1203,14 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr,1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
@@ -1162,16 +1219,12 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     auto ymap = matmap(yeval);
     // initialize output
     bool as_col_vec = xmap.cols() > 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        xmap.rows() ,
-        as_col_vec ? 1 : ymap.rows()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(xmap.rows(), as_col_vec ? 1 : ymap.rows());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap * ymap.transpose();
+        matmap(res) = xmap * ymap.transpose();
     }
     return res;
 }
@@ -1194,9 +1247,14 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
@@ -1205,16 +1263,12 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     auto ymap = matmap(yeval);
     // initialize and map output
     bool as_col_vec = ymap.rows() == 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        as_col_vec ? xmap.rows() : 1,
-        ymap.cols()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(as_col_vec ? xmap.rows() : 1, ymap.cols());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap.transpose() * ymap;
+        matmap(res) = xmap.transpose() * ymap;
     }
     return res;
 }

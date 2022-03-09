@@ -36,6 +36,12 @@ nMultSM <- nFunction(
   returnType = 'numericMatrix'
 )
 
+nMultSS <- nFunction(
+  fun = mmult,
+  argTypes = list(x = 'nSparseMatrix', y = 'nSparseMatrix'),
+  returnType = 'nSparseMatrix'
+)
+
 nMultVS <- nFunction(
   fun = mmult,
   argTypes = list(x = 'numericVector', y = 'nSparseMatrix'),
@@ -51,6 +57,7 @@ nMultSV <- nFunction(
 # compiled functions
 cMultMS <- nCompile(nMultMS)
 cMultSM <- nCompile(nMultSM)
+cMultSS <- nCompile(nMultSS)
 cMultVS <- nCompile(nMultVS)
 cMultSV <- nCompile(nMultSV)
 cAddMultMMS <- nCompile(nAddMultMMS)
@@ -103,6 +110,10 @@ expect_identical(
 expect_identical(
   unname(as.matrix(Xsparse %*% Ydense)), 
   cMultSM(x = Xsparse, y = Ydense)
+)
+expect_identical(
+  Xsparse %*% Ysparse, 
+  cMultSS(x = Xsparse, y = Ysparse)
 )
 expect_identical(
   unname(as.matrix(Xdense[1:n] %*% Ysparse)), 

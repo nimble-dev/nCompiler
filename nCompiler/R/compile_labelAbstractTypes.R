@@ -1129,11 +1129,12 @@ inLabelAbstractTypesEnv(
     # important b/c matrix multiplication could be used to implement an outer 
     # product between two input vectors, which returns a matrix
     resDim <- 2
-    # TODO: double check the assumption that output will always be a 
-    # symbolBasic type as it is understood today.  Is a Vector always a dense 
-    # vector?  Or do we really need a separate handler for vectors stored in 
-    # different datastructures, such as SparseVectors, hashmaps, or lists?
-    code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    # return a dense object if any arguments are dense, o/w return sparse
+    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse')))) {
+      code$type <- symbolSparse$new(nDim = resDim, type = returnType)
+    } else {
+      code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    }
     invisible(inserts)
   }
 )
