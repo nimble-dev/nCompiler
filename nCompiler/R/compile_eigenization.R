@@ -854,15 +854,11 @@ inEigenizeEnv(
         }
         # generated c++ code requires static_cast to assign to tensor output
         if(!DiagAsAssign) {
+          # StaticCast wraps the original argument, will get c++ type from
+          # it's type member during code generation
           e <- wrapExprClassOperator(code = code, funName = 'StaticCast', 
                                      isName = FALSE, isCall = TRUE, 
-                                     isAssign = FALSE)
-          # StaticCast will get c++ type from code$type during code generation
-          cast_type <- exprClass$new(
-            isName = FALSE, isCall = FALSE, isAssign = FALSE,
-            type = code$type, name = 'cppType'
-          )
-          insertArg(expr = e, ID = 2, value = cast_type)
+                                     isAssign = FALSE, type = code$type)
         }
         
         return(invisible(NULL)) # no further action necessary for eigenization

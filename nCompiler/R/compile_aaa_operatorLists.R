@@ -338,7 +338,7 @@ assignOperatorDef(
 assignOperatorDef(
   'StaticCast',
   list(
-    help = 'StaticCast(A, type) is for static_cast<type>(A).',
+    help = 'StaticCast(A) is for static_cast<code$type>(A).',
     cppOutput = list(
       handler = 'StaticCast'
     )
