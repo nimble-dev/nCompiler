@@ -839,10 +839,29 @@ inEigenizeEnv(
   
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     
-    # handle "diag(x)" when x is a matrix and goal is to extract diagonal
+    # handle "diag(x)" when x is a matrix and goal is to set or extract diagonal
     if(length(code$args) == 1) {
       if(code$args[[1]]$type$nDim == 2) {
-        return(invisible(NULL)) # no action necessary for eigenization
+        # default assumption is that "diag" is being used to extract diagonal
+        DiagAsAssign <- FALSE
+        # "diag" is being used as assignment if nDiag is LHS of "<-" caller
+        if(!is.null(code$caller)) {
+          if(code$caller$isAssign) {
+            if(code$callerArgID == 1) {
+              DiagAsAssign <- TRUE
+            }
+          }
+        }
+        # generated c++ code requires static_cast to assign to tensor output
+        if(!DiagAsAssign) {
+          # StaticCast wraps the original argument, will get c++ type from
+          # it's type member during code generation
+          e <- wrapExprClassOperator(code = code, funName = 'StaticCast', 
+                                     isName = FALSE, isCall = TRUE, 
+                                     isAssign = FALSE, type = code$type)
+        }
+        
+        return(invisible(NULL)) # no further action necessary for eigenization
       }
     }
     

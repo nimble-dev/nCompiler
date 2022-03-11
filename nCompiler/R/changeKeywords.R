@@ -16,6 +16,8 @@ nKeyWords <- list(copy = 'nCopy',
                   seq = 'nSeq',
                   eigen = 'nEigen',
                   diag = 'nDiag',
+                  Diagonal = 'nDiagonal', # mirror Matrix::Diagonal to 
+                                          # create sparse matrices
                   '%*%' = 'nMul',
                   svd = 'nSvd',
                   chol = 'nChol',

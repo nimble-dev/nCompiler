@@ -205,11 +205,48 @@ struct IsSparseCholesky : std::is_base_of<
  *
  * @tparam Class type to inspect
  */
+template<typename Class,
+         typename HasScalarType = int>
+struct IsSparseMatrix : std::false_type { };
+
 template<typename Class>
-struct IsSparseMatrix : std::is_base_of<
+struct IsSparseMatrix<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
     Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
     Class
 > { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::SparseVector
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename HasScalarType = int>
+struct IsSparseVector : std::false_type { };
+
+template<typename Class>
+struct IsSparseVector<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
+    Eigen::SparseVector<typename Eigen::internal::traits<Class>::Scalar>,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is a sparse Eigen object
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseType : std::conditional<
+    IsSparseMatrix<Class>::value || IsSparseVector<Class>::value,
+    std::true_type,
+    std::false_type
+>::type { };
 
 /**
  * Template meta programming check to see if Class is an Eigen::Tensor type.
@@ -222,14 +259,14 @@ struct IsSparseMatrix : std::is_base_of<
  * @tparam Class type to inspect
  */
 template<typename Class,
-         typename Scalar = typename Class::Scalar,
+         typename HasScalarType = int,
          typename HasNumDimensionsMember = int>
 struct IsTensor : std::false_type { };
 
 // partial specialization
 template<typename Class>
 struct IsTensor<Class,
-                typename Class::Scalar,
+                decltype(sizeof(Class::Scalar), 0),
                 decltype(Class::NumDimensions, 0)> :
 std::is_base_of<
   Eigen::Tensor<typename Class::Scalar, Class::NumDimensions>,
@@ -245,8 +282,8 @@ std::is_base_of<
  */
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
-    IsSparseMatrix<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value,
+    IsSparseType<Class>::value || IsTensor<Class>::value ||
+    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
     std::true_type,
     std::false_type
 >::type { };
@@ -268,11 +305,10 @@ struct IsEvaluatedType : std::conditional<
  */
  template<typename Class>
  struct IsTensorExpression : std::conditional<
-     IsEvaluatedType<Class> :: value,
+     IsEvaluatedType<Class>::value,
      std::false_type,
      std::true_type
  >:: type { };
-
 
  /**
   * Returns true if template Class has N dimensions
@@ -304,6 +340,20 @@ struct IsEvaluatedType : std::conditional<
  constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
    HasNumDimensionsN() {
      return N == 2;  // matrices are inherently 2-dimensional
+   }
+
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to Eigen::SparseVector by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<IsSparseVector<Class>::value, bool>::type
+   HasNumDimensionsN() {
+     return N == 1;  // vectors are inherently 1-dimensional
    }
 
 /**
@@ -469,9 +519,9 @@ Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
  * @tparam Scalar (primitive) type for matrix entries
  */
  template<typename Scalar>
- Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
-     return x;
- }
+Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
+    return x;
+}
 
  /**
  * Constant "passthrough" for a const Eigen::SparseMatrix object
@@ -668,65 +718,280 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
     return res;
  }
 
-/**
- * Extract the primary diagonal from an Eigen::Tensor object, or derived from
- * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
+ /**
+ * Generate a Sparse matrix with constant diagonal.  Uses SFINAE to restrict
+ * usage to template arguments Scalar, which are a basic numeric type.
  *
- * Uses SFINAE to restrict input to a non-evaluated type (i.e., an unevaluated
- * Eigen Tensor expression type) or to an Eigen::Tensor type.
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
  *
- * @tparam TensorExpr type for an un/evaluated tensor expression
- * @tparam Scalar (primitive) type for Tensor entries
+ * @param x Constant value for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
  */
-template<
-    typename TensorXpr,
-    typename Scalar = typename TensorXpr::Scalar,
-    typename std::enable_if<
-        IsTensorExpression<TensorXpr>::value || IsTensor<TensorXpr>::value,
-        TensorXpr
-    >::type* = nullptr
->
-Eigen::Tensor<Scalar, 1> nDiag(const TensorXpr &x) {
-    // tensor type associated with TensorXpr input
-    typedef Eigen::Tensor<typename TensorXpr::Scalar,
-                          TensorXpr::NumDimensions> TensorType;
-    // access elements of x without fully evaluating x if a tensor expression
-    Eigen::TensorRef<TensorType> ref(x);
-    // determine dimensions of x, and size of main diagonal
-    auto xDim = ref.dimensions();
-    auto nDiag = *(std::min_element(xDim.begin(), xDim.end()));
-    // initialize and fill output
-    Eigen::Tensor<Scalar, 1> res(nDiag);
-    Scalar *diagIt = res.data();
-    Scalar *diagEnd = diagIt + nDiag;
-    auto indexEnd = xDim.end();
-    unsigned long i = 0;
-    for(; diagIt != diagEnd; ++diagIt) {
-        for(auto index = xDim.begin(); index != indexEnd; ++index)
-            *index = i;
-        *diagIt = ref.coeff(xDim);
-        ++i;
+ template<
+   typename Scalar,
+   typename Index,
+   typename std::enable_if<
+     std::is_arithmetic<Scalar>::value
+   >::type* = nullptr
+ >
+ Eigen::SparseMatrix<Scalar> nDiagonal(Scalar x, Index nrow, Index ncol) {
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = x;
     }
     return res;
-}
+ }
 
-template<typename Scalar>
-Eigen::Tensor<Scalar, 1> nDiag(const Eigen::SparseMatrix<Scalar> &x) {
-    Eigen::Tensor<Scalar, 1> res(x.rows());
-    auto diagmap = matmap(res);
-    diagmap = x.diagonal();
-    return(res);
-}
-
-template<
+ /**
+ * Generate a Sparse matrix with non-constant diagonal
+ *
+ * @tparam Xpr Eigen::Tensor or Tensor expression type with diagonal entries
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
+ *
+ * @param x Vector of values for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
+ */
+ template<
     typename Xpr,
+    typename Index,
+    typename Scalar = typename Xpr::Scalar,
     typename std::enable_if<
-        IsSparseCholesky<Xpr>::value,
+        (IsTensor<Xpr>::value || IsTensorExpression<Xpr>::value) &&
+        HasNumDimensionsN<Xpr, 1>(),
         Xpr
     >::type* = nullptr
 >
-Eigen::Tensor<double, 1> nDiag(const Xpr &x) {
-    return nDiag(x.R);
+Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
+    // evaluate input if needed
+    auto xEval = eval(x);
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    if(x.size() != nEntries) {
+        throw std::range_error(
+            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+        );
+    }
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = xEval(i);
+    }
+    return res;
+ }
+
+ /**
+  * DiagIO is a templated class that uses partial specialization and
+  * SFINAE to implement a family of specialized template classes facilitating
+  * assignment and extraction of diagonal entries for object types that
+  * nCompiler uses to store matrix-like data.  For example, I/O is supported for
+  * Eigen::Tensor<Scalar, 2> types, Eigen Tensor expressions of such objects,
+  * Eigen::SparseMatrix types, and others.
+  *
+  * The design goal is that the target object will be wrapped by a specialized
+  * DiagIO class that uses conversion operators and overloaded
+  * assignment operators to provide additional functionality (i.e., assignment
+  * and extraction of diagonal entries) in a way that is compatible with
+  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler would
+  * need to perform additional, possibly complex, modification of an nFunction's
+  * AST in order to change R-like syntax into Eigen-like syntax.
+  *
+  * @tparam xType The type of the target object to be manipulated
+  * @tparam Enable template parameter used by SFINAE to allow the compiler to
+  *   select a partially specialized class that will have appropriate
+  *   syntax/method implementations for manipulating objects of type xType
+  */
+ template<typename xType, typename Enable = void>
+ class DiagIO { };
+
+ /**
+  * Partial specialization of DiagIO designed to work with
+  * Eigen::Tensor<Scalar, 2> objects or Eigen Tensor expressions of those same
+  * types of objects.
+  *
+  * @tparam xType an Eigen::Tensor<Scalar, 2> type, or Expression of Tensor
+  *   objects with 2 dimensions.
+  */
+ template<typename xType>
+ class DiagIO<
+    xType,
+    typename std::enable_if<
+        (IsTensorExpression<xType>::value || IsTensor<xType>::value) &&
+        HasNumDimensionsN<xType, 2>(),
+        void
+    >::type
+ > {
+
+    private:
+
+        // wrapped object
+        xType &x;
+
+        // data storage type
+        typedef typename xType::Scalar Scalar;
+        // tensor type associated with wrapped object
+        typedef Eigen::Tensor<Scalar, xType::NumDimensions> TensorType;
+        // type associate with tensor indices and coordinate objects
+        typedef typename Eigen::TensorRef<TensorType>::Index Index;
+        typedef typename Eigen::TensorRef<TensorType>::Dimensions Dimensions;
+
+        // access elements of x without fully evaluating x if a tensor object
+        Eigen::TensorRef<TensorType> xref;
+        // coordinate object to access elements of x
+        Dimensions xcoord;
+        // number of elements in main diagonal
+        Index nDiag;
+
+        /**
+         * Point coordinate object to the i^th diagonal element of wrapped obj.
+         */
+        Dimensions& diagElem(Index i) {
+            auto indexEnd = xcoord.end();
+            for(auto val = xcoord.begin(); val != indexEnd; ++val)
+                *val = i;
+            return xcoord;
+        }
+
+    public:
+
+        explicit DiagIO(xType & tgt) : x(tgt), xref(x),
+            xcoord(xref.dimensions()),
+            nDiag(*(std::min_element(xcoord.begin(), xcoord.end()))) { };
+
+        /**
+         * replace diagonal of wrapped object with contents of a tensor
+         */
+         template<
+             typename Xpr,
+             typename std::enable_if<
+                 (IsTensorExpression<Xpr>::value || IsTensor<Xpr>::value) &&
+                 HasNumDimensionsN<Xpr, 1>(),
+                 Xpr
+             >::type* = nullptr
+         >
+         DiagIO& operator=(const Xpr& v) {
+             auto veval = eval(v);
+             if(veval.size() != nDiag) {
+                 throw std::range_error(
+                     "nCompiler::DiagIO - Replacement diagonal entry vector length does not match matrix size"
+                 );
+             }
+             Scalar *vScalar = veval.data();
+             for(auto i = 0; i < nDiag; ++i)
+                 xref.coeffRef(diagElem(i)) = *(vScalar++);
+            return *this;
+         }
+
+        /**
+         * replace diagonal of wrapped object with a constant value
+         */
+        DiagIO& operator=(const Scalar& cst) {
+            for(auto i = 0; i < nDiag; ++i)
+                xref.coeffRef(diagElem(i)) = cst;
+            return *this;
+        }
+
+        /**
+         * use explicit conversion to extract diagonal from wrapped object
+         */
+        explicit operator Eigen::Tensor<Scalar, 1> ()  {
+            Eigen::Tensor<Scalar, 1> res(nDiag);
+            Scalar *diagIt = res.data();
+            for(auto i = 0; i < nDiag; ++i)
+                *(diagIt++) = xref.coeff(diagElem(i));
+            return res;
+        }
+};
+
+template<typename xType>
+ class DiagIO<
+    xType,
+    typename std::enable_if<
+        IsSparseMatrix<xType>::value,
+        void
+    >::type
+ > {
+
+    private:
+
+        // wrapped object
+        xType &x;
+
+        // data storage type
+        typedef typename xType::Scalar Scalar;
+        // type associate with tensor indices and coordinate objects
+        typedef typename xType::StorageIndex StorageIndex;
+
+        // number of elements in main diagonal
+        StorageIndex nDiag;
+
+    public:
+
+        explicit DiagIO(xType & tgt) : x(tgt),
+            nDiag(std::min(x.rows(), x.cols())) { };
+
+        /**
+         * replace diagonal of wrapped object with contents of a tensor
+         */
+         template<
+             typename Xpr,
+             typename std::enable_if<
+                 (IsTensorExpression<Xpr>::value || IsTensor<Xpr>::value) &&
+                 HasNumDimensionsN<Xpr, 1>(),
+                 Xpr
+             >::type* = nullptr
+         >
+         DiagIO& operator=(const Xpr& v) {
+             auto veval = eval(v);
+             if(veval.size() != nDiag) {
+                 throw std::range_error(
+                     "nCompiler::DiagIO - Replacement diagonal entry vector length does not match matrix size"
+                 );
+             }
+             Scalar *vScalar = veval.data();
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = *(vScalar++);
+            return *this;
+         }
+
+        /**
+         * replace diagonal of wrapped object with a constant value
+         */
+         DiagIO& operator=(const Scalar& cst) {
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = cst;
+             return *this;
+         }
+
+        /**
+        * explicit conversion to extract diagonal from an Eigen::SparseMatrix
+        */
+        explicit operator Eigen::Tensor<Scalar, 1> ()  {
+         Eigen::Tensor<Scalar, 1> res(x.rows());
+         auto diagmap = matmap(res);
+         diagmap = x.diagonal();
+         return(res);
+     }
+};
+
+/**
+ * Pass assignment and extraction of diagonal entries to instantiations of a
+ * partial specialization of the template class DiagIO.  SFINAE will determine
+ * which partial specialization to use during compilation.
+ */
+template<typename xType>
+auto nDiag(xType &x) -> decltype(
+    DiagIO<xType>(x)
+) {
+    return DiagIO<xType>(x);
 }
 
 /**
@@ -866,19 +1131,23 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(xmap.rows(), ymap.cols());
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap * ymap;
+    ResultType res(xmap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = xmap * ymap;
     return res;
 }
 
@@ -896,19 +1165,23 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap.transpose() * ymap;
+    ResultType res(1, 1);
+    // map and multiply!
+    matmap(res) = xmap.transpose() * ymap;
     return res;
 }
 
@@ -930,9 +1203,14 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr,1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
@@ -941,16 +1219,12 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     auto ymap = matmap(yeval);
     // initialize output
     bool as_col_vec = xmap.cols() > 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        xmap.rows() ,
-        as_col_vec ? 1 : ymap.rows()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(xmap.rows(), as_col_vec ? 1 : ymap.rows());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap * ymap.transpose();
+        matmap(res) = xmap * ymap.transpose();
     }
     return res;
 }
@@ -973,9 +1247,14 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
@@ -984,16 +1263,12 @@ Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
     auto ymap = matmap(yeval);
     // initialize and map output
     bool as_col_vec = ymap.rows() == 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        as_col_vec ? xmap.rows() : 1,
-        ymap.cols()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(as_col_vec ? xmap.rows() : 1, ymap.cols());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap.transpose() * ymap;
+        matmap(res) = xmap.transpose() * ymap;
     }
     return res;
 }
