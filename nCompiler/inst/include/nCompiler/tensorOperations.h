@@ -211,8 +211,178 @@ TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
 TENSOR_SPMAT_OP(||, nCompiler::logical_or)
 TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
+// forward declaration of nCompiler struct to store Sparse Chol. decompositions
+class SparseCholesky;
+
 /**
- * Implicitly convert an arbitrary input to an Eigen::Tensor object, as needed
+ * Template meta programming check to see if Class is an Eigen::SparseCholesky
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseCholesky : std::is_base_of<
+    SparseCholesky,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::SparseMatrix
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename HasScalarType = int>
+struct IsSparseMatrix : std::false_type { };
+
+template<typename Class>
+struct IsSparseMatrix<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
+    Eigen::SparseMatrix<typename Eigen::internal::traits<Class>::Scalar>,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::SparseVector
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename HasScalarType = int>
+struct IsSparseVector : std::false_type { };
+
+template<typename Class>
+struct IsSparseVector<
+    Class,
+    decltype(sizeof(typename Eigen::internal::traits<Class>::Scalar), 0)
+> : std::is_base_of<
+    Eigen::SparseVector<typename Eigen::internal::traits<Class>::Scalar>,
+    Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is a sparse Eigen object
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsSparseType : std::conditional<
+    IsSparseMatrix<Class>::value || IsSparseVector<Class>::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::Tensor type.
+ *
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not have a member named NumDimensions.  SFINAE is used because
+ * Eigen::Tensor is an incomplete type, requiring a scalar type and number of
+ * number of dimensions, which may in general be arbitrary.
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class,
+         typename HasScalarType = int,
+         typename HasNumDimensionsMember = int>
+struct IsTensor : std::false_type { };
+
+// partial specialization
+template<typename Class>
+struct IsTensor<Class,
+                decltype(sizeof(Class::Scalar), 0),
+                decltype(Class::NumDimensions, 0)> :
+std::is_base_of<
+  Eigen::Tensor<typename Class::Scalar, Class::NumDimensions>,
+  Class
+> { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen object for which
+ * coefficients are immediately accessible, unlike unevaluated Tensor
+ * operations.
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsEvaluatedType : std::conditional<
+    IsSparseType<Class>::value || IsTensor<Class>::value ||
+    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
+ * Template meta programming check to see if Class is an unevaluated Eigen
+ * Tensor expression, such as the result of operations like
+ * "Eigen::Tensor + Eigen::Tensor".
+ *
+ * Unevaluated Eigen Tensor expressions are difficult to explicitly identify
+ * in template meta programming because unevaluated expressions are template
+ * classes which are specialized according to the arguments of the operators.
+ * As a result, it is difficult to design a meta programming function that
+ * checks Class against explicit Eigen types that represent Tensor expressions.
+ * Instead, we deduce that Class is an unevaluated Tensor expression if Class
+ * does not match a known, evaluated type used with nCompiler.
+ *
+ * @tparam Class type to inspect
+ */
+ template<typename Class>
+ struct IsTensorExpression : std::conditional<
+     IsEvaluatedType<Class>::value,
+     std::false_type,
+     std::true_type
+ >:: type { };
+
+ /**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, implicitly restricted to Eigen::Tensor or
+  *   TensorExpression types by SFINAE by checking for a NumDimensions member
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<
+   IsTensorExpression<Class>::value || IsTensor<Class>::value,
+   bool
+ >::type
+   HasNumDimensionsN() {
+     return N == Class::NumDimensions;
+   }
+
+ /**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to Eigen::SparseMatrix by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<IsSparseMatrix<Class>::value, bool>::type
+   HasNumDimensionsN() {
+     return N == 2;  // matrices are inherently 2-dimensional
+   }
+
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to Eigen::SparseVector by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+ template<typename Class, int N>
+ constexpr typename std::enable_if<IsSparseVector<Class>::value, bool>::type
+   HasNumDimensionsN() {
+     return N == 1;  // vectors are inherently 1-dimensional
+   }
+
+/**
+ * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
  * The compiler uses implicit conversion to decide how to convert the TensorXpr
  * input x to an Eigen::Tensor<Scalar, NumDimensions> object. Naturally, the
@@ -220,24 +390,22 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
  * Tensor's entries.
  *
  * Uses SFINAE to restrict the template function (nominally) to only work with
- * Tensor expression inputs vs. with evaluated, concrete Eigen::Tensor objects.
+ * Tensor expression inputs vs. with evaluated, concrete Eigen::Tensor objects
+ * and other concrete types.
  *
- * If the input is already an Eigen::Tensor object, the desired behavior is to
- * return a reference to the object (implemented in an overloaded function)
- * because the input is already an Eigen::Tensor object, which is the desired
- * output class.  If we were to call this function on an Eigen::Tensor object
- * (i.e., if SFINAE restriction is removed), it would only consume memory and
- * time by creating a copy of an otherwise reasonable input.
+ * If the input is already an Eigen::Tensor object, for example, the desired
+ * behavior is to return a reference to the object (implemented in an overloaded
+ * function) because the input is already an Eigen::Tensor object, which is the
+ * desired output class.  If we were to call this function on an Eigen::Tensor
+ * object (i.e., if SFINAE restriction is removed), it would only consume memory
+ * and time by creating a copy of an otherwise reasonable input.
  *
  * @tparam TensorXpr Nominally, an unevaluated tensor expression
  */
 template<
     typename TensorXpr,
     typename std::enable_if<
-        !std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
+        IsTensorExpression<TensorXpr>::value,
         TensorXpr
     >::type* = nullptr
 >
@@ -248,10 +416,12 @@ Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions> eval(
 }
 
 /**
- * Return a reference to an Eigen::Tensor object, avoiding copying the input
+ * Return a reference to an Eigen::Tensor object, or concrete Eigen type,
+ * avoiding copying the input
  *
  * Uses SFINAE to restrict the template function to only work with Eigen::Tensor
- * inputs vs. with Tensor expression objects.
+ * inputs and other types with concrete data storage, vs. with Tensor expression
+ * objects.
  *
  * If the input is a Tensor expression object, the desired behavior is to return
  * an Eigen::Tensor object with the results of the evaluated Tensor expression
@@ -261,40 +431,34 @@ Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions> eval(
  * require evaluated inputs, such as wrappers for matrix multiplication and
  * linear solvers.
  *
- * @tparam TensorXpr An Eigen::Tensor object type
+ * @tparam Xpr An Eigen::Tensor or other concrete object type
  */
 template<
-    typename TensorXpr,
+    typename Xpr,
     typename std::enable_if<
-        std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
-        TensorXpr
+    IsEvaluatedType<Xpr>::value,
+        Xpr
     >::type* = nullptr
 >
-TensorXpr& eval(TensorXpr & x) {
+Xpr& eval(Xpr & x) {
     return x;
 }
 
 /**
- * Constant version of eval() with Eigen::Tensor inputs.
+ * Constant version of eval() with Eigen::Tensor and other concrete inputs.
  *
  * See documentation for eval() with Eigen::Tensor inputs for more details.
  *
- * @tparam TensorXpr An Eigen::Tensor object type
+ * @tparam Xpr An Eigen::Tensor or other concrete object type
  */
 template<
-    typename TensorXpr,
+    typename Xpr,
     typename std::enable_if<
-        std::is_base_of<
-            Eigen::Tensor<typename TensorXpr::Scalar, TensorXpr::NumDimensions>,
-            TensorXpr
-        >::value,
-        TensorXpr
+        IsEvaluatedType<Xpr>::value,
+        Xpr
     >::type* = nullptr
 >
-const TensorXpr& eval(const TensorXpr & x) {
+const Xpr& eval(const Xpr & x) {
     return x;
 }
 
@@ -375,6 +539,28 @@ Eigen::Map<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>> matmap(
 }
 
 /**
+ * "Passthrough" for a const Eigen::SparseMatrix object
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ */
+ template<typename Scalar>
+Eigen::SparseMatrix<Scalar>& matmap(Eigen::SparseMatrix<Scalar> & x) {
+    return x;
+}
+
+ /**
+ * Constant "passthrough" for a const Eigen::SparseMatrix object
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ */
+ template<typename Scalar>
+ const Eigen::SparseMatrix<Scalar>& matmap(
+     const Eigen::SparseMatrix<Scalar> & x
+ ) {
+     return x;
+ }
+
+/**
  * Convert an Eigen::Tensor or Tensor expression object (i.e., an object derived
  * from Eigen::TensorBase) to an Eigen::SparseMatrix<Scalar> object.
  *
@@ -387,7 +573,7 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
     // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
     // evaluate input tensor
-    const Eigen::Tensor<Scalar, TensorExpr::NumDimensions> xEval = x;
+    const auto xEval = eval(x);
     // map to matrix, sparsify and return
     auto xDim = xEval.dimensions();
     Eigen::Map<const MatrixType> xmat(xEval.data(), xDim[0], xDim[1]);
@@ -432,6 +618,18 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     return res;
 }
 
+template<typename SparseCholType = SparseCholesky, typename Scalar>
+SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(x);
+    SparseCholType res;
+    res.R = llt.matrixU();
+    Eigen::Tensor<int, 1> P(x.rows());
+    auto pmap = matmap(P);
+    pmap = llt.permutationP().indices();
+    res.P = P;
+    return res;
+}
+
 /**
  * Compute the Cholesky decomposition for a symmetric matrix stored as an
  * Eigen::Tensor<Scalar, 2> object, or derived from a Tensor expression object
@@ -443,8 +641,15 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
  * @tparam TensorExpr An Eigen::Tensor or tensor expression object type
  * @tparam Scalar (primitive) type for Tensor entries
  */
-template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
-Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
+template<
+    typename TensorExpr,
+    typename Scalar = typename TensorExpr::Scalar,
+    typename std::enable_if<
+        IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,
+        TensorExpr
+    >::type* = nullptr
+>
+Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
     // evaluate arguments, if necessary
     const auto & x_eval = eval(x);
     // Eigen::Matrix class compatible with function arguments
@@ -463,32 +668,355 @@ Eigen::Tensor<Scalar, 2> chol(const TensorExpr &x) {
 }
 
 /**
- * Extract the primary diagonal from an Eigen::Tensor object, or derived from
- * a Tensor expression object (i.e., an object derived from Eigen::TensorBase).
+ * Generate a rank-2 Eigen::Tensor object (i.e., a matrix) with constant
+ * diagonal.  Uses SFINAE to restrict usage to template arguments Scalar, which
+ * are a basic numeric type.
  *
- * @tparam TensorExpr type for an unevaluated tensor expression
  * @tparam Scalar (primitive) type for Tensor entries
+ * @tparam Index (primitive) type for Tensor dimension values
+ *
+ * @param x Constant value for diagonal entries
+ * @param nrow Number of rows for Tensor output
+ * @param ncol Number of columns for Tensor output
  */
-template<typename TensorExpr, typename Scalar = typename TensorExpr::Scalar>
-Eigen::Tensor<Scalar, 1> nDiag(const TensorExpr &x) {
-    // access elements of x without fully evaluating x if a tensor expression
-    Eigen::TensorRef<TensorExpr> ref(x);
-    // determine dimensions of x, and size of main diagonal
-    auto xDim = ref.dimensions();
-    auto nDiag = *(std::min_element(xDim.begin(), xDim.end()));
-    // initialize and fill output
-    Eigen::Tensor<Scalar, 1> res(nDiag);
-    Scalar *diagIt = res.data();
-    Scalar *diagEnd = diagIt + nDiag;
-    auto indexEnd = xDim.end();
-    unsigned long i = 0;
-    for(; diagIt != diagEnd; ++diagIt) {
-        for(auto index = xDim.begin(); index != indexEnd; ++index)
-            *index = i;
-        *diagIt = ref.coeff(xDim);
-        ++i;
+ template<
+   typename Scalar,
+   typename Index,
+   typename std::enable_if<
+     std::is_arithmetic<Scalar>::value
+   >::type* = nullptr
+ >
+ Eigen::Tensor<Scalar, 2> nDiag(Scalar x, Index nrow, Index ncol) {
+    // initialize output
+    Eigen::Tensor<Scalar, 2> res(nrow, ncol);
+    // zero-initialize tensor contents
+    res.setZero();
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res(i,i) = x;
     }
     return res;
+ }
+
+ /**
+ * Generate a rank-2 Eigen::Tensor object (i.e., a matrix) with non-constant
+ * diagonal
+ *
+ * @tparam Xpr Eigen::Tensor or Tensor expression type with diagonal entries
+ * @tparam Scalar (primitive) type for Tensor entries
+ * @tparam Index (primitive) type for Tensor dimension values
+ *
+ * @param x Vector of values for diagonal entries
+ * @param nrow Number of rows for Tensor output
+ * @param ncol Number of columns for Tensor output
+ */
+ template<
+    typename Xpr,
+    typename Index,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        (IsTensor<Xpr>::value || IsTensorExpression<Xpr>::value) &&
+        HasNumDimensionsN<Xpr, 1>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
+    // evaluate input if needed
+    auto xEval = eval(x);
+    // initialize output
+    Eigen::Tensor<Scalar, 2> res(nrow, ncol);
+    // zero-initialize tensor contents
+    res.setZero();
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    if(x.size() != nEntries) {
+        throw std::range_error(
+            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+        );
+    }
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res(i,i) = xEval(i);
+    }
+    return res;
+ }
+
+ /**
+ * Generate a Sparse matrix with constant diagonal.  Uses SFINAE to restrict
+ * usage to template arguments Scalar, which are a basic numeric type.
+ *
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
+ *
+ * @param x Constant value for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
+ */
+ template<
+   typename Scalar,
+   typename Index,
+   typename std::enable_if<
+     std::is_arithmetic<Scalar>::value
+   >::type* = nullptr
+ >
+ Eigen::SparseMatrix<Scalar> nDiagonal(Scalar x, Index nrow, Index ncol) {
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = x;
+    }
+    return res;
+ }
+
+ /**
+ * Generate a Sparse matrix with non-constant diagonal
+ *
+ * @tparam Xpr Eigen::Tensor or Tensor expression type with diagonal entries
+ * @tparam Scalar (primitive) type for matrix entries
+ * @tparam Index (primitive) type for matrix dimension values
+ *
+ * @param x Vector of values for diagonal entries
+ * @param nrow Number of rows for matrix output
+ * @param ncol Number of columns for matrix output
+ */
+ template<
+    typename Xpr,
+    typename Index,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        (IsTensor<Xpr>::value || IsTensorExpression<Xpr>::value) &&
+        HasNumDimensionsN<Xpr, 1>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
+    // evaluate input if needed
+    auto xEval = eval(x);
+    // initialize output
+    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    // figure out how large the main diagonal is
+    Index nEntries = std::min(nrow, ncol);
+    if(x.size() != nEntries) {
+        throw std::range_error(
+            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+        );
+    }
+    // populate diagonal and return
+    for(Index i = 0; i < nEntries; ++i) {
+        res.coeffRef(i,i) = xEval(i);
+    }
+    return res;
+ }
+
+ /**
+  * DiagIO is a templated class that uses partial specialization and
+  * SFINAE to implement a family of specialized template classes facilitating
+  * assignment and extraction of diagonal entries for object types that
+  * nCompiler uses to store matrix-like data.  For example, I/O is supported for
+  * Eigen::Tensor<Scalar, 2> types, Eigen Tensor expressions of such objects,
+  * Eigen::SparseMatrix types, and others.
+  *
+  * The design goal is that the target object will be wrapped by a specialized
+  * DiagIO class that uses conversion operators and overloaded
+  * assignment operators to provide additional functionality (i.e., assignment
+  * and extraction of diagonal entries) in a way that is compatible with
+  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler would
+  * need to perform additional, possibly complex, modification of an nFunction's
+  * AST in order to change R-like syntax into Eigen-like syntax.
+  *
+  * @tparam xType The type of the target object to be manipulated
+  * @tparam Enable template parameter used by SFINAE to allow the compiler to
+  *   select a partially specialized class that will have appropriate
+  *   syntax/method implementations for manipulating objects of type xType
+  */
+ template<typename xType, typename Enable = void>
+ class DiagIO { };
+
+ /**
+  * Partial specialization of DiagIO designed to work with
+  * Eigen::Tensor<Scalar, 2> objects or Eigen Tensor expressions of those same
+  * types of objects.
+  *
+  * @tparam xType an Eigen::Tensor<Scalar, 2> type, or Expression of Tensor
+  *   objects with 2 dimensions.
+  */
+ template<typename xType>
+ class DiagIO<
+    xType,
+    typename std::enable_if<
+        (IsTensorExpression<xType>::value || IsTensor<xType>::value) &&
+        HasNumDimensionsN<xType, 2>(),
+        void
+    >::type
+ > {
+
+    private:
+
+        // wrapped object
+        xType &x;
+
+        // data storage type
+        typedef typename xType::Scalar Scalar;
+        // tensor type associated with wrapped object
+        typedef Eigen::Tensor<Scalar, xType::NumDimensions> TensorType;
+        // type associate with tensor indices and coordinate objects
+        typedef typename Eigen::TensorRef<TensorType>::Index Index;
+        typedef typename Eigen::TensorRef<TensorType>::Dimensions Dimensions;
+
+        // access elements of x without fully evaluating x if a tensor object
+        Eigen::TensorRef<TensorType> xref;
+        // coordinate object to access elements of x
+        Dimensions xcoord;
+        // number of elements in main diagonal
+        Index nDiag;
+
+        /**
+         * Point coordinate object to the i^th diagonal element of wrapped obj.
+         */
+        Dimensions& diagElem(Index i) {
+            auto indexEnd = xcoord.end();
+            for(auto val = xcoord.begin(); val != indexEnd; ++val)
+                *val = i;
+            return xcoord;
+        }
+
+    public:
+
+        explicit DiagIO(xType & tgt) : x(tgt), xref(x),
+            xcoord(xref.dimensions()),
+            nDiag(*(std::min_element(xcoord.begin(), xcoord.end()))) { };
+
+        /**
+         * replace diagonal of wrapped object with contents of a tensor
+         */
+         template<
+             typename Xpr,
+             typename std::enable_if<
+                 (IsTensorExpression<Xpr>::value || IsTensor<Xpr>::value) &&
+                 HasNumDimensionsN<Xpr, 1>(),
+                 Xpr
+             >::type* = nullptr
+         >
+         DiagIO& operator=(const Xpr& v) {
+             auto veval = eval(v);
+             if(veval.size() != nDiag) {
+                 throw std::range_error(
+                     "nCompiler::DiagIO - Replacement diagonal entry vector length does not match matrix size"
+                 );
+             }
+             Scalar *vScalar = veval.data();
+             for(auto i = 0; i < nDiag; ++i)
+                 xref.coeffRef(diagElem(i)) = *(vScalar++);
+            return *this;
+         }
+
+        /**
+         * replace diagonal of wrapped object with a constant value
+         */
+        DiagIO& operator=(const Scalar& cst) {
+            for(auto i = 0; i < nDiag; ++i)
+                xref.coeffRef(diagElem(i)) = cst;
+            return *this;
+        }
+
+        /**
+         * use explicit conversion to extract diagonal from wrapped object
+         */
+        explicit operator Eigen::Tensor<Scalar, 1> ()  {
+            Eigen::Tensor<Scalar, 1> res(nDiag);
+            Scalar *diagIt = res.data();
+            for(auto i = 0; i < nDiag; ++i)
+                *(diagIt++) = xref.coeff(diagElem(i));
+            return res;
+        }
+};
+
+template<typename xType>
+ class DiagIO<
+    xType,
+    typename std::enable_if<
+        IsSparseMatrix<xType>::value,
+        void
+    >::type
+ > {
+
+    private:
+
+        // wrapped object
+        xType &x;
+
+        // data storage type
+        typedef typename xType::Scalar Scalar;
+        // type associate with tensor indices and coordinate objects
+        typedef typename xType::StorageIndex StorageIndex;
+
+        // number of elements in main diagonal
+        StorageIndex nDiag;
+
+    public:
+
+        explicit DiagIO(xType & tgt) : x(tgt),
+            nDiag(std::min(x.rows(), x.cols())) { };
+
+        /**
+         * replace diagonal of wrapped object with contents of a tensor
+         */
+         template<
+             typename Xpr,
+             typename std::enable_if<
+                 (IsTensorExpression<Xpr>::value || IsTensor<Xpr>::value) &&
+                 HasNumDimensionsN<Xpr, 1>(),
+                 Xpr
+             >::type* = nullptr
+         >
+         DiagIO& operator=(const Xpr& v) {
+             auto veval = eval(v);
+             if(veval.size() != nDiag) {
+                 throw std::range_error(
+                     "nCompiler::DiagIO - Replacement diagonal entry vector length does not match matrix size"
+                 );
+             }
+             Scalar *vScalar = veval.data();
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = *(vScalar++);
+            return *this;
+         }
+
+        /**
+         * replace diagonal of wrapped object with a constant value
+         */
+         DiagIO& operator=(const Scalar& cst) {
+             for(auto i = 0; i < nDiag; ++i)
+                 x.coeffRef(i,i) = cst;
+             return *this;
+         }
+
+        /**
+        * explicit conversion to extract diagonal from an Eigen::SparseMatrix
+        */
+        explicit operator Eigen::Tensor<Scalar, 1> ()  {
+         Eigen::Tensor<Scalar, 1> res(x.rows());
+         auto diagmap = matmap(res);
+         diagmap = x.diagonal();
+         return(res);
+     }
+};
+
+/**
+ * Pass assignment and extraction of diagonal entries to instantiations of a
+ * partial specialization of the template class DiagIO.  SFINAE will determine
+ * which partial specialization to use during compilation.
+ */
+template<typename xType>
+auto nDiag(xType &x) -> decltype(
+    DiagIO<xType>(x)
+) {
+    return DiagIO<xType>(x);
 }
 
 /**
@@ -626,25 +1154,25 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 2) &&
-        (Ypr::NumDimensions == 2),
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // initialize output
-    auto xdim = xeval.dimensions();
-    auto ydim = yeval.dimensions();
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(xdim[0], ydim[1]);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap * ymap;
+    ResultType res(xmap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = xmap * ymap;
     return res;
 }
 
@@ -660,23 +1188,25 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 1) &&
-        (Ypr::NumDimensions == 1),
+        HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // initialize output
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(1, 1);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs and initialize output
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    auto resmap = matmap(res);
-    // multiply!
-    resmap = xmap.transpose() * ymap;
+    ResultType res(1, 1);
+    // map and multiply!
+    matmap(res) = xmap.transpose() * ymap;
     return res;
 }
 
@@ -696,30 +1226,30 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 2) &&
-        (Ypr::NumDimensions == 1),
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr,1>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
-    // initialize and map output
+    // initialize output
     bool as_col_vec = xmap.cols() > 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        xmap.rows() ,
-        as_col_vec ? 1 : ymap.rows()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(xmap.rows(), as_col_vec ? 1 : ymap.rows());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap * ymap.transpose();
+        matmap(res) = xmap * ymap.transpose();
     }
     return res;
 }
@@ -740,30 +1270,30 @@ template<
     typename Xpr,
     typename Ypr,
     typename std::enable_if<
-        (Xpr::NumDimensions == 1) &&
-        (Ypr::NumDimensions == 2),
+        HasNumDimensionsN<Xpr, 1>() && HasNumDimensionsN<Ypr, 2>(),
         Xpr
-    >::type* = nullptr
+    >::type* = nullptr,
+    typename ResultType = typename std::conditional<
+        IsSparseType<Xpr>::value && IsSparseType<Ypr>::value,
+        Eigen::SparseMatrix<typename Xpr::Scalar>,
+        Eigen::Tensor<typename Xpr::Scalar, 2>
+    >::type
 >
-Eigen::Tensor<typename Xpr::Scalar, 2> nMul(const Xpr & x, const Ypr & y) {
+ResultType nMul(const Xpr & x, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & xeval = eval(x);
     const auto & yeval = eval(y);
-    // map tensor objects to Eigen::Matrix types
+    // map inputs
     auto xmap = matmap(xeval);
     auto ymap = matmap(yeval);
     // initialize and map output
     bool as_col_vec = ymap.rows() == 1;
-    Eigen::Tensor<typename Xpr::Scalar, 2> res(
-        as_col_vec ? xmap.rows() : 1,
-        ymap.cols()
-    );
-    auto resmap = matmap(res);
-    // multiply!
+    ResultType res(as_col_vec ? xmap.rows() : 1, ymap.cols());
+    // map and multiply!
     if(as_col_vec) {
-        resmap = xmap * ymap;
+        matmap(res) = xmap * ymap;
     } else {
-        resmap = xmap.transpose() * ymap;
+        matmap(res) = xmap.transpose() * ymap;
     }
     return res;
 }

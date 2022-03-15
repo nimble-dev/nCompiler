@@ -344,6 +344,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'StaticCast',
+  list(
+    help = 'StaticCast(A) is for static_cast<code$type>(A).',
+    cppOutput = list(
+      handler = 'StaticCast'
+    )
+  )
+)
+
+assignOperatorDef(
   '->method',
   list(
     help = '->method(A, foo, b) is for A->foo(b)',
@@ -723,20 +733,23 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('chol'),
+  c('nChol'),
   list(
     labelAbstractTypes = list(
-      handler = 'RecurseAndLabel',
+      handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
     )
   )
 )
 
 assignOperatorDef(
-  c('nDiag'),
+  c('nDiag', 'nDiagonal'),
   list(
     labelAbstractTypes = list(
-      handler = 'VectorReturnType'
+      handler = 'Diag'
+    ),
+    eigenImpl = list(
+      handler = 'Diag'
     )
   )
 )

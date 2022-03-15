@@ -364,6 +364,24 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nChol <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    if(inherits(argType, 'symbolSparse')) {
+      # Cholesky factor of a sparse matrix is a collection of matrices
+      # TODO: do we need to specify arguments for the initializer?
+      code$type <- symbolSparseCholesky$new(name = code$name)
+    } else {
+      # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
+      type <- setReturnType(handlingInfo, argType$type)
+      nDim <- setReturn_nDim(handlingInfo, argType$nDim)
+      code$type <- symbolBasic$new(type = type, nDim = nDim)
+    }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   InitData <- function(code, symTab, auxEnv, handlingInfo) {
     ## TODO: handle 'init' arg
     ## defaults:
@@ -1000,6 +1018,10 @@ inLabelAbstractTypesEnv(
       setArg(code, 'drop', drop_arg, add = TRUE)
     }
 
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  this is handling for the
+    # subsetting operator, [], but will it always be subsetted to a symbolBasic
+    # type?
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }
@@ -1103,6 +1125,10 @@ inLabelAbstractTypesEnv(
   VectorReturnType <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    # TODO: double check the assumption that output will always be a 
+    # symbolBasic type as it is understood today.  Is a Vector always a dense 
+    # vector?  Or do we really need a separate handler for vectors stored in 
+    # different datastructures, such as SparseVectors, hashmaps, or lists?
     code$type <- symbolBasic$new(nDim = 1, type = returnType)
     invisible(inserts)
   }
@@ -1131,11 +1157,12 @@ inLabelAbstractTypesEnv(
     # important b/c matrix multiplication could be used to implement an outer 
     # product between two input vectors, which returns a matrix
     resDim <- 2
-    # TODO: double check the assumption that output will always be a 
-    # symbolBasic type as it is understood today.  Is a Vector always a dense 
-    # vector?  Or do we really need a separate handler for vectors stored in 
-    # different datastructures, such as SparseVectors, hashmaps, or lists?
-    code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    # return a dense object if any arguments are dense, o/w return sparse
+    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse')))) {
+      code$type <- symbolSparse$new(nDim = resDim, type = returnType)
+    } else {
+      code$type <- symbolBasic$new(nDim = resDim, type = returnType)
+    }
     invisible(inserts)
   }
 )
@@ -1252,6 +1279,119 @@ inLabelAbstractTypesEnv(
     # different datastructures, such as SparseVectors, hashmaps, or lists?
     code$type <- symbolBasic$new(nDim = 2, type = returnType)
     invisible(insertions)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  nEigen <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) > 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'trying to eigen decompose an ambiguous input.'
+      ), call. = FALSE)
+    }
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(!inherits(argType, 'symbolSparse')) {
+      browser()
+      code$type <- xxx # TODO: instantiate a new EigenDecomp object
+    } else if(inherits(argType, 'symbolSparse')) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'eigendecompositions not supported for sparse matrices.'
+      ), call. = FALSE)
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to handle input type.'
+      ), call. = FALSE)
+    }
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  Diag <- function(code, symTab, auxEnv, handlingInfo) {
+    
+    # recurse arguments
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    
+    # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
+    if(length(code$args) == 1) {
+      if(code$args[[1]]$type$nDim == 2) {
+        returnType <- code$args[[1]]$type$type
+        code$type <- symbolBasic$new(nDim = 1, type = returnType)
+        return(invisible(inserts))
+      }
+    }
+    
+    #
+    # handle "diag()" when used to create dense matrices
+    #
+    
+    # validate type for argument
+    valArg <- function(argName, maxDim, missingAllowed) {
+      # validate type for argument argName. validation fails if the argument
+      # does not inherit from symbolBasic, or if the argument has nDim > maxDim.  
+      # skips validation if arg is missing and missingAllowed = TRUE
+      
+      # extract argument
+      arg <- code$args[[argName]]
+      
+      # make sure argument exists if required, or skip processing
+      if(missingAllowed == TRUE) {
+        if(is.null(arg)) {
+          return(NULL)
+        }
+      } else if(missingAllowed == FALSE) {
+        if(is.null(arg)) {
+          stop(exprClassProcessingErrorMsg(
+            code,
+            paste('Required argument', argName, 'is missing from function call')
+          ))
+        }
+      }
+      
+      # check inheritance - make sure object has dense storage
+      if(!inherits(arg$type, 'symbolBasic')) {
+        stop(exprClassProcessingErrorMsg(
+          code, paste('Argument', argName, 'must be a symbolBasic type')
+        ))
+      }
+      
+      # check dimensions
+      if(arg$type$nDim > maxDim) {
+        stop(exprClassProcessingErrorMsg(
+          code, paste('Argument', argName, 'must have nDim less than', maxDim)
+        ))
+      }
+      
+      NULL
+    } # valArg
+    
+    # validate arguments
+    valArg(argName = 'x', maxDim = 1, missingAllowed = TRUE)
+    valArg(argName = 'nrow', maxDim = 0, missingAllowed = TRUE)
+    valArg(argName = 'ncol', maxDim = 0, missingAllowed = TRUE)
+    
+    returnType <- 'double'
+    
+    if(code$name == 'nDiag') {
+      # output will be a symbolBasic type, representing a dense matrix
+      code$type <- symbolBasic$new(nDim = 2, type = returnType)
+    } else if(code$name == 'nDiagonal') {
+      # output will be a sparse matrix
+      code$type <- symbolSparse$new(type = returnType, nDim = 2)
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code, paste('Not sure what symbol type should be returned for', 
+                    code$name)
+      ))
+    }
+    
+    invisible(inserts)
   }
 )
 
