@@ -56,6 +56,7 @@ cpp_nClassBaseClass <- R6::R6Class(
         ##                require(RcppEigenAD)
         ##                require(Rcereal)
         self$CPPusings <- c(self$CPPusings,
+                            paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
                             "using namespace Rcpp;",
                             "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
                             "// [[Rcpp::depends(RcppEigenAD)]]",
@@ -86,7 +87,7 @@ cpp_nClassBaseClass <- R6::R6Class(
       ##ncp$cppDef <- .self
       Compiler <<- InputCompiler
         ##genNeededTypes(debugCpp = debugCpp, fromModel = fromModel)
-      cpp_include_nClasses(self, Compiler$symbolTable)
+      cpp_include_needed_nClasses(self, Compiler$symbolTable)
       symbolTable <<- symbolTable2cppSymbolTable(Compiler$symbolTable)
       variableNamesForInterface <<- symbolTable$getSymbolNames()
     },

@@ -13,18 +13,6 @@ call_method <- function(Xptr, name, Sargs) {
     .Call('_nCompiler_call_method', PACKAGE = 'nCompiler', Xptr, name, Sargs)
 }
 
-new_test_predefined <- function() {
-    .Call('_nCompiler_new_test_predefined', PACKAGE = 'nCompiler')
-}
-
-new_nC_derivClass <- function() {
-    .Call('_nCompiler_new_nC_derivClass', PACKAGE = 'nCompiler')
-}
-
-new_EigenDecomp <- function() {
-    .Call('_nCompiler_new_EigenDecomp', PACKAGE = 'nCompiler')
-}
-
 rcpp_hello_world <- function() {
     .Call('_nCompiler_rcpp_hello_world', PACKAGE = 'nCompiler')
 }

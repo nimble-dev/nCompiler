@@ -10,6 +10,7 @@
 #include<memory>
 #include<nCompiler/nCompiler_cereal.h>
 #include<nCompiler/expand_call_method.h>
+#include "shared_ptr_as_wrap.h"
 
 // #include<nCompiler/loadedObjectEnv.h>
 

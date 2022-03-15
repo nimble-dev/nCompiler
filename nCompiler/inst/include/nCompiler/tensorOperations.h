@@ -1,6 +1,31 @@
 #ifndef _NCOMPILER_TENSOR_OPERATIONS
 #define _NCOMPILER_TENSOR_OPERATIONS
 
+#define QUOTEME(A) #A
+#define PREDEFINED_HEADER(PH) QUOTEME(PH.h)
+
+#ifdef PREDEFINED_test_predefined
+#include PREDEFINED_HEADER(PREDEFINED_test_predefined)
+std::shared_ptr<test_predefined> make_test_predefined() {
+  return(std::shared_ptr<test_predefined>(new test_predefined));
+}
+#endif
+
+#ifdef PREDEFINED_derivClass
+#include PREDEFINED_HEADER(PREDEFINED_derivClass)
+std::shared_ptr<derivClass> make_derivClass() {
+  return(std::shared_ptr<derivClass>(new derivClass));
+}
+#endif
+
+#ifdef PREDEFINED_EigenDecomp
+#include PREDEFINED_HEADER(PREDEFINED_EigenDecomp)
+std::shared_ptr<EigenDecomp> make_EigenDecomp() {
+  return(std::shared_ptr<EigenDecomp>(new EigenDecomp));
+}
+#endif
+
+
 /**
  * Generate functors similar to std::binary_function, but where the 
  * return type from operator() is determined automatically.

@@ -43,25 +43,45 @@ nCompile_nClass <- function(NC,
     get_nOption('compilerOptions'),
     control
   )
-  ## Make a new compiler object
-  NC_Compiler <- NC_CompilerClass$new(NC)
-  ## Use the compiler to generate a cppDef
-  NC_Compiler$createCpp(control = controlFull,
-                        sourceObj = NC) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
-  ## Get the cppDef
-  cppDef <- NC_Compiler$cppDef
-  ##
-  ## cppDef$buildSEXPgenerator()
-  if(isTRUE(get_nOption('serialize')))
-    cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
-  if(isTRUE(get_nOption('automaticDerivatives')))
-    cppDef$addADclassContent()
-  # if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
-  #   cppDef$addLoadedObjectEnv()
-  
-  cppDef$addGenericInterface()
-  if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
-    return(NC_Compiler)
+  if(isFALSE(controlFull$generate_predefined) && !isFALSE(NCinternals(NC)$predefined)) {
+    if(!is.character(NCinternals(NC)$predefined))
+      stop("There is a predefined nClass whose predefined field is not character.  It should give the filename base of the predefined nClass.")
+    predefined_filename <-  NCinternals(NC)$predefined
+    regular_filename <-  NC$classname
+    if(identical(predefined_filename, regular_filename))
+      warning(paste0("There is a predefined class whose predefined_filename and regular_filename are both ", 
+                     predefined_filename,". These should be different."))
+    cppContent <- readLines(
+      system.file(
+        file.path("include", "nCompiler", paste0(predefined_filename,".cpp")),
+        package = "nCompiler"))
+    cppDef <- cppMacroCallClass$new(
+      name =  regular_filename,
+      Hpreamble = paste0("#define PREDEFINED_", regular_filename," ", predefined_filename),
+      Hincludes = nCompilerIncludeFile(paste0(predefined_filename, ".h")),
+      cppContent = cppContent
+    )
+  } else {    
+    ## Make a new compiler object
+    NC_Compiler <- NC_CompilerClass$new(NC)
+    ## Use the compiler to generate a cppDef
+    NC_Compiler$createCpp(control = controlFull,
+                          sourceObj = NC) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
+    ## Get the cppDef
+    cppDef <- NC_Compiler$cppDef
+    ##
+    ## cppDef$buildSEXPgenerator()
+    if(isTRUE(get_nOption('serialize')))
+      cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
+    if(isTRUE(get_nOption('automaticDerivatives')))
+      cppDef$addADclassContent()
+    # if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
+    #   cppDef$addLoadedObjectEnv()
+    
+    cppDef$addGenericInterface()
+    if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
+      return(NC_Compiler)
+  }
   filebase <- controlFull$filename
   
   if(is.null(filebase))

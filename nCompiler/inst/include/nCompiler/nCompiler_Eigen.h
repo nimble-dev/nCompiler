@@ -10,19 +10,7 @@
 #include "tensorFlex.h"
 #include "StridedTensorMap.h"
 // Exporters go from SEXP to internal type
-
-// This could be organized in a better place, but it is here for now:
-#include "shared_ptr_as_wrap.h"
-
-#include "typedefs.h"
-#include "setWhich.h"
-#include "repClass.h"
-#include "seqClass.h"
-#include "recyclingRule.h"
-#include "tensorCreation.h"
-#include "tensorOperations.h"
 #include "nCompiler_Rcpp.h"
-#include "cWiseUnary_external.h"
 
 // The following Exporter implements Rcpp::as< Eigen::Tensor<T, nDim> >
 namespace Rcpp {

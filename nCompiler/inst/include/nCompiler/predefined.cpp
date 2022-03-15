@@ -62,7 +62,13 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 SEXP  new_test_predefined (  )  {
 RESET_EIGEN_ERRORS
-return(loadedObjectEnv(new_nCompiler_object<test_predefined>()));
+return CREATE_NEW_NCOMP_OBJECT(test_predefined);
+}
+
+// [[Rcpp::export]]
+void  set_CnClass_env_test_predefined ( SEXP env )  {
+RESET_EIGEN_ERRORS
+SET_CNCLASS_ENV(test_predefined, env);
 }
 
 NCOMPILER_INTERFACE(
@@ -136,7 +142,13 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 SEXP  new_nC_derivClass (  )  {
 RESET_EIGEN_ERRORS
-return(loadedObjectEnv(new_nCompiler_object<nC_derivClass>()));
+return CREATE_NEW_NCOMP_OBJECT(nC_derivClass);
+}
+
+// [[Rcpp::export]]
+void  set_CnClass_env_nC_derivClass ( SEXP env )  {
+RESET_EIGEN_ERRORS
+SET_CNCLASS_ENV(nC_derivClass, env);
 }
 
 NCOMPILER_INTERFACE(
@@ -212,7 +224,13 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 SEXP  new_EigenDecomp (  )  {
 RESET_EIGEN_ERRORS
-return(loadedObjectEnv(new_nCompiler_object<EigenDecomp>()));
+return CREATE_NEW_NCOMP_OBJECT(EigenDecomp);
+}
+
+// [[Rcpp::export]]
+void  set_CnClass_env_EigenDecomp ( SEXP env )  {
+RESET_EIGEN_ERRORS
+SET_CNCLASS_ENV(EigenDecomp, env);
 }
 
 NCOMPILER_INTERFACE(

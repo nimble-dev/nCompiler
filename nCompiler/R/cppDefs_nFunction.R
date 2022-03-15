@@ -38,7 +38,9 @@ cpp_nFunctionClass <- R6::R6Class(
         }
         ## require(RcppEigenAD)
         ## require(Rcereal)
+        # We can put includes here that need to occur after the file's own .h is included.
         self$CPPusings <- c(self$CPPusings,
+                            paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
                             "using namespace Rcpp;",
                             "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
                             "// [[Rcpp::depends(RcppEigenAD)]]",
@@ -95,7 +97,7 @@ cpp_nFunctionClass <- R6::R6Class(
                                   NF_Compiler,
                                   parentST)
       cpp_include_needed_nFunctions(self, NF_Compiler)
-      cpp_include_nClasses(self, NF_Compiler$symbolTable)
+      cpp_include_needed_nClasses(self, NF_Compiler$symbolTable, NF_Compiler)
       cpp_include_aux_content(self, NF_Compiler)
     }
   )
@@ -124,14 +126,28 @@ cpp_include_needed_nFunctions <- function(cppDef,
   invisible(NULL)
 }
 
-cpp_include_nClasses <- function(cppDef,
-                                 symTab) {
+cpp_include_needed_nClasses <- function(cppDef,
+                                        symTab,
+                                        NF_Compiler = NULL) {
+  new_Hincludes <- character()
   for(i in seq_along(symTab$symbols)) {
     if(inherits(symTab$symbols[[i]], "symbolNC")) {
       needed_nClass_cppname <- symTab$symbols[[i]]$NCgenerator$classname
-      cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
+      new_Hincludes <- c(new_Hincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
     }
   }
+  #  cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
+  if(!is.null(NF_Compiler)) {
+    auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
+    for(i in seq_along(auxEnv_needed_nClasses)) {
+      if(isNCgenerator(auxEnv_needed_nClasses[[i]])) {
+        needed_nClass_cppname <- auxEnv_needed_nClasses[[i]]$classname
+        new_Hincludes <- c(new_Hincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
+      }
+    }
+  }
+  new_Hincludes <- unique(new_Hincludes)  
+  cppDef$Hincludes <- c(cppDef$Hincludes, new_Hincludes)
   invisible(NULL)
 }
 

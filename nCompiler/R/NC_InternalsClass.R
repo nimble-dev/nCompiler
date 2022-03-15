@@ -9,9 +9,11 @@ NC_InternalsClass <- R6::R6Class(
     RcppPacket = NULL,
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
     enableDerivs = NULL,
+    predefined = FALSE,
     initialize = function(Cpublic,
                           isOnlyC = FALSE,
-                          enableDerivs = NULL) {
+                          enableDerivs = NULL,
+                          predefined = FALSE) {
       self$isOnlyC = isOnlyC
       numEntries <- length(Cpublic)
       if(numEntries) {
@@ -40,6 +42,7 @@ NC_InternalsClass <- R6::R6Class(
             stop(paste0('enableDerivs entry ', i, ' is not a method in Cpublic.'))
         }
         self$enableDerivs <- enableDerivs
+        self$predefined <- predefined
       }
     }
   )

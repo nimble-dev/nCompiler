@@ -128,7 +128,7 @@ test_that("Create package with multiple objects",
                          dir = tempdir(),
                          package.name = "fooPackageMultiples",
                          control = list(export = TRUE))
-            # This fails. 4/20/21.
+            
             ans <- buildPackage("fooPackageMultiples",
                                 dir = tempdir())
             

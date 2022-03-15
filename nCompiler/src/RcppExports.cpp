@@ -49,36 +49,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// new_test_predefined
-SEXP new_test_predefined();
-RcppExport SEXP _nCompiler_new_test_predefined() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(new_test_predefined());
-    return rcpp_result_gen;
-END_RCPP
-}
-// new_nC_derivClass
-SEXP new_nC_derivClass();
-RcppExport SEXP _nCompiler_new_nC_derivClass() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(new_nC_derivClass());
-    return rcpp_result_gen;
-END_RCPP
-}
-// new_EigenDecomp
-SEXP new_EigenDecomp();
-RcppExport SEXP _nCompiler_new_EigenDecomp() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(new_EigenDecomp());
-    return rcpp_result_gen;
-END_RCPP
-}
 // rcpp_hello_world
 List rcpp_hello_world();
 RcppExport SEXP _nCompiler_rcpp_hello_world() {
@@ -94,9 +64,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_nCompiler_get_value", (DL_FUNC) &_nCompiler_get_value, 2},
     {"_nCompiler_set_value", (DL_FUNC) &_nCompiler_set_value, 3},
     {"_nCompiler_call_method", (DL_FUNC) &_nCompiler_call_method, 3},
-    {"_nCompiler_new_test_predefined", (DL_FUNC) &_nCompiler_new_test_predefined, 0},
-    {"_nCompiler_new_nC_derivClass", (DL_FUNC) &_nCompiler_new_nC_derivClass, 0},
-    {"_nCompiler_new_EigenDecomp", (DL_FUNC) &_nCompiler_new_EigenDecomp, 0},
     {"_nCompiler_rcpp_hello_world", (DL_FUNC) &_nCompiler_rcpp_hello_world, 0},
     {NULL, NULL, 0}
 };

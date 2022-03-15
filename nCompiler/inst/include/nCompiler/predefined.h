@@ -51,15 +51,17 @@ using namespace Rcpp;
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_core.h>
-#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_loadedObjectsHook.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
-class test_predefined : public genericInterfaceC<test_predefined> {
+class test_predefined : public genericInterfaceC<test_predefined>, public loadedObjectHookC<test_predefined> {
 public:
   double a;
 };
 
 SEXP  new_test_predefined (  );
+
+void  set_CnClass_env_test_predefined ( SEXP env );
 
 
 #endif
@@ -115,10 +117,10 @@ using namespace Rcpp;
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_core.h>
-#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_loadedObjectsHook.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
-class nC_derivClass : public genericInterfaceC<nC_derivClass> {
+class nC_derivClass : public genericInterfaceC<nC_derivClass>, public loadedObjectHookC<nC_derivClass> {
 public:
   Eigen::Tensor<double, 1> value;
   Eigen::Tensor<double, 2> gradient;
@@ -126,6 +128,8 @@ public:
 };
 
 SEXP  new_nC_derivClass (  );
+
+void  set_CnClass_env_nC_derivClass ( SEXP env );
 
 
 #endif
@@ -181,16 +185,18 @@ using namespace Rcpp;
 #include <nCompiler/nCompiler_Eigen.h>
 #include <nCompiler/nCompiler_TBB.h>
 #include <nCompiler/nCompiler_core.h>
-#include <nCompiler/nCompiler_class_factory.h>
+#include <nCompiler/nCompiler_loadedObjectsHook.h>
 #include <nCompiler/nCompiler_class_interface.h>
 
-class EigenDecomp : public genericInterfaceC<EigenDecomp> {
+class EigenDecomp : public genericInterfaceC<EigenDecomp>, public loadedObjectHookC<EigenDecomp> {
 public:
   Eigen::Tensor<double, 1> values;
   Eigen::Tensor<double, 2> vectors;
 };
 
 SEXP  new_EigenDecomp (  );
+
+void  set_CnClass_env_EigenDecomp ( SEXP env );
 
 
 #endif

@@ -59,12 +59,14 @@ nClass <- function(classname,
                    Rpublic = list(),
                    Cpublic = list(),
                    enableDerivs = character(),
+                   predefined = FALSE,
                    env = parent.frame()) {
   if(missing(classname))
     classname <- nClassLabelMaker()
   internals = NC_InternalsClass$new(Cpublic = Cpublic,
                                     isOnlyC = length(Rpublic) == 0,
-                                    enableDerivs = enableDerivs)
+                                    enableDerivs = enableDerivs,
+                                    predefined = predefined)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance
   new_env <- new.env(parent = env)

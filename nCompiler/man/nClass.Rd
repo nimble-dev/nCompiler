@@ -9,6 +9,7 @@ nClass(
   Rpublic = list(),
   Cpublic = list(),
   enableDerivs = character(),
+  predefined = FALSE,
   env = parent.frame()
 )
 }
