@@ -433,7 +433,7 @@ X1 <- X
 X2 <- X
 diag(X1) <- diag(Y) + diag(X)
 expect_identical(X1, cDiagExprAssignment(x = X2, y = diag(Y), z = diag(X)))
-  
+
 # dense assignment to vector
 X1 <- X
 X2 <- X
@@ -463,3 +463,35 @@ X1 <- Xsp
 X2 <- Xsp
 diag(X1) <- diag(Y) + diag(X)
 expect_identical(X1, cSpDiagExprAssignment(x = X2, y = diag(Y), z = diag(X)))
+
+
+#
+# usage in composition
+#
+
+d2 <- function(x) {
+  return(diag(diag(x = x)))
+}
+
+d2Sp <- function(x) {
+  return(diag(Diagonal(x = x)))
+}
+
+nD2 <- nFunction(
+  fun = d2, 
+  argTypes = list(x = 'integer'), 
+  returnType = 'numericVector'
+)
+
+nD2Sp <- nFunction(
+  fun = d2Sp, 
+  argTypes = list(x = 'integer'), 
+  returnType = 'numericVector'
+)
+
+cD2 <- nCompile(nD2)
+cD2Sp <- nCompile(nD2Sp)
+
+expect_equivalent(cD2(x = 5), rep(1,5))
+expect_equivalent(cD2Sp(x = 5), rep(1,5))
+
