@@ -1013,7 +1013,26 @@ template<typename xType>
  * which partial specialization to use during compilation.
  */
 template<typename xType>
-auto nDiag(xType &x) -> decltype(
+auto nDiag(xType & x) -> decltype(
+    DiagIO<xType>(x)
+) {
+    return DiagIO<xType>(x);
+}
+
+/**
+ * Required to support composition of diagonal operator, i.e., nDiag(nDiag(...))
+ * because the output of the nested nDiag(...) will be an rvalue argument into
+ * the outer nDiag( ) call.  As an rvalue argument, the output of
+ * nDiag(...) will not be able to be used with the previous implementation of
+ * the outer function, with signature nDiag(xType & x) for lvalue args.
+ */
+template<
+    typename xType,
+    class = typename std::enable_if<
+        !std::is_lvalue_reference<xType>::value
+    >::type
+>
+auto nDiag(xType && x) -> decltype(
     DiagIO<xType>(x)
 ) {
     return DiagIO<xType>(x);
