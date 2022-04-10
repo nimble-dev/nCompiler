@@ -48,13 +48,16 @@ public:
 //    The (i, j, k) element would be at raw flat index
 //     startIndices[0] + i*output_strides[0] + output_sizes[0]*( (j*output_strides[1] + startIndices[1]) + output_sizes[1] * ( (k * output_strides[2] + startIndices[2]) )
 // Note also that quantities like output_sizes[1] * output_strides[2] could be cached.
-template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
-  void createSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
-			   const Eigen::array<long, input_nDim> &input_sizes,
-			   Eigen::array<long, output_nDim> &output_sizes,
-			   Eigen::array<long, output_nDim> &output_strides,
-			   Eigen::array<long, output_nDim> &output_startIndices,
-			   Eigen::array<long, output_nDim> &output_stopIndices) {
+
+// backward compatibility with first version that used fixed input_nDim
+
+template<typename ss_type, typename input_sizes_type, size_t output_nDim, typename ScalarType=double>
+  void createSubTensorInfoGeneral(const ss_type &ss,
+				  const input_sizes_type &input_sizes,
+				  Eigen::array<long, output_nDim> &output_sizes,
+				  Eigen::array<long, output_nDim> &output_strides,
+				  Eigen::array<long, output_nDim> &output_startIndices,
+				  Eigen::array<long, output_nDim> &output_stopIndices) {
   typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
   size_t currentOutputDim(output_nDim-1);
   if(output_nDim < 1) {
@@ -68,6 +71,7 @@ template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
   bool onLeadingSingletons(false);
   Index currentExtent(0);
   size_t i;
+  int input_nDim = input_sizes.size();
   for(size_t ip1 = input_nDim; ip1 > 0; --ip1) {
     i = ip1-1; // weirdness of decrement sequence with unsigned type
     //   std::cout<<"i = "<<i<<" currentOutputDim = "<<currentOutputDim<<std::endl;
@@ -110,22 +114,32 @@ template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
     output_strides[0] = currentOutputStride;
   }
 }
-
+    
   template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
+  void createSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
+			   const Eigen::array<long, input_nDim> &input_sizes,
+			   Eigen::array<long, output_nDim> &output_sizes,
+			   Eigen::array<long, output_nDim> &output_strides,
+			   Eigen::array<long, output_nDim> &output_startIndices,
+			   Eigen::array<long, output_nDim> &output_stopIndices) {
+    createSubTensorInfoGeneral< Eigen::array<b__, input_nDim>, Eigen::array<long, input_nDim>, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
+  }
+  
+    template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
   void showSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
 			 const Eigen::array<long, input_nDim> &input_sizes) {
-    typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
-    Eigen::array<Index, output_nDim> output_sizes; // I need to figure out the right type
-    Eigen::array<Index, output_nDim> output_strides;
-    Eigen::array<Index, output_nDim> output_startIndices;
-    Eigen::array<Index, output_nDim> output_stopIndices;
-    createSubTensorInfo<input_nDim, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
-    std::cout<<"sizes\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_sizes[i]<<" "; std::cout<<std::endl;
-    std::cout<<"starts\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_startIndices[i]<<" "; std::cout<<std::endl;
-    std::cout<<"stops\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_stopIndices[i]<<" "; std::cout<<std::endl;
-    std::cout<<"strides\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_strides[i]<<" "; std::cout<<std::endl;
+      typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
+      Eigen::array<Index, output_nDim> output_sizes; // I need to figure out the right type
+      Eigen::array<Index, output_nDim> output_strides;
+      Eigen::array<Index, output_nDim> output_startIndices;
+      Eigen::array<Index, output_nDim> output_stopIndices;
+      createSubTensorInfo<input_nDim, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
+      std::cout<<"sizes\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_sizes[i]<<" "; std::cout<<std::endl;
+      std::cout<<"starts\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_startIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"stops\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_stopIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"strides\t"; for(size_t i = 0; i < output_nDim; ++i) std::cout<<output_strides[i]<<" "; std::cout<<std::endl;
   
-  }
+    }
 
 
 #endif
