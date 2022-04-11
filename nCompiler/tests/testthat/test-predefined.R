@@ -369,4 +369,24 @@ test_that("predefined EigenDecomp class works",
   x <- C_get$get_EigenDecomp()
   x$vectors <- matrix(1:4, nrow = 2)
   expect_equal(x$vectors, matrix(1:4, nrow = 2))
+  
+  doEigen <- nFunction(
+    fun = function(x, symmetric, valuesOnly) {
+      eigX <- nEigen(x, symmetric, valuesOnly)
+      return(eigX)
+    },
+    argTypes = list(x = 'numericMatrix', symmetric = 'logicalScalar', valuesOnly = 'logicalScalar'),
+    returnType = 'EigenDecomp')
+  comp <- nCompile(doEigen, EigenDecomp)
+  x <- matrix(as.numeric(c(2, 4, 1, 3)), nrow = 2)
+  Cres <- comp$doEigen(x, FALSE, FALSE) ## Add some variants with symmetric = TRUE and valuesOnly=TRUE
+  Rres <- eigen(x)
+  expect_equal(as.numeric(Cres$values), as.numeric(Rres$values))
+  for(i in 1:nrow(x)) {
+    Cvec <- as.numeric(Cres$vectors[,i])
+    Rvec <- as.numeric(Rres$vectors[,i])
+    # Must work out a test that allows Cvec == -Rvec or Cvec == Rvec
+    # For now:
+    print(min( abs(max(Rvec-Cvec)), abs(max(Rvec+Cvec)) )) ## should be 0s or near 0s, showing agreement between R and c++ up to sign flip.
+  }
 })

@@ -1284,19 +1284,21 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) > 1) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'trying to eigen decompose an ambiguous input.'
-      ), call. = FALSE)
-    }
+    ## if(length(code$args) > 1) {
+    ##   stop(exprClassProcessingErrorMsg(
+    ##     code,
+    ##     'trying to eigen decompose an ambiguous input.'
+    ##   ), call. = FALSE)
+    ## }
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     # extract or construct a sparse type for argument
     if(!inherits(argType, 'symbolSparse')) {
-      browser()
-      code$type <- xxx # TODO: instantiate a new EigenDecomp object
+      code$type <- symbolNC$new(
+        name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp, 
+        isArg = FALSE
+      )
     } else if(inherits(argType, 'symbolSparse')) {
       stop(exprClassProcessingErrorMsg(
         code,
