@@ -31,16 +31,20 @@ compile_generateCpp <- function(code,
 
   if(isTRUE(code$isLiteral)) {
     value <- code$name
-    if(is.numeric(value))
+    if(is.numeric(value)) {
       return(
         if(is.nan(value)) "(nCompiler_NaN())"
+        else if(is.infinite(value)) 
+            paste0('(', sign(value), 
+                   ' * std::numeric_limits<double>::infinity())')
         else if (identical(code$type$type, 'double') &&
                    identical(value %% 1, 0))
-          ## If value is a whole number we need to add . to the end
-          ## so C++ knows that it's actually a double.
-          paste0(value, ".")
+          ## If value is a whole number we need to add "." or ".0" to the end
+          ## or use scientific notation so C++ knows it's actually a double.
+          format(x = value, nsmall = 1)
         else value
       )
+    }
     if(is.character(value)) return(paste0('\"',
                                           gsub("\\n","\\\\n", value),
                                           '\"'))
@@ -137,6 +141,13 @@ inGenCppEnv(
                                      asArg = TRUE) ),
                        collapse = ', '),
            ')' )
+  }
+)
+
+inGenCppEnv(
+  Generic_nClass_method_ref <- function(code, symTab) {
+    paste0('nCompiler::nBind(&', compile_generateCpp(code$args[[2]]), '::', 
+           compile_generateCpp(code$args[[1]]), ', this)')
   }
 )
 
@@ -442,5 +453,12 @@ inGenCppEnv(
            compile_generateCpp(code$args[[2]], symTab),
            ';}'
            )
+  }
+)
+
+inGenCppEnv(
+  PrependNamespace <- function(code, symTab) {
+    code$name = paste0('nCompiler::', code$name, sep = '')
+    compile_generateCpp(code, symTab)
   }
 )

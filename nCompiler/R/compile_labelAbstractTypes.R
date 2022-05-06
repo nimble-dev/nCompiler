@@ -52,6 +52,16 @@ compile_labelAbstractTypes <- function(code,
             return(NULL)
           }
         }
+        # see if code$name is a method of current nClass
+        if(is.null(obj) & isNCgenerator(auxEnv$where)) {
+          if(code$name %in% names(auxEnv$where$public_methods)) {
+            # code$name is as a reference to the member function as an object
+            labelAbstractTypesEnv$reference_nFunction_or_method_AST(
+              code, auxEnv$where
+            )
+            return(NULL)
+          }
+        }
         if(!auxEnv$.AllowUnknowns)
           if(identical(code$name, 'pi')) {
             ## unique because it may be encountered anew on a RHS
@@ -324,6 +334,63 @@ inLabelAbstractTypesEnv(
         )
       code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
       invisible(NULL)
+    }
+)
+
+## Called by main compile_labelAbstractTypes loop
+## This converts use of the function foo as an object to 
+## nFunctionRef(foo, namespace)
+## if foo is either an nFunction or a method of the current class
+inLabelAbstractTypesEnv(
+  reference_nFunction_or_method_AST <- function(code, obj) {
+    
+    if(isFALSE(code$isName)) {
+      stop(exprClassProcessingErrorMsg(
+        code, paste('In reference_nFunction_or_method_AST: the nFunction ', 
+                    code$name, ' is not used as an object', sep = '')
+      ))
+    }
+    
+    # access nFunction
+    tgt <- NFinternals(obj$public_methods[[code$name]])
+    
+    if(is.null(tgt)) {
+      stop(exprClassProcessingErrorMsg(
+        code, paste('In reference_nFunction_or_method_AST: the nFunction ', 
+                    code$name, ' is not a method for nClass "obj"', sep = '')
+      ))
+    }
+    
+    # wrap the nFunction usage
+    wrapExprClassOperator(code = code, funName = 'nFunctionRef')
+    
+    # name substitution
+    cpp_code_name <- tgt$cpp_code_name
+    code$name <- cpp_code_name
+    
+    # class in which function is defined
+    namespaceExpr <- exprClass$new(
+      name = obj$classname, isName = TRUE, isCall = FALSE, isLiteral = FALSE,
+      isAssign = FALSE
+    )
+    namespaceExpr$type <- symbolNCgenerator$new(
+      name = obj$classname, type = obj$classname, NCgenerator = obj
+    )
+    insertArg(code$caller, 2, namespaceExpr)
+    
+    ## TO-DO: Add error-trapping of argument types
+    returnSym <- tgt$returnSym
+    if(is.null(returnSym))
+      stop(
+        exprClassProcessingErrorMsg(
+          code, paste('In reference_nFunction_or_method_AST: the nFunction (or method) ',
+                      code$name, 
+                      ' does not have a valid returnType.')
+        ), call. = FALSE
+      )
+    code$type <- symbolNF$new(name = cpp_code_name, returnSym = tgt$returnSym)
+    code$caller$type <- code$type$clone()
+    invisible(NULL)
     }
 )
 
@@ -1284,12 +1351,6 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
-    ## if(length(code$args) > 1) {
-    ##   stop(exprClassProcessingErrorMsg(
-    ##     code,
-    ##     'trying to eigen decompose an ambiguous input.'
-    ##   ), call. = FALSE)
-    ## }
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
@@ -1310,6 +1371,43 @@ inLabelAbstractTypesEnv(
         'unable to handle input type.'
       ), call. = FALSE)
     }
+    invisible(NULL)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  nSvd <- function(code, symTab, auxEnv, handlingInfo) {
+    # determine object's natural type
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    # extract or construct a sparse type for argument
+    if(!inherits(argType, 'symbolSparse')) {
+      code$type <- symbolNC$new(
+        name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp, 
+        isArg = FALSE
+      )
+    } else if(inherits(argType, 'symbolSparse')) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'singular value decompositions not supported for sparse matrices.'
+      ), call. = FALSE)
+    } else {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'unable to handle input type.'
+      ), call. = FALSE)
+    }
+    # check type that specifies singular vector calculation
+    if(length(code$args) == 2) {
+      argType <- code$args[[2]]$type
+      if(argType$nDim != 0 || argType$type != 'integer') {
+        stop(exprClassProcessingErrorMsg(
+          code, 
+          'compiled code must use an integer for num. of vectors to compute'
+        ))
+      }
+    }
+    argType <- code$args[[2]]$type
     invisible(NULL)
   }
 )
@@ -1393,6 +1491,17 @@ inLabelAbstractTypesEnv(
       ))
     }
     
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  nOptim <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- symbolNC$new(name = '',
+                              type = 'OptimResultList',
+                              isArg = FALSE,
+                              NCgenerator = OptimResultList)
     invisible(inserts)
   }
 )

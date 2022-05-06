@@ -138,8 +138,14 @@ expect_error(
 )
 
 ##
-## triangular solver tests
+## triangular and LU solver tests
 ##
+
+# solve wrapper
+lusolve <- function(A, b) {
+  x <- solve(A, b)
+  return(x)
+}
 
 # forwardsolve wrapper
 fsolve <- function(L, b) {
@@ -152,6 +158,20 @@ bsolve <- function(U, b) {
   x <- backsolve(U, b)
   return(x)
 }
+
+# nCompiler implementation of forward solve with unknown matrix
+nLUsolve <- nFunction(
+  fun = lusolve,
+  argTypes = list(A = 'numericMatrix', b = 'numericVector'),
+  returnType = 'numericVector'
+)
+
+# nCompiler implementation of forward solve with unknown matrix
+nLUsolveMat <- nFunction(
+  fun = lusolve,
+  argTypes = list(A = 'numericMatrix', b = 'numericMatrix'),
+  returnType = 'numericMatrix'
+)
 
 # nCompiler implementation of forward solve with unknown matrix
 nFsolve <- nFunction(
@@ -182,6 +202,8 @@ nBsolveMat <- nFunction(
 )
 
 # compile nFunctions
+cLUsolve <- nCompile(nLUsolve)
+cLUsolveMat <- nCompile(nLUsolveMat)
 cFsolve <- nCompile(nFsolve)
 cFsolveMat <- nCompile(nFsolveMat)
 cBsolve <- nCompile(nBsolve)
@@ -190,18 +212,24 @@ cBsolveMat <- nCompile(nBsolveMat)
 # test data
 L <- structure(c(1, 2, 3, 0, 1, 1, 0, 0, 2), .Dim = c(3L, 3L))
 U <- t(L)
+A <- L %*% t(L)
 x <- c(-1, 3, 1)
 x2 <- cbind(x, x)
 b <- L %*% x
 b2 <- L %*% x2
 bU <- U %*% x
 b2U <- U %*% x2
+bA <- A %*% x
+bA2 <- A %*% x2
 
 # validate results (lower triangular system)
+expect_equal(as.numeric(cLUsolve(A = A, b = bA)), x)
+expect_equal(cLUsolveMat(A = A, b = bA2), unname(x2))
 expect_equal(as.numeric(cFsolve(L = L, b = b)), x)
 expect_equal(cFsolveMat(L = L, b = b2), unname(x2))
 expect_equal(as.numeric(cBsolve(U = U, b = bU)), x)
 expect_equal(cBsolveMat(U = U, b = b2U), unname(x2))
+expect_equal(cLUsolveMat(A = L, b = b2), unname(x2))
 
 
 ##

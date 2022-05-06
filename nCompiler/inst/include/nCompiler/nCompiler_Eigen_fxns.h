@@ -8,6 +8,7 @@
 #include "recyclingRule.h"
 #include "tensorCreation.h"
 #include "tensorOperations.h"
+#include "nOptim.h"
 #include "cWiseUnary_external.h"
 
 #endif
