@@ -23,7 +23,13 @@ std::shared_ptr<derivClass> make_derivClass() {
 std::shared_ptr<EigenDecomp> make_EigenDecomp() {
   return(std::shared_ptr<EigenDecomp>(new EigenDecomp));
 }
+#endif
 
+#ifdef PREDEFINED_SVDDecomp
+#include PREDEFINED_HEADER(PREDEFINED_SVDDecomp)
+std::shared_ptr<SVDDecomp> make_SVDDecomp() {
+    return(std::shared_ptr<SVDDecomp>(new SVDDecomp));
+}
 #endif
 
 
@@ -1101,6 +1107,34 @@ Eigen::Tensor<Scalar, 2> initSolveX(
 }
 
 /**
+ * Solve the linear system A %*% x = b when RHS represents a matrix or a vector,
+ * and A is a square matrix
+ *
+ * @tparam LHS An Eigen::Tensor or tensor expression object type
+ * @tparam RHS An Eigen::Tensor or tensor expression object type
+ */
+template<typename LHS, typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nSolve(
+    const LHS & A, const RHS & b
+) {
+    // explicit Eigen::Tensor types for inputs
+    typedef Eigen::Tensor<typename LHS::Scalar, LHS::NumDimensions> LTensor;
+    typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
+    // evaluate arguments, if necessary
+    const auto & A_eval = eval(A);
+    const auto & b_eval = eval(b);
+    // initialize storage for solution, given problem dimensions
+    bTensor res = initSolveX(A_eval, b_eval);
+    // map tensor objects to Eigen::Matrix types
+    auto Amap = matmap(A_eval);
+    auto bmap = matmap(b_eval);
+    auto resMap = matmap(res);
+    // solve linear system
+    resMap = Amap.partialPivLu().solve(bmap);
+    return res;
+}
+
+/**
 *
 * Solve the linear system A %*% x = b when RHS represents a matrix or
 * a vector, and A is either a lower or upper-triangular matrix
@@ -1140,7 +1174,7 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> triangularsolve(
 * @tparam RHS An Eigen::Tensor or tensor expression object type
 */
 template<typename LHS, typename RHS>
-Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> forwardsolve(
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nForwardsolve(
     const LHS & L,
     const RHS & b
 ) {
@@ -1156,7 +1190,7 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> forwardsolve(
 * @tparam RHS An Eigen::Tensor or tensor expression object type
 */
 template<typename LHS, typename RHS>
-Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> backsolve(
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(
     const LHS & U,
     const RHS & b
 ) {
@@ -1336,7 +1370,55 @@ bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
   return(true);
 }
 
-  
+#ifdef PREDEFINED_SVDDecomp
+std::shared_ptr<SVDDecomp> nSvd(
+    const Eigen::Tensor<double, 2> &x, int vectors
+) {
+    auto xm = matmap(x);
+    std::shared_ptr<SVDDecomp> ans(new SVDDecomp);
+
+    int n = xm.rows();
+    int p = xm.cols();
+ 	int nu = std::min(n, p);
+
+ 	Eigen::JacobiSVD<Eigen::MatrixXd> svd;
+
+ 	/* note: if nu > 16, bidiagonialization algo. is recommended on eigen
+ 	   website.  not currently available w/ nimble's version of eigen, but may
+ 	   be in future. */
+ 	if(vectors == 0) {
+ 	    svd.compute(xm);
+ 	}
+ 	else {
+ 	    int leftSVs = nu;
+ 	    int rightSVs = nu;
+
+ 	    if(vectors == 1) {
+ 	        svd.compute(xm, Eigen::ComputeThinU | Eigen::ComputeThinV);
+ 	    }
+ 	    if(vectors == 2) {
+ 	        leftSVs = xm.rows();
+ 	        rightSVs = xm.cols();
+ 	        svd.compute(xm, Eigen::ComputeFullU | Eigen::ComputeFullV);
+ 	    }
+
+ 	    ans->u.resize({{n, leftSVs}});
+ 	    auto u = matmap(ans->u);
+ 	    u = svd.matrixU();
+
+ 	    ans->v.resize({{p, rightSVs}});
+ 	    auto v = matmap(ans->v);
+        v = svd.matrixV();
+ 	}
+
+    ans->d.resize(nu);
+ 	auto d = matmap(ans->d);
+ 	d = svd.singularValues();
+
+ 	return ans;
+}
+#endif
+
 #ifdef PREDEFINED_EigenDecomp
   std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symmetric = true, bool valuesOnly = false) {
     auto x_map = matmap(x);

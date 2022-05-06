@@ -72,6 +72,7 @@ symbolBasic <-
         else if(type == 'integer') cType <- 'int'
         else if(type == 'double') cType <- 'double'
         else if(type == 'logical') cType <- 'bool'
+        else if(type == 'string') cType <- 'std::string'
         else warning(paste("in genCppVar method for",
                            self$name,
                            "in symbolBasic class,",

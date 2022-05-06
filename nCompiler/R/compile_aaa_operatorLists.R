@@ -34,6 +34,13 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
 }
 
 assignOperatorDef(
+  'nFunctionRef',
+  list(
+    cppOutput = list(handler = 'Generic_nClass_method_ref')
+  )
+)
+
+assignOperatorDef(
   'nFunction',
   list(
     labelAbstractTypes = list(
@@ -755,7 +762,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('forwardsolve', 'backsolve'),
+  c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
     labelAbstractTypes = list(
       handler = 'ArgReturnType',
@@ -783,6 +790,26 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'nSvd',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nSvd'
+    )
+  )
+)
+
+assignOperatorDef(
+  'nOptim',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nOptim'
+    ),
+    cppOutput = list(
+      handler = 'PrependNamespace'
+    )
+  )
+)
 
 ## assignOperatorDef(
 ##   c('list'),

@@ -49,3 +49,77 @@ EigenDecomp <- nClass(
 ## #' @export
 ## C_EigenDecomp <- build_compiled_nClass(EigenDecomp,
 ##                                          function() new_EigenDecomp())
+
+#' @export
+SVDDecomp <- nClass(
+  classname = 'SVDDecomp',
+  predefined = "SVDDecomp_pkg",
+  Cpublic = list(
+    d = 'numericVector',
+    v = 'numericMatrix',
+    u = 'numericMatrix'
+  )
+)
+
+
+#' @export
+OptimControlList <- nClass(
+  classname = 'OptimControlList',
+  predefined = "OptimControlList_pkg",
+  Cpublic = list(
+    trace = 'integer',
+    fnscale = 'double',
+    parscale = 'numericVector',
+    ndeps = 'numericVector',
+    maxit = 'integer', 
+    abstol = 'double',
+    reltol = 'double',
+    alpha = 'double',
+    beta = 'double',
+    gamma = 'double',
+    REPORT = 'integer',
+    type = 'integer',
+    lmm = 'integer',
+    factr = 'double',
+    pgtol = 'double',
+    tmax = 'integer',
+    temp = 'double',
+    # method to set members to default values
+    initToDefaults = nFunction(
+      fun = function() {
+        trace <- 0
+        fnscale <- 1
+        parscale <- nNumeric(length = 1, value = 1.0)
+        ndeps <- nNumeric(length = 1, value = 1e-3)
+        abstol <- -Inf
+        cppLiteral('reltol = std::sqrt(std::numeric_limits<double>::epsilon());')
+        cppLiteral('maxit = NA_INTEGER;')
+        alpha <- 1.0
+        beta <- 0.5
+        gamma <- 2.0
+        REPORT <- 10
+        type <- 1
+        lmm <- 5
+        factr <- 1e7
+        pgtol <- 0
+        tmax <- 10
+        temp <- 10.0
+      }
+    )
+    
+  )
+)
+
+#' @export
+OptimResultList <- nClass(
+  classname = 'OptimResultList',
+  predefined = "OptimResultList_pkg",
+  Cpublic = list(
+    par = 'numericVector',
+    value = 'double',
+    hessian = 'numericMatrix',
+    counts = 'integerVector',
+    convergence = 'integer',
+    message = 'RcppCharacterVector'
+  )
+)

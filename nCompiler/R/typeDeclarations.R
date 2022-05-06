@@ -141,6 +141,9 @@ typeDeclarationList <- list(
   void = function(...) {
     nType("void", 0)
   },
+  string = function(...) {
+    nType("string", 0)
+  },
 
   ## Rcpp types
   RcppList = function(...) {
