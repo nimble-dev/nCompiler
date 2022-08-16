@@ -1,6 +1,8 @@
 #ifndef _NCOMPILER_TENSOR_OPERATIONS
 #define _NCOMPILER_TENSOR_OPERATIONS
 
+#include "tensorIndexingOps.h"
+
 #define QUOTEME(A) #A
 #define PREDEFINED_HEADER(PH) QUOTEME(PH.h)
 
