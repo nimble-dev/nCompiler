@@ -319,18 +319,18 @@ inEigenizeEnv(
   }
 )
 
-inEigenizeEnv(
-  makeEigenArgsMatch <- function(code) {
-    if(xor(code$args[[1]]$implementation$eigMatrix,
-           code$args[[2]]$implementation$eigMatrix)) {
-      ## default to matrix:
-      if(!code$args[[1]]$implementation$eigMatrix)
-        eigenizeMatricize(code$args[[1]])
-      else
-        eigenizeMatricize(code$args[[2]])
-    }
-  }
-)
+## inEigenizeEnv(
+##   makeEigenArgsMatch <- function(code) {
+##     if(xor(code$args[[1]]$implementation$eigMatrix,
+##            code$args[[2]]$implementation$eigMatrix)) {
+##       ## default to matrix:
+##       if(!code$args[[1]]$implementation$eigMatrix)
+##         eigenizeMatricize(code$args[[1]])
+##       else
+##         eigenizeMatricize(code$args[[2]])
+##     }
+##   }
+## )
 
 inEigenizeEnv(
   ## This hasn't been updated in redesign.
@@ -521,28 +521,8 @@ inEigenizeEnv(
   }
 )
 
-inEigenizeEnv(
-  Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    n_args <- length(code$args)
-    if (code$type$nDim == 0) {
-      # Either we're indexing a vector and we keep '[' in the AST, or we're
-      # indexing a non-vector object and we use 'index(' instead.
-      # TODO: if (code$args[[1]]$type$nDim == 0)
-      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
-      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
-      ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
-      ## We see inconsistent C++ compiler behavior around casting a double index
-      ## to a long index, so we do it explicitly.
-      ## Right now we will hard-code the type "long" assuming it is the underlying
-      ## type. We could more generally use EigenType::Index where EigenType is the type
-      ## of the indexed variable, assuming it can't be an expression.
-      if(length(code$args)>1) {
-        for(i in 2:length(code$args)) {
-          insertExprClassLayer(code, i, "static_cast<long>")
-        }
-      }
-      return(invisible(NULL))
-    }
+nCompiler:::inEigenizeEnv(
+  Bracket_to_StridedTensorMap <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
     ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
@@ -590,6 +570,138 @@ inEigenizeEnv(
       ## add the b__ call to the AST as arg to blocks_expr
       setArg(blocks_expr, i, b_expr)
     }
+    invisible(NULL)
+  })
+
+
+nCompiler:::inEigenizeEnv(
+  MakeIndexByScalarCall <- function(index_slot, index_value, x) {
+    ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                          name = "IndexByScalar")
+    setArg(ans, 1, literalIntegerExpr(index_slot-1))
+    setArg(ans, 2, index_value)
+    setArg(ans, 3, x)
+    ans
+  }
+  )
+
+nCompiler:::inEigenizeEnv(
+  MakeIndexByVecCall <- function(index_slot, index_value, x) {
+    ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                          name = "IndexByVec")
+    setArg(ans, 1, literalIntegerExpr(index_slot-1))
+    setArg(ans, 2, index_value)
+    setArg(ans, 3, x)
+    ans
+  }
+  )
+
+nCompiler:::inEigenizeEnv(
+  MakeIndexBySeqsCall <- function(index_slots, index_value, x) {
+    ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                          name = "IndexBySeqs")
+    setArg(ans, 1, literalIntegerExpr(length(index_slots)))
+    iArg <- 2
+    for(i in seq_along(index_slots)) {
+      setArg(ans, iArg, literalIntegerExpr(index_slots[i]-1))
+      setArg(ans, iArg + 1, index_value[[i]][[1]])
+      setArg(ans, iArg + 2, index_value[[i]][[2]])
+      iArg <- iArg + 3
+    }
+    setArg(ans, iArg, x)
+    ans
+  }
+  )
+
+
+nCompiler:::inEigenizeEnv(
+  Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if (code$type$nDim == 0) {
+      # Either we're indexing a vector and we keep '[' in the AST, or we're
+      # indexing a non-vector object and we use 'index(' instead.
+      # TODO: if (code$args[[1]]$type$nDim == 0)
+      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
+      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
+      ## We see inconsistent C++ compiler behavior around casting a double index
+      ## to a long index, so we do it explicitly.
+      ## Right now we will hard-code the type "long" assuming it is the underlying
+      ## type. We could more generally use EigenType::Index where EigenType is the type
+      ## of the indexed variable, assuming it can't be an expression.
+      if(length(code$args)>1) {
+        for(i in 2:length(code$args)) {
+          insertExprClassLayer(code, i, "static_cast<long>")
+        }
+      }
+      return(invisible(NULL))
+    }
+    if(code$caller$name == "nFunction") {
+      return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
+    }
+    ## Work: new handling here
+    indexVec_inds <- integer()
+    singleton_inds <- integer()
+    indexSeq_inds <- integer()
+    indexSeq_info <- list()
+    indexVec_info <- list()
+    drop <- code$args$drop$name
+    if(!is.logical(drop))
+      warning("Problem determining whether to drop dimensions.")
+    for(argInd in 2:(length(code$args)-1)) {
+      ind <- argInd - 1
+      isBlank <- code$args[[argInd]]$isName & code$args[[argInd]]$name == ""
+      if(!isBlank) {
+        this_nDim <- code$args[[argInd]]$type$nDim
+        if(this_nDim == 0) {
+          if(drop)
+            singleton_inds <- c(singleton_inds, ind)
+          else {
+            indexSeq_inds <- c(indexSeq_inds, ind)
+            indexSeq_info <- c(indexSeq_info, list(c(code$args[[argInd]]$clone(),
+                                                     code$args[[argInd]]$clone()))) # could flag this in some other way
+          }
+        } else if(this_nDim == 1) {
+          if(code$args[[argInd]]$name == ':') {
+            indexSeq_inds <- c(indexSeq_inds, ind)
+            indexSeq_info <- c(indexSeq_info, list(c(code$args[[argInd]]$args[[1]]$clone(),
+                                                     code$args[[argInd]]$args[[2]]$clone())))
+          } else {
+            indexVec_inds <- c(indexVec_inds, ind)
+            indexVec_info <- c(indexVec_info, list(code$args[[argInd]]$clone()))
+          }
+        } else {
+          warning("PROBLEM")
+        }
+      }
+    }
+
+    currentInput <- code$args[[1]]
+    for(iInd in rev(seq_along(singleton_inds))) {
+      thisInd <- singleton_inds[iInd]
+      newExpr <- MakeIndexByScalarCall(thisInd, code$args[[thisInd+1]]$clone(), currentInput )
+      bool <- indexSeq_inds > thisInd
+      indexSeq_inds[bool] <- indexSeq_inds[bool] - 1
+      bool <- indexVec_inds > thisInd
+      indexVec_inds[bool] <- indexVec_inds[bool] - 1
+      currentInput <- newExpr
+    }
+    for(iInd in rev(seq_along(indexVec_inds))) {
+      thisInd <- indexVec_inds[iInd]
+      newExpr <- MakeIndexByVecCall(thisInd, indexVec_info[[iInd]], currentInput )
+      bool <- indexSeq_inds > thisInd
+      indexSeq_inds[bool] <- indexSeq_inds[bool] - 1
+      currentInput <- newExpr
+    }
+    if(length(indexSeq_inds)) {
+      newExpr <- MakeIndexBySeqsCall(indexSeq_inds, indexSeq_info, currentInput)
+    }
+
+    newExpr$type <- code$type
+    setArg(code$caller, code$callerArgID, newExpr)
+
+    # index vecs have dim == 1 and are not ':'
+    # singletons have dim == 0
+    # index seqs have dim == 1 and are ':'
     invisible(NULL)
   }
 )

@@ -31,7 +31,7 @@ exprClass <- R6::R6Class(
     callerArgID =  NULL, ## index in the calling object's args list for this object.
     insertions =  list(), 
     cppADCode = FALSE, ## is expr in code generated for cppad?
-    ##     aux = list(), ## auxiliary list of additional info to be used as needed 
+    ##aux = list(), ## auxiliary list of additional info to be used as needed
     initialize = function(...) {
       dotsList <- list(...)
       for(v in names(dotsList))

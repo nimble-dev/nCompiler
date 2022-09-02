@@ -235,6 +235,26 @@ assignOperatorDef(
   )
 )
 
+nCompiler:::assignOperatorDef(
+  c('IndexByScalar'),
+  list(
+    cppOutput = list(handler = 'IndexByScalar')
+  )
+)
+
+nCompiler:::assignOperatorDef(
+  c('IndexByVec'),
+  list(
+    cppOutput = list(handler = 'IndexByVec')
+  )
+)
+
+nCompiler:::assignOperatorDef(
+  c('IndexBySeqs'),
+  list(
+    cppOutput = list(handler = 'IndexBySeqs')
+  )
+)
 
 assignOperatorDef(
   c('<-','<<-','='),

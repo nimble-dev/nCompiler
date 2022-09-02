@@ -383,6 +383,74 @@ inGenCppEnv(
   }
 )
 
+nCompiler:::inGenCppEnv(
+  IndexByScalar <- function(code, symTab) {
+    paste0("ISINGLE_(",
+           compile_generateCpp(code$args[[1]], symTab), ",",
+           MinusOne(compile_generateCpp(code$args[[2]], symTab)), ",",
+           compile_generateCpp(code$args[[3]], symTab), ")"
+           )
+    ## paste0("nCompiler::IndexByScalar<",
+    ##        compile_generateCpp(code$args[[1]], symTab),
+    ##        ">().op(",
+    ##        compile_generateCpp(code$args[[2]], symTab),
+    ##        ",",
+    ##        compile_generateCpp(code$args[[3]], symTab),
+    ##        ")")
+  }
+)
+
+nCompiler:::inGenCppEnv(
+  IndexByVec <- function(code, symTab) {
+    paste0("IVEC_(",
+           compile_generateCpp(code$args[[1]], symTab), ",",
+           compile_generateCpp(code$args[[2]], symTab), ",",
+           compile_generateCpp(code$args[[3]], symTab), ",",
+           "true)" # Use R-based indexing by subtracting 1 in C++
+           )
+    ## paste0("nCompiler::IndexByVec<",
+    ##        compile_generateCpp(code$args[[1]], symTab),
+    ##        ">().op(",
+    ##        compile_generateCpp(code$args[[2]], symTab),
+    ##        ",",
+    ##        compile_generateCpp(code$args[[3]], symTab),
+    ##        ")")
+  }
+)
+
+nCompiler:::inGenCppEnv(
+  IndexBySeqs <- function(code, symTab) {
+    midpieces <- list()
+    NumSeqs <- compile_generateCpp(code$args[[1]], symTab)
+    ## piece1 <- paste0("nCompiler::IndexBySeqs<",
+    ##                  NumSeqs,
+    ##                  ">().op(nCompiler::IndexBySeqs<",N,">::AllSliceDetails{")
+    piece1 <- paste0("ISEQS_(", NumSeqs, ", SEQS_(")
+    midpieces <- list()
+    iArg <- 2
+    for(i in 1:((length(code$args)-2)/3)) {
+      midpieces[[i]] <- paste0("SEQ_(",
+                               compile_generateCpp(code$args[[iArg]], symTab), ",",
+                               MinusOne(compile_generateCpp(code$args[[iArg+1]], symTab)), ",",
+                               MinusOne(compile_generateCpp(code$args[[iArg+2]], symTab)), ")"
+                               )
+
+      ## midpieces[[i]] <- paste0("nCompiler::IndexBySeqs<",N,">::SliceDetail{",
+      ##                          "static_cast<Eigen::Index>(", compile_generateCpp(code$args[[iArg]], symTab), ")",
+      ##                          ",",
+      ##                          "static_cast<Eigen::Index>(", compile_generateCpp(code$args[[iArg+1]], symTab), ")",
+      ##                          ",",
+      ##                          "static_cast<Eigen::Index>(", compile_generateCpp(code$args[[iArg+2]], symTab), ")",
+      ##                          "}")
+      iArg <- iArg + 3
+    }
+    piece2 <- paste0(unlist(midpieces), collapse=", \n ")
+    piece3 <- paste0( nCompiler:::compile_generateCpp(code$args[[iArg]], symTab))
+    ans <- paste0(piece1, "\n ", piece2, "),\n ", piece3, ")")
+    ans
+  }
+)
+
 inGenCppEnv(
   Paren <- function(code, symTab) {
     paste0('(', compile_generateCpp(code$args[[1]], symTab), ')')

@@ -1,5 +1,30 @@
 context("Testing indexing (a bunch of correct caught-error messages are expected as part of this test)")
 
+test_that("indexing by numeric vector works" {
+  nC <- nClass(
+    Cpublic = list(
+      test1 = nFunction(function(x = numericArray(nDim = 2),
+                                 iv = numericVector()) {
+        ans <- x[, iv]
+        return(ans)
+        returnType(numericArray(nDim = 2))
+      })
+    )
+  )
+  cobj <- nCompile_nClass(nC)$new()
+  x <- matrix(1:20, nrow = 4)
+  iv <- c(2,3,2,1,5)
+  for (i in seq_along(ls(nC$public_methods)[-1])) {
+    test_i  <- paste0('test', i)
+    outC <- cobj[[test_i]](x, iv)
+    outR <- nC$public_methods[[test_i]](x, iv)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+      attributes(outC)$dim <- NULL
+    expect_equal(outC, outR)
+  }
+  
+})
+
 test_that("drop arg variations give correct results, 3D input", {
   nC <- nClass(
     Cpublic = list(
@@ -407,6 +432,8 @@ test_that("3:3 style indexing arg doesn't drop dimension", {
   expect_silent(nfc(x))
 })
 
+## THESE TESTS WON'T PASS UNTIL SOME NEW ERROR-TRAPPING
+## IS IMPLEMENTED.
 test_that("compilation of [ throws errors as expected ", {
   nf1 <- nFunction( ## call that is not ':' as indexing arg
     function(x = numericArray(nDim = 3)) {

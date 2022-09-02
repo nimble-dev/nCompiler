@@ -988,60 +988,62 @@ inLabelAbstractTypesEnv(
       ## ensure that indexing args appear before drop in AST
       setArg(code, i + 1, index_args[[i]])
 
-      ## do a bunch of indexing arg error checking
-      if (index_args[[i]]$isCall)
-        ## for now, can't handle indexing args of nDim > 0 other than those
-        ## created via ':'
-        ## TODO: allow for (more) general expressions
-        if (index_args[[i]]$name != ':' && index_args[[i]]$type$nDim != 0)
-          stop(
-            exprClassProcessingErrorMsg(
-              code,
-              "In Bracket: non-scalar indexing expressions other than ':' not currently supported."
-            ), call. = FALSE
-          )
+      ## Temp work: disable lots of checking, some of which will become moot
+      ##
+      ## ## do a bunch of indexing arg error checking
+      ## if (index_args[[i]]$isCall)
+      ##   ## for now, can't handle indexing args of nDim > 0 other than those
+      ##   ## created via ':'
+      ##   ## TODO: allow for (more) general expressions
+      ##   if (index_args[[i]]$name != ':' && index_args[[i]]$type$nDim != 0)
+      ##     stop(
+      ##       exprClassProcessingErrorMsg(
+      ##         code,
+      ##         "In Bracket: non-scalar indexing expressions other than ':' not currently supported."
+      ##       ), call. = FALSE
+      ##     )
 
       if (index_args[[i]]$name != '') {
-        ## not a call resulting in non-scalar other than ':'
-        if (is.null(index_args[[i]]$type) || ## missing index nDim info
-              is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
-          stop(
-            exprClassProcessingErrorMsg(
-              code,
-              paste0("In Bracket: '", index_args[[i]]$name,
-                     "' has no dimension.")
-            ), call. = FALSE
-          )
-        ## TODO: allow for scalar logicals?
-        if (index_args[[i]]$type$type == 'logical') ## index logical
-          stop(
-            exprClassProcessingErrorMsg(
-              code,
-              paste0("In Bracket: '", index_args[[i]]$name,
-                     "' is a logical which is not allowed when indexing.")
-            ), call. = FALSE
-          )
-        if (index_args[[i]]$type$nDim > 1) ## bad index nDim
-          stop(
-            exprClassProcessingErrorMsg(
-              code,
-              paste0(
-                "In Bracket: the dimension of '", index_args[[i]]$name,
-                " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
-              )
-            ), call. = FALSE
-          )
-        if (nDim == 0 && index_args[[i]]$type$nDim != 0) ## indexing a scalar with non-scalar
-          stop(
-            exprClassProcessingErrorMsg(
-              code,
-              paste0(
-                "In Bracket: '", obj$name,
-                "' is a scalar but the indexing arg has dimension ",
-                index_args[[i]]$type$nDim, "."
-              )
-            ), call. = FALSE
-          )
+        ##   ## not a call resulting in non-scalar other than ':'
+        ##   if (is.null(index_args[[i]]$type) || ## missing index nDim info
+        ##         is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
+        ##     stop(
+        ##       exprClassProcessingErrorMsg(
+        ##         code,
+        ##         paste0("In Bracket: '", index_args[[i]]$name,
+        ##                "' has no dimension.")
+        ##       ), call. = FALSE
+        ##     )
+        ##   ## TODO: allow for scalar logicals?
+        ##   if (index_args[[i]]$type$type == 'logical') ## index logical
+        ##     stop(
+        ##       exprClassProcessingErrorMsg(
+        ##         code,
+        ##         paste0("In Bracket: '", index_args[[i]]$name,
+        ##                "' is a logical which is not allowed when indexing.")
+        ##       ), call. = FALSE
+        ##     )
+        ##   if (index_args[[i]]$type$nDim > 1) ## bad index nDim
+        ##     stop(
+        ##       exprClassProcessingErrorMsg(
+        ##         code,
+        ##         paste0(
+        ##           "In Bracket: the dimension of '", index_args[[i]]$name,
+        ##           " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
+        ##         )
+        ##       ), call. = FALSE
+        ##     )
+        ##   if (nDim == 0 && index_args[[i]]$type$nDim != 0) ## indexing a scalar with non-scalar
+        ##     stop(
+        ##       exprClassProcessingErrorMsg(
+        ##         code,
+        ##         paste0(
+        ##           "In Bracket: '", obj$name,
+        ##           "' is a scalar but the indexing arg has dimension ",
+        ##           index_args[[i]]$type$nDim, "."
+        ##         )
+        ##       ), call. = FALSE
+        ##     )
         ## no errors were triggered so increment nDrop if the arg is scalar
         if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
       }
@@ -1049,7 +1051,7 @@ inLabelAbstractTypesEnv(
 
     drop <- TRUE
     if (nDim == 0) {
-      # If we're indexing a scalar, any drop arg provided is ignored.
+                                        # If we're indexing a scalar, any drop arg provided is ignored.
       drop <- FALSE
     } else if (inherits(drop_arg, 'exprClass')) {
       if (drop_arg$isLiteral) {
@@ -1085,10 +1087,10 @@ inLabelAbstractTypesEnv(
       setArg(code, 'drop', drop_arg, add = TRUE)
     }
 
-    # TODO: double check the assumption that output will always be a 
-    # symbolBasic type as it is understood today.  this is handling for the
-    # subsetting operator, [], but will it always be subsetted to a symbolBasic
-    # type?
+                                        # TODO: double check the assumption that output will always be a
+                                        # symbolBasic type as it is understood today.  this is handling for the
+                                        # subsetting operator, [], but will it always be subsetted to a symbolBasic
+                                        # type?
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }
