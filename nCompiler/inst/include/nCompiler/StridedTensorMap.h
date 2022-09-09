@@ -134,6 +134,20 @@ template<typename PlainObjectType, int Options_, template <class> class MakePoin
 	 std::cout<<"strides\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_strides[i]<<" "; std::cout<<std::endl;
 #endif
        }
+
+    template<typename ss_type, typename input_sizes_type>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(double *data,
+							   const input_sizes_type &input_sizes,
+							   const ss_type &ss)
+      : m_data(data)
+    {
+      createSubTensorInfoGeneral<ss_type, input_sizes_type, NumIndices, Scalar>(ss, 
+							     input_sizes,
+							     m_dimensions, // sizes 
+							     m_strides, 
+							     m_startIndices, 
+							     m_stopIndices);
+    }
    
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index rank() const { return m_dimensions.rank(); }
