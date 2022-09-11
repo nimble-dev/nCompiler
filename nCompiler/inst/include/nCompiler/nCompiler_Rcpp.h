@@ -136,6 +136,69 @@ struct SEXP_2_EigenTensor {
   }
 };
 
+namespace Rcpp {
+  // Casting should not be necessary here but might be
+  // safe to provide.
+  // But note that the as<> system could invoke an unnecessary
+  // eigen evaluation, prior to a copy.
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<double, nDim> &x ) {
+    const typename Eigen::Tensor<double, nDim>::Dimensions &xDims = x.dimensions();
+    SEXP Sans = PROTECT(::Rf_allocVector(REALSXP, x.size()));
+    Eigen::TensorMap< Eigen::Tensor<double, nDim> > ansMap(REAL(Sans), xDims);
+    ansMap = x; // copy the data
+    if(nDim > 1) {
+      SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
+      int *dims = INTEGER(Sdims);
+      for(unsigned int i = 0; i < nDim; i++) {
+        dims[i] = xDims[i];
+      }
+      ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
+      UNPROTECT(1);
+    }
+    UNPROTECT(1);
+    return(Sans);
+  };
+
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<int, nDim> &x ) {
+    const typename Eigen::Tensor<int, nDim>::Dimensions &xDims = x.dimensions();
+    SEXP Sans = PROTECT(::Rf_allocVector(INTSXP, x.size()));
+    Eigen::TensorMap< Eigen::Tensor<int, nDim> > ansMap(INTEGER(Sans), xDims);
+    ansMap = x; // copy the data
+    if(nDim > 1) {
+      SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
+      int *dims = INTEGER(Sdims);
+      for(unsigned int i = 0; i < nDim; i++) {
+        dims[i] = xDims[i];
+      }
+      ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
+      UNPROTECT(1);
+    }
+    UNPROTECT(1);
+    return(Sans);
+  };
+
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<bool, nDim> &x ) {
+    const typename Eigen::Tensor<bool, nDim>::Dimensions &xDims = x.dimensions();
+    SEXP Sans = PROTECT(::Rf_allocVector(LGLSXP, x.size()));
+    // R represents logicals as integers
+    Eigen::TensorMap< Eigen::Tensor<int, nDim> > ansMap(INTEGER(Sans), xDims);
+    ansMap = x.template cast<int>(); // copy the data
+    if(nDim > 1) {
+      SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
+      int *dims = INTEGER(Sdims);
+      for(unsigned int i = 0; i < nDim; i++) {
+        dims[i] = xDims[i];
+      }
+      ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
+      UNPROTECT(1);
+    }
+    UNPROTECT(1);
+    return(Sans);
+  };
+} // end namespace Rcpp
 
 template< typename Scalar, int nInd >
 class nCompiler_Eigen_SEXP_converter {
@@ -152,7 +215,6 @@ class nCompiler_Eigen_SEXP_converter {
   operator EigenTensorType() {
     EigenTensorType xCopy;
     xCopy = SEXP_2_EigenTensor<Scalar, nInd>::template copy<EigenTensorType, IndexArray>(Sinput, indexArray);
-    std::cout<<"found it"<<std::endl;
     return xCopy; // compiler should use copy elision
   }
  private:
@@ -168,26 +230,58 @@ class nCompiler_EigenRef_SEXP_converter {
 
   typedef typename EigenTensorType::Index Index;
   typedef typename Eigen::array<Index, nInd> IndexArray;
- nCompiler_EigenRef_SEXP_converter(SEXP Sx) :
-  Sinput(Sx),
-    indexArray(SEXP_indices_2_IndexArray<Index, nInd>(Sx)) {
+  nCompiler_EigenRef_SEXP_converter(SEXP Sx) :
+    SxList_(Sx) {
+    Rprintf("hello to a tensor ref\n");
+    if(!(SxList_.isUsable()))
+      Rcpp::stop("Problem: List was not provided for a ref arg.\n");
+    SxList = SxList_;
+    // I could not get the following uses of Nullable to work.
+    // Rcpp::Nullable<Rcpp::CharacterVector> SobjName_(SxList[0]); // compiler error: ambiguous
+    // if(SobjName_.isNull())
+    //   Rcpp::stop("Problem: Variable name as second list element is missing for a ref arg.\n");
+    // SobjName = SobjName_;
+    SobjName = SxList[0];
+    // Rcpp::Nullable<Rcpp::Environment> Senv_(SxList[1]);  // ditto
+    // if(Senv_.isNull())
+    //   Rcpp::stop("Problem: Environment as second list element is missing for a ref arg.\n");
+    // Senv = Senv_;
+    Senv = SxList[1];
+    // Since Nullable did not work in this context, error-trapping might need
+    // simpler use of SEXPs until everything is checked.
   }
   operator EigenTensorRefType() {
-    xCopy = SEXP_2_EigenTensor<Scalar, nInd>::template copy<EigenTensorType, IndexArray>(Sinput, indexArray);
-    std::cout<<"found it2"<<std::endl;
+    //    Rcpp::CharacterVector SobjName = SxList[0];
+    //    Rcpp::Environment Senv(SxList[1]);
+    Rprintf("Doing the implicit type conversion operator\n");
+    std::string objStr = Rcpp::as<std::string>(SobjName[0]);
+    SEXP Sobj = PROTECT(Senv.get(objStr)); // equiv to Senv[ <1st arg> ]
+    if(Sobj == R_NilValue) {
+      Rcpp::stop("Problem: Could not obtain object for a ref arg.\n");
+    }
+    IndexArray indexArray( SEXP_indices_2_IndexArray<Index, nInd>(Sobj) );
+    xCopy = SEXP_2_EigenTensor<Scalar, nInd>::template copy<EigenTensorType, IndexArray>(Sobj, indexArray);
+    UNPROTECT(1);
     return xCopy; // compiler should use copy elision
   }
   ~nCompiler_EigenRef_SEXP_converter() {
+    Rprintf("goodbye to a tensor ref\n");
+    SEXP Sputback = PROTECT(Rcpp::wrap(xCopy));
+    Senv.assign(Rcpp::as<std::string>(SobjName[0]),  Sputback);
+    UNPROTECT(1);
     // One idea was to update the Sinput object upon destruction,
     // but that is not how SEXP objects work.  If we assign it to
     // newly allocated data, this is not seen by the calling function.
     // std::cout<<xCopy[0]<<std::endl;
     //    Sinput = PROTECT(Rcpp::wrap(xCopy)); // Does not modify original object
-    //    UNPROTECT(1);
-    //    REAL(Sinput)[0] = xCopy[0]; // This does modify the calling object
+    // UNPROTECT(1);
+    //    REAL(Sinput)[0] = xCopy[0];
   }
- private:
-  SEXP Sinput;
+private:
+  Rcpp::Nullable<Rcpp::List> SxList_;
+  Rcpp::List SxList;
+  Rcpp::CharacterVector SobjName;
+  Rcpp::Environment Senv;
   IndexArray indexArray;
   EigenTensorType xCopy;
 };
@@ -374,68 +468,7 @@ namespace Rcpp {
       struct input_parameter< Eigen::StridedTensorMap< Eigen::Tensor<Scalar, nInd> > > {
       typedef nCompiler_StridedTensorMap_SEXP_converter<Scalar, nInd> type;
     };
-
   } // end namespace traits
-  
-  // Casting should not be necessary here but might be
-  // safe to provide.
-  // But note that the as<> system could invoke an unnecessary
-  // eigen evaluation, prior to a copy.
-  template <int nDim>
-    SEXP wrap( const Eigen::Tensor<double, nDim> &x ) {
-    //    std::cout<<"In wrap with nDim = "<<nDim<<std::endl;
-    // if(nDim == 1) std::cout<<"Warning: vector will be returned as 1D array.  Fix the wrap method for Eigen::Tensor to fix this."<<std::endl;
-    SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
-    int *dims = INTEGER(Sdims);
-    const typename Eigen::Tensor<double, nDim>::Dimensions &xDims = x.dimensions();
-    for(unsigned int i = 0; i < nDim; i++) {
-      dims[i] = xDims[i];
-    }
-    SEXP Sans = PROTECT(::Rf_allocVector(REALSXP, x.size()));
-    Eigen::TensorMap< Eigen::Tensor<double, nDim> > ansMap(REAL(Sans), xDims);
-    ansMap = x; // copy the data
-    ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
-    UNPROTECT(2);
-    return(Sans);
-  };
-
-  template <int nDim>
-    SEXP wrap( const Eigen::Tensor<int, nDim> &x ) {
-    // std::cout<<"In wrap with nDim = "<<nDim<<std::endl;
-    // if(nDim == 1) std::cout<<"Warning: vector will be returned as 1D array.  Fix the wrap method for Eigen::Tensor to fix this."<<std::endl;
-    SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
-    int *dims = INTEGER(Sdims);
-    const typename Eigen::Tensor<int, nDim>::Dimensions &xDims = x.dimensions();
-    for(unsigned int i = 0; i < nDim; i++) {
-      dims[i] = xDims[i];
-    }
-    SEXP Sans = PROTECT(::Rf_allocVector(INTSXP, x.size()));
-    Eigen::TensorMap< Eigen::Tensor<int, nDim> > ansMap(INTEGER(Sans), xDims);
-    ansMap = x; // copy the data
-    ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
-    UNPROTECT(2);
-    return(Sans);
-  };
-
-  template <int nDim>
-    SEXP wrap( const Eigen::Tensor<bool, nDim> &x ) {
-    // std::cout<<"In wrap with nDim = "<<nDim<<std::endl;
-    // if(nDim == 1) std::cout<<"Warning: vector will be returned as 1D array.  Fix the wrap method for Eigen::Tensor to fix this."<<std::endl;
-    SEXP Sdims = PROTECT(::Rf_allocVector(INTSXP, nDim));
-    int *dims = INTEGER(Sdims);
-    const typename Eigen::Tensor<bool, nDim>::Dimensions &xDims = x.dimensions();
-    for(unsigned int i = 0; i < nDim; i++) {
-      dims[i] = xDims[i];
-    }
-    SEXP Sans = PROTECT(::Rf_allocVector(LGLSXP, x.size()));
-    // R represents logicals as integers
-    Eigen::TensorMap< Eigen::Tensor<int, nDim> > ansMap(INTEGER(Sans), xDims);
-    ansMap = x.template cast<int>(); // copy the data
-    ::Rf_setAttrib(Sans, R_DimSymbol, Sdims);
-    UNPROTECT(2);
-    return(Sans);
-  };
-  
 } // end namespace Rcpp
 
 #endif

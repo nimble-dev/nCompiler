@@ -17,10 +17,11 @@
 ## a = matrix(type = "integer", nrow = 10, ncol, init = FALSE)
 
 #' @export
-nType <- function(scalarType, nDim, isRef = FALSE, ...) {
+nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE, ...) {
   symbolBasic$new(type = scalarType,
                   nDim = nDim,
                   isRef = isRef,
+                  isBlockRef = isBlockRef,
                   ...)
 }
 
@@ -37,6 +38,13 @@ typeDeclarationList <- list(
                           evalEnv = parent.frame(2))
     ans$isRef <- TRUE
     nErrorEnv$.isRef_has_been_set <- TRUE
+    ans
+  },
+  blockRef = function(internalType) {
+    ans <- argType2symbol(substitute(internalType),
+                          evalEnv = parent.frame(2))
+    ans$isBlockRef <- TRUE
+    nErrorEnv$.isBlockRef_has_been_set <- TRUE
     ans
   },
   ## integer types:
@@ -265,9 +273,11 @@ argType2symbol <- function(argType,
                            isArg = FALSE,
                            explicitType = NULL,
                            isRef = NULL,
+                           isBlockRef = NULL,
                            evalEnv = parent.frame()) {
   nErrorEnv$stateInfo <- paste0("handling argument ", name, ".")
   nErrorEnv$.isRef_has_been_set <- FALSE
+  nErrorEnv$.isBlockRef_has_been_set <- FALSE
   typeToUse <- if(!is.null(explicitType))
     explicitType
   else
@@ -300,11 +310,30 @@ argType2symbol <- function(argType,
       if(!is.null(isRef)) {
         if(isTRUE(nErrorEnv$.isRef_has_been_set)) {
           nErrorEnv$.errorDetails <-
-            paste0("The reference status is being set in multiple ways.",
+            paste0("The reference status for ", origName, " is being set in multiple ways.",
                    " That is not allowed.")
           stop(call.=FALSE)
         }
         symbol$isRef <- isRef
+      }
+      if(inherits(symbol, "symbolBasic")) {
+        if(!inherits(symbol, "symbolSparse")) {
+          if(!is.null(isBlockRef)) {
+            if(isTRUE(nErrorEnv$.isBlockRef_has_been_set)) {
+              nErrorEnv$.errorDetails <-
+                paste0("The block reference status for ", origName, "is being set in multiple ways.",
+                       " That is not allowed.")
+              stop(call.=FALSE)
+            }
+            symbol$isBlockRef <- isBlockRef
+          }
+          if(symbol$isRef & symbol$isBlockRef) {
+            nErrorEnv$.errorDetails <-
+              paste0("Argument ", origName, " is marked as both a reference and a block reference.",
+                     " That is not allowed.")
+            stop(call.=FALSE)
+          }
+        }
       }
       if(!is.null(explicitType)) {
         if(!is.null(argType)) {
@@ -347,9 +376,9 @@ argType2symbol <- function(argType,
           typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
         symbol$name <- name
         symbol$isArg <- isArg
-        if(isTRUE(isRef)) {
+        if(isTRUE(isRef) | isTRUE(isBlockRef)) {
           nErrorEnv$.errorDetails <-
-            paste0("A reference variable must have its type set by explicit declaration,",
+            paste0("A reference or block reference variable must have its type set by explicit declaration,",
                    " because it cannot have a default value.")
           stop(call.=FALSE)
         }
@@ -374,6 +403,7 @@ argType2symbol <- function(argType,
     
   }
   nErrorEnv$.isRef_has_been_set <- FALSE
+  nErrorEnv$.isBlockRef_has_been_set <- FALSE
   nErrorEnv$stateInfo <- character()
   ans
 }
@@ -382,6 +412,7 @@ argTypeList2symbolTable <- function(argTypeList,
                                     origNames = NULL,
                                     isArg = rep(FALSE, length(argTypeList)),
                                     isRef = list(),
+                                    isBlockRef = list(),
                                     explicitTypeList = list(),
                                     evalEnv = parent.frame()
                                     ) {
@@ -437,6 +468,19 @@ argTypeList2symbolTable <- function(argTypeList,
            call. = FALSE)
     }
   }
+  ## Check that isBlockRef is valid
+  if(!is.list(isBlockRef)) {
+    ok <- FALSE
+    if(is.logical(isBlockRef)) {
+      ok <- TRUE
+      isBlockRef <- as.list(isBlockRef)
+    }
+    if(!ok) {
+      stop(paste0("In argTypeList2symbolTable, ",
+                  "isBlockRef must be a list or logical vector."),
+           call. = FALSE)
+    }
+  }
   if(is.null(names(isRef))) {
     ok <- FALSE
     if(length(isRef) == length(argTypeList)) {
@@ -447,6 +491,19 @@ argTypeList2symbolTable <- function(argTypeList,
       if(length(isRef) > 0)
         stop(paste0("In argTypeList2symbolTable, ",
                     "isRef must be named or be the same length as argTypeList."),
+             call. = FALSE)
+    }
+  }
+  if(is.null(names(isBlockRef))) {
+    ok <- FALSE
+    if(length(isBlockRef) == length(argTypeList)) {
+      ok <- TRUE
+      names(isBlockRef) <- names(argTypeList)
+    }
+    if(!ok) {
+      if(length(isBlockRef) > 0)
+        stop(paste0("In argTypeList2symbolTable, ",
+                    "isBlockRef must be named or be the same length as argTypeList."),
              call. = FALSE)
     }
   }
@@ -480,6 +537,7 @@ argTypeList2symbolTable <- function(argTypeList,
                      origNames[i],
                      isArg = isArg[[thisName]],
                      isRef = isRef[[thisName]],
+                     isBlockRef = isBlockRef[[thisName]],
                      explicitType = explicitTypeList[[thisName]],
                      evalEnv = evalEnv)
     )

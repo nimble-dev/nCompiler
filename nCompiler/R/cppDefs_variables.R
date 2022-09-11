@@ -233,6 +233,15 @@ cppVectorOfCppADdouble <- function(name = character()) {
                       ref = FALSE)
 }
 
+cppStridedTensorMapRef <- function(name = character(),
+                                   nDim,
+                                   scalarType) {
+  cppVarFullClass$new(name = name,
+                      baseType = "Eigen::StridedTensorMap",
+                      templateArgs = list(cppEigenTensor(nDim = nDim, scalarType = scalarType))
+                      )
+}
+
 cppEigenTensor <- function(name = character(),
                            nDim,
                            scalarType) {

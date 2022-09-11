@@ -36,12 +36,15 @@ symbolBasic <-
     public = list(
       nDim  = NULL,
       size = NULL,
+      isBlockRef = FALSE,
       initialize = function(...,
                             nDim = 0,
-                            size = if(nDim == 0) 1 else NA) {
+                            size = if(nDim == 0) 1 else NA,
+                            isBlockRef = FALSE) {
         super$initialize(...)
         self$nDim <- nDim
         self$size <- size
+        self$isBlockRef <- isBlockRef
         self
       },
       shortPrint = function() {
@@ -92,7 +95,11 @@ symbolBasic <-
                                   constructor = "(M_PI)")
             )
         }
-        if(self$isRef) {
+        if(self$isBlockRef) {
+          return(cppStridedTensorMapRef(name = self$name,
+                                             nDim = self$nDim,
+                                             scalarType = cType))
+        } else if(self$isRef) {
           return(cppEigenTensorRef(name = self$name,
                                    nDim = self$nDim,
                                    scalarType = cType))

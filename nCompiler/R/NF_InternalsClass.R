@@ -27,6 +27,7 @@ NF_InternalsClass <- R6::R6Class(
                               name,
                               argTypes = list(),
                               refArgs = list(),
+                              blockRefArgs = list(),
                               returnType = NULL,
                               enableDerivs = list(),
                               check = FALSE,
@@ -43,9 +44,14 @@ NF_InternalsClass <- R6::R6Class(
                 refArgs <- structure(as.list(rep(TRUE, length(refArgs))),
                                      names = refArgs)
             }
+            if(is.character(blockRefArgs)) {
+                blockRefArgs <- structure(as.list(rep(TRUE, length(blockRefArgs))),
+                                     names = blockRefArgs)
+            }
             argSymTab <<- argTypeList2symbolTable(argTypeList = arguments,
                                                   isArg = rep(TRUE, length(arguments)),
                                                   isRef = refArgs,
+                                                  isBlockRef = blockRefArgs,
                                                   explicitTypeList = argTypes,
                                                   evalEnv = where)
 
@@ -89,24 +95,28 @@ NF_InternalsClass <- R6::R6Class(
                                     sep = "_")
             
         },
-        getFunction = function() {
-            functionAsList <- list(as.name('function'))
-            functionAsList[2] <- list(NULL)
-            if(!is.null(args)) functionAsList[[2]] <- as.pairlist(arguments)
-            boolRefArg <- unlist(lapply(argSymTab$symbols,
-                                        function(x) x$isRef))
-            refArgs <- names(argSymTab$symbols)[boolRefArg]
-            callableCode <- if(length(refArgs) > 0)
-                                passByReference(code,
-                                                refArgs)
-                            else
-                                code
-            functionAsList[[3]] <- callableCode
-            ans <- eval(
-                parse(text=deparse(as.call(functionAsList)),
-                      keep.source = FALSE)[[1]])
-            environment(ans) <- where
-            ans
+      getFunction = function() {
+        functionAsList <- list(as.name('function'))
+        functionAsList[2] <- list(NULL)
+        if(!is.null(args)) functionAsList[[2]] <- as.pairlist(arguments)
+        boolRefArg <- unlist(lapply(argSymTab$symbols,
+                                    function(x) x$isRef))
+        refArgs <- names(argSymTab$symbols)[boolRefArg]
+        boolBlockRefArg <- unlist(lapply(argSymTab$symbols,
+                                         function(x) x$isBlockRef))
+        blockRefArgs <- names(argSymTab$symbols)[boolBlockRefArg]
+        callableCode <- if(length(refArgs) > 0 | length(blockRefArgs > 0))
+                          passByReference(code,
+                                          refArgs,
+                                          blockRefArgs)
+                        else
+                          code
+        functionAsList[[3]] <- callableCode
+        ans <- eval(
+          parse(text=deparse(as.call(functionAsList)),
+                keep.source = FALSE)[[1]])
+        environment(ans) <- where
+        ans
         }
     )
 )

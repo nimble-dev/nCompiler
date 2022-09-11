@@ -71,7 +71,7 @@ OptimControlList <- nClass(
     fnscale = 'double',
     parscale = 'numericVector',
     ndeps = 'numericVector',
-    maxit = 'integer', 
+    maxit = 'integer',
     abstol = 'double',
     reltol = 'double',
     alpha = 'double',
@@ -106,9 +106,9 @@ OptimControlList <- nClass(
         temp <- 10.0
       }
     )
-    
   )
 )
+
 
 #' @export
 OptimResultList <- nClass(
