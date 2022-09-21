@@ -10,7 +10,7 @@
 #include<memory>
 #include<nCompiler/nCompiler_cereal.h>
 #include<nCompiler/expand_call_method.h>
-#include "shared_ptr_as_wrap.h"
+#include<nCompiler/shared_ptr_as_wrap.h>
 
 // #include<nCompiler/loadedObjectEnv.h>
 
@@ -65,6 +65,24 @@ class genericInterfaceBaseC {
     std::cout<<"In genericInterfaceBaseC destructor"<<std::endl;
 #endif
   }
+
+  enum argPassingType{copy, ref, refBlock};
+  struct arg {
+    const std::string name;
+    const argPassingType APtype;
+    arg(const std::string &name_, argPassingType type_=copy) :
+    name(name_),
+      APtype(type_) {}
+  };
+  struct args {
+    typedef std::vector<const arg> argVectorT;
+    // explicit saves the compiler from giving ambiguous
+    // constructor error from implicit copy and move constructors.
+    // I am not sure if this is the right way to resolve the issue.
+    const argVectorT argVector;
+    explicit args(const argVectorT &argVector_ ) :
+    argVector(argVector_) {};
+  };
 };
 
 // Base class for accessing a single member from a nimble class,
@@ -113,7 +131,7 @@ class genericInterfaceC : public genericInterfaceBaseC {
    typedef P T::*ptrtype;
     ptrtype ptr;
  accessor_class(ptrtype ptr) : ptr(ptr) {};
-    
+
     SEXP get(const genericInterfaceBaseC *intBasePtr) const {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived get"<<std::endl;
@@ -137,7 +155,7 @@ class genericInterfaceC : public genericInterfaceBaseC {
  static int name_count;
  typedef std::map<std::string,int> name2index_type;
  static name2index_type name2index;
- 
+
   typedef std::map<std::string, std::shared_ptr<accessor_base> > name2access_type;
   typedef std::pair<std::string, std::shared_ptr<accessor_base> > name_access_pair;
   static name2access_type name2access;
@@ -150,9 +168,9 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #endif
     name2index[name] = name_count++;
     return name_access_pair(
-			    name,
-			    std::shared_ptr<accessor_base>(new accessor_class<P>(ptr))
-			    );
+                            name,
+                            std::shared_ptr<accessor_base>(new accessor_class<P>(ptr))
+                            );
       }
 
   // hello world to see if static maps were populated.
@@ -187,16 +205,253 @@ class genericInterfaceC : public genericInterfaceBaseC {
   }
 
   /****** METHODS ******/
+  struct method_info {
+    // explicit saves the compiler from giving ambiguous
+    // constructor error from implicit copy and move constructors.
+    // I am not sure if this is the right way to resolve the issue.
+    method_info(const std::shared_ptr<method_base>& method_ptr_,
+                const args &args_) :
+    my_args(args_),
+    method_ptr(method_ptr_){};
+    args my_args;
+    std::shared_ptr<method_base> method_ptr;
+  };
+  // method_info needs a template argument, so this idea breaks.
+  typedef std::map<std::string, method_info > name2method_type;
+  typedef std::pair<std::string, method_info > name_method_pair;
+
+
   SEXP call_method(const std::string &name, SEXP Sargs) {
 #ifdef SHOW_METHODS
     std::cout<<"in derived call_method"<<std::endl;
 #endif
-    name2method_type::iterator method = name2method.find(name);
+    typename name2method_type::iterator method = name2method.find(name);
     if(method == name2method.end()) {
       std::cout<<"Problem: \""<<name<<"\" is not a method in this nClass."<<std::endl;
       return R_NilValue;
     }
-    return (method->second->call(this, Sargs));
+    if(TYPEOF(Sargs) != ENVSXP)
+      Rcpp::stop("nCompiler call_method should pass the calling environment.\n");
+    const args::argVectorT &argVector(method->second.my_args.argVector);
+    args::argVectorT::size_type numArgsRequired(argVector.size());
+    std::vector<std::string> namesProvided(numArgsRequired);
+    std::vector<SEXP> promisesProvided(numArgsRequired);
+
+    // We implement R's rules for argument matching:
+    // 1. exact matces; 2. partial matches; 3. positional
+    // https://cran.r-project.org/doc/manuals/r-release/R-lang.html#Argument-matching
+    // In addition, we do not (cannot easily) support missingness.
+    if(numArgsRequired) { // continue if > 0 args
+      // Get '...' from the calling environment
+      SEXP Sdotdotdot = Rf_findVarInFrame(Sargs, R_DotsSymbol);
+      std::cout<<TYPEOF(Sdotdotdot)<<std::endl;
+      if(TYPEOF(Sdotdotdot) != DOTSXP) {
+        Rcpp::stop("nCompiler call_method's environment does not have '...'.\n");
+      }
+      // partial_matches "rows" will be required(aka expected), "columns" will be provided
+      std::vector<bool> partial_matches(numArgsRequired*numArgsRequired, false);
+      std::vector<int> arg_match_indices(numArgsRequired, -1);
+      std::vector<bool> provided_arg_used(numArgsRequired, false);
+      bool done(false);
+      // We navigate through the ... pairlist using Rinternals.
+      // Use of Rcpp for this was not straightforward.
+      SEXP SthisArg = CAR(Sdotdotdot);
+      SEXP SnextArg = CDR(Sdotdotdot);
+      SEXP SargSym = TAG(Sdotdotdot);
+      // Iterate over provided arguments
+      size_t numArgsProvided;
+      size_t iProv = 0; // index of provided argument
+      while(!done) {
+        if(TYPEOF(SthisArg)!=PROMSXP) { // PROMSXP=5
+//          std::cout<<"finishing on type "<<TYPEOF(SthisArg)<<std::endl;
+          done = true;
+        } else {
+          promisesProvided[iProv] = SthisArg;
+          if(TYPEOF(SargSym)==SYMSXP) { // (SYMSXP=1); so the provided arg is named
+            SEXP SprovName = PRINTNAME(SargSym);
+            // CHARSXP's have internal details already figured out
+            // by Rcpp, so use Rcpp to obtain regular std::string
+            const std::string provName(Rcpp::String(SprovName).get_cstring());
+            namesProvided[iProv] = provName; // used later only for error reporting.
+            // Iterate over require arguments
+            bool this_exact_matches(false);
+            int iReq = 0;
+            while((!this_exact_matches) && iReq < numArgsRequired) {
+              // C++ STL tools for partial matching
+              // are not the right fit, and this is so simple,
+              // so we'll cook it right here: Determine if
+              // the name match is exact, partial, or neither
+
+              const std::string expected_name(argVector[iReq].name);
+              std::string::const_iterator iExpected(expected_name.begin());
+              const std::string::const_iterator iExpEnd(expected_name.end());
+              std::string::const_iterator iProvided(provName.begin());
+              const std::string::const_iterator iProvEnd(provName.end());
+              bool done_this_match((iExpected == iExpEnd) || (iProvided == iProvEnd));
+              if(!done_this_match)
+                done_this_match = (*iExpected) != (*iProvided);
+              while(!done_this_match) {
+                ++iExpected;
+                ++iProvided;
+                done_this_match = (iExpected == iExpEnd) || (iProvided == iProvEnd);
+                if(!done_this_match) {
+                  done_this_match = (*iExpected) != (*iProvided);
+                }
+              }
+              std::cout<<*iExpected<<" "<<*iProvided<<std::endl;
+              this_exact_matches = (iProvided == iProvEnd) &&
+                (*iExpected) == (*iProvided);
+              bool this_partial_matches = iProvided == iProvEnd;
+
+//              std::cout<<"match result for input "<<provName<<" to "<<expected_name<<" "<<this_exact_matches<<" "<<this_partial_matches<<std::endl;
+
+              if(this_exact_matches) { // exact match
+                if(arg_match_indices[iReq]==-1) {
+ //                 std::cout<<"exact match for arg "<<provName<<std::endl;
+                  arg_match_indices[iReq] = iProv;
+                  provided_arg_used[iProv] = true;
+                } else {
+                  Rcpp::stop("Multiple exact matches to name " + provName);
+                }
+              } else if(this_partial_matches) {
+                partial_matches[iReq + numArgsRequired*iProv] = true;
+              }
+              ++iReq;
+            } // finish iterating over required args
+          } // finish handling case that an arg name was input
+//          int l = LENGTH(STRING_ELT(SargName, 0));
+ //         std::string ans(CHAR(STRING_ELT(SargName 0)));
+ //         std::cout<<"name is "<<ans<<std::endl;
+        } // finish handling that this provided arg
+        ++iProv;
+        done = TYPEOF(SnextArg) == NILSXP;
+//        std::cout<<"next type "<<TYPEOF(SnextArg)<<std::endl;
+        if(iProv >= numArgsRequired && !done) {
+          Rcpp::stop("Too many arguments provided.");
+          done = true;
+        }
+        if(!done) {
+          SthisArg = CAR(SnextArg);
+          SargSym = TAG(SnextArg);
+          SnextArg = CDR(SnextArg);
+        }
+      } //finish iterating over provided args
+      numArgsProvided = iProv;// We will have already errored out if too many were provided
+      if(numArgsProvided != numArgsRequired) {
+        Rcpp::stop("Too few arguments provided.");
+      }
+      // At this point, we have arg_match_indices set for exact matches
+      // and partial_matches matrix set for partial matches
+      // Next we choose partial matches for args that lack exact matches
+      for(int iReq = 0; iReq < numArgsRequired; ++iReq) {
+        if(arg_match_indices[iReq]==-1) {
+          int new_match(-1);
+          for(int iP = 0; iP < numArgsRequired; ++iP) {
+            if(partial_matches[iReq + numArgsRequired*iP]) {
+              if(new_match != -1) {
+                Rcpp::stop("Multiple partial matches to " + namesProvided[iP]);
+              } else {
+                new_match = iP;
+              }
+            }
+          }
+          if(new_match != -1) {
+            arg_match_indices[iReq] = new_match;
+            provided_arg_used[new_match] = true;
+          }
+        }
+      }
+      // At this point, we have arg_match_indices for both exact and partial matches.
+      // Now we check if any unused arguments were named, which is an error.
+      for(int iP = 0; iP < numArgsRequired; ++iP) {
+        if(!provided_arg_used[iP]) {
+          if(namesProvided[iP].size() != 0) {
+            Rcpp::stop("Named argument " + namesProvided[iP] + " does not match any formal arguments.");
+          }
+        }
+      }
+
+      // And then we place remaining arguments in order.
+      bool done_unnamed_matching(false);
+      int i_unmatched_req(0);
+      int i_unused_prov(0);
+      while(!done_unnamed_matching) {
+        while(arg_match_indices[i_unmatched_req] != -1 &&
+              i_unmatched_req < numArgsRequired-1) {
+          ++i_unmatched_req;
+        }
+        while(provided_arg_used[i_unused_prov] &&
+              i_unused_prov < numArgsRequired-1) {
+          ++i_unused_prov;
+        }
+//        std::cout<<"i_unmatched_req " <<i_unmatched_req<<" i_unused_prov "<< i_unused_prov<<std::endl;
+        // At this point we have already trapped mismatched numbers of
+        // arguments and multiple partial matches, so
+        // the unnamed matches should work perfectly.
+        if(arg_match_indices[i_unmatched_req] == -1 &&
+          (!provided_arg_used[i_unused_prov])) {
+//          std::cout<<"unnamed placement of provided "<<i_unused_prov<<" for formal "<<i_unmatched_req<<std::endl;
+          arg_match_indices[i_unmatched_req] = i_unused_prov;
+          provided_arg_used[i_unused_prov] = true;
+        } else {
+          done_unnamed_matching = true;
+        }
+      }
+      // std::cout<<"arg_match_indices ";
+      // for(int iii = 0; iii < numArgsRequired; ++iii) {
+      //   std::cout<<arg_match_indices[iii]<<" ";
+      // }
+      // std::cout<<std::endl;
+      // std::cout<<"ready to construct arg list for inner call"<<std::endl;
+//
+    // We use Rcpp tools at this step to get PROTECTion behavior.
+    // We are not sure how direct use of PROTECT/UNPROTECT works
+    // when inside of the called function there could be an error trap
+    // that does not return control here for UNPROTECT.
+    Rcpp::List RinnerArgs(numArgsRequired);
+      for(int iReq = 0; iReq < numArgsRequired; ++iReq) {
+        int this_iP = arg_match_indices[iReq];
+        switch(argVector[iReq].APtype) {
+        case copy:
+          {
+            RinnerArgs[iReq] = Rf_eval(R_PromiseExpr(promisesProvided[this_iP]),
+                                       PRENV(promisesProvided[this_iP]));
+            break;
+          };
+        case ref:
+          {
+            // In the argument place, put a list of the argument name and its environment
+            // This imitates R function createRefInfoIntoC.  Any changes here or there must
+            // be kept up to date with each other.
+            std::cout<<"handling ref"<<std::endl;
+            RinnerArgs[iReq] = Rcpp::List::create(PRCODE(promisesProvided[this_iP]),
+                                            PRENV(promisesProvided[this_iP]));
+            break;
+          };
+        case refBlock:
+          {
+            std::cout<<"handling blockRef"<<std::endl;
+            RinnerArgs[iReq] = Rcpp::List::create(PRCODE(promisesProvided[this_iP]),
+                                                  PRENV(promisesProvided[this_iP]));
+            break;
+          };
+        default:
+          Rcpp::stop("Invalid argPassingType"); // should never ever be reached
+        }
+      }
+      // Can I UNPROTECT(1) here, in case there is any error-trap inside the
+      // method that prevents returning to this code?
+      // In the subsequent calls, there is a LENGTH() and VECTOR_ELT() calls on SinnerArgs.
+      // Are those safe without PROTECTion?
+      // Alternatively, should I make SinnerArgs an Rcpp::List?
+      SEXP Sans = PROTECT(method->second.method_ptr->call(this, RinnerArgs));
+      UNPROTECT(1);
+      return Sans;
+    } // end of if(numArgsRequired)
+    std::cout<<"Need to handle no-argument case!"<<std::endl;
+    return R_NilValue; // Here is where no-args case goes.
+
+//    return (method->method_ptr->call(this, Sargs));
   }
 
   template<typename P, typename ...ARGS>
@@ -205,18 +460,18 @@ class genericInterfaceC : public genericInterfaceBaseC {
     typedef P (T::*ptrtype)(ARGS...);
     ptrtype ptr;
   method_class(ptrtype ptr) : ptr(ptr) {};
-    
+
     SEXP call(genericInterfaceBaseC *intBasePtr, SEXP Sargs) {
 #ifdef SHOW_METHODS
       std::cout<<"in derived call"<<std::endl;
 #endif
       if(LENGTH(Sargs) != sizeof...(ARGS)) {
-	      std::cout<<"Incorrect number of arguments"<<std::endl;
-	      return R_NilValue;
+        std::cout<<"Incorrect number of arguments"<<std::endl;
+        return R_NilValue;
       }
       return Rcpp::wrap(
-			   expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs)
-			);
+                        expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs)
+                        );
     }
   };
 
@@ -229,38 +484,40 @@ class genericInterfaceC : public genericInterfaceBaseC {
     typedef void (T::*ptrtype)(ARGS...);
     ptrtype ptr;
   method_class(ptrtype ptr) : ptr(ptr) {};
-    
+
     SEXP call(genericInterfaceBaseC *intBasePtr, SEXP Sargs) {
 #ifdef SHOW_METHODS
       std::cout<<"in derived call"<<std::endl;
 #endif
       if(LENGTH(Sargs) != sizeof...(ARGS)) {
-	std::cout<<"Incorrect number of arguments"<<std::endl;
-	return R_NilValue;
+        std::cout<<"Incorrect number of arguments"<<std::endl;
+        return R_NilValue;
       }
       expand_call_method_narg<void, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs);
       return R_NilValue;
     }
   };
-  
-  typedef std::map<std::string, std::shared_ptr<method_base> > name2method_type;
-  typedef std::pair<std::string, std::shared_ptr<method_base> > name_method_pair;
+
+//  typedef std::map<std::string, std::shared_ptr<method_base> > name2method_type;
+//  typedef std::pair<std::string, std::shared_ptr<method_base> > name_method_pair;
 
   static name2method_type name2method;
-  template<typename P, typename ...ARGS>
+  template<typename P,  typename ...ARGS>
     static name_method_pair method(std::string name,
-				   P (T::*fun)(ARGS... args)) {
+                                   P (T::*fun)(ARGS... args),
+                                   const args& args_) {
 #ifdef SHOW_METHODS
     std::cout<<"adding method "<<name<<std::endl;
 #endif
-    return name_method_pair(name,
-			    std::shared_ptr<method_base>(new method_class<P, ARGS...>(fun))
-			    );
+    return
+      name_method_pair(name,
+                       method_info(std::shared_ptr<method_base>(new method_class<P, ARGS...>(fun)), args_)
+                       );
   }
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {
     archive(cereal::base_class<genericInterfaceBaseC>(this));
-  } 
+  }
 };
 
 

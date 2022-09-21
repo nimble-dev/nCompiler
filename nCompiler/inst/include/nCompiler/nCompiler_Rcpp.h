@@ -29,8 +29,8 @@ int SEXP_2_int(SEXP Sn, int i, int offset ) {
 template<class fromT, class toT, int nDim>
 Eigen::Tensor<toT, nDim>
 castedTensorCopy(const fromT * const from,
-		 const Eigen::array<typename Eigen::Tensor<fromT, nDim>::Index, nDim> &indexArray,
-		 std::true_type same_types) {
+                 const Eigen::array<typename Eigen::Tensor<fromT, nDim>::Index, nDim> &indexArray,
+                 std::true_type same_types) {
   Eigen::TensorMap< Eigen::Tensor<const fromT, nDim> > xMap(from, indexArray);
   Eigen::Tensor<toT, nDim> to = xMap;
   return to;
@@ -39,8 +39,8 @@ castedTensorCopy(const fromT * const from,
 template<class fromT, class toT, int nDim>
 Eigen::Tensor<toT, nDim>
 castedTensorCopy(const fromT * const from,
-		 const Eigen::array<typename Eigen::Tensor<fromT, nDim>::Index, nDim> &indexArray,
-		 std::false_type different_types) {
+                 const Eigen::array<typename Eigen::Tensor<fromT, nDim>::Index, nDim> &indexArray,
+                 std::false_type different_types) {
   Eigen::TensorMap< Eigen::Tensor<const fromT, nDim> > xMap(from, indexArray);
   Eigen::Tensor<toT, nDim> to = xMap.template cast<toT>();
   return to;
@@ -231,31 +231,36 @@ class nCompiler_EigenRef_SEXP_converter {
   typedef typename EigenTensorType::Index Index;
   typedef typename Eigen::array<Index, nInd> IndexArray;
   nCompiler_EigenRef_SEXP_converter(SEXP Sx) :
-    SxList_(Sx) {
+    RxList_(Sx) {
     Rprintf("hello to a tensor ref\n");
-    if(!(SxList_.isUsable()))
+    if(!(RxList_.isUsable()))
       Rcpp::stop("Problem: List was not provided for a ref arg.\n");
-    SxList = SxList_;
+    Rcpp::List RxList(RxList_);
     // I could not get the following uses of Nullable to work.
     // Rcpp::Nullable<Rcpp::CharacterVector> SobjName_(SxList[0]); // compiler error: ambiguous
-    // if(SobjName_.isNull())
-    //   Rcpp::stop("Problem: Variable name as second list element is missing for a ref arg.\n");
-    // SobjName = SobjName_;
-    SobjName = SxList[0];
+    //
+    // Sx should contain a list with first element a symbol and second element an environment
+    SEXP SobjName = Rcpp::as<SEXP>(RxList[0]);
+    if(TYPEOF(SobjName) != SYMSXP) {
+      if(TYPEOF(SobjName) == LANGSXP)
+        Rcpp::stop("A reference argument should be a variable name, not an expression.");
+      else
+        Rcpp::stop("A reference argument should be a variable name.");
+    }
+    objStr = Rcpp::String(PRINTNAME(SobjName)).get_cstring();
     // Rcpp::Nullable<Rcpp::Environment> Senv_(SxList[1]);  // ditto
     // if(Senv_.isNull())
     //   Rcpp::stop("Problem: Environment as second list element is missing for a ref arg.\n");
     // Senv = Senv_;
-    Senv = SxList[1];
+    Renv = RxList[1];
     // Since Nullable did not work in this context, error-trapping might need
     // simpler use of SEXPs until everything is checked.
   }
   operator EigenTensorRefType() {
     //    Rcpp::CharacterVector SobjName = SxList[0];
-    //    Rcpp::Environment Senv(SxList[1]);
+    //    Rcpp::Environment Renv(SxList[1]);
     Rprintf("Doing the implicit type conversion operator\n");
-    std::string objStr = Rcpp::as<std::string>(SobjName[0]);
-    SEXP Sobj = PROTECT(Senv.get(objStr)); // equiv to Senv[ <1st arg> ]
+    SEXP Sobj = PROTECT(Renv.get(objStr)); // equiv to Renv[ <1st arg> ]
     if(Sobj == R_NilValue) {
       Rcpp::stop("Problem: Could not obtain object for a ref arg.\n");
     }
@@ -267,7 +272,7 @@ class nCompiler_EigenRef_SEXP_converter {
   ~nCompiler_EigenRef_SEXP_converter() {
     Rprintf("goodbye to a tensor ref\n");
     SEXP Sputback = PROTECT(Rcpp::wrap(xCopy));
-    Senv.assign(Rcpp::as<std::string>(SobjName[0]),  Sputback);
+    Renv.assign(objStr,  Sputback);
     UNPROTECT(1);
     // One idea was to update the Sinput object upon destruction,
     // but that is not how SEXP objects work.  If we assign it to
@@ -278,10 +283,9 @@ class nCompiler_EigenRef_SEXP_converter {
     //    REAL(Sinput)[0] = xCopy[0];
   }
 private:
-  Rcpp::Nullable<Rcpp::List> SxList_;
-  Rcpp::List SxList;
-  Rcpp::CharacterVector SobjName;
-  Rcpp::Environment Senv;
+  Rcpp::Nullable<Rcpp::List> RxList_;
+  std::string objStr;
+  Rcpp::Environment Renv;
   IndexArray indexArray;
   EigenTensorType xCopy;
 };
@@ -307,23 +311,22 @@ SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
   
   SEXP Ssym;
   if(Rf_isSymbol(Sexpr)) { // argument is a name without indexing brackets
-    Ssym = PROTECT(Sexpr);
+    Ssym = Sexpr;
   } else {
     if( Rf_isLanguage(Sexpr) ) {
-      SEXP Sop = PROTECT(CAR(Sexpr)); // should be `[` of A[ <inds> ]
+      // It is unclear if PROTECT needs to be used for results or CAR, CADR, etc.  I don't think so.
+      SEXP Sop = CAR(Sexpr); // should be `[` of A[ <inds> ]
       // If these get turned into error throws, check on PROTECT/UNPROTECT balance,
       // or use Rcpp::Shield.
       if(Sop != R_BracketSymbol) {
-	std::cout<<"Problem: Argument to refBlock should be a name or indexing expression."<<std::endl;
+        Rcpp::stop("Problem: Argument to refBlock should be a name or indexing expression.");
       }
-      UNPROTECT(1); // Sop
-      Ssym = PROTECT(CADR(Sexpr));
+      Ssym = CADR(Sexpr);
       if(!Rf_isSymbol(Ssym)) {
-	std::cout<<"Problem: Argument to refBlock has first arg that is not a symbol."<<std::endl;
+        Rcpp::stop("Problem: Argument to refBlock has first arg that is not a symbol.");
       }
     } else {
-      std::cout<<"Problem: Argument to refBlock should be a name or language object."<<std::endl;
-      PROTECT(Ssym = R_NilValue);
+      Rcpp::stop("Problem: Argument to refBlock should be a name or language object.");
     }
   }
   SEXP Robj = PROTECT(Rf_findVarInFrame(Senv, Ssym)); // This does not search up environments
@@ -332,9 +335,9 @@ SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
   // Passing by reference is already dangerous, so the user should be careful,
   // and objects of the same name in higher environments should not be modified.
   if(Rf_isNull(Robj)) {
-    std::cout<<"Problem: Variable in refBlock argument not found."<<std::endl;
+    Rcpp::stop("Problem: Variable in refBlock argument not found.");
   }
-  UNPROTECT(2);
+  UNPROTECT(1);
   return Robj;
 }
 
@@ -351,15 +354,15 @@ int SEXP_eval_to_single_int(SEXP Sx, SEXP Senv) {
 
 template<typename InputArray>
 std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
-					SEXP Senv,
-					InputArray &sizeArray) {
+                                        SEXP Senv,
+                                        InputArray &sizeArray) {
   // This will be called after Sexpr_2_data, so much of the checking
   // of Sexpr as a valid input will already be done.
   //
   // sizeArray is used if there are no indexing brackets.
   // It is also used to check that entries in indexing brackets 
-  //  are within bounds.
-  SEXP R_ColonSymbol = Rf_install(":"); // Why isn't this with the others in Rinternals.h
+    //  are within bounds.
+    SEXP R_ColonSymbol = Rf_install(":"); // Why isn't this with the others in Rinternals.h
 
   int nDim = sizeArray.size();
   std::vector<b__> indexBlockArray(nDim);
@@ -373,40 +376,40 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
     if(!useSizeArray) {
       Sind = PROTECT(CAR(SnextIndex));
       if(Rf_isLanguage(Sind)) { // should be `:`(start, end)
-	Sop = PROTECT(CAR(Sind)); // should be `:`
-	if(Sop != R_ColonSymbol) {
-	  std::cout<<"Problem: Index in a refBlock argument has an operation that is not ':'"<<std::endl;
-	}
-	UNPROTECT(1); // done with Sop
-	Sargs = PROTECT(CDR(Sind));
-	int first = SEXP_eval_to_single_int(PROTECT(CAR(Sargs)), Senv);
-	int last =  SEXP_eval_to_single_int(PROTECT(CADR(Sargs)), Senv);
-	if(first < 0) {
-	  PRINTF("Problem: First index in a range is <= 0. Using 0.\n");
-	  first = 0;
-	}
-	if(last > sizeArray[i] - 1) {
-	  PRINTF("Problem: Last index in a range is too large.  Using size of object instead.\n");
-	  last = sizeArray[i] - 1;
-	}
-	PRINTF("first last\n");
-	indexBlockArray[i] = b__(first, last);
-	UNPROTECT(3);
+        Sop = PROTECT(CAR(Sind)); // should be `:`
+        if(Sop != R_ColonSymbol) {
+          std::cout<<"Problem: Index in a refBlock argument has an operation that is not ':'"<<std::endl;
+        }
+        UNPROTECT(1); // done with Sop
+        Sargs = PROTECT(CDR(Sind));
+        int first = SEXP_eval_to_single_int(PROTECT(CAR(Sargs)), Senv);
+        int last =  SEXP_eval_to_single_int(PROTECT(CADR(Sargs)), Senv);
+        if(first < 0) {
+          PRINTF("Problem: First index in a range is <= 0. Using 0.\n");
+          first = 0;
+        }
+        if(last > sizeArray[i] - 1) {
+          PRINTF("Problem: Last index in a range is too large.  Using size of object instead.\n");
+          last = sizeArray[i] - 1;
+        }
+        PRINTF("first last\n");
+        indexBlockArray[i] = b__(first, last);
+        UNPROTECT(3);
       } else { // index entry is a number, a variable, or a blank.
-	bool isBlank(false);
-	if(Rf_isSymbol(Sind)) {
-	  isBlank = PRINTNAME(Sind) == R_BlankString;
-	}
-	if(isBlank) {
-	  PRINTF("blank\n");
-	  indexBlockArray[i] = b__(0, sizeArray[i]-1);
-	} else {
-	  indexBlockArray[i] = b__( SEXP_eval_to_single_int(Sind, Senv) );
-	  std::cout<<"Got singleton "<< SEXP_eval_to_single_int(Sind, Senv)<<std::endl;
-	}
+        bool isBlank(false);
+        if(Rf_isSymbol(Sind)) {
+          isBlank = PRINTNAME(Sind) == R_BlankString;
+        }
+        if(isBlank) {
+          PRINTF("blank\n");
+          indexBlockArray[i] = b__(0, sizeArray[i]-1);
+        } else {
+          indexBlockArray[i] = b__( SEXP_eval_to_single_int(Sind, Senv) );
+          std::cout<<"Got singleton "<< SEXP_eval_to_single_int(Sind, Senv)<<std::endl;
+        }
       }
       if(i < nDim -1)
-	SnextIndex = PROTECT(CDR(SnextIndex));
+        SnextIndex = PROTECT(CDR(SnextIndex));
     } else {
       indexBlockArray[i] = b__(0, sizeArray[i]-1);
     }
@@ -416,6 +419,25 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
   }
   return(indexBlockArray);
 }
+
+template<typename Scalar>
+struct Rdataptr;
+
+template<>
+struct Rdataptr<double> {
+  static double *PTR(SEXP Sin) {return REAL(Sin);}
+};
+
+template<>
+struct Rdataptr<int> {
+  static int *PTR(SEXP Sin) {return INTEGER(Sin);}
+};
+
+template<>
+struct Rdataptr<bool> {
+  static int *PTR(SEXP Sin) {return INTEGER(Sin);} // R bools are integers
+};
+
 
 template< typename Scalar, int nInd >
 class nCompiler_StridedTensorMap_SEXP_converter {
@@ -433,12 +455,13 @@ class nCompiler_StridedTensorMap_SEXP_converter {
     Sdata(Sexpr_2_data(Sexpr, Senv)),
     indexArray(SEXP_indices_2_IndexArray_general<Index, std::vector<Index> >(Sdata)),
     indexBlockArray(SEXP_2_indexBlockArray(Sexpr, Senv, indexArray)),
-    xMap(REAL(Sdata), indexArray, indexBlockArray )
+    xMap(Rdataptr<Scalar>::PTR(Sdata), indexArray, indexBlockArray )
       {
+        std::cout<<"hello to a StridedTensorMap"<<std::endl;
   }
   operator StridedTensorMapType() {
     //xMap = Eigen::MakeStridedTensorMap<2>::make(ans, indexBlockArray);
-    std::cout<<"found it3"<<std::endl;
+    std::cout<<"handing my StridedTensorMap for function input"<<std::endl;
     return xMap; // compiler should use copy elision
   }
   ~nCompiler_StridedTensorMap_SEXP_converter() {

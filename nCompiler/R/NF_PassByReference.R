@@ -180,14 +180,14 @@ passByReferenceIntoC <- function(fun,
 
 #' @export
 createRefInfoIntoC <- function(outerCode,
-                               env,
-                               innerEnv ) {
+                               env) {
+                               #,innerEnv ) {
   ## for foo(x)
-  ## outerCode is the x used in the calling function, e.g. my_x in a call foo(my_x)
+  ## outerCode is the x used in the call, e.g. my_x in a call foo(my_x)
   ## env is the calling environment i.e. of foo(my_x)
-  ## innerEnv is the local function environment, i.e. of x and x_RefIntoC
+  ## deprecated: innerEnv is the local function environment, i.e. of x and x_RefIntoC
   if(missing(env)) env <- parent.frame(n = 2)
-  if(missing(innerEnv)) innerEnv <- parent.frame()
-  outerName <- as.character(outerCode)
-  list(outerName, env) # If other things are not needed, we can remove them.
+  # if(missing(innerEnv)) innerEnv <- parent.frame()
+  # outerName <- as.character(outerCode)
+  list(outerCode, env) # If other things are not needed, we can remove them.
 }

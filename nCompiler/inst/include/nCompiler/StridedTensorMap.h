@@ -136,7 +136,7 @@ template<typename PlainObjectType, int Options_, template <class> class MakePoin
        }
 
     template<typename ss_type, typename input_sizes_type>
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(double *data,
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(Scalar *data,
 							   const input_sizes_type &input_sizes,
 							   const ss_type &ss)
       : m_data(data)
