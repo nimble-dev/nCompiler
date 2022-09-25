@@ -99,6 +99,12 @@ cpp_nFunctionClass <- R6::R6Class(
       cpp_include_needed_nFunctions(self, NF_Compiler)
       cpp_include_needed_nClasses(self, NF_Compiler$symbolTable, NF_Compiler)
       cpp_include_aux_content(self, NF_Compiler)
+    },
+    get_post_cpp_compiler = function() {
+      structure(
+        list(list(refArgs = self$NF_Compiler$NFinternals$refArgs,
+                  blockRefArgs = self$NF_Compiler$NFinternals$blockRefArgs)),
+        names = self$NF_Compiler$NFinternals$cpp_code_name)
     }
   )
 )

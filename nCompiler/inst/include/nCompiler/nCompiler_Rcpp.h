@@ -425,19 +425,42 @@ struct Rdataptr;
 
 template<>
 struct Rdataptr<double> {
-  static double *PTR(SEXP Sin) {return REAL(Sin);}
+  static double *PTR(SEXP Sin) {
+    if(!Rf_isReal(Sin)) {
+      std::string passed_type = "unknown";
+      if(Rf_isInteger(Sin)) passed_type = "integer";
+      if(Rf_isLogical(Sin)) passed_type = "logical";
+      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
+    }
+    return REAL(Sin);
+  }
 };
 
 template<>
 struct Rdataptr<int> {
-  static int *PTR(SEXP Sin) {return INTEGER(Sin);}
+  static int *PTR(SEXP Sin) {
+    if(!Rf_isInteger(Sin)) {
+      std::string passed_type = "unknown";
+      if(Rf_isReal(Sin)) passed_type = "numeric";
+      if(Rf_isLogical(Sin)) passed_type = "logical";
+      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
+    }
+    return INTEGER(Sin);
+  }
 };
 
 template<>
 struct Rdataptr<bool> {
-  static int *PTR(SEXP Sin) {return INTEGER(Sin);} // R bools are integers
+  static int *PTR(SEXP Sin) {
+    if(!Rf_isLogical(Sin)) {
+      std::string passed_type = "unknown";
+      if(Rf_isReal(Sin)) passed_type = "numeric";
+      if(Rf_isInteger(Sin)) passed_type = "integer";
+      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
+    }
+    return INTEGER(Sin);// R bools are integers
+  }
 };
-
 
 template< typename Scalar, int nInd >
 class nCompiler_StridedTensorMap_SEXP_converter {

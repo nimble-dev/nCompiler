@@ -224,13 +224,18 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ## during a call to methodGenerator$new().  We put a new.env()
   ## here anyway as insurance against the possibility of quirky 
   ## environment problems.
-  listcode <- quote(list())
-  for(i in seq_along(argNames))
-    listcode[[i+1]] <- as.name(argNames[i])
+  ##
+  ## We used to make the third argument like list(arg1, arg2, arg3)
+  ## Now we just provide the environment() and from C++ look up the
+  ## inputs for arg1, arg2, and arg3.  This allows us to capture
+  ## them in lazy-evaluation (promise) form and impement ref and
+  ## blockRef behavior. This is similar to what rlang's quosures do.
+  ##  listcode <- quote(list())
+  ##  for(i in seq_along(argNames))
+  ##    listcode[[i+1]] <- as.name(argNames[i])
   body(ans) <- substitute(
-    nCompiler:::call_method(nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE),
-    list(NAME = name,
-         LISTCODE = listcode)
+    nCompiler:::call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
+    list(NAME = name)
   )
   ans
 }

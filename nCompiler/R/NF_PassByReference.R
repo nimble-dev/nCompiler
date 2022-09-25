@@ -82,7 +82,6 @@ createRef <- function(innerName,
         assign(outerName, v, env)
         v
       }
-
   makeActiveBinding(innerName, binding, innerEnv)
   NULL
 }
@@ -98,8 +97,13 @@ createBlockRef <- function(innerName,
   # and check that v matches it.
   if(missing(env)) env <- parent.frame(n = 2)
   if(missing(innerEnv)) innerEnv <- parent.frame()
-  if(is.character(outerCode))
+  if(is.character(outerCode)) { # This shouldn't really be necessary to handle - maybe remove later?
     outerCode <- parse(text = outerCode, keep.source = FALSE)[[1]]
+  } else if(is.name(outerCode)) { #ok if it's a name
+  } else if(is.call(outerCode)) { #if it's a call, check that it is simply indexing
+    if(outerCode[[1]] != '[')
+      stop("A block reference argument must be passed as a variable name, e.g. `x`, or an indexed block of a variable, e.g. `x[1:4, 2:3]` or `x[1:4, ]`.")
+  }
   outer_dummy_assign_code <- substitute(L <- R,
                                         list(L = outerCode,
                                              R = as.name(dummyName)))
@@ -120,6 +124,19 @@ createBlockRef <- function(innerName,
 passByReferenceIntoC <- function(fun,
                                  refArgs = character(),
                                  blockRefArgs = character()) {
+
+  if(is.list(refArgs))
+    refArgs <- names(refArgs)[ unlist(lapply(refArgs, isTRUE)) ]
+
+  if(is.list(blockRefArgs))
+    blockRefArgs <- names(blockRefArgs)[ unlist(lapply(blockRefArgs, isTRUE)) ]
+
+  if(is.null(refArgs)) refArgs <- character()
+  if(is.null(blockRefArgs)) blockRefArgs <- character()
+
+  if((length(refArgs)==0) & length(blockRefArgs)==0)
+    return(fun)
+
   passedAsFunction <- is.function(fun)
   code <- if(passedAsFunction)
             body(fun)
@@ -150,8 +167,8 @@ passByReferenceIntoC <- function(fun,
 
   blockSubList <- list()
   blockRefArg_activeBinding_lines  <- list()
-  ## blockSubList <- args_2_subList(blockRefArgs, "_BlockRef__")
-  ## blockRefArg_activeBinding_lines <- subList_2_lines(blockSubList, "createBlockRef")
+  blockSubList <- args_2_subList(blockRefArgs, "_BlockRef__")
+  blockRefArg_activeBinding_lines <- subList_2_lines(blockSubList, "createBlockRefInfoIntoC")
 
   code <-
     eval(
@@ -189,5 +206,13 @@ createRefInfoIntoC <- function(outerCode,
   if(missing(env)) env <- parent.frame(n = 2)
   # if(missing(innerEnv)) innerEnv <- parent.frame()
   # outerName <- as.character(outerCode)
-  list(outerCode, env) # If other things are not needed, we can remove them.
+  list(outerCode, env)
+}
+
+#' export
+createBlockRefInfoIntoC <- function(outerCode,
+                                env) {
+  # currently the same as createRefIntoC
+  if(missing(env)) env <- parent.frame(n = 2)
+  list(outerCode, env)
 }

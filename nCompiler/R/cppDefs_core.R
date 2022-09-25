@@ -30,8 +30,8 @@ cppDefinitionClass <- R6::R6Class(
     ## return all objects to be included.  This allows adjunct objects
     ## like SEXPinterfaceFuns to be included
     getDefs = function() {return(c(list(self),
-                                   do.call("c", lapply(neededCppDefs, function(x) x$getDefs()) ) ) )} 
-  )
+                                   do.call("c", lapply(neededCppDefs, function(x) x$getDefs()) ) ) )},
+    get_post_cpp_compiler = function() NULL)
 )
 
 cppMacroCallClass <- R6::R6Class(
@@ -202,7 +202,7 @@ add_obj_hooks_impl <- function(self) {
                              name,
                              ">"))
 }
-  
+
 addGenericInterface_impl <- function(self) {
   name <- self$name
   self$addInheritance(paste0("genericInterfaceC<",
@@ -214,6 +214,32 @@ addGenericInterface_impl <- function(self) {
   methodNames <- names(self$cppFunctionDefs)
   includeBool <- methodNames %in% self$functionNamesForInterface
   if(sum(includeBool) > 0) {
+    # construct arg info sections like
+    # args({{'x', ref}, {'y', copy}})
+
+    cat('time to get the args output set up\n')
+    browser()
+
+    cppArgInfos <- structure(character(length(methodNames)), names = methodNames)
+    for(mName in methodNames) {
+      args <- self$cppFunctionDefs[[mName]]$args
+      argNames <-
+        if(inherits(args, 'symbolTableClass')) {
+          names(args$getSymbols())
+        } else {
+          character()
+        }
+      post_cpp <- self$cppFunctionDefs[[mName]]$get_post_cpp_compiler()[[1]]
+      passingTypes <-
+        ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
+               ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
+      step1 <- paste0('\"',argNames,'\"')
+      step2 <- paste(step1, passingTypes, sep=',')
+      step3 <- paste0('{arg(', step2, ')}', collapse = ',')
+      step4 <- paste0('args({', step3, '})')
+      cppArgInfos[mName] <- step4
+    }
+
     cppMethodNames <- lapply(self$cppFunctionDefs, function(x) x$name)
     methodsContent <- paste0("method(\"",
                              methodNames[includeBool],
@@ -221,6 +247,8 @@ addGenericInterface_impl <- function(self) {
                              name,
                              "::",
                              cppMethodNames[includeBool],
+                             ", ",
+                             cppArgInfos[includeBool],
                              ")", collapse = ",\n")
     methodsContent <- paste0("NCOMPILER_METHODS(\n", methodsContent, "\n)")
   } else

@@ -101,16 +101,25 @@ nCompile <- function(...,
   ## Write the results jointly, with one .cpp file and multiple .h files.
   ## This fits Rcpp::sourceCpp's requirements.
   cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
-  writeCpp_nCompiler_combine(RcppPacket_list,
-                             cppfile = cppfile)
-  if(isTRUE(get_nOption('pause_after_writing_files')))
-    browser()
   resultEnv <- new.env()
-  compiledFuns <- compileCpp_nCompiler(cppfile,
-                                       dir = dir,
-                                       cacheDir = cacheDir,
-                                       env = resultEnv,
-                                       returnList = TRUE)
+  compiledFuns <- cpp_nCompiler(RcppPacket_list,
+                                cppfile = cppfile,
+                                dir = dir,
+                                cacheDir = cacheDir,
+                                env = resultEnv,
+                                packetList = TRUE,
+                                returnList = TRUE)
+
+  ## writeCpp_nCompiler_combine(RcppPacket_list,
+  ##                            cppfile = cppfile)
+  ## if(isTRUE(get_nOption('pause_after_writing_files')))
+  ##   browser()
+  ## resultEnv <- new.env()
+  ## compiledFuns <- compileCpp_nCompiler(cppfile,
+  ##                                      dir = dir,
+  ##                                      cacheDir = cacheDir,
+  ##                                      env = resultEnv,
+  ##                                      returnList = TRUE)
 
   # Build full interfaces for everything, even if generic is requested in the return object.
   unit_is_nClass <- unitTypes=="nCgen"

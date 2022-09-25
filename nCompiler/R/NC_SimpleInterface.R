@@ -7,7 +7,10 @@ method <- function(obj, name) {
   function(...) {
     if(is.null(getExtptr(obj)))
       stop("obj does not point to a C++ object.")
-    nCompiler:::call_method(getExtptr(obj), name, list(...))
+    # We switched from list(...) to environment() with the switch to having
+    # the C++ generic interface look up ... from the calling environment()
+    # in order to implement ref and blockRef behavior.
+    nCompiler:::call_method(getExtptr(obj), name, environment())
   }
 }
 

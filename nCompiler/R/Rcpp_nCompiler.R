@@ -77,11 +77,17 @@ cppDefs_2_RcppPacket <- function(cppDef,
                                      code = hCode,
                                      ifndefName = paste0('__', name, '_H')
                                      )
+
+    post_cpp_compiler <-
+      do.call('c',
+              lapply(allCppDefs,
+                     function(x) x$get_post_cpp_compiler()))
     
     Rcpp_nCompilerPacket(
-        cppContent = cppContent,
-        hContent = hContent,
-        filebase = filebase
+      cppContent = cppContent,
+      hContent = hContent,
+      filebase = filebase,
+      post_cpp_compiler = post_cpp_compiler
     )    
 }
 
@@ -201,26 +207,35 @@ sourceCpp_nCompiler <- function(file,
 #'     should be used.
 #' @export
 cpp_nCompiler <- function(Rcpp_packet,
+                          cppfile = NULL, # must be provided if packetList = TRUE
                       dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                       cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                       env = parent.frame(),
+                      packetList = FALSE,
                       write = TRUE,
                       compile = TRUE,
                       ...) {
 
   if(write) {
-    writeCpp_nCompiler(Rcpp_packet,
-                   dir)
+    if(packetList) {
+      writeCpp_nCompiler_combine(Rcpp_packet,
+                                 cppfile = cppfile)
+    } else {
+      writeCpp_nCompiler(Rcpp_packet,
+                         dir)
+    }
   }
   if(!compile) {
     return(Rcpp_packet)
   }
   if(isTRUE(get_nOption('pause_after_writing_files')))
     browser()
-  compileCpp_nCompiler(Rcpp_packet,
-                   dir,
-                   cacheDir,
-                   env,
+  compileCpp_nCompiler(Rcpp_packet = Rcpp_packet,
+                       cppfile = cppfile,
+                   dir = dir,
+                   cacheDir = cacheDir,
+                   env = env,
+                   packetList = packetList,
                    ...)
 }
 
@@ -295,18 +310,21 @@ writeCpp_nCompiler <- function(Rcpp_packet,
 
 #' @export
 compileCpp_nCompiler <- function(Rcpp_packet,
+                                 cppfile = NULL,
                                  dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                                  cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                                  env = parent.frame(),
+                                 packetList = FALSE,
                                  returnList = FALSE, ## force result list even for a singleton
                                  ...) {
   if(!dir.exists(dir)) 
     stop(paste0("directory ", dir, " does not exist."))
-  if(is.character(Rcpp_packet)) {
+  if(is.character(Rcpp_packet)) { # backward compatibility, to be deprecated perhaps
     cppfile <- Rcpp_packet
   } else {
-    cppfile <- paste0(Rcpp_packet$filebase,
-                      ".cpp")
+    if(is.null(cppfile))
+      cppfile <- paste0(Rcpp_packet$filebase,
+                        ".cpp")
   }
   cppfilepath <- file.path(dir, cppfile)
   
@@ -314,16 +332,37 @@ compileCpp_nCompiler <- function(Rcpp_packet,
                                   cacheDir = cacheDir,
                                   env = env,
                                   ...)
-  
+
+  if(packetList)
+    post_cpp_compiler <- do.call('c', lapply(Rcpp_packet, `[[`, 'post_cpp_compiler'))
+  else
+    post_cpp_compiler <- Rcpp_packet$post_cpp_compiler
   ## Next lines copy/imitate Rcpp::cppFunction,
   ## for now without error checking until we see
   ## final uses.
   numFunctions <- length(exported$functions)
   if(numFunctions == 0) return(invisible(NULL))
-  if(numFunctions == 1 & !returnList) return(get(exported$functions[[1]], env))
-  return(structure(
-    lapply(exported$functions, 
+  if(numFunctions == 1 & !returnList) {
+    fname <- exported$functions[[1]]
+    ans <- get(fname, env)
+    this_post <- post_cpp_compiler[[fname]]
+    if(!is.null(this_post))
+      ans <- passByReferenceIntoC(ans,
+                                  refArgs = this_post[['refArgs']],
+                                  blockRefArgs = this_post[['blockRefArgs']])
+    return(ans)
+  }
+  ans <- structure(
+    lapply(exported$functions,
            function(x) get(x, env)),
     names = exported$functions)
-    )
+  for(fname in names(ans)) {
+    this_post <- post_cpp_compiler[[fname]]
+    if(!is.null(this_post)) {
+      ans[[fname]] <- passByReferenceIntoC(ans[[fname]],
+                                           refArgs = this_post[['refArgs']],
+                                           blockRefArgs = this_post[['blockRefArgs']])
+    }
+  }
+  return(ans)
 }
