@@ -126,6 +126,8 @@ compile_eigenize <- function(code,
 }
 
 inEigenizeEnv(
+  # promoteTypes takes foo(a, b) and promotes types of a and b
+  # to match type of foo(a, b).  promoting means casting from logical -> integer -> double.
   promoteTypes <- function(code, which_args = seq_along(code$args)) {
     resultType <- code$type$type
     for(i in which_args) {
@@ -139,7 +141,15 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  promoteArgTypes <- function(code) {
+  # promoteArgTypes is similar to promote types but the type of
+  # foo(a, b) is not considered.  Instead the types of a and b
+  # arg promoted to match each other, using the most information-rich
+  # type (i.e. logical -> integer -> double)
+  #
+  # promoteArgTypes is used for the special case of assignment to
+  # ensure that it is always the RHS that is cast to match the
+  # LHS.
+  promoteArgTypes <- function(code, assignment = FALSE) {
     if(!(inherits(code$args[[1]], 'exprClass') & inherits(code$args[[2]], 'exprClass'))) return(NULL)
     a1type <- code$args[[1]]$type$type
     a2type <- code$args[[2]]$type$type
@@ -148,7 +158,8 @@ inEigenizeEnv(
     argID <- 0
     newType <- 'double'
 
-    if(code$name == '<-') {argID <- 2; newType <- a1type}
+    # if(code$name == '<-')
+    if(assignment) {argID <- 2; newType <- a1type}
     ## because we know arg types don't match, pairs of conditions are mutually exclusive
     if(argID == 0) {
       if(a2type == 'double') {argID <- 1; newType <- 'double'}
@@ -185,11 +196,33 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  scalarCast <- function(code, argIndex, newType) {
+    castExpr <- insertExprClassLayer(code, argIndex, 'scalarcast')
+    cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
+                             name = scalarTypeToCppType(newType))
+    setArg(castExpr, 2, cppType)
+    castExpr$type <- symbolBasic$new(name = castExpr$name,
+                                     type = newType,
+                                     nDim = castExpr$args[[1]]$type$nDim)
+    castExpr
+  }
+)
+
+inEigenizeEnv(
   Assign <- function(code, symTab, auxEnv, workEnv,
                      handlingInfo) {
-    if(isTRUE(get_nOption("use_flexible_assignment"))) {
-      insertExprClassLayer(code, 1, 'flex_')
+    ## For scalar LHS, promoting arg types is not needed because flex_() handles
+    ## so much on the C++ side including casting, and the casting is
+    ## tricky because Eigen reduction operations (e.g. sum()) return
+    ## 0-dimensional tensors rather than true scalars.
+    if(code$args[[1]]$type$nDim != 0) {
+      promoteArgTypes(code, assignment=TRUE)
     }
+    ##
+    ## Right now this is done in generateCpp$MidOperator, and for scalars only
+    ## if(isTRUE(get_nOption("use_flexible_assignment"))) {
+    ##   insertExprClassLayer(code, 1, 'flex_')
+    ## }
     invisible(NULL)
   }
 )
@@ -389,6 +422,7 @@ inEigenizeEnv(
       }
     } else
       maybe_convertToMethod(code, handlingInfo) # used for mean(vector) = vector.mean() if method=TRUE
+    scalarCast(code$caller, code$callerArgID, code$type$type)
     invisible(NULL)
   }
 )
@@ -483,14 +517,14 @@ inEigenizeEnv(
     ## promote args to match each other, not logical return type
     promoteArgTypes(code)
     maybeSwapBinaryArgs(code, handlingInfo)
+    d1 <- code$args[[1]]$type$nDim
+    d2 <- code$args[[2]]$type$nDim
     if(code$args[[1]]$type$nDim > 0) { # arg1 is non-scalar
       if(code$args[[2]]$type$nDim == 0) # arg2 is scalar
         convert_cWiseBinaryToUnaryExpr(code, handlingInfo)
       else
         maybe_convertToMethod(code, handlingInfo) # arg2 is non-scalar.
     }
-    d1 <- code$args[[1]]$type$nDim
-    d2 <- code$args[[2]]$type$nDim
     if(d1 > 0 && d2 > 0) {
       if(d1 != d2) {
         # perform operation with reshaping, i.e., for matrix-vector operations

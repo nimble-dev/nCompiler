@@ -299,6 +299,29 @@ public:
   }
 };
 
+template<typename ScalarType, typename XprType>
+ScalarType do_scalar_cast(const XprType &x, trueScalar) {return static_cast<ScalarType>(x);}
+
+template<typename ScalarType, typename XprType>
+ScalarType do_scalar_cast(const XprType &x, eigenTensor) {return x().template cast<ScalarType>();}
+
+template<typename ScalarType, typename XprType>
+ScalarType do_scalar_cast(const XprType &x, eigenOp) {
+  Eigen::Tensor<ScalarType, 0> ans = x.template cast<ScalarType>();
+  return ans();
+}
+
+//
+// syntax will be scalar_cast_<int>::cast(x);
+template<typename ScalarOutput>
+struct scalar_cast_ {
+  template<typename XprType>
+  static ScalarOutput cast(const XprType &x) {
+    return do_scalar_cast<ScalarOutput, XprType>(x,
+                                                 typename type_category<XprType>::type());
+  }
+};
+
 // smartAssignWholeObject handles assignment when the sizes of the LHS
 // can be changed because the entire object is assigned to.
 // This is tag dispatched similarly to smartAssignFixedSize
@@ -348,20 +371,20 @@ LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, more)
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, trueScalar) {
   // std::cout<<"In smartAssignToScalar zeroDim trueScalar"<<std::endl;
-  Lhs = Rhs;
+  Lhs = static_cast<ScalarType>(Rhs);
   return Lhs;
 }
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, eigenTensor) {
   // std::cout<<"In smartAssignToScalar zeroDim eigenTensor"<<std::endl;
-  Lhs = Rhs();
+  Lhs = Rhs().template cast<ScalarType>();
   return Lhs;
 }
 
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, eigenOp) {
   // std::cout<<"In smartAssignToScalar zeroDim eigenOp"<<std::endl;
-  Eigen::Tensor<ScalarType, 0> ans = Rhs;
+  Eigen::Tensor<ScalarType, 0> ans = Rhs.template cast<ScalarType>();
   Lhs = ans();
   return Lhs;
 }
@@ -369,40 +392,40 @@ ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim,
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenOp) {
   static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-  
+
   typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
   typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
   RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
   const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-  
+
   //  std::cout<<"In smartAssignToScalar nonzeroDim eigenOp"<<std::endl;
-  
+
   bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
   if(!ok) {
     std::cout<<"Error: dimension mismatch\n"<<std::endl;
     return Lhs;
   }
-  Lhs = Rhs.eval();
+  Lhs = Rhs.template cast<ScalarType>().eval();
   return Lhs;
 }
 
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenTensor) {
   static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-  
+
   typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
   typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
   RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
   const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-  
+
   //  std::cout<<"In smartAssignToScalar nonzeroDim eigenTensor (GET INFO MORE DIRECTLY)"<<std::endl;
-  
+
   bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
   if(!ok) {
     std::cout<<"Error: dimension mismatch\n"<<std::endl;
     return Lhs;
   }
-  Lhs = Rhs(0);
+  Lhs = static_cast<ScalarType>(Rhs(0));
   return Lhs;
 }
 

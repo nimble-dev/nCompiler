@@ -566,9 +566,9 @@ inLabelAbstractTypesEnv(
           newSym$name <- LHS$name
           symTab$addSymbol(newSym)
           LHS$type <- newSym
-          code$type <- newSym
         }
       }
+      code$type <- LHS$type
       NULL
     }
 )

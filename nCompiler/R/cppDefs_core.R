@@ -216,10 +216,6 @@ addGenericInterface_impl <- function(self) {
   if(sum(includeBool) > 0) {
     # construct arg info sections like
     # args({{'x', ref}, {'y', copy}})
-
-    cat('time to get the args output set up\n')
-    browser()
-
     cppArgInfos <- structure(character(length(methodNames)), names = methodNames)
     for(mName in methodNames) {
       args <- self$cppFunctionDefs[[mName]]$args

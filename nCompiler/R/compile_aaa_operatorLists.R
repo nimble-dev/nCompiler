@@ -371,6 +371,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'scalarcast',
+  list(
+    help = 'scalarcast(A, type) is for scalar_cast_<type>::cast(A).',
+    cppOutput = list(
+      handler = 'ScalarCast'
+    )
+  )
+)
+
+assignOperatorDef( ## Used only for diag(x); could it use eigencast instead?
   'StaticCast',
   list(
     help = 'StaticCast(A) is for static_cast<code$type>(A).',

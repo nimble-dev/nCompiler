@@ -209,7 +209,7 @@ inGenCppEnv(
       ## The code generated for automatic derivatives creates problems here.
       ## The isEigScalar may not be general.
       ## In any case, we'll want a more general way to manage flex_()
-      if (code$name %in% assignmentOperators && isEigScalar(code$args[[1]]))
+      if (code$name %in% assignmentOperators && isEigScalar(code$args[[1]], allowIndexing=TRUE))
         firstPart <- paste0('flex_(', firstPart, ')')
     }
 
@@ -486,6 +486,16 @@ inGenCppEnv(
     else
       paste0('static_cast<', compile_generateCpp(code$args[[2]]), '>(',
              compile_generateCpp(code$args[[1]], symTab), ')')
+  }
+)
+
+inGenCppEnv(
+  ScalarCast <- function(code, symTab) {
+    paste0('scalar_cast_<',
+           compile_generateCpp(code$args[[2]]),
+           '>::cast(',
+           compile_generateCpp(code$args[[1]], symTab),
+           ')')
   }
 )
 

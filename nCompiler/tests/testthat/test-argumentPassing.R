@@ -138,3 +138,21 @@ nOptions(showCompilerOutput = FALSE)
 Cnc1 <- nCompile(nc1)
 Cobj <- Cnc1$new()
 Cobj$Cfoo
+
+
+nc1 <- nClass(
+  Cpublic = list(
+    Cfoo = nFunction(
+      fun = function(x, z) {
+        y <- x + 1
+        return(y)
+      },
+      argTypes = list(x = 'numericScalar', z = 'numericVector'),
+      returnType = 'numericScalar')
+  )
+)
+nOptions(showCompilerOutput = FALSE)
+Cnc1 <- nCompile_nClass(nc1)
+Cobj <- Cnc1$new()
+
+Cobj$Cfoo

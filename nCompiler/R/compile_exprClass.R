@@ -363,8 +363,8 @@ checkArgDims <- function(expr, ID, nDimRange) {
     )
 }
 
-isEigScalar <- function(code) {
-  code$isLiteral || (code$isName && identical(code$type$nDim, 0))
+isEigScalar <- function(code, allowIndexing = FALSE) {
+  code$isLiteral || ((if(allowIndexing) TRUE else code$isName) && identical(code$type$nDim, 0))
 }
 
 newAssignmentExpression <- function() {
