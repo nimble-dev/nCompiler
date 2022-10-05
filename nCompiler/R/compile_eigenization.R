@@ -18,6 +18,10 @@ inEigenizeEnv <- function(expr) {
 compile_eigenize <- function(code,
                              symTab,
                              auxEnv,
+                             # auxEnv is for sharing across lines in the same code body
+                             # workEnv is for sharing within a line.  This
+                             # could be done via auxEnv, but having workEnv is cleaner
+                             # and more safely avoids having residual information left around.
                              ## It is unclear if workEnv will be needed.
                              workEnv = new.env()) {
   nErrorEnv$stateInfo <- paste0("handling eigenize for ",
@@ -68,12 +72,12 @@ compile_eigenize <- function(code,
         compile_eigenize(code$args[[3]], symTab, auxEnv)
       return(invisible(NULL))
     }
+
     opInfo <- operatorDefEnv[[code$name]]
     if(!is.null(opInfo)) {
       handlingInfo <- opInfo[["eigenImpl"]]
       if(!is.null(handlingInfo)) {
         beforeHandler <- handlingInfo[['beforeHandler']]
-        ##eCall <- eigenizeCallsBeforeRecursing[[code$name]] ## previous cases can be absorbed into this.  This allows catching expressions that evaluate to something numeric, like nfVar(nf, 'x')
         if(!is.null(beforeHandler)) {
           setupExprs <- c(setupExprs,
                           eval(call(beforeHandler,
@@ -83,25 +87,22 @@ compile_eigenize <- function(code,
                                     workEnv,
                                     handlingInfo),
                                envir = eigenizeEnv))
-          return(if(length(setupExprs) == 0) NULL else setupExprs)
+          # return(if(length(setupExprs) == 0) NULL else setupExprs)
         }
       }
     }
-    IsetAliasRisk <- FALSE
-    if(code$name %in% c('t', 'asRow')) {
-      IsetAliasRisk <- workEnv[['aliasRisk']] <- TRUE
-    }
-
 
     iArgs <- seq_along(code$args)
     useArgs <- eigenizeUseArgs[[code$name]]
     if(!is.null(useArgs)) iArgs <- iArgs[-which(!useArgs)] ## this allows iArgs to be longer than useArgs.  if equal length, iArgs[useArgs] would work 
-    
+
     for(i in iArgs) {
-      if(inherits(code$args[[i]], 'exprClass'))
+      if(inherits(code$args[[i]], 'exprClass')) {
         setupExprs <- c(setupExprs,
                         compile_eigenize(code$args[[i]], symTab, auxEnv, workEnv))
+      }
     }
+
     ## finally, call any special handlers
     if(!is.null(opInfo)) {
       handlingInfo <- opInfo[["eigenImpl"]]
@@ -120,7 +121,6 @@ compile_eigenize <- function(code,
         }
       }
     }
-    if(IsetAliasRisk) workEnv[['aliasRisk']] <- NULL
   }
   return(if(length(setupExprs) == 0) NULL else setupExprs)
 }
@@ -209,6 +209,90 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  # We need a way to check for easy-to-catch aliasing risks
+  # Aliasing risks refer to situations like
+  # x[2:5] <- x[1:4]
+  # In eigen, this will replace x[2] <- x[1]
+  # then x[3] <- x[2] , but the RHS will be the just-replaced
+  # value of x[2].  If we catch an alias risk,
+  # we will add .eval() on the end of the RHS Eigen expression
+  # This forces evaluation of the RHS into separate memory
+  # before copying into LHS elements.
+  #
+  # We could have situations like A$B$x[1:4].
+  # We deine an EigenVarInfo object as a list of two elements:
+  # First element would be c("A", "B", "x")
+  # Second element would be TURE to indicate there is a '[' involved
+  getVarInfoForAliasChecking <- function(LHS) {
+    # How intricate will we go in matching objects for alias risk?
+    LHSvarName <- NULL
+    hasBracket <- FALSE
+    if(LHS$isName) {
+      return(list(LHS$name, hasBracket))
+    } else if(LHS$name == '[') {
+      nested <- getVarInfoForAliasChecking(LHS$args[[1]])
+      return(list(nested[[1]], TRUE))
+    } else if(LHS$name=='$') {
+      nested <- getVarInfoForAliasChecking(LHS$args[[1]])
+      return(list(c(nested[[1]], LHS$args[[2]]$name), FALSE ))
+    }
+    NULL
+  }
+)
+
+inEigenizeEnv(
+  checkRHSaliasing <- function(code, LHSvarInfo, insidePermutingFxn = FALSE) {
+    if(code$isLiteral) return(FALSE)
+    thisIsAvar <- code$isName
+    if(!thisIsAvar) {
+      thisIsAvar <- code$name == "[" || code$name == "$"
+    }
+    if(thisIsAvar) {
+      RHSvarInfo <- getVarInfoForAliasChecking(code)
+      aliasing <- identical(LHSvarInfo[[1]], RHSvarInfo[[1]])
+      if(aliasing) {
+        if(!insidePermutingFxn) {
+          aliasing <- isTRUE(LHSvarInfo[[2]]) || isTRUE(RHSvarInfo[[2]]) # future can check if indexing is the same, x[2:5] <- x[2:5] + 1
+        }
+      }
+      if(aliasing) return(TRUE)
+    }
+    if(code$isCall) { # must be true at this point
+      skip <- code$name %in% c("nFunction", "chainedCall",
+                               "nMul", "nDiag", "nDiagonal",
+                               "nSvd", "nChol", "nEigen",
+                               "nSolve", "nForwardSolve", "nBacksolve")
+      # operators that force evaluation anyway, so no need to recurse
+      # These should really be identified by an entry within their operatorDefEnv entries
+      if(!skip) {
+        iArgs <- seq_along(code$args)
+        if(code$name == '[') iArgs <- iArgs[iArgs != 1] # recurse into '[' index args only, for say x[2:5] <- y[ x ]
+        permutingFxn <- insidePermutingFxn || code$name %in% c("t", "asRow") # possibly add others
+        for(i in iArgs) {
+          if(checkRHSaliasing(code$args[[i]], LHSvarInfo, permutingFxn)) return(TRUE)
+        }
+      }
+    }
+    FALSE
+  }
+)
+
+inEigenizeEnv(
+  Assign_Before <- function(code, symTab, auxEnv, workEnv,
+                           handlingInfo) {
+    LHS <- code$args[[1]]
+    LHSvarInfo <- getVarInfoForAliasChecking(LHS)
+    if(is.null(LHSvarInfo))
+      stop("Problem determining LHS variable name for ", nDeparse(code))
+    aliasRisk <- checkRHSaliasing(code$args[[2]], LHSvarInfo)
+    workEnv$aliasRisk <- aliasRisk
+    # If the LHS has no indexing, use nEval_
+    if(!isTRUE(LHSvarInfo[[2]])) workEnv$need_nEval <- TRUE
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   Assign <- function(code, symTab, auxEnv, workEnv,
                      handlingInfo) {
     ## For scalar LHS, promoting arg types is not needed because flex_() handles
@@ -223,6 +307,18 @@ inEigenizeEnv(
     ## if(isTRUE(get_nOption("use_flexible_assignment"))) {
     ##   insertExprClassLayer(code, 1, 'flex_')
     ## }
+    if(isTRUE(workEnv$aliasRisk)) {
+      if(isTRUE(workEnv$need_nEval)) {
+        insertExprClassLayer(code, 2, 'nEval_')
+        code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
+      } else {
+        insertExprClassLayer(code, 2, 'eval')
+        code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
+        eigenizeEnv$maybe_convertToMethod(code$args[[2]], handlingInfo = list(), force = TRUE)
+      }
+    }
+    workEnv$aliasRisk <- NULL
+    workEnv$need_nEval <- NULL
     invisible(NULL)
   }
 )
@@ -646,7 +742,6 @@ nCompiler:::inEigenizeEnv(
     ans
   }
   )
-
 
 nCompiler:::inEigenizeEnv(
   Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {

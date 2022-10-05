@@ -154,5 +154,4 @@ nc1 <- nClass(
 nOptions(showCompilerOutput = FALSE)
 Cnc1 <- nCompile_nClass(nc1)
 Cobj <- Cnc1$new()
-
 Cobj$Cfoo

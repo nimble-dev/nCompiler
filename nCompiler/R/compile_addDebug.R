@@ -116,8 +116,8 @@ compile_addDebug <- function(code,
                                  isCall = FALSE, isAssign = FALSE, 
                                  isLiteral = TRUE)
       insertArg(setExpr, 2, labelExpr)
+      insertExprClassLayer(setExpr, 1, "CODE__")
     }
-    
   }
   return(NULL)
 }

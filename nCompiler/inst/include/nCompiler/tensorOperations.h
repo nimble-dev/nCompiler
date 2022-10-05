@@ -64,6 +64,31 @@ NCOMPILER_BINOP(logical_neq, !=)
 
 namespace nCompiler {
 
+/**
+ * When there may be aliasing in an assignment, the normal
+ * Eigen solution is to use eval.  E.g.
+ * naive code generated from x[2:5] <- x[1:4]
+ * would give wrong results because x[2] <- x[1]
+ * would be done first, then x[3] <- x[2] would use the just-assigned x[2]
+ * Usually the answer is to add a .eval() method call at the end of
+ * the Eigen expression.  This works in some cases but not when
+ * the left-hand side (LHS) is the entire object.  E.g.
+ *  x <- x[1:2]
+ * I don't know why it doesn't work, even with .eval().
+ * Our solution is to use x = nEval_<scalar type, nDim>::go( ops including indexing ).
+ * We think/hope that by copy elision when returning ans, there will only be
+ * one extra object made, not two (i.e. not creation of ans following by
+ * creation of x, but rather ans will be created as x by copy elision.
+ */
+  template<typename EigenType>
+  struct nEval_ {
+    template<typename T>
+    static EigenType go(const T& op) {
+      EigenType ans = op; // Materialize the result of op.
+      return ans;
+    }
+  };
+
   /**
    * Templated reshaping to use the Eigen library to lazily evaluate a `op` b 
    * when a and b are specializations of Eigen::TensorBase objects with

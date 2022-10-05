@@ -256,14 +256,16 @@ nCompiler:::assignOperatorDef(
   )
 )
 
+assignmentOperators <- c('<-','<<-','=')
+
 assignOperatorDef(
-  c('<-','<<-','='),
+  assignmentOperators,
   list(
     labelAbstractTypes = list(
       handler = 'Assign'),
     eigenImpl = list(
-      handler = 'Assign'
-    ),
+      beforeHandler = 'Assign_Before',
+      handler = 'Assign'),
     cppOutput = list(
       handler = 'MidOperator',
       cppString = ' = ')
@@ -369,6 +371,17 @@ assignOperatorDef(
     )
   )
 )
+
+assignOperatorDef(
+  'nEval_',
+  list(
+    help = 'nEval_(A, type) is for forcing evaluation of A before assignment in x <- A, needed to fix aliasing if A is an expression containing parts of x',
+    cppOutput = list(
+      handler = 'nEval_'
+    )
+  )
+)
+
 
 assignOperatorDef(
   'scalarcast',
@@ -879,9 +892,10 @@ for(op in names(specificCallReplacements))
         )
     )
 
-assignmentOperators <- c('<-','<<-','=')
-
 ifOrWhile <- c('if','while')
+
+# aliasRiskOperators <- c('t', 'asRow') # If we develop asRow
+# These are currently hard-coded in compile_eigenize system.
 
 callToSkipInEigenization <- c('copy',
                               'setValues',

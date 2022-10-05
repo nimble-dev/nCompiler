@@ -8,6 +8,7 @@
 typedef std::pair<std::string, std::string> StringPair;
 static std::vector<StringPair> msgs;
 static bool nc_did_throw = false;
+#define CODE__(...) __VA_ARGS__
 #define PUSH_DEBUGFUN(x) { msgs.emplace_back(StringPair(x, "")); }
 #define SET_DEBUG_MSG(x, description) { msgs.back().second = description; x; }
 #define POP_DEBUGFUN() { msgs.pop_back(); }

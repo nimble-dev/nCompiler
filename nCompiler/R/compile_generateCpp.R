@@ -476,6 +476,16 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  nEval_ <- function(code, symTab) {
+    paste0("nCompiler::nEval_<",
+           code$type$genCppVar()$generate(""),
+           ">::go(",
+           compile_generateCpp(code$args[[1]], symTab),
+           ")")
+  }
+)
+
+inGenCppEnv(
   ## This differs from old system
   ## EigenCast(A, type) -> A.cast<type>() if A$type$nDim > 0
   ## EigenCast(A, type) -> static_cast<type>(A) if A is scalar
