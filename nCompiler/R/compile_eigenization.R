@@ -132,8 +132,16 @@ inEigenizeEnv(
     resultType <- code$type$type
     for(i in which_args) {
       if(inherits(code$args[[i]], 'exprClass')) {
-        if(code$args[[i]]$type$type != resultType)
-          eigenCast(code, i, resultType)
+        if(code$args[[i]]$type$type != resultType) {
+          # There are cases (e.g. from nSeq)
+          # where output type can be integer even from inputs of double
+          # We need to avoid reducing information by checking strictly
+          # here whether a promotion should really be done.
+          promote <- resultType == "double" ||
+            (resultType == "integer" && code$args[[i]]$type$type == "logical")
+          if(promote)
+            eigenCast(code, i, resultType)
+        }
       }
     }
     NULL
@@ -143,7 +151,7 @@ inEigenizeEnv(
 inEigenizeEnv(
   # promoteArgTypes is similar to promote types but the type of
   # foo(a, b) is not considered.  Instead the types of a and b
-  # arg promoted to match each other, using the most information-rich
+  # are promoted to match each other, using the most information-rich
   # type (i.e. logical -> integer -> double)
   #
   # promoteArgTypes is used for the special case of assignment to
@@ -941,54 +949,53 @@ inEigenizeEnv(
     ## TODO: this assumes proper arg ordering and naming
     ## TODO: handle zero-dim first arg
     arg_names <- names(code$args)
-    if (length(code$arg) > 3) {
-      ## the second arg is 'times' which is ignored whenever 'length.out' is
-      ## included
-      removeArg(code, 2)
-      ## any other args are unused and can be removed
-      code$args <- code$args[1:3]
-      code$name <- 'repLenEach'
-    } else if (length(code$args) == 3) {
-      if (!'each' %in% arg_names) {
-        ## the second arg must be 'times' and the third is 'length.out'
-        removeArg(code, 2)
-        code$name <- 'repLen'
+    has_times <- "times" %in% arg_names
+    has_lengthout <- "length.out" %in% arg_names
+    has_each <- "each" %in% arg_names
+
+    call_to_use <-
+      if(has_times) {
+        if(has_lengthout) { #length.out moots times
+          removeArg(code, which(arg_names == "times"))
+          if(has_each) "repLenEach" else "repLen"
+        } else {
+          if(has_each) "repTimesEach" else "repTimes"
+        }
       } else {
-        if ('length.out' %in% arg_names)
-          code$name <- 'repLenEach'
-        else
-          code$name <- 'repTimesEach'
+        if(has_lengthout) {
+          if(has_each) "repLenEach" else "repLen"
+        } else {
+          if(has_each) "repEach" else "REMOVE"
+        }
       }
-    } else if (length(code$args) == 2) {
-      if ('length.out' %in% arg_names)
-        code$name <- 'repLen'
-      else if ('each' %in% arg_names)
-        code$name <- 'repEach'
-      else
-        code$name <- 'repTimes'
-    } else {
-      ## If length(code$args) == 1, this takes 'rep' out of the AST and
-      ## replaces it with its one arg. If length(code$args) == 1, 'rep' is
-      ## replaced with NULL which is exactly what the call rep() returns.
-      removeExprClassLayer(code)
+
+    if(code$args[[1]]$type$nDim == 0) {
+      insertExprClassLayer(code, 1, "Eigen::Make_Length1_Tensor")
+    }
+
+    if(call_to_use == "REMOVE") {
+      code <- removeExprClassLayer(code)
       return(invisible(NULL))
     }
-    ## In C++, eval = true when the call to rep is part of a larger expression
-    ## and rep's arg is a call to avoid costly repeated computation when
-    ## reshaping and broadcasting the tensor.
-    if (!code$caller$name %in% assignmentOperators && code$args[[1]]$isCall)
-      setArg(code, length(code$args) + 1, literalLogicalExpr())
+
+    code$name <- call_to_use
+    ## Should we still try to control eval of x or will this be handled by Eigen internally?
+    ##
+    ## ## In C++, eval = true when the call to rep is part of a larger expression
+    ## ## and rep's arg is a call to avoid costly repeated computation when
+    ## ## reshaping and broadcasting the tensor.
+    ## if (!code$caller$name %in% assignmentOperators && code$args[[1]]$isCall)
+    ##   setArg(code, length(code$args) + 1, literalLogicalExpr())
     invisible(NULL)
   }
 )
 
 inEigenizeEnv(
  Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    if (!code$caller$name == '[') {
-      code$name <- 'seq'
-      by_arg <- literalIntegerExpr(1)
-      setArg(code, 'by', by_arg, add = TRUE)
-      compile_eigenize(code, symTab, auxEnv, workEnv)
+    if (!code$caller$name == '[') { # To check: A '[' case might no longer ever come here.
+      code$name <- "nSeqFromTo"
+      promoteTypes(code) # redundant in this case
+      return(invisible(NULL))
     }
     invisible(NULL)
   }
@@ -996,53 +1003,76 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Seq <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    if (length(code$args) == 0 ||
-          ## seq(by = x) always returns 1
-          (length(code$args) == 1 && 'by' %in% names(code$args))) {
-      integer1 <- literalIntegerExpr(1)
-      setArg(code$caller, code$callerArgID, integer1)
+    # In C++ we have
+    # nSeqBy, nSeqLen, nSeqLenFrom, nSeqLenTo, nSeqFromTo, nSeqTo, nSeqSingle
+    if(length(code$args) == 4) {
+      stop(exprClassProcessingErrorMsg(
+        code, 'seq() was coded with too many arguments.'
+      ), call. = FALSE)
+    }
+    if(length(code$args) == 0) {
+      #insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
+      code$name <- 'nSeqEmpty'
       return(invisible(NULL))
     }
-    if (length(code$args) == 1) {
-      ## the only arg becomes 'to'... note that `seq(from = 10)` gives 1:10
-      integer1 <- literalIntegerExpr(1)
-      if ('length.out' %in% names(code$args))
-        insertExprClassLayer(code, 1, 'ceil')
-      insertArg(code, 1, integer1, 'from')
-      names(code$args)[2] <- 'to'
-    }
+    fromProvided <- 'from' %in% names(code$args)
+    toProvided <- 'to' %in% names(code$args)
     byProvided <- 'by' %in% names(code$args)
-    lengthProvided <- 'length.out' %in% names(code$args) 
-    if (!byProvided && !lengthProvided) {
-      if (length(code$args) >= 3) {
-        ## by was provided as a positional arg
-        byProvided <- TRUE
-        if (length(code$args) >= 4)
-          ## length.out was also provided as a positional arg
-          lengthProvided <- TRUE
-        ## TODO: what if more than 4 args provided (e.g. 'along.with')
-      } else {
-        by_arg <- literalIntegerExpr(1)
-        setArg(code, 'by', by_arg, add = TRUE)
-        byProvided <- TRUE
+    lengthProvided <- 'length.out' %in% names(code$args)
+
+    if (length(code$args) == 1) {
+      if(fromProvided) {
+        code$name <- "nSeqSingle"
+      } else if(byProvided) {
+        code$name <- 'nSeqEmpty'
+        removeArg(code, 1) # equivalent to code$args <- list()
+      } else if(toProvided) {
+        code$name <- "nSeqTo"
+      } else { # lengthProvided must be TRUE
+#        insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
+        code$name <- "nSeqLen"
       }
+      return(invisible(NULL))
     }
-    if (byProvided) {
-      code$name <- 'nSeqBy'
-      if(lengthProvided)
-        code$name <- paste0(code$name, 'Len')
-    } else { ## must be lengthProvided
-      code$name <- 'nSeqLen'
+    #  At this point, length(code$args) >= 2
+    if(byProvided) {
+      if(toProvided && lengthProvided) {
+        code$name <- "nSeqByLenTo"
+        promoteTypes(code)
+      } else {
+        if(!fromProvided) insertArg(code, 1, copyExprClass(handlingInfo$d1), 'from')
+        if(lengthProvided) {
+          code$name <- "nSeqByLenFrom"
+          promoteTypes(code)
+        } else {
+          if(!toProvided) insertArg(code, 2, copyExprClass(handlingInfo$d1), 'to')
+          code$name <- "nSeqBy"
+          promoteTypes(code)
+        }
+      }
+      return(invisible(NULL))
     }
-    code$name <- paste0(
-      code$name,
-      switch(
-        code$type$type,
-        'double' = 'D',
-        'integer' = 'I'
-      )
-    )
-    invisible(NULL)
+
+    if(lengthProvided) {
+      if(!fromProvided) {
+        code$name <- "nSeqLenTo"
+        promoteTypes(code)
+      } else if(!toProvided) {
+        code$name <- "nSeqLenFrom"
+        promoteTypes(code)
+      } else code$name <- "nSeqLen"
+      return(invisible(NULL))
+    }
+
+    if(fromProvided && toProvided) {
+      code$name <- "nSeqFromTo"
+      promoteTypes(code) # redundant in this case
+      return(invisible(NULL))
+    }
+
+    stop(exprClassProcessingErrorMsg(
+      code, 'unexpected case of seq()'
+    ), call. = FALSE)
   }
 )
 

@@ -150,6 +150,12 @@ compile_labelAbstractTypes <- function(code,
       }
     }        
     if(!is.null(opInfo)) {
+      match_def <- opInfo[["match_def"]]
+      if(!is.null(match_def)) {
+        matched_code <- exprClass_put_args_in_order(match_def, code)
+        code <- replaceArgInCaller(code, matched_code)
+      }
+
       handlingInfo <- opInfo[["labelAbstractTypes"]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
@@ -727,6 +733,11 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Colon <- function(code, symTab, auxEnv, handlingInfo, recurse = TRUE) {
+    # This could almost be diverted to Seq.
+    # We keep it separate in case it needs different handling
+    # when inside '['.
+    # That used to be the case.  It might not be any more.
+    # For now, for defensive purposes, we're keeping it separate.
     if (length(code$args) != 2)
       stop(
         exprClassProcessingErrorMsg(
@@ -737,17 +748,16 @@ inLabelAbstractTypesEnv(
         ), call. = FALSE
       )    
 
+    # Check: Is recurse=FALSE ever used.  Why was this here?
     inserts <-
       if (recurse)
         recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     else list()
 
-    ## this isn't quite right... if the first arg is a whole number double, :
-    ## returns an integer regardless of the second arg's type
-    arg1_type <- code$args[[1]]$type$type
-    code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+    # Imitate the (from, to) case from Seq
+    fromType <- code$args[[1]]$type$type
+    code_type <- if (fromType == 'logical') 'integer' else fromType
     code$type <- symbolBasic$new(nDim = 1, type = code_type)
-
     invisible(inserts)
   }
 )
@@ -755,17 +765,92 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   Seq <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code_type <- NULL
     if (length(code$args) == 0 ||
           ## seq(by = x) always returns 1
-          (length(code$args) == 1 && 'by' %in% names(code$args))) {
-      code$type <- symbolBasic$new(nDim = 0, type = 'integer')
+        (length(code$args) == 1 && any(c('from','to','length.out') %in% names(code$args)))) {
+      # These cases always return scalars, but we define seq to always return a vector.
+ #     code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+      code_type <- "integer"
+    } else if(length(code$args) == 1 && ('by' %in% names(code$args))) {
+#      code$type <- symbolBasic$new(nDim = 1, type = 'double')
+      code_type <- "integer"
     } else {
-      arg1_type <- code$args[[1]]$type$type
-      code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
-      ## TODO: What about when from and to have same value?
-      code$type <- symbolBasic$new(nDim = 1, type = code_type)
+      fromProvided <- 'from' %in% names(code$args)
+      toProvided <- 'to' %in% names(code$args)
+      byProvided <- 'by' %in% names(code$args)
+      lengthProvided <- 'length.out' %in% names(code$args)
+
+      promoteLogical <- function(x)
+        if(x=="logical") "integer" else x
+
+      fromType <- if(fromProvided)
+                    promoteLogical(code$args[['from']]$type$type) else NULL
+      toType <- if(toProvided)
+                  promoteLogical(code$args[['to']]$type$type) else NULL
+      byType <- if(byProvided)
+                  promoteLogical(code$args[['by']]$type$type) else NULL
+      lengthType <- if(lengthProvided)
+                      promoteLogical(code$args[['length.out']]$type$type) else NULL
+
+      if(length(code$args)==2) {
+        if(fromProvided && toProvided) {
+  #        code$type <- symbolBasic$new(nDim = 1, type = fromType)
+          code_type <- fromType
+#          return(invisible(NULL))
+        } else if((fromProvided && byProvided) ||
+                    (toProvided && byProvided) ||
+                    (byProvided && lengthProvided)) {
+   #       code$type <- symbolBasic$new(nDim = 1, type = "double")
+          code_type <- "double"
+#          return(invisible(NULL))
+        } else if(fromProvided && lengthProvided) {
+          code_type <- arithmeticOutputType(fromType, lengthType, returnTypeCodes$promoteNoLogical)
+#          return(invisible(NULL))
+        } else if(toProvided && lengthProvided) {
+          code_type <- arithmeticOutputType(toType, lengthType, returnTypeCodes$promoteNoLogical)
+#$          return(invisible(NULL))
+        }
+      } else if(length(code$args) == 3) {
+        if(lengthProvided) {
+          if(fromProvided && toProvided) {
+            code$type <- symbolBasic$new(nDim = 1, type = "double")
+            code_type <- "double"
+#            return(invisible(NULL))
+          } else if(fromProvided && byProvided) {
+            code_type <- arithmeticOutputType(fromType, byType, returnTypeCodes$promoteNoLogical)
+            #return(invisible(NULL))
+          } else if(toProvided && byProvided) {
+            code_type <- arithmeticOutputType(toType, byType, returnTypeCodes$promoteNoLogical)
+            ##            return(invisible(NULL))
+          }
+        } else if(byProvided) {
+          # from, to, by
+          code_type <- arithmeticOutputType(fromType, toType, returnTypeCodes$promoteNoLogical)
+          code_type <- arithmeticOutputType(code_type, byType, returnTypeCodes$promoteNoLogical)
+        }
+      }
     }
-    inserts
+
+    if(is.null(code_type))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In labelAbstractTypes for seq: something is wrong.')),
+        call. = FALSE)
+
+    code$type <- symbolBasic$new(nDim = 1, type = code_type)
+
+    ##   # Type is determined by the "from" value
+    ##   arg_from <- code$args[['from']]
+    ##   if(is.null(arg_from)) {
+    ##     # If to and length are provided, integer if BOTH are integer, double otherwise
+
+    ##   }
+    ##   arg1_type <- if(is.null(arg_from)) "integer" else arg_from$type$type
+    ##   code_type <- if (arg1_type == 'logical') 'integer' else arg1_type
+    ##   code$type <- symbolBasic$new(nDim = 1, type = code_type)
+    ## }
+    invisible(inserts)
   }
 )
 

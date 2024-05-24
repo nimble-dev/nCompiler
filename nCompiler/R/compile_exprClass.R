@@ -31,7 +31,7 @@ exprClass <- R6::R6Class(
     callerArgID =  NULL, ## index in the calling object's args list for this object.
     insertions =  list(), 
     cppADCode = FALSE, ## is expr in code generated for cppad?
-    ##aux = list(), ## auxiliary list of additional info to be used as needed
+    aux = list(), ## auxiliary list of additional info to be used as needed
     initialize = function(...) {
       dotsList <- list(...)
       for(v in names(dotsList))
@@ -256,6 +256,13 @@ insertArg <- function(expr, ID, value, name = NULL) {
   invisible(value)
 }
 
+replaceArgInCaller <- function(expr, value) {
+  if(!inherits(expr$caller, 'exprClass')) {
+    stop("Problem replacing a call in replaceArgInCaller.")
+  }
+  setArg(expr$caller, expr$callerArgID, value)
+}
+
 setArg <- function(expr, ID, value, add = FALSE) {
   arg_names <- names(expr$args)
   expr$args[[ID]] <- value
@@ -338,7 +345,7 @@ reorderArgs <- function(expr, perm) {
   for(i in 1:nArgs) {
     removeArg(expr = expr, ID = 1)
   }
-  
+
   # insert arguments in new order
   #   Note: use insertArg vs. setArg b/c insertArg lets us rename the arguments
   #         in addition to changing the argument values
@@ -447,4 +454,50 @@ anyNonScalar <- function(code) {
     }
   }
   FALSE
+}
+
+exprClass_match_call <- function(def, expr) {
+  # This is a version of match.call where def is an R function definition (like for match.call)
+  # or a pairlist, and expr is an exprClass, returned by nParse.
+  #
+  # The strategy will be to create something like
+  # match.call(function(a , b , c ){}, call("foo", b = 1, 2, 3))
+  # resulting in foo(a = 2, b = 1, c = 3),
+  # from which we can see that the expr arguments need to be re-orded by c(2, 1, 3)
+  # We can also see what expected arguments are missing and store that information
+  #  for potential later handling.
+  # The sequential values 1, 2, 3 in the artificial call will reveal argument permutations needed.
+  # An error will reveal bad argument matching.
+  # The call part will actually take the form do.call("call", list of "foo" and args)
+
+  # def can be a function (used for its formals only) or a pairlist
+  # If it is a pairlist, make it the formals of a function
+  if(is.pairlist(def)) {
+    foo <- function() {}
+    formals(foo) <- def
+    def <- foo
+  }
+  # Make list of artificial arg values starting from 1,  with provided names
+  exprArgs <- structure( as.list(seq_along(expr$args)), names = names(expr$args) )
+  result <- try(match.call(def, do.call("call", c(list("foo"), exprArgs ))))
+  if(inherits(result, "try-error"))
+    stop("error in matching arguments for ", expr$name)
+  result
+}
+
+exprClass_put_args_in_order <- function(def, expr) {
+  match_res <- exprClass_match_call(def, expr)
+  # there is a function reorderArgs above which appears to have been written
+  # for eigenization of nDiag.
+  # However its behavior is slightly different than needed here, so we don't use it.
+  args <- expr$args
+  expr$args <- NULL
+  for(i in seq_along(match_res)) {
+    if(i==1) next # "foo"
+    insertArg(expr = expr, ID=i-1, value = args[[match_res[[i]] ]], name = names(match_res)[i] )
+  }
+  missing_names <- setdiff(names(formals(def)), names(match_res)[-1] )
+  if(length(missing_names))
+    expr$aux[["missing_names"]] <- missing_names
+  expr
 }

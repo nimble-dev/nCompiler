@@ -340,7 +340,7 @@ namespace Eigen {
 }  // end namespace Eigen
 
 #define ISINGLE_(DIM, I, X) nCompiler::IndexByScalar<DIM>().op(I, X)
-#define IVEC_(DIM, IVEC, X, R) nCompiler::IndexByVec<DIM, R>().op(IVEC, X)
+#define IVEC_(DIM, IVEC, X, R) nCompiler::IndexByVec<DIM, R>().op(IVEC, X) // R is bool to indicate whether to use R indexing (starting at 1)
 #define ISEQS_(NUMSEQS, SEQINFO, X) nCompiler::IndexBySeqs<NUMSEQS>::go(SEQINFO, X)
 #define SEQ_(DIM, START, END) {I_(DIM), I_(START), I_(END)}
 #define SEQS_(...) {{__VA_ARGS__}}
@@ -450,11 +450,13 @@ namespace nCompiler {
           // initialize slice offsets and extents
           offsets.fill(0);
           extents.fill(0);
-        // get dimension information for the object being subsetted
-          Eigen::TensorRef<
-            Eigen::Tensor<typename BaseType<T>::type::Scalar,
-                          NumSourceDims>
-          > xref(x);
+          // get dimension information for the object being subsetted
+          // Eigen::TensorRef<
+          //   Eigen::Tensor<typename BaseType<T>::type::Scalar,
+          //                 NumSourceDims>
+          // > xref(x);
+          typedef typename std::remove_reference<T>::type cleanT;
+          auto xref = nDimTraits<cleanT>::getEvaluator(std::forward<T>(x));
           auto dim = xref.dimensions();
           // initialize subview to fully span all dimensions
           for(Eigen::Index i = 0; i < BaseType<T>::type::NumDimensions; ++i) {

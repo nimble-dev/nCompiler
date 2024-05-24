@@ -12,6 +12,7 @@
 // is envisioned.
 
 #include <type_traits>
+#include "tensorUtils.h"
 // Want to support flex_(y) = x;
 
 // These structs are used for tag dispatch.
@@ -141,6 +142,30 @@ template<int LhsNdim, int RhsNdim>
     return true;
 }
 
+// template<typename XprType>
+// struct nDimTraits2 {
+//   typedef Eigen::internal::remove_all<typename XprType::Nested>::type cleaned_type;
+//   typedef Eigen::TensorEvaluator<cleanedType, Eigen::DefaultDevice> EvaluatorType;
+//   static EvaluatorType  getEvaluator(const XprType &x) {
+//     const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x);
+//     // careful: m_impl might go out of scope
+//     return EvaluatorType(x_removed,
+// 			 Eigen::DefaultDevice());
+//   }
+//   // We previously experimented with a getDimensions function here, but then the evaluator
+//   // is instantiated here, so the dimensions can't be returned by reference.
+//   // Hence it seems better to return an evalautor to the calling function, where it
+//   // will stay in scope for use of a reference returned by its .dimensions()
+//   /* static const Dimensions getDimensions(const XprType &x) { */
+//   /*   const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x); */
+//   /*   // careful: m_impl might go out of scope */
+//   /*   Eigen::TensorEvaluator<XprType, Eigen::DefaultDevice> m_impl( */
+//   /* 								 x_removed, */
+//   /* 								 Eigen::DefaultDevice()); */
+//   /*   return m_impl.dimensions(); */
+//   /* } */
+// };
+
 // nDimTraits<SomeEigenType>::NumDimensions will give the number of dimensions of SomeEigenType
 // nDimTraits<SomeEigenType>::Dimensions will give a valid type for dimensions.
 // nDimTraits<SomeEigenType>::EvaluatorType give the type returned by:
@@ -194,8 +219,8 @@ struct nDimTraits<bool> {
 // depending on whether LHSnDim is <, ==, or > than RHSnDim.
 template<typename Xpr1, typename Xpr2>
   struct compare_nDim {
-    static const int nDim1 = nDimTraits<Xpr1>::NumDimensions;
-    static const int nDim2 = nDimTraits<Xpr2>::NumDimensions;
+    static const int nDim1 = Eigen::nDimTraits2<Xpr1>::NumDimensions;
+    static const int nDim2 = Eigen::nDimTraits2<Xpr2>::NumDimensions;
     typedef typename std::conditional<nDim1 == nDim2, 
       same, 
       typename std::conditional<nDim1 <= nDim2,
@@ -241,20 +266,11 @@ struct is_zeroDim<bool> {
 // Lhs has fewer dimensions than Rhs
 template<typename LhsXprType, typename RhsXprType>
 LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, less) {
-  static const int LhsNumDim = nDimTraits<LhsXprType>::NumDimensions;
-  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-  typedef typename nDimTraits<LhsXprType>::EvaluatorType LhsEvaluatorType;
-  typedef typename nDimTraits<LhsXprType>::Dimensions LhsDimensions;
-  LhsEvaluatorType LhsEvaluator( nDimTraits<LhsXprType>::getEvaluator(Lhs) );
-  const LhsDimensions &LhsDims = LhsEvaluator.dimensions();
-
-  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-
-  //  std::cout<<"In LHSND < RHSND"<<std::endl;
-  //std::cout<<"Lhs dim[0] = "<<LhsDims[0]<<std::endl;
+  std::cout<<"smartAssignWholeObject less"<<std::endl;
+  static const int LhsNumDim = Eigen::nDimTraits2<LhsXprType>::NumDimensions;
+  static const int RhsNumDim = Eigen::nDimTraits2<RhsXprType>::NumDimensions;
+  auto LhsDims = nDimTraits2_dimensions(Lhs);
+  auto RhsDims = nDimTraits2_dimensions(Rhs);
   bool ok = checkDims<LhsNumDim, RhsNumDim>(LhsDims, RhsDims);
   if(!ok) {
     std::cout<<"Error: dimension mismatch\n"<<std::endl;
@@ -266,7 +282,7 @@ LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, less) {
 
 // Lhs has same number of dimensions as Rhs
 template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, same) {
+LhsXprType& smartAssignFixedSize(LhsXprType &&Lhs, const RhsXprType &Rhs, same) {
   Lhs = Rhs;
   return Lhs;
 }
@@ -275,8 +291,7 @@ LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, same) {
 template<typename LhsXprType, typename RhsXprType>
 LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, more) {
   std::cout<<"more case need to be done"<<std::endl;
-    Lhs = Rhs;
-  return Lhs;
+  return smartAssignFixedSize(Lhs, Rhs, less()) ;
 }
 
 // flex__ is the key class.
@@ -287,13 +302,14 @@ template<typename xType>
 class flex__ {
 public:
   xType &x;
-  explicit flex__(xType &x_) : x(x_) {
+  explicit flex__(xType &&x_) : x(x_) {
     //  std::cout<<"building flex__ for fixed-size Lhs"<<std::endl;
   }
   template<typename oType>
   xType& operator=(const oType &other) {
-    // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
+    std::cout<<"In flex__ op case operator="<<std::endl;
     // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
+
     return smartAssignFixedSize(x, other,
                                 typename compare_nDim<xType, oType>::type());
   }
@@ -328,18 +344,12 @@ struct scalar_cast_ {
 // Lhs has fewer dimensions than Rhs
 template<typename LhsXprType, typename RhsXprType>
 LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, less) {
-  static const int LhsNumDim = nDimTraits<LhsXprType>::NumDimensions;
-  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-  typedef typename nDimTraits<LhsXprType>::Dimensions LhsDimensions;
-
+  std::cout<<"smartAssignWholeObject less"<<std::endl;
+  static const int LhsNumDim = Eigen::nDimTraits2<LhsXprType>::NumDimensions;
+  static const int RhsNumDim = Eigen::nDimTraits2<RhsXprType>::NumDimensions;
+  typedef typename Eigen::nDimTraits2<LhsXprType>::Dimensions LhsDimensions;
   LhsDimensions NewLhsDims;
-  
-  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-  
-  //  std::cout<<"In smartAssignWholeObject for LHSND < RHSND"<<std::endl;
+  auto RhsDims = nDimTraits2_dimensions(Rhs);
   bool ok = checkAndSetupDims<LhsNumDim, RhsNumDim>(NewLhsDims, RhsDims);
   if(!ok) {
     std::cout<<"Error: dimension mismatch\n"<<std::endl;
@@ -359,8 +369,7 @@ LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, same)
 template<typename LhsXprType, typename RhsXprType>
 LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, more) {
   std::cout<<"more case need to be done"<<std::endl;
-  Lhs = Rhs;
-  return Lhs;
+  return smartAssignWholeObject(Lhs, Rhs, less());
 }
 
 //smartAssignToScalar handles cases like A  <- B where A is a true scalar (e.g. double),
@@ -391,21 +400,25 @@ ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim,
 
 template<typename ScalarType, typename RhsXprType>
 ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenOp) {
-  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
+  static const int RhsNumDim = Eigen::nDimTraits2<const RhsXprType>::NumDimensions;
 
-  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
+  // typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
+  // typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
+  // RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
+  // const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
+
+  // auto RhsDimensions = nDimTraits2_dimensions(Rhs);
 
   //  std::cout<<"In smartAssignToScalar nonzeroDim eigenOp"<<std::endl;
 
-  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
+//  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
+  bool ok = nDimTraits2_size(Rhs) == 1;
   if(!ok) {
     std::cout<<"Error: dimension mismatch\n"<<std::endl;
     return Lhs;
   }
-  Lhs = Rhs.template cast<ScalarType>().eval();
+  Eigen::Tensor<ScalarType, RhsNumDim> temp = Rhs.template cast<ScalarType>();
+  Lhs = temp(0);
   return Lhs;
 }
 
@@ -497,7 +510,7 @@ public:
   ScalarType& operator=(const oType &other) {
     // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
     // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-   return smartAssignToScalar(x, other, 
+   return smartAssignToScalar(x, other,
                                typename is_zeroDim<oType>::type(),
                                typename type_category<oType>::type());
   }
@@ -510,6 +523,7 @@ public:
 // The following templated function can deduce type easily.
 // This means we can code flex_(x) = foo(y);
 template<typename xType>
-flex__<xType> flex_(xType &x_) {return flex__<xType>(x_);}
+flex__<typename std::remove_reference<xType>::type > flex_(xType &&x_)
+{return flex__<typename std::remove_reference<xType>::type >(std::forward<xType>(x_));}
 
 #endif

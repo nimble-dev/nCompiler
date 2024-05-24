@@ -166,8 +166,9 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('rep'),
+  c('nRep'),
   list(
+    match_def = function(x, times, length.out, each){},
     labelAbstractTypes = list(
       handler = 'VectorReturnType',
       returnTypeCode = returnTypeCodes$promote),
@@ -187,12 +188,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('seq'),
+  c('nSeq'),
   list(
+    match_def = function(from, to, by, length.out) {},
     labelAbstractTypes = list(
       handler = 'Seq'),
     eigenImpl = list(
-      handler = 'Seq')
+      handler = 'Seq'#,
+      #      i1 = literalIntegerExpr(1), # see compile_zzz_operatorLists.R, where there are added after the relevant definitions
+      #      d1 = literalDoubleExpr(1)
+    )
   )
 )
 

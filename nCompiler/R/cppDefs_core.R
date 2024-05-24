@@ -225,13 +225,17 @@ addGenericInterface_impl <- function(self) {
         } else {
           character()
         }
-      post_cpp <- self$cppFunctionDefs[[mName]]$get_post_cpp_compiler()[[1]]
-      passingTypes <-
-        ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
-               ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
-      step1 <- paste0('\"',argNames,'\"')
-      step2 <- paste(step1, passingTypes, sep=',')
-      step3 <- paste0('{arg(', step2, ')}', collapse = ',')
+      if(length(argNames)) {
+        post_cpp <- self$cppFunctionDefs[[mName]]$get_post_cpp_compiler()[[1]]
+        passingTypes <-
+          ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
+          ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
+        step1 <- paste0('\"',argNames,'\"')
+        step2 <- paste(step1, passingTypes, sep=',')
+        step3 <- paste0('{arg(', step2, ')}', collapse = ',')
+      } else {
+        step3 <- '{}'
+      }
       step4 <- paste0('args({', step3, '})')
       cppArgInfos[mName] <- step4
     }

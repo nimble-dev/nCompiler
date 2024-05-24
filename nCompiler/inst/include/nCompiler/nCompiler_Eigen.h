@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <memory>
 #include "tensorFlex.h"
+#include "tensorUtils.h"
 #include "StridedTensorMap.h"
 // Exporters go from SEXP to internal type
 #include "nCompiler_Rcpp.h"
