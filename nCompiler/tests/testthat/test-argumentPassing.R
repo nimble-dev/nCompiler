@@ -7,6 +7,12 @@
 library(testthat)
 library(nCompiler)
 
+message("see comments on test coverage needed")
+# need cases of multiple function call layers
+# need cases of >1D
+# need cases of blockRef
+
+# compiled and uncompiled 1D by copy
 foo <- nFunction(
   function(x = numericVector()) {
     x <- x + 1
@@ -22,7 +28,7 @@ x <- 1:3
 y <- cfoo(x)
 expect_equal(x+1, y)
 
-
+# redundant - can be removed
 foo <- nFunction(
   function(x = numericVector()) {
     x <- x + 1
@@ -38,7 +44,7 @@ x <- 1:3
 y <- cfoo(x)
 expect_equal(x+1, y)
 
-
+# compiled and uncompiled 1D by ref (foo here can be removed)
 foo <- nFunction(
   function(x = numericVector()) {
     x <- x + 1
@@ -67,7 +73,7 @@ expect_equal(x+1, y)
 y <- cfoo$foo2(x)
 expect_equal(x, y)
 
-
+# compiled and uncompiled 1D by ref correctly errors when used as blockRef
 foo <- nFunction(
   function(x = numericVector()) {
     x <- x + 1
@@ -89,6 +95,8 @@ expect_equal(x, y)
 x <- 1:5
 expect_error(y <- cfoo(x[2:4]))
 
+# compiled and uncompiled mix 1D mix of by copy and by ref
+message("error-trapping differs between R and C++")
 foo <- nFunction(
   function(x = numericVector(), x2 = numericVector()) {
     x2 <- x2 + x
@@ -123,6 +131,7 @@ x2 <- as.numeric(11:15)
 expect_error(y <- cfoo(x, x2[2:4])) # We could error-trap more on this.
 # Discrepancy in compiled vs uncompiled is a warning in uncompiled but an error in compiled.
 
+# 0D and 1D by copy in nClass
 nc1 <- nClass(
   Cpublic = list(
     Cfoo = nFunction(
@@ -139,7 +148,7 @@ Cnc1 <- nCompile(nc1)
 Cobj <- Cnc1$new()
 Cobj$Cfoo
 
-
+# redundant
 nc1 <- nClass(
   Cpublic = list(
     Cfoo = nFunction(

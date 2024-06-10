@@ -1,6 +1,6 @@
 context("Testing indexing (a bunch of correct caught-error messages are expected as part of this test)")
 
-test_that("indexing by numeric vector works" {
+test_that("indexing by numeric vector works", {
   nC <- nClass(
     Cpublic = list(
       test1 = nFunction(function(x = numericArray(nDim = 2),

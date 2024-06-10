@@ -1,5 +1,3 @@
-context("Testing NF_CompilerClass steps")
-
 test_that("NF_CompilerClass steps",
 {
 

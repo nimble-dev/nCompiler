@@ -46,19 +46,28 @@ castedTensorCopy(const fromT * const from,
   return to;
 }
 
-// this code got klugey
 template<bool do_resize=true>
-  struct resize_if_needed {
-    template<typename T>
-    static void resize(T &t, int n) {t.resize(n);}
-  };
-  template<>
-  struct resize_if_needed<false> {
-    template<typename T>
-    static void resize(T &t, int n) {}
-  };
+struct resize_if_needed {
+  template<typename T>
+  static void resize(T &t, size_t n) {t.resize(n);}
+};
+template<>
+struct resize_if_needed<false> {
+  template<typename T>
+  static void resize(T &t, size_t n) {}
+};
 
-// can be specialized for nDim up to 8 for array's ctors
+/*
+ * Notes on cases for SEXP_indices_2_IndexArray_general
+ *
+ * When do_resize=false, the return_type nDims is known at compile time because it must match the declared type.
+ * The copying mechanism already uses a TensorMap into the R-allocated memory
+ *
+ * nimble behavior: for declared 1D, flatten input. for declared >1D, error out for mismatched input.
+ * nCompiler behavior (if not mimicing nimble): possibly allow declared 2D to accept 1D input
+ *          possibly allow (optional?) erroring instead of flattening for wrong 1D input
+ *
+ */
 template<class Index, typename return_type, bool do_resize=true >
 return_type SEXP_indices_2_IndexArray_general(SEXP x) {
   // from RcppEigen RcppEigenWrap.h
@@ -68,22 +77,29 @@ return_type SEXP_indices_2_IndexArray_general(SEXP x) {
   /* } */
   /* int* dims_ = INTEGER(dims); */
   return_type ans;
-  SEXP SDims; 
-  PROTECT(SDims = ::Rf_getAttrib( x, R_DimSymbol ));
-  if(SDims == R_NilValue) {
-    resize_if_needed<do_resize>::template resize<return_type>(ans, 1);
-    // if(do_resize) ans.resize(1);
+  SEXP Sinput_dims;
+  PROTECT(Sinput_dims = ::Rf_getAttrib( x, R_DimSymbol ));
+  size_t input_nDim;
+  if(Sinput_dims == R_NilValue) input_nDim = 1; else input_nDim = LENGTH(Sinput_dims);
+  resize_if_needed<do_resize>::template resize<return_type>(ans, input_nDim);
+  size_t output_nDim = ans.size(); // will match input_nDim if do_resize==true
+  bool mismatch(false);
+  if(output_nDim == 1) {
     ans[0] = LENGTH(x);
   } else {
-    int nDim = LENGTH(SDims);
-    resize_if_needed<do_resize>::template resize<return_type>(ans, nDim);
-    //    if(do_resize) ans.resize(nDim);
-    int *xIndices = INTEGER(SDims);
-    for(unsigned int i = 0; i < nDim; i++) {
-      ans[i] = xIndices[i];
+    if(output_nDim != input_nDim) {
+      mismatch=true; // track error for later to avoid multiple UNPROTECTs
+    } else {
+      int *xIndices = INTEGER(Sinput_dims);
+      for(size_t i = 0; i < input_nDim; i++) {
+        ans[i] = xIndices[i];
+      }
     }
   }
   UNPROTECT(1);
+  if(mismatch) {
+    Rcpp::stop("Dimension mismatch on input. Expected %i, but got %i.\n", output_nDim, input_nDim);
+  }
   return ans;
 }
 
@@ -443,7 +459,7 @@ struct Rdataptr<int> {
       std::string passed_type = "unknown";
       if(Rf_isReal(Sin)) passed_type = "numeric";
       if(Rf_isLogical(Sin)) passed_type = "logical";
-      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
+      Rcpp::stop("Block reference argument expected type integer but received type " + passed_type);
     }
     return INTEGER(Sin);
   }
@@ -456,7 +472,7 @@ struct Rdataptr<bool> {
       std::string passed_type = "unknown";
       if(Rf_isReal(Sin)) passed_type = "numeric";
       if(Rf_isInteger(Sin)) passed_type = "integer";
-      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
+      Rcpp::stop("Block reference argument expected type logical but received type " + passed_type);
     }
     return INTEGER(Sin);// R bools are integers
   }

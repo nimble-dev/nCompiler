@@ -1,4 +1,3 @@
-context("Testing Rcpp_nCompilerPacket for Rcpp-managed compilation")
 
 test_that("basics",
           {

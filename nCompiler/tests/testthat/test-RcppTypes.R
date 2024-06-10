@@ -1,5 +1,3 @@
-context("Testing Rcpp types")
-
 # Test that Rcpp types work in nFunctions
 
 test_that("RcppNumericVector works in nFunctions", {
