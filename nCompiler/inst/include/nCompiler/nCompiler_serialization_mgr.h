@@ -5,7 +5,7 @@
 // Rough draft of C++ serialization manager class
 // I want to make this as similar as possible to the design of an nClass
 // for simplicity and code re-use.
-class serialization_mgr : public genericInterfaceC<serialization_mgr> {
+class serialization_mgr : public genericInterfaceC<serialization_mgr>, loadedObjectHookC<serialization_mgr> {
 public:
   typedef std::unique_ptr<genericInterfaceBaseC> unique_base_ptr;
   std::vector< unique_base_ptr > objects;
@@ -54,19 +54,21 @@ return Sans;
 
 CEREAL_REGISTER_TYPE(serialization_mgr)
 
-CEREAL_REGISTER_DYNAMIC_INIT(serialization_mgr)
+CEREAL_REGISTER_DYNAMIC_INIT(serialization_mgr);
 
 NCOMPILER_INTERFACE(
-		    serialization_mgr,
-		    NCOMPILER_FIELDS(
-				     ),
-		    NCOMPILER_METHODS(
-				      method("add_extptr",
-					     &serialization_mgr::add_extptr),
-				      method("get_extptr",
-					     &serialization_mgr::get_extptr)
-				      )
-		    )
+                    serialization_mgr,
+                    NCOMPILER_FIELDS(
+                                     ),
+                    NCOMPILER_METHODS(
+                                      method("add_extptr",
+                                             &serialization_mgr::add_extptr,
+                                             args({{arg("extptr",copy)}})),
+                                      method("get_extptr",
+                                             &serialization_mgr::get_extptr,
+                                             args({{arg("id",copy)}}))
+                                      )
+                    )
 
 
 #endif

@@ -8,7 +8,7 @@ set_nOption("serialize", TRUE)
 test_that("Basic serialization works",
           {
             nc1 <- nClass(
-              classname = "nc1",
+              classname = "nc3",
               Rpublic = list(
                 Rv = NULL,
                 Rfoo = function(x) x+1
@@ -33,6 +33,7 @@ test_that("Basic serialization works",
             )
             set_nOption("showCompilerOutput", TRUE)
             set_nOption("pause_after_writing_files", TRUE)
+            ans <- try(nCompile(nc1, interfaces = "generic"))
             ans <- try(nCompile_nClass(nc1, interface = "generic"))
             expect_true(is.function(ans)) ## compilation succeeded
             obj <- ans()

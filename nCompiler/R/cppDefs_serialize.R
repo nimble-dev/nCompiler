@@ -7,7 +7,7 @@ make_serialization_cppDef <- function(funNames = c("nComp_serialize_", "nComp_de
       cppContent = paste0(
         "// [[Rcpp::export]]\n",
         "SEXP new_serialization_mgr ( ) {\n",
-        "return(loadedObjectEnv(new_nCompiler_object<serialization_mgr>()));\n",
+        "return CREATE_NEW_NCOMP_OBJECT(serialization_mgr);\n",
         "}\n",
         "\n",
         "//[[Rcpp::export]]\n",

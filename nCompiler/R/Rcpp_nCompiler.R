@@ -18,28 +18,32 @@ Rcpp_nCompilerPacket <- function(...) {
 ## To be expanded to take a list of cppDefs
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {
-    name <- cppDef$name
-    Hincludes <- cppDef$getHincludes()
-    CPPincludes <- cppDef$getCPPincludes()
-    Hpreamble <- cppDef$getHpreamble()
-    CPPpreamble <- cppDef$getCPPpreamble()
-    
-    CPPusings <- cppDef$getCPPusings()
-    
+  name <- cppDef$name
+  allCppDefs <- cppDef$getDefs()
+
+  Hincludes <- allCppDefs |> lapply(\(x) x$getHincludes()) |> unlist(use.names=FALSE)
+  CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> unlist(use.names=FALSE)
+  Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> unlist(use.names=FALSE)
+  CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> unlist(use.names=FALSE)
+  CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> unlist(use.names=FALSE)
+
+  ## Hincludes <- cppDef$getHincludes()
+  ## CPPincludes <- cppDef$getCPPincludes()
+  ## Hpreamble <- cppDef$getHpreamble()
+  ## CPPpreamble <- cppDef$getCPPpreamble()
+  ## CPPusings <- cppDef$getCPPusings()
+
     Hincludes <- unique(Hincludes)
     CPPincludes <- unique(CPPincludes)
     Hpreamble <- unique(Hpreamble)
     CPPpreamble <- unique(CPPpreamble)
     CPPusings <- unique(CPPusings)
-    
 
     selfCPP <- paste0('"', filebase, '.cpp"')
     CPPincludes <- CPPincludes[ CPPincludes != selfCPP ]
 
     selfH <- paste0('"', filebase, '.h', '"')
     CPPincludes <- c(CPPincludes, selfH)
-
-    allCppDefs <- cppDef$getDefs()
 
     debugCpp <- get_nOption('compilerOptions')[['debugCpp']]
 
