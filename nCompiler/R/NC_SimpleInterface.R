@@ -4,27 +4,42 @@
 
 #' @export
 method <- function(obj, name) {
+  DLLenv <- nCompiler:::get_DLLenv(obj)
+  extptr <- nCompiler:::getExtptr(obj)
   function(...) {
-    if(is.null(getExtptr(obj)))
-      stop("obj does not point to a C++ object.")
+    DLLenv$call_method(extptr, name, environment())
     # We switched from list(...) to environment() with the switch to having
     # the C++ generic interface look up ... from the calling environment()
     # in order to implement ref and blockRef behavior.
-    nCompiler:::call_method(getExtptr(obj), name, environment())
+    #
+    # We also switched to having each DLL hold its own R interface fxns
   }
+  ## function(...) {
+  ##   if(is.null(getExtptr(obj)))
+  ##     stop("obj does not point to a C++ object.")
+  ##   nCompiler:::call_method(getExtptr(obj), name, environment())
+  ## }
 }
 
 #' @export
 value <- function(obj, name) {
-  if(is.null(getExtptr(obj)))
-    stop("obj does not point to a C++ object.")
-  nCompiler:::get_value(getExtptr(obj), name)
+  DLLenv <- nCompiler:::get_DLLenv(obj)
+  extptr <- nCompiler:::getExtptr(obj)
+  DLLenv$get_value(extptr, name)
+
+  ## if(is.null(getExtptr(obj)))
+  ##   stop("obj does not point to a C++ object.")
+  ## nCompiler:::get_value(getExtptr(obj), name)
 }
 
 #' @export
 `value<-` <- function(obj, name, value) {
-  if(is.null(getExtptr(obj)))
-    stop("obj does not point to a C++ object.")
-  nCompiler:::set_value(getExtptr(obj), name, value)
+  DLLenv <- nCompiler:::get_DLLenv(obj)
+  extptr <- nCompiler:::getExtptr(obj)
+  DLLenv$set_value(extptr, name, value)
   obj
+  ## if(is.null(getExtptr(obj)))
+  ##   stop("obj does not point to a C++ object.")
+  ## nCompiler:::set_value(getExtptr(obj), name, value)
+  ## obj
 }

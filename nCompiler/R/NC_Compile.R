@@ -111,7 +111,7 @@ nCompile_nClass <- function(NC,
   
   newDLLenv <- make_DLLenv()
   # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
-  newCobjFun <- setup_CnC_environments(newCobjFun,
+  newCobjFun <- setup_nClass_environments(newCobjFun,
                                        newDLLenv,
                                        nC_names = filebase,
                                        R6interface)

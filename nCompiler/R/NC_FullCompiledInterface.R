@@ -89,7 +89,8 @@ build_compiled_nClass <- function(NCgenerator,
     expr = R6::R6Class(
       classname = CLASSNAME,
       private = list(
-        CppObj = NULL
+        CppObj = NULL,
+        DLLenv = NULL
       ),
       public = c(
         list(initialize = function(CppObj) {
@@ -100,6 +101,7 @@ build_compiled_nClass <- function(NCgenerator,
             CppObj <- newCobjFun()
           }
           private$CppObj <- CppObj
+          private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
         }),
         RPUBLIC,
         RFIELDS,
@@ -137,6 +139,7 @@ build_compiled_nClass <- function(NCgenerator,
       CppObj <- newCobjFun()
     }
     private$CppObj <- CppObj
+    private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
   }
 
   new_env <- new.env(parent = env)
@@ -190,7 +193,7 @@ buildActiveBinding_for_compiled_nClass <- function(NCI) {
               stop("Assigning an invalid object to a Cpublic nClass field")          
           }
           self$INTERNAL_NAME <- value
-          nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value$private$CppObj)
+          private$DLLenv$set_value(nCompiler:::getExtptr(private$CppObj), NAME, value$private$CppObj)
         }
       },
       list(NAME = name, INTERNAL_NAME = as.name(internal_name))
@@ -203,9 +206,9 @@ buildActiveBinding_for_compiled_nClass <- function(NCI) {
     body(ans) <- substitute(
     {
       if(missing(value))
-        nCompiler:::get_value(nCompiler:::getExtptr(private$CppObj), NAME)
+        private$DLLenv$get_value(nCompiler:::getExtptr(private$CppObj), NAME)
       else
-        nCompiler:::set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
+        private$DLLenv$set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
     },
     list(NAME = name)
     )
@@ -234,7 +237,7 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ##  for(i in seq_along(argNames))
   ##    listcode[[i+1]] <- as.name(argNames[i])
   body(ans) <- substitute(
-    nCompiler:::call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
+    private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
     list(NAME = name)
   )
   ans
@@ -251,7 +254,7 @@ buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
   for(i in seq_along(argNames))
     listcode[[i+1]] <- as.name(argNames[i])
   body(ans) <- substitute({
-    obj_env <- nCompiler:::call_method(
+    obj_env <- private$DLLenv$call_method(
       nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE
     )
     C_nC_derivClass$new(obj_env)

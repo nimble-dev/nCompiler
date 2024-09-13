@@ -393,6 +393,7 @@ cppClassClass <- R6::R6Class(
     addGenericInterface = function() {
       addGenericInterface_impl(self)
       add_obj_hooks_impl(self)
+      self$neededCppDefs[["R_generic_interface_calls"]]  <- make_R_interface_cppDef()
     },
     addSerialization = function(include_DLL_funs = FALSE) {
       addSerialization_impl(self, include_DLL_funs)
@@ -402,7 +403,6 @@ cppClassClass <- R6::R6Class(
     # }
   )
 )
-
 
 ## A cppCodeBlock is an arbitrary collection of annotated syntax tree (exprClass)
 ## and other cppCodeBlocks (defined below).

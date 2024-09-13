@@ -372,6 +372,18 @@ writePackage <- function(...,
            file = file.path(datDir, paste0(ls(datEnv)[i], ".RData")))
     }
   }
+
+  # Write .onLoad
+  nClass_names <- unlist(lapply(objs, function(x)
+    if(isNCgenerator(x)) x$classname else NULL
+    ))
+  if(length(nClass_names)) {
+    onLoad_lines <- c(".onLoad <- function(libName, pkgName) {\n",
+                      paste0(" nCompiler::setup_nClass_environments_from_package(c(", paste0("\"",nClass_names,"\"", collapse = ", "),  "))\n"),
+                      "NULL}\n")
+    writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
+  }
+
   DESCfile <- file.path(pkgDir, "DESCRIPTION")
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
   if (initializePkg) {
@@ -467,6 +479,7 @@ writePackage <- function(...,
 buildPackage <- function(package.name, 
                          dir = ".",
                          lib,
+                         quiet = TRUE,
                          load = TRUE,
                          roxygenize = FALSE){
   if(!missing(lib)) {
@@ -491,7 +504,7 @@ buildPackage <- function(package.name,
                    lib = lib,
                    repos = NULL,
                    type = "source",
-                   quiet = TRUE)
+                   quiet = quiet)
   ok <- TRUE
   if(load) {
     if(missing(lib))

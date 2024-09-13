@@ -148,7 +148,7 @@ nCompile <- function(...,
   
   if(any(unitTypes == "nCgen")) {
     newDLLenv <- make_DLLenv()
-    compiledFuns <- setup_CnC_environments(compiledFuns,
+    compiledFuns <- setup_nClass_environments(compiledFuns,
                                            newDLLenv,
                                            nC_names = cpp_names[unitTypes=="nCgen"],
                                            R6interfaces = R6interfaces,

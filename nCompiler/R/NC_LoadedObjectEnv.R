@@ -26,9 +26,10 @@ new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
 
 #' @export
 to_full_interface <- function(LOE) {
-  parentEnv <- parent.env(LOE)
-  if(exists('.R6interface', parentEnv)) {
-    fullAns <- parentEnv$.R6interface$new(LOE)
+#  parentEnv <- parent.env(LOE)
+  CnCenv <- get_CnCenv(LOE)
+  if(exists('.R6interface', CnCenv)) {
+    fullAns <- CnCenv$.R6interface$new(LOE)
     return(fullAns)
   }
   LOE # default to non-full
@@ -47,6 +48,7 @@ new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL) {
   ans
 }
 
+#' @export
 is.loadedObjectEnv <- function(env) {
   ## The checks here may be over-kill.
   ## We may be able to rely solely on the class label.
@@ -56,6 +58,7 @@ is.loadedObjectEnv <- function(env) {
   TRUE
 }
 
+#' @export
 getExtptr <- function(env) {
     ## If env$extptr ever changes, the C++ code for as< std::shared_ptr< T > > should also be changed.
     ## This is written as a custom Exporter added to namespace Rcpp::traits
@@ -78,14 +81,35 @@ make_DLLenv <- function() {
 }
 
 get_DLLenv <- function(obj) {
-  parent.env(obj)
+  if(class(obj) == "CnClass_env") parent.env(obj)
+  else if(class(obj) == "loadedObjectEnv")
+    parent.env(parent.env(obj))
+  else
+    stop("DLLenv not available.")
 }
 
-setup_CnC_environments <- function(compiledFuns,
-                                   newDLLenv,
-                                   nC_names = character(),
-                                   R6interfaces,
-                                   returnList = FALSE) {
+#' @export
+DLLenv <- function(obj) get_DLLenv(obj)
+
+is.CnC_env <- function(env) {
+  if(!is.environment(env)) return(FALSE)
+  if(class(env) != "CnClass_env") return(FALSE)
+  TRUE
+}
+
+get_CnCenv <- function(obj) {
+  if(class(obj) == "loadedObjectEnv") parent.env(obj)
+  else stop("CnCenv not available.")
+}
+
+# This will be called from nCompile and nCompile_nClass
+# and also from setup_nClass_environments_from_package
+setup_nClass_environments <- function(compiledFuns,
+                                      newDLLenv,
+                                      nC_names = character(),
+                                      R6interfaces,
+                                      returnList = FALSE) {
+  if(missing(newDLLenv)) newDLLenv <- make_DLLenv()
   compiledFuns <- setup_DLLenv(compiledFuns, newDLLenv, returnList = FALSE)
   for(nC_name in nC_names) {
     compiledFuns <- setup_CnClass_env(nC_name, compiledFuns, R6interfaces, newDLLenv)
@@ -93,6 +117,40 @@ setup_CnC_environments <- function(compiledFuns,
   if(is.list(compiledFuns)) compiledFuns
   else if(returnList) list(compiledFuns)
   else compiledFuns
+}
+
+#' @export
+setup_nClass_environments_from_package <- function(nClass_names,
+                                                   pkgName) {
+  if(missing(pkgName)) pkgName <- evalq(packageName(), envir=parent.frame())
+  packageEnv <- getNamespace(pkgName)
+  DLLenv <- make_DLLenv() # This is the spot to change the parent.env of the DLLenv if necessary (currently it will be the nCompiler namespace)
+  reqdFuns <- c(paste0("new_", nClass_names),
+                paste0("set_CnClass_env_", nClass_names),
+                "call_method",
+                "get_value",
+                "set_value")
+  optFuns <- c("new_serialization_mgr",
+               "nComp_serialize_",
+               "nComp_deserialize_")
+  compiledFuns <- list()
+  get_fn <- function(fn, warn=FALSE) {
+    if(exists(fn, envir = packageEnv, inherits=FALSE))
+      compiledFuns[[fn]] <<- get(fn, envir=packageEnv, inherits=FALSE)
+    else
+      if(warn)
+        warning(
+          paste0("function ", fn,
+                 " was expected but does not exist in the package namespace."))
+  }
+  for(fn in reqdFuns) get_fn(fn, TRUE)
+  for(fn in optFuns) get_fn(fn, FALSE)
+  # TO-DO: Case when R6interfaces are set up
+  setup_nClass_environments(compiledFuns,
+                            DLLenv,
+                            nC_names = nClass_names,
+                            R6interfaces = list(),
+                            returnList = TRUE)
 }
 
 setup_CnClass_env <- function(nC_name,
@@ -141,7 +199,11 @@ setup_DLLenv <- function(compiledFuns,
   if(!is.list(compiledFuns)) return(compiledFuns) 
   namesForDLLenv <- c("nComp_serialize_",
                       "nComp_deserialize_",
-                      "new_serialization_mgr")
+                      "new_serialization_mgr",
+                      "get_value",
+                      "set_value",
+                      "call_method"
+                      )
   
   compiledFuns <- move_funs_from_list_to_env(namesForDLLenv,
                                              compiledFuns, newDLLenv)
@@ -180,64 +242,63 @@ move_funs_from_list_to_env <- function(funNames, funList, env) {
   funList
 }
 
-wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {
-  force(newDLLenv)
-  force(newObjFun)
-  if(!is.function(newObjFun))
-    stop(paste0("newObjFun is not a function. It is a ", 
-                paste0(class(newObjFun), collase = " ")))
-  wrappedNewObjFun <- function() {
-    ans <- newObjFun()
-    parent.env(ans) <- newDLLenv
-    ans
-  }
-  wrappedNewObjFun
-}
+## wrapNCgenerator_for_DLLenv <- function(newObjFun, newDLLenv) {
+##   force(newDLLenv)
+##   force(newObjFun)
+##   if(!is.function(newObjFun))
+##     stop(paste0("newObjFun is not a function. It is a ",
+##                 paste0(class(newObjFun), collase = " ")))
+##   wrappedNewObjFun <- function() {
+##     ans <- newObjFun()
+##     parent.env(ans) <- newDLLenv
+##     ans
+##   }
+##   wrappedNewObjFun
+## }
 
-new.serialObjectEnv <- function(serial_data = NULL, parent_env) {
-  ans <- new.env()
-  if(!missing(parent_env)) parent.env(ans) <- parent_env
-  ans$serial <- serial_data
-  class(ans) <- "serialObjectEnv"
-  ans
-}
+## new.serialObjectEnv <- function(serial_data = NULL, parent_env) {
+##   ans <- new.env()
+##   if(!missing(parent_env)) parent.env(ans) <- parent_env
+##   ans$serial <- serial_data
+##   class(ans) <- "serialObjectEnv"
+##   ans
+## }
 
-is.serialObjectEnv <- function(env) {
-  ## The checks here may be over-kill.
-  ## We may be able to rely solely on the class label.
-  if(!is.environment(env)) return(FALSE)
-  if(!exists("serial", where = env)) return(FALSE)
-  if(class(env) != "serialObjectEnv") return(FALSE)
-  TRUE
-}
+## is.serialObjectEnv <- function(env) {
+##   ## The checks here may be over-kill.
+##   ## We may be able to rely solely on the class label.
+##   if(!is.environment(env)) return(FALSE)
+##   if(!exists("serial", where = env)) return(FALSE)
+##   if(class(env) != "serialObjectEnv") return(FALSE)
+##   TRUE
+## }
 
-getSerial <- function(env) {
-  ## If env$extptr ever changes, the C++ code for as< std::shared_ptr< T > > should also be changed.
-  ## This is written as a custom Exporter added to namespace Rcpp::traits
-  if(!is.serialObjectEnv(env))
-    stop("env should be a serialObjectEnv")
-  env$serial
-}
+## getSerial <- function(env) {
+##   ## If env$extptr ever changes, the C++ code for as< std::shared_ptr< T > > should also be changed.
+##   ## This is written as a custom Exporter added to namespace Rcpp::traits
+##   if(!is.serialObjectEnv(env))
+##     stop("env should be a serialObjectEnv")
+##   env$serial
+## }
 
-setSerial <- function(env, serial_data) {
-  if(!is.serialObjectEnv(env))
-    stop("env should be a serialObjectEnv")
-  env$serial <- serial_data
-  env
-}
+## setSerial <- function(env, serial_data) {
+##   if(!is.serialObjectEnv(env))
+##     stop("env should be a serialObjectEnv")
+##   env$serial <- serial_data
+##   env
+## }
 
 ## Next two will be deprecated
 
-loadedObjectEnv_serialized <- function(env) {
-  if(!is.loadedObjectEnv(env))
-    stop("env should be a loadedObjectEnv")
-  env$serialized
-}
+## loadedObjectEnv_serialized <- function(env) {
+##   if(!is.loadedObjectEnv(env))
+##     stop("env should be a loadedObjectEnv")
+##   env$serialized
+## }
 
-`loadedObjectEnv_serialized<-` <- function(env, value) {
-  if(!is.loadedObjectEnv(env))
-    stop("env should be a loadedObjectEnv")
-  env$serialized <- value
-  env
-}
-  
+## `loadedObjectEnv_serialized<-` <- function(env, value) {
+##   if(!is.loadedObjectEnv(env))
+##     stop("env should be a loadedObjectEnv")
+##   env$serialized <- value
+##   env
+## }

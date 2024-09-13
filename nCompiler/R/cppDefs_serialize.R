@@ -108,11 +108,7 @@ addSerialization_impl <- function(self,
    , code = nCompiler:::cppCodeBlockClass$new(
      code = nCompiler:::nParse(nCompiler:::cppLiteral(
        paste0(
-         "std::shared_ptr<", self$name,"> shared(this);\n",
-         "SEXP Sans = PROTECT(return_nCompiler_object<", self$name ,
-         ">(shared));\n",
-         "UNPROTECT(1);\n",
-         "return Sans;"
+         "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
        ))),
      symbolTable = nCompiler:::symbolTableClass$new(),
      skipBrackets = TRUE
@@ -142,8 +138,11 @@ addSerialization_impl <- function(self,
   ## CEREAL_REGISTER_TYPE(fooC)
   cereal_register_type_macro <-
     cppMacroCallClass$new(
-      cppContent = paste0("CEREAL_REGISTER_TYPE(", self$name, ")\n")
-    )
+      cppContent = paste0("CEREAL_REGISTER_TYPE(", self$name, ")\n",
+                          "CEREAL_REGISTER_TYPE(shared_ptr_holder<",self$name,">)\n",
+                          "CEREAL_REGISTER_TYPE(genericInterfaceC<",self$name,">)\n",
+                          "CEREAL_REGISTER_TYPE(loadedObjectHookC<",self$name,">)\n")
+      )
   self$neededCppDefs[["cereal_register_type_macro"]] <- cereal_register_type_macro
 
   ## Lines to force dynamic initialization

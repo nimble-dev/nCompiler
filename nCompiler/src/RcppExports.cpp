@@ -11,44 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// get_value
-SEXP get_value(SEXP Xptr, const std::string& name);
-RcppExport SEXP _nCompiler_get_value(SEXP XptrSEXP, SEXP nameSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type Xptr(XptrSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type name(nameSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_value(Xptr, name));
-    return rcpp_result_gen;
-END_RCPP
-}
-// set_value
-SEXP set_value(SEXP Xptr, const std::string& name, SEXP Svalue);
-RcppExport SEXP _nCompiler_set_value(SEXP XptrSEXP, SEXP nameSEXP, SEXP SvalueSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type Xptr(XptrSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type name(nameSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type Svalue(SvalueSEXP);
-    rcpp_result_gen = Rcpp::wrap(set_value(Xptr, name, Svalue));
-    return rcpp_result_gen;
-END_RCPP
-}
-// call_method
-SEXP call_method(SEXP Xptr, const std::string& name, SEXP Sargs);
-RcppExport SEXP _nCompiler_call_method(SEXP XptrSEXP, SEXP nameSEXP, SEXP SargsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type Xptr(XptrSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type name(nameSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type Sargs(SargsSEXP);
-    rcpp_result_gen = Rcpp::wrap(call_method(Xptr, name, Sargs));
-    return rcpp_result_gen;
-END_RCPP
-}
 // rcpp_hello_world
 List rcpp_hello_world();
 RcppExport SEXP _nCompiler_rcpp_hello_world() {
@@ -61,9 +23,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_nCompiler_get_value", (DL_FUNC) &_nCompiler_get_value, 2},
-    {"_nCompiler_set_value", (DL_FUNC) &_nCompiler_set_value, 3},
-    {"_nCompiler_call_method", (DL_FUNC) &_nCompiler_call_method, 3},
     {"_nCompiler_rcpp_hello_world", (DL_FUNC) &_nCompiler_rcpp_hello_world, 0},
     {NULL, NULL, 0}
 };
