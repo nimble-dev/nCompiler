@@ -37,7 +37,7 @@ updateDefaults <- function(defaults, controls) {
     packagingOptions = list(
       export = TRUE
     ),
-    modifyPackageContents = FALSE,
+    modifyPackageFiles = "no",
     localDLL_isLoaded = FALSE, # if TRUE, the localDLL has been loaded.  This will be set TRUE after first compilation.
     localDLLdir = "nCompLocalLibrary", # directory to be used from the working directory if localDLL needs to be locally built.
     showLocalDLLoutput = FALSE,

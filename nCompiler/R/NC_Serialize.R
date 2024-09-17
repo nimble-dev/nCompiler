@@ -8,6 +8,7 @@ nSerialize <- function(obj) {
   ser_mgr <- NULL
   add_extptr <- NULL
   find_extptr <- NULL
+  packageName <- NULL
 
   # function for refhook argument of R's serialize
   refhook <- function(ref_obj) {
@@ -32,6 +33,9 @@ nSerialize <- function(obj) {
           DLLenv$call_method(ser_mgr$extptr, "add_extptr", environment())
         find_extptr <<- function(...)
           DLLenv$call_method(ser_mgr$extptr, "find_extptr", environment())
+      }
+      if(is.null(packageName)) {
+        packageName <<- DLLpackageName(ref_obj)
       }
       ID <- add_extptr(ref_obj$extptr)
       NULL # must return NULL to say we are not serializing the environment
@@ -61,7 +65,8 @@ nSerialize <- function(obj) {
     (\() DLLenv$call_method(ser_mgr$extptr, "clear", environment()))()
   }
   # 3. We need one serialization result, so now serialized the two pieces together.
-  combined <- serialize(list(Rside=Rside, CPPside=CPPside), connection=NULL)
+  combined <- serialize(list(Rside=Rside, CPPside=CPPside, packageName = packageName),
+                        connection=NULL)
   # 4. Delete the serialization manager (will be finalized when R's gc() next runs)
   rm(ser_mgr)
   combined
@@ -70,13 +75,33 @@ nSerialize <- function(obj) {
 # nUnserialize assumes the DLL is correctly loaded again,
 # as from a pacakge.
 #' @export
-nUnserialize <- function(obj, DLLenv) {
+nUnserialize <- function(obj, pkgName, lib = NULL) {
   # The steps reverse those of nSerialize:
   # 1. separate the Rside and CPPside
+  # pkgName can be an environment such as DLLenv or a package name. It's where to look for nComp_deserialize_
+
   combined <- unserialize(obj)
+
+  if(missing(pkgName)) {
+    pkgName <- combined$packageName
+  }
+  if(is.environment(pkgName)) DLLenv <- pkgName
+  else {
+    if(!is.character(pkgName) || (length(pkgName)>1))
+      stop("pkgName must be an environment or one character string.")
+    pkgString <- pkgName
+    if(!substr(pkgString, 1, 8) == "package:")
+      pkgString <- paste0("package:", pkgName)
+    if(is.na(match(pkgString, search()))) {
+      load_ok <- require(pkgName, lib.loc = lib)
+      if(!load_ok)
+        stop("Package ", pkgName, " was not already loaded and couldn't be found and loaded.")
+    }
+    DLLenv <- as.environment(pkgString)
+  }
   unser_fn <- DLLenv$nComp_deserialize_
   if(!is.function(unser_fn))
-    stop("nCompiler unserialization function not found")
+    stop("Could not find 'nComp_deserialize_' function in pkgName environment or package namespace.")
   if(!is.null(combined$CPPside)) {
     # 2. If there was anything on the C++ side, make a serialization_mgr
     ser_mgr <- unser_fn(combined$CPPside)

@@ -91,6 +91,9 @@ get_DLLenv <- function(obj) {
 #' @export
 DLLenv <- function(obj) get_DLLenv(obj)
 
+DLLpackageName <- function(obj)
+  environmentName(environment(get_DLLenv(obj)$call_method))
+
 is.CnC_env <- function(env) {
   if(!is.environment(env)) return(FALSE)
   if(class(env) != "CnClass_env") return(FALSE)

@@ -9,7 +9,63 @@ set_nOption("serialize", TRUE)
 # Then nUnserialize can take as a second argument simply a package name.
 # And one CnCenv for each nClass.
 
-test_that("Basic serialization via packaging works",
+in_new_R_session <- function(code,
+                             pkgName,
+                             lib,
+                             transfer,
+                             runfile = system.file("tests","testthat","serialization_test_in_new_R_session.R",
+                                                   package = "nCompiler"),
+                             outdir,
+                             overwrite=TRUE,
+                             test = TRUE
+                             ) {
+  code <- substitute(code)
+
+  if(!dir.exists(outdir))
+    dir.create(outdir)
+  else {
+    if(overwrite) {
+      unlink(outdir, recursive = TRUE)
+      dir.create(outdir)
+    }
+  }
+  
+  codefile <- file.path(outdir, "testing_code_.R")
+  writeLines(deparse(code),
+             con = codefile)
+
+  savefile <- NULL
+  if(!missing(transfer)) {
+    savefile <- file.path(outdir, "objects_.RData")
+    save(transfer, file = savefile)
+  }
+
+  system2("Rscript",
+          c(runfile,
+            if(!missing(pkgName)) paste0("--pkgName=",pkgName) else NULL,
+            if(!missing(lib)) paste0("--lib=",lib) else NULL,
+            paste0("--codefile=",codefile),
+            if(!is.null(savefile)) paste0("--savefile=",savefile) else NULL),
+          stdout = file.path(outdir, "stdout"),
+          stderr = file.path(outdir, "stderr"))
+
+  if(test) {
+    output <- readLines(file.path(outdir, "stdout"))
+    failure_lines <- grepl("Failure", output)
+    if(any(failure_lines)) {
+      cat("There were some failures\n")
+      writeLines(output)
+    }
+    expect_true(!any(failure_lines))
+  }
+}
+
+test_that("in_new_R_session works",
+          in_new_R_session({test_that("foo", {expect_true(1==1)})},
+                 outdir = file.path(tempdir(), "test_output"))
+)
+
+test_that("Basic serialization works (packaged, generic, multiple, new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -41,13 +97,18 @@ test_that("Basic serialization via packaging works",
   writePackage(
     nc1,
     dir = tempdir(),
-    package.name = "nc1Package",
+    pkgName = "nc1Package",
+    modify = "clear",
     nClass_full_interface = FALSE
   )
+  lib <- file.path(tempdir(), "local_lib")
   buildPackage("nc1Package",
-               dir = tempdir(), quiet = FALSE)
+               dir = tempdir(),
+               lib = lib,
+               quiet = TRUE)
 
-  # serialize and deserialize 1 object
+  ## serialize and deserialize 1 object
+  # build and test object
   obj <- new_nc1()
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   expect_equal(method(obj, "Cfoo")(1.2), 2.2)
@@ -56,12 +117,12 @@ test_that("Basic serialization via packaging works",
   value(obj, "Cx") <- 3
   expect_equal(value(obj, "Cx"), 3L)
 
+  # serialize it
   serialized_obj <- nSerialize(obj)
-  DLLenv <- DLLenv(obj)
-  restored_obj <- nUnserialize(serialized_obj, DLLenv) # second argument should be package name. DLLenv should be recorded in the package.
-  # Also check on persistence of DLLenv.
-  # add a clean argument to writePackage that will do erasePackage if needed.
+  # restore (unserialize) it
+  restored_obj <- nUnserialize(serialized_obj)
 
+  # test the restored objected
   expect_true(nCompiler:::is.loadedObjectEnv(restored_obj))
   expect_equal(method(restored_obj, "Cfoo")(1.2), 2.2)
   expect_equal(value(restored_obj, "Cv"), 1.23)
@@ -77,16 +138,37 @@ test_that("Basic serialization via packaging works",
   obj3 <- new_nc1()
   value(obj3, "Cx") <- 2134
   serialized_objlist <- nSerialize(list(obj, obj2, obj3))
-  restored_objlist <- nUnserialize(serialized_objlist, DLLenv)
+  restored_objlist <- nUnserialize(serialized_objlist, "nc1Package") # alt mode of providing package
+  # test the restored objects
   expect_equal(value(restored_objlist[[1]], "Cv"), 1.23)
   expect_equal(value(restored_objlist[[2]], "Cv"), -8.5)
   expect_equal(value(restored_objlist[[2]], "Cx"), -100)
   expect_equal(value(restored_objlist[[3]], "Cx"), 2134)
   # done
 
+  outdir <- file.path(tempdir(), "working_test")
+#  if(!dir.exists(outdir)) dir.create(outdir)
+#  saveRDS(serialized_objlist, file = file.path(outdir, "objlist.RDS"))
+  # test in a new R session
+  in_new_R_session({
+    serialized_objlist <- transfer$serialized_objlist
+    restored_objlist <- nUnserialize(serialized_objlist)
+    test_that("restored objects work", {
+      expect_equal(value(restored_objlist[[1]], "Cv"), 1.23)
+      expect_equal(value(restored_objlist[[2]], "Cv"), -8.5)
+      expect_equal(value(restored_objlist[[2]], "Cx"), -100)
+      expect_equal(value(restored_objlist[[3]], "Cx"), 2134)
+    })
+  },
+  transfer = list(serialized_objlist = serialized_objlist),
+  pkgName = "nc1Package",
+  lib = lib,
+  outdir = outdir
+  )
+
 })
 
-test_that("Basic serialization via packaging works",
+test_that("Basic serialization works (packaged, fill, multiple, new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -118,11 +200,15 @@ test_that("Basic serialization via packaging works",
   writePackage(
     nc1,
     dir = tempdir(),
-    package.name = "nc1Package",
+    pkgName = "nc1Package",
+    modify = "clear",
     nClass_full_interface = TRUE
   )
+  lib <- file.path(tempdir(), "local_lib")
   buildPackage("nc1Package",
-               dir = tempdir(), quiet = FALSE)
+               dir = tempdir(),
+               lib=lib,
+               quiet = TRUE)
 
   # serialize and deserialize 1 object
   obj <- nc1Package::nc1$new()
@@ -135,10 +221,8 @@ test_that("Basic serialization via packaging works",
 
   serialized_obj <- nSerialize(obj)
   message("Make finding DLLenv better")
-  DLLenv <- obj$private$DLLenv
-  restored_obj <- nUnserialize(serialized_obj, DLLenv) # second argument should be package name. DLLenv should be recorded in the package.
-  # Also check on persistence of DLLenv.
-  # add a clean argument to writePackage that will do erasePackage if needed.
+  # DLLenv <- obj$private$DLLenv
+  restored_obj <- nUnserialize(serialized_obj)
 
   expect_true(inherits(restored_obj, "R6"))
   expect_equal(restored_obj$Cfoo(2.2), 3.2)
@@ -156,12 +240,33 @@ test_that("Basic serialization via packaging works",
   obj3 <- nc1Package::nc1$new()
   obj3$Cx <- 2134
   serialized_objlist <- nSerialize(list(obj, obj2, obj3))
-  restored_objlist <- nUnserialize(serialized_objlist, DLLenv)
+  restored_objlist <- nUnserialize(serialized_objlist, "nc1Package")
   expect_equal(restored_objlist[[1]]$Cv, 1.23)
   expect_equal(restored_objlist[[2]]$Cv, -8.5)
   expect_equal(restored_objlist[[2]]$Cx, -100)
   expect_equal(restored_objlist[[3]]$Cx, 2134)
   # done
+
+  outdir <- file.path(tempdir(), "working_test")
+#  if(!dir.exists(outdir)) dir.create(outdir)
+#  saveRDS(serialized_objlist, file = file.path(outdir, "objlist.RDS"))
+  # test in a new R session
+  in_new_R_session({
+    serialized_objlist <- transfer$serialized_objlist
+    restored_objlist <- nUnserialize(serialized_objlist)
+    test_that("restored objects work", {
+      expect_equal(restored_objlist[[1]]$Cv, 1.23)
+      expect_equal(restored_objlist[[2]]$Cv, -8.5)
+      expect_equal(restored_objlist[[2]]$Cx, -100)
+      expect_equal(restored_objlist[[3]]$Cx, 2134)
+    })
+  },
+  transfer = list(serialized_objlist = serialized_objlist),
+  pkgName = "nc1Package",
+  lib = lib,
+  outdir = outdir
+  )
+
 })
 
 # stopped here.
