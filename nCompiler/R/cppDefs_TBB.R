@@ -36,7 +36,7 @@ cppParallelBodyClass <- R6::R6Class(
                                ''
                            else
                              pasteSemicolon(x, indent = '  ')),
-                    generateAll(cppFunctionDefs),
+                    generateAll(memberCppDefs),
                     '};'
         )
         unlist(output)
@@ -143,7 +143,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                       initializerList = initializerList,
                                       returnType = cppBlank())
   cppDef$name <- name
-  cppDef$cppFunctionDefs <- list(`operator()` = `operator()`,
+  cppDef$memberCppDefs <- list(`operator()` = `operator()`,
                                  constructor = constructor)
   cppDef$symbolTable <- newSymTab
   invisible(NULL)
@@ -184,7 +184,7 @@ cppParallelReduceBodyClass <- R6::R6Class(
                                ''
                            else
                              pasteSemicolon(x, indent = '  ')),
-                    generateAll(cppFunctionDefs),
+                    generateAll(memberCppDefs),
                     '};'
         )
         unlist(output)
@@ -224,7 +224,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                               isAssign = FALSE, isLiteral = FALSE)
   ## remove '&' from the aggregation value member of parallel_reduce_body
   cppDef$symbolTable$symbols[[value_name]]$ref <- FALSE
-  cppDef$cppFunctionDefs[['constructor']]$args$symbols[[
+  cppDef$memberCppDefs[['constructor']]$args$symbols[[
     value_name]]$ref <- FALSE
   ## create the assignment expr `val__ = value`
   val_assign <- newAssignmentExpression()
@@ -235,13 +235,13 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   setArg(value_assign, 1, copyExprClass(value_expr))
   setArg(value_assign, 2, copyExprClass(val_expr))
   ## edit `operator()`'s body (loop_body$caller)
-  cppDef$cppFunctionDefs[['operator()']]$code$code <- newBracketExpr(
+  cppDef$memberCppDefs[['operator()']]$code$code <- newBracketExpr(
     list(val_assign, loop_body$caller, value_assign))
   ## add val__ to `operator()`'s symbolTable
-  cppDef$cppFunctionDefs[['operator()']]$code$symbolTable$addSymbol(
+  cppDef$memberCppDefs[['operator()']]$code$symbolTable$addSymbol(
     cppVarClass$new(name = val_expr$name, baseType = val_expr$type$type))
   ## remove 'const' from the `operator()` declaration
-  cppDef$cppFunctionDefs[['operator()']]$const <- FALSE
+  cppDef$memberCppDefs[['operator()']]$const <- FALSE
 
   ## get the reduce op's identity element which is guaranteed to be a literal
   ## by the labelAbstractTypes ParallelReduce handler
@@ -296,7 +296,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                const = FALSE,
                                returnType = cppVoid())
 
-  cppDef$cppFunctionDefs <- c(cppDef$cppFunctionDefs,
+  cppDef$memberCppDefs <- c(cppDef$memberCppDefs,
                               list(split_constructor = split_constructor,
                                    join = join))
   invisible(NULL)

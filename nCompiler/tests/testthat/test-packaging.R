@@ -1,6 +1,5 @@
 # not working (flag to omit from testing)
 # This was working after Ben drafted it all and is recently broken (April 2021) by Perry's changes.
-context("Test writePackage and buildPackage")
 
 test_that("writePackage and buildPackage work for nFunction", 
           {

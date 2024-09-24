@@ -18,6 +18,8 @@ LazyData: true
 Collate:
     all_utils.R
     options.R
+    local_DLL.R
+    Rcpp_nCompiler_plugin.R
     changeKeywords.R
     distributions_implementations.R
     distributions_inputList.R
@@ -34,17 +36,16 @@ Collate:
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
     compile_finalTransformations.R
+    cppDefs_core.R
+    cppDefs_utils.R
     cppDefs_ADutils.R
     cppDefs_R_interface_calls.R
-    cppDefs_core.R
     cppDefs_nFunction.R
     cppDefs_nClass.R
     cppDefs_serialize.R
     cppDefs_TBB.R
-    cppDefs_utils.R
     cppDefs_variables.R
     developerTools.R
-    local_DLL.R
     NC.R
     NC_Compile.R
     NC_CompilerClass.R
@@ -71,7 +72,6 @@ Collate:
     RcppExports.R
     Rcpp_check.R
     Rcpp_nCompiler.R
-    Rcpp_nCompiler_plugin.R
     Rexecution.R
     Rhooks.R
     symbolTable.R

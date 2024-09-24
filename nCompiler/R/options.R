@@ -8,7 +8,8 @@ updateDefaults <- function(defaults, controls) {
 
 .nOptions <- as.environment(
   list(
-    check_nFunction = TRUE,  ## check syntax of nFunction fun  
+    enableSaving = TRUE,
+    check_nFunction = TRUE,  ## check syntax of nFunction fun
     showCompilerOutput = FALSE,
     use_nCompLocal = FALSE,
     debugSizeProcessing = FALSE,

@@ -19,7 +19,10 @@ Rcpp_nCompilerPacket <- function(...) {
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {
   name <- cppDef$name
-  allCppDefs <- cppDef$getDefs()
+  if(missing(filebase))
+    filebase <- make_cpp_filebase(name)
+
+  allCppDefs <- cppDef$getInternalDefs()
 
   Hincludes <- allCppDefs |> lapply(\(x) x$getHincludes()) |> unlist(use.names=FALSE)
   CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> unlist(use.names=FALSE)
@@ -33,66 +36,71 @@ cppDefs_2_RcppPacket <- function(cppDef,
   ## CPPpreamble <- cppDef$getCPPpreamble()
   ## CPPusings <- cppDef$getCPPusings()
 
-    Hincludes <- unique(Hincludes)
-    CPPincludes <- unique(CPPincludes)
-    Hpreamble <- unique(Hpreamble)
-    CPPpreamble <- unique(CPPpreamble)
-    CPPusings <- unique(CPPusings)
+  Hincludes <- unique(Hincludes)
+  CPPincludes <- unique(CPPincludes)
+  Hpreamble <- unique(Hpreamble)
+  CPPpreamble <- unique(CPPpreamble)
+  CPPusings <- unique(CPPusings)
 
-    selfCPP <- paste0('"', filebase, '.cpp"')
-    CPPincludes <- CPPincludes[ CPPincludes != selfCPP ]
+  selfCPP <- paste0('"', filebase, '.cpp"')
+  CPPincludes <- CPPincludes[ CPPincludes != selfCPP ]
 
-    selfH <- paste0('"', filebase, '.h', '"')
-    CPPincludes <- c(CPPincludes, selfH)
+  selfH <- paste0('"', filebase, '.h', '"')
+  CPPincludes <- c(CPPincludes, selfH)
 
-    debugCpp <- get_nOption('compilerOptions')[['debugCpp']]
+  debugCpp <- get_nOption('compilerOptions')[['debugCpp']]
 
-    cppCode <-
-        unlist(
+  cppCode <-
+    unlist(
+      lapply(allCppDefs,
+             function(x)
+               capture.output( {
+                 writeLines("")
+                 writeCode(x$generate())
+               }, split = debugCpp) ## for debugging to send handler output to console
+             )
+    )
+
+  hCode <-
+    unlist(
+      lapply(allCppDefs,
+             function(x)
+               capture.output( {
+                 writeLines("")
+                 writeCode(x$generate(declaration=TRUE))
+               })
+             )
+    )
+
+  cppContent <- collate_nCompiler_CppCode(preamble = CPPpreamble,
+                                          includes = CPPincludes,
+                                          usings = CPPusings,
+                                          code = cppCode,
+                                          ifndefName = paste0('__', name, '_CPP')
+                                          )
+
+  hContent <- collate_nCompiler_CppCode(preamble = Hpreamble,
+                                        includes = Hincludes,
+                                        code = hCode,
+                                        ifndefName = paste0('__', name, '_H')
+                                        )
+
+  post_cpp_compiler <-
+    do.call('c',
             lapply(allCppDefs,
-                   function(x)
-                       capture.output( {
-                           writeLines("")
-                           writeCode(x$generate())
-                       }, split = debugCpp) ## for debugging to send handler output to console
-                   )
-        )
+                   function(x) x$get_post_cpp_compiler()))
 
-    hCode <-
-        unlist(
-            lapply(allCppDefs,
-                   function(x)
-                       capture.output( {
-                           writeLines("")
-                           writeCode(x$generate(declaration=TRUE))
-                       })
-                   )
-        )
-
-    cppContent <- collate_nCompiler_CppCode(preamble = CPPpreamble,
-                                       includes = CPPincludes,
-                                       usings = CPPusings,
-                                       code = cppCode,
-                                       ifndefName = paste0('__', name, '_CPP')
-                                       )
-
-    hContent <- collate_nCompiler_CppCode(preamble = Hpreamble,
-                                     includes = Hincludes,
-                                     code = hCode,
-                                     ifndefName = paste0('__', name, '_H')
-                                     )
-
-    post_cpp_compiler <-
-      do.call('c',
-              lapply(allCppDefs,
-                     function(x) x$get_post_cpp_compiler()))
-    
-    Rcpp_nCompilerPacket(
-      cppContent = cppContent,
-      hContent = hContent,
-      filebase = filebase,
-      post_cpp_compiler = post_cpp_compiler
-    )    
+  RcppPacket <- Rcpp_nCompilerPacket(
+    cppContent = cppContent,
+    hContent = hContent,
+    filebase = filebase,
+    post_cpp_compiler = post_cpp_compiler
+  )
+  # This sketches the idea that we could store packets in NCinternals and NFinternals.
+  # In an earlier procesing flow of nCompile, we did this. Now it would be a bit trickier
+  # so we will wait to see if it appears really useful.
+  # cppDef$storeRcppPacket(RcppPacket) # This may not really be necessary
+  RcppPacket
 }
 
 ## This replaces the role of the cppCodeFileClass.
@@ -186,9 +194,14 @@ sourceCpp_nCompiler <- function(file,
   exported
 }
 
-## Write file .cpp and .h files and call sourceCpp_nCompiler to compile
-## them.
-## C++ code (not intended to be called directly).
+## cpp_nCompiler writes .cpp and .h files and calls compileCpp_nCompiler to compile
+## them and produce the interface R functions.
+##
+## This is the entryway function called by nCompile to provide an RcppPacket
+## or list of packets and take all compilation steps from there.
+##
+## The actual C++ compiler call happens from sourceCpp_nCompiler, which
+## calls Rcpp::sourceCpp, possibly wrapped in silence.
 
 #' Call Rcpp's C++ compilation system for nCompiler-generated content
 #'
@@ -243,6 +256,8 @@ cpp_nCompiler <- function(Rcpp_packet,
                    ...)
 }
 
+# writeCpp_nCompiler_combine is a utility to combine .h and .cpp outputs
+# from a list of RcppPackets
 writeCpp_nCompiler_combine <- function(RcppPacket_list,
                                        cppfile,
                                        dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -267,6 +282,7 @@ writeCpp_nCompiler_combine <- function(RcppPacket_list,
   invisible(RcppPacket_list)
 }
 
+# writeCpp_nCompiler is a utility to write .h and .cpp files from an Rcpp_packet
 #' @export
 writeCpp_nCompiler <- function(Rcpp_packet,
                            dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -312,6 +328,12 @@ writeCpp_nCompiler <- function(Rcpp_packet,
   invisible(Rcpp_packet)
 }
 
+# compileCpp_nCompiler calls the C++ compiler for C++ code that is
+# already generated and then builds the R interface functions for any
+# suitable functions in the C++. The Rcpp_packet is used for the filename
+# and the post_cpp content, which has information on the argument passing
+# semantics for each function.
+# Compilation is done via sourceCpp_nCompiler, which uses Rcpp::sourceCpp.
 #' @export
 compileCpp_nCompiler <- function(Rcpp_packet,
                                  cppfile = NULL,

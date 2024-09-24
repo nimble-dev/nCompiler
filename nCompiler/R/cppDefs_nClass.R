@@ -16,8 +16,11 @@ cpp_nClassBaseClass <- R6::R6Class(
     built = NULL,
     loaded = NULL,
     Cwritten = NULL,
-    getDefs = function() {
-      super$getDefs()
+    getInternalDefs = function() {
+      super$getInternalDefs()
+    },
+    getExternalDefs = function() {
+      super$getExternalDefs()
     },
     getHincludes = function() {
       super$getHincludes()
@@ -94,11 +97,12 @@ cpp_nClassBaseClass <- R6::R6Class(
     buildAll = function(where = where) {
       buildSEXPgenerator()
       build_set_nClass_env()
-    },
-    makeCppNames = function() {
-      Rnames2CppNames <<- as.list(Rname2CppName(symbolTable$getSymbolNames()))
-      names(Rnames2CppNames) <<- symbolTable$getSymbolNames()
     }
+    ## Following could turn out to be useful but was carried over from nimble and perhaps not needed.
+    ## , makeCppNames = function() {
+    ##   Rnames2CppNames <<- as.list(Rname2CppName(symbolTable$getSymbolNames()))
+    ##   names(Rnames2CppNames) <<- symbolTable$getSymbolNames()
+    ## }
   )
 )
 
@@ -109,29 +113,20 @@ cpp_nClassClass <- R6::R6Class(
   public = list(
     ##NC_Compiler = NULL, 
     ##parentsSizeAndDims = 'ANY',
-    getDefs = function() {
-      c(super$getDefs()
-        ##, SEXPmemberInterfaceFuns
-      ) 
+    getInternalDefs = function() {
+      super$getInternalDefs()
+    },
+    getExternalDefs = function() {
+      super$getExternalDefs()
     },
     getHincludes = function() {
-      c(super$getHincludes()
-        ## , unlist(lapply(
-        ##     SEXPmemberInterfaceFuns, function(x) x$getHincludes()),
-        ##     recursive = FALSE)
-        ##
-      )
+      super$getHincludes()
     },
     getCPPincludes = function() {
-      c(super$getCPPincludes()
-        ##, unlist(lapply(SEXPmemberInterfaceFuns, function(x) x$getCPPincludes()), recursive = FALSE)
-      )
+      super$getCPPincludes()
     },
     getCPPusings = function() {
-      CPPuse <- unique(c(super$getCPPusings()
-                         ##, unlist(lapply(SEXPmemberInterfaceFuns, function(x) x$getCPPusings()))
-      ))
-      CPPuse
+      unique(super$getCPPusings())
     },
     initialize = function(Compiler,
                           isNode = FALSE,
@@ -146,6 +141,8 @@ cpp_nClassClass <- R6::R6Class(
         process_NC_Compiler(Compiler,
                             debugCpp = debugCpp,
                             fromModel = fromModel)
+      # isNode clause has not been updated from nimble.
+      # It is a placeholder / reminder for later.
       if(isNode) {
         inheritance <<- inheritance[inheritance != 'NamedObjects']
         baseClassObj <- environment(nfProc$nfGenerator)$contains
@@ -157,16 +154,16 @@ cpp_nClassClass <- R6::R6Class(
     },
     process_NC_Compiler = function(Compiler, debugCpp = FALSE, fromModel = FALSE) {
       buildFunctionDefs()
-      for(i in seq_along(cppFunctionDefs)) {
-        cppFunctionDefs[[i]]$args$setParentST(symbolTable)
+      for(i in seq_along(memberCppDefs)) {
+        memberCppDefs[[i]]$args$setParentST(symbolTable)
       }
       buildParallelClassDefs()
     },
     buildFunctionDefs = function() {
       for(i in seq_along(Compiler$NFcompilers)) {
         RCname <- names(Compiler$NFcompilers)[i]
-        cppFunctionDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE) 
-        cppFunctionDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
+        memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE)
+        memberCppDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
         self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
       }
     },
@@ -177,12 +174,12 @@ cpp_nClassClass <- R6::R6Class(
           for(j in seq_along(parallelContent)) {
             cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
                                                    loop_var = parallelContent[[j]]$args[[1]],
-                                                   symbolTable = cppFunctionDefs[[i]]$code$symbolTable,
+                                                   symbolTable = memberCppDefs[[i]]$code$symbolTable,
                                                    copyVars = parallelContent[[j]]$args[[4]],
                                                    noncopyVars = parallelContent[[j]]$args[[5]])
             ## The name is hard-wired expecting only a single case of parallel content.
             ## TO-DO: generalize the name with unique identifier.
-            self$cppFunctionDefs[["parallel_loop_body"]] <<- cppDef_TBB
+            self$memberCppDefs[["parallel_loop_body"]] <<- cppDef_TBB
           }
         }
         parallelReduceContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelReduceContent
@@ -195,43 +192,43 @@ cpp_nClassClass <- R6::R6Class(
             cppDef_TBB <- cppParallelReduceBodyClass$new(
               loop_body = parallelReduceContent[[j]]$args[[3]],
               loop_var = parallelReduceContent[[j]]$args[[1]],
-              symbolTable = cppFunctionDefs[[i]]$code$symbolTable,
+              symbolTable = memberCppDefs[[i]]$code$symbolTable,
               copyVars = list(),
               noncopyVars = list(parallelReduceContent[[j]]$args[[4]],
                                  parallelReduceContent[[j]]$args[[5]])
             )
             ## The name is hard-wired expecting only a single case of parallel content.
             ## TO-DO: generalize the name with unique identifier.
-            self$cppFunctionDefs[["parallel_reduce_body"]] <<- cppDef_TBB
+            self$memberCppDefs[["parallel_reduce_body"]] <<- cppDef_TBB
           }
         }
       }
     },
     addTypeTemplateFunction = function( funName ) {
       newFunName <- paste0(funName, '_AD_')
-      regularFun <- cppFunctionDefs[[funName]]
-      cppFunctionDefs[[newFunName]] <<- makeTypeTemplateFunction(newFunName, regularFun)
+      regularFun <- memberCppDefs[[funName]]
+      memberCppDefs[[newFunName]] <<- makeTypeTemplateFunction(newFunName, regularFun)
       invisible(NULL)
     },
     addADtapingFunction = function( funName, 
                                     independentVarNames, 
                                     dependentVarNames ) {
       ADfunName <- paste0(funName, '_AD_')
-      regularFun <- cppFunctionDefs[[funName]]
+      regularFun <- memberCppDefs[[funName]]
       newFunName <- paste0(funName, '_callForADtaping_')
-      cppFunctionDefs[[newFunName]] <<- makeADtapingFunction(newFunName, 
+      memberCppDefs[[newFunName]] <<- makeADtapingFunction(newFunName,
                                                              regularFun, 
                                                              ADfunName, 
                                                              independentVarNames, 
                                                              dependentVarNames, 
                                                              isNode = FALSE,
-                                                             cppFunctionDefs)
+                                                             memberCppDefs)
       invisible(NULL)
     },
     addADmethodMacros = function(funName, args) {
       ## fun will be named foo_derivs_.
       newName <- paste0(funName, "_derivs_")
-      cppFunctionDefs[[newName]] <<- cppADmethodMacroClass$new(name = newName,
+      memberCppDefs[[newName]] <<- cppADmethodMacroClass$new(name = newName,
                                                                base_name = funName,
                                                                args = args)
       self$functionNamesForInterface <<- c(self$functionNamesForInterface, newName)
@@ -239,9 +236,9 @@ cpp_nClassClass <- R6::R6Class(
     },
     addADargumentTransferFunction = function( funName, independentVarNames ) {
       newFunName <- paste0(funName, '_ADargumentTransfer_')
-      regularFun <- cppFunctionDefs[[funName]]
+      regularFun <- memberCppDefs[[funName]]
       funIndex <- which(NCinternals(self$Compiler$NCgenerator)$enableDerivs == funName) ## needed for correct index for allADtapePtrs_
-      cppFunctionDefs[[newFunName]] <<- makeADargumentTransferFunction(newFunName,
+      memberCppDefs[[newFunName]] <<- makeADargumentTransferFunction(newFunName,
                                                                        regularFun, 
                                                                        independentVarNames, 
                                                                        funIndex 
@@ -249,7 +246,7 @@ cpp_nClassClass <- R6::R6Class(
       )
     },
     addStaticInitClass = function() {
-      neededCppDefs[['staticInitClass']] <<- makeStaticInitClass(self,
+      internalCppDefs[['staticInitClass']] <<- makeStaticInitClass(self,
                                                                  NCinternals(self$Compiler$NCgenerator)$enableDerivs) ##
       invisible(NULL)
     },
@@ -272,7 +269,7 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
       addTypeTemplateFunction(funName)
-      independentVarNames <- self$cppFunctionDefs[[funName]]$args$getSymbolNames() ## Is this the right layer?
+      independentVarNames <- self$memberCppDefs[[funName]]$args$getSymbolNames() ## Is this the right layer?
       if(FALSE)
         if(nfProc$isNode) independentVarNames <- independentVarNames[-1]  ## remove ARG1_INDEXEDNODEINFO__ from independentVars
       
@@ -282,7 +279,7 @@ cpp_nClassClass <- R6::R6Class(
       addADargumentTransferFunction(funName,
                                     independentVarNames = independentVarNames)
       addADmethodMacros(funName,
-                        self$cppFunctionDefs[[funName]]$args)
+                        self$memberCppDefs[[funName]]$args)
     },
     checkADargument = function(funName, 
                                argSym, 
@@ -313,12 +310,17 @@ cpp_nClassClass <- R6::R6Class(
       globals <- cppGlobalObjectClass$new(name = paste0('staticGlobals_', name),
                                           staticMembers = TRUE)
       globals$symbolTable$addSymbol(cppVectorOfADFunPtr(name = paste0(name,'::allADtapePtrs_')))
-      neededCppDefs[['allADtapePtrs_']] <<- globals
+      internalCppDefs[['allADtapePtrs_']] <<- globals
       addStaticInitClass()
       invisible(NULL)
     },
     buildAll = function(where = where) {
       super$buildAll(where)
+      if(isTRUE(get_nOption('serialize')))
+        addSerialization()
+      if(isTRUE(get_nOption('automaticDerivatives')))
+        addADclassContent()
+      addGenericInterface()
     }
   )
 )

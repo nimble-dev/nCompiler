@@ -558,8 +558,8 @@ makeStaticInitClass <- function(cppDef,
   initializerECcode <- nParse(initializerCode)
   initializerDef$code <- cppCodeBlockClass$new(code = initializerECcode, 
                                                symbolTable = symbolTableClass$new())
-  cppClass$cppFunctionDefs[['initializer']] <- initializerDef
-  cppClass$neededCppDefs[['globals']] <- globalsDef
+  cppClass$memberCppDefs[['initializer']] <- initializerDef
+  cppClass$internalCppDefs[['globals']] <- globalsDef
   cppClass
 }
 

@@ -57,9 +57,11 @@ cpp_nFunctionClass <- R6::R6Class(
       ## nCompiler_plugin()$includes already have #include, so they go here
       super$initialize(...)
     },
-    getDefs = function() {
-      super$getDefs()
-      ##,self$SEXPwrapper) ## may be NULL
+    getInternalDefs = function() {
+      super$getInternalDefs()
+    },
+    getExternalDefs = function() {
+      super$getExternalDefs()
     },
     getHincludes = function() {
       c(self$Hincludes,
@@ -88,8 +90,8 @@ cpp_nFunctionClass <- R6::R6Class(
       unique(c(self$CPPusings,
                if(!is.null(self$SEXPwrapper))
                  self$SEXPwrapper$getCPPusings()
-      )
-      )
+               )
+             )
     },
     buildFunction = function(NF_Compiler,
                              parentST = NULL) {

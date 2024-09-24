@@ -4,11 +4,6 @@ library(testthat)
 old_serialize_option <- get_nOption("serialize")
 set_nOption("serialize", TRUE)
 
-# To do:
-# Each generated package should have one static DLLenv to always use.
-# Then nUnserialize can take as a second argument simply a package name.
-# And one CnCenv for each nClass.
-
 in_new_R_session <- function(code,
                              pkgName,
                              lib,
@@ -94,6 +89,15 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   # Use this line for debugging any issues with nc1
   # Cnc1 <- nCompile(nc1)
 
+  debug(writePackage2)
+  writePackage2(
+    nc1,
+    dir = tempdir(),
+    pkgName = "nc1Package",
+    modify = "clear",
+    nClass_full_interface = FALSE
+  )
+
   writePackage(
     nc1,
     dir = tempdir(),
@@ -101,11 +105,20 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
     modify = "clear",
     nClass_full_interface = FALSE
   )
+
+  debug(nCompile2)
+  nCompile2(
+    nc1,
+    dir = tempdir(),
+    pkgName = "nc1PackageB",
+    package = TRUE
+  )
+
   lib <- file.path(tempdir(), "local_lib")
   buildPackage("nc1Package",
                dir = tempdir(),
                lib = lib,
-               quiet = TRUE)
+               quiet = FALSE)
 
   ## serialize and deserialize 1 object
   # build and test object
@@ -165,10 +178,9 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   lib = lib,
   outdir = outdir
   )
-
 })
 
-test_that("Basic serialization works (packaged, fill, multiple, new session)",
+test_that("Basic serialization works (packaged, full, multiple, new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -266,7 +278,128 @@ test_that("Basic serialization works (packaged, fill, multiple, new session)",
   lib = lib,
   outdir = outdir
   )
+})
 
+# Stopped below, getting one nC to contain another nC
+test_that("Serialization with multiple and/or nested objects works",
+{
+  nc1 <- nClass(
+    classname = "nc1",
+    Rpublic = list(
+      Rv = NULL,
+      Rfoo = function(x) x+1
+    ),
+    Cpublic = list(
+      Cv = 'numericScalar',
+      Cx = 'integerScalar',
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+1)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar'),
+      Cbar = nFunction(
+        fun = function(x, y) {
+          return(x + y)
+        },
+        argTypes = list(x = 'numericMatrix',
+                        y = 'numericMatrix'),
+        returnType = 'numericMatrix')
+    )
+  )
+  nc2 <- nClass(
+    classname = "nc2",
+    Cpublic = list(
+      Cv = 'numericScalar',
+      Cx = 'integerScalar',
+      Cnc1 = 'nc1',
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+1)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar'),
+      Cfoofoo = nFunction(
+        fun = function(x) {
+          return(Cnc1$foo(x))
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar')
+      )
+  )
+
+  # Use this line for debugging any issues with nc1
+  # Cnc1 <- nCompile(nc1)
+
+  writePackage(
+    nc1, nc2,
+    dir = tempdir(),
+    pkgName = "nc2Package",
+    modify = "clear",
+    nClass_full_interface = TRUE
+  )
+  lib <- file.path(tempdir(), "local_lib")
+  buildPackage("nc1Package",
+               dir = tempdir(),
+               lib=lib,
+               quiet = TRUE)
+
+  # serialize and deserialize 1 object
+  obj <- nc1Package::nc1$new()
+  expect_true(inherits(obj, "R6"))
+  expect_equal(obj$Cfoo(1.2), 2.2)
+  obj$Cv <- 1.23
+  expect_equal(obj$Cv, 1.23)
+  obj$Cx <- 3
+  expect_equal(obj$Cx, 3L)
+
+  serialized_obj <- nSerialize(obj)
+  message("Make finding DLLenv better")
+  # DLLenv <- obj$private$DLLenv
+  restored_obj <- nUnserialize(serialized_obj)
+
+  expect_true(inherits(restored_obj, "R6"))
+  expect_equal(restored_obj$Cfoo(2.2), 3.2)
+  restored_obj$Cv <- 1.23
+  expect_equal(restored_obj$Cv, 1.23)
+  restored_obj$Cx <- 3
+  expect_equal(restored_obj$Cx, 3L)
+  restored_obj$Cv <- 2.34
+  expect_equal(restored_obj$Cv, 2.34)
+
+  # serialize and deserialize 3 objects
+  obj2 <- nc1Package::nc1$new()
+  obj2$Cv <- -8.5
+  obj2$Cx <- -100
+  obj3 <- nc1Package::nc1$new()
+  obj3$Cx <- 2134
+  serialized_objlist <- nSerialize(list(obj, obj2, obj3))
+  restored_objlist <- nUnserialize(serialized_objlist, "nc1Package")
+  expect_equal(restored_objlist[[1]]$Cv, 1.23)
+  expect_equal(restored_objlist[[2]]$Cv, -8.5)
+  expect_equal(restored_objlist[[2]]$Cx, -100)
+  expect_equal(restored_objlist[[3]]$Cx, 2134)
+  # done
+
+  outdir <- file.path(tempdir(), "working_test")
+#  if(!dir.exists(outdir)) dir.create(outdir)
+#  saveRDS(serialized_objlist, file = file.path(outdir, "objlist.RDS"))
+  # test in a new R session
+  in_new_R_session({
+    serialized_objlist <- transfer$serialized_objlist
+    restored_objlist <- nUnserialize(serialized_objlist)
+    test_that("restored objects work", {
+      expect_equal(restored_objlist[[1]]$Cv, 1.23)
+      expect_equal(restored_objlist[[2]]$Cv, -8.5)
+      expect_equal(restored_objlist[[2]]$Cx, -100)
+      expect_equal(restored_objlist[[3]]$Cx, 2134)
+    })
+  },
+  transfer = list(serialized_objlist = serialized_objlist),
+  pkgName = "nc1Package",
+  lib = lib,
+  outdir = outdir
+  )
 })
 
 # stopped here.

@@ -18,25 +18,34 @@ CnClassClass <- R6::R6Class(
 #' via C++, while others are in pure R.  nClasses are implemented
 #' using R6 classes.
 #'
-#' @param classname A name for the class.
-#' @param Rpublic A list of public data and methods (functions) for
-#'     use from R only.
-#' @param Cpublic A list of public data (with type declarations) and
-#'     methods (nFunctions) that can be turned into C++ via
-#'     \link{nCompile_nClass}.  As in R6 classes (see
-#'     \link{R6Class}), data and methods go in the same list.
-#' @param enableDerivs A list or character vector of methods in Cpublic 
-#'     for which derivatives should be enabled.
-#' @param env An environment that should be used as the
-#'     enclosing environment for objects created from the nClass
-#' @export
+#' @param classname name for the class.
+#' @param Rpublic list of public data and methods (functions) for use from R
+#'   only.
+#' @param Cpublic list of public data (with type declarations) and methods
+#'   (nFunctions) that can be turned into C++ via \link{nCompile_nClass}. As in
+#'   R6 classes (see \link{R6Class}), data and methods go in the same list.
+#' @param enableDerivs list or character vector of methods in Cpublic for which
+#'   derivatives should be enabled.
+#' @param enableSaving logical indicating whether C++ should include support for
+#'   saving objects. Defaults to the value of nOptions("enableSerialize"), which
+#'   defaults to \code{TRUE}.
+#' @param env An environment that should be used as the enclosing environment
+#'   for objects created from the nClass
 #' @return An R6 class generator enhanced with information needed for
-#'     compilation.
-#' @details The internal information used for compilation can be
-#'     accessed with \code{NCinternals(nClassGenerator)} and
-#'     modified with \code{NCinternals(nClassGenerator)<-}, where
-#'     \code{nClassGenerator} was returned from a call to
-#'     \code{nClass}.
+#'   compilation.
+#' @details Use of \code{enableDerivs} will substantially slow down C++
+#'   compilation. See \code{help(nDerivs)} about how to obtain derivatives from
+#'   enabled methods.
+#'
+#' Setting \code{enableSaving=TRUE} will somewhat slow down C++ compilation. See
+#' \code{help(nSave)} and \code{help(nSerialize)} about how to save objects.
+#' (The technical jargon for converting data structures such as class objects
+#' into data suitable for saving and later loading is "serialization".)
+#'
+#' The internal information used for compilation can be accessed with
+#'   \code{NCinternals(nClassGenerator)} and modified with
+#'   \code{NCinternals(nClassGenerator)<-}, where \code{nClassGenerator} was
+#'   returned from a call to \code{nClass}.
 #' @examples
 #' \donttest{
 #'     nc1 <- nClass(
@@ -55,17 +64,21 @@ CnClassClass <- R6::R6Class(
 #'         )
 #'   )
 #' }
+#' @export
 nClass <- function(classname,
                    Rpublic = list(),
                    Cpublic = list(),
                    enableDerivs = character(),
+                   enableSaving = get_nOption("enableSaving"),
                    predefined = FALSE,
                    env = parent.frame()) {
   if(missing(classname))
     classname <- nClassLabelMaker()
-  internals = NC_InternalsClass$new(Cpublic = Cpublic,
+  internals = NC_InternalsClass$new(classname = classname,
+                                    Cpublic = Cpublic,
                                     isOnlyC = length(Rpublic) == 0,
                                     enableDerivs = enableDerivs,
+                                    enableSaving = enableSaving,
                                     predefined = predefined)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance

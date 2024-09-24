@@ -22,12 +22,13 @@ NCvirtual_CompilerClass <- R6::R6Class(
              call. = FALSE)
       }
       NCgenerator <<- NC
+      myNCinternals <- NCinternals(NCgenerator)
       if(is.null(className)) {
-        name <<- Rname2CppName(NCgenerator$classname)
+        name <<- myNCinternals$cpp_classname
       } else {
         name <<- className
       }
-      name <<- name
+      # name <<- name  #???
       ## In the past we've a system that makes every name unique by
       ## pasting on a unique ID.  We need that to not happen for
       ## predefined classes.  For now I am turning off the behavior
@@ -36,7 +37,7 @@ NCvirtual_CompilerClass <- R6::R6Class(
       # name <<- paste(name, 
       #                nClassIDMaker(),
       #                sep = "_")
-      myNCinternals <- NCinternals(NCgenerator)
+
       methodNames <- myNCinternals$methodNames
       for(m in methodNames) {
         thisMethod <- NCgenerator$public_methods[[m]]

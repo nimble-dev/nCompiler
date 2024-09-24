@@ -1,61 +1,71 @@
 # This is called from nCompile or nCompile_nClass
-make_serialization_cppDef <- function(funNames = c("nComp_serialize_", "nComp_deserialize_"),
-                                      defName = "serialization") {
-  ans <-
-    cppMacroCallClass$new(
-      Hincludes = nCompilerIncludeFile("nCompiler_serialization_mgr.h"),
-      cppContent = paste0(
-        "// [[Rcpp::export]]\n",
-        "SEXP new_serialization_mgr ( ) {\n",
-        "return CREATE_NEW_NCOMP_OBJECT(serialization_mgr);\n",
-        "}\n",
-        "\n",
-        "//[[Rcpp::export]]\n",
-                          "RawVector ", funNames[1],
-                          "(SEXP Sfrom) {\n",
-                          "genericInterfaceBaseC *baseobj =\n",
-                          "reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sfrom))->get_ptr());\n",
-                          "std::unique_ptr<genericInterfaceBaseC> shared_baseobj(baseobj);\n",
-                          "std::stringstream ss;\n",
-                          "{\n",
-                          "cereal::BinaryOutputArchive oarchive(ss);\n",
-                          "oarchive(shared_baseobj);\n",
-                          "}\n",
-                          "shared_baseobj.release();\n",
-                          "ss.seekg(0, ss.end);\n",
-                          "RawVector retval(ss.tellg());\n",
-                          "ss.seekg(0, ss.beg);\n",
-                          "ss.read(reinterpret_cast<char*>(&retval[0]), retval.size());\n",
-                          "return retval;\n",
-                          "}\n",
-                          "\n",
-                          "//[[Rcpp::export]]\n",
-                          "SEXP ", funNames[2],
-                          "(RawVector src) {\n",
-                          "  std::stringstream ss;\n",
-                          "  ss.write(reinterpret_cast<char*>(&src[0]), src.size());\n",
-                          "  ss.seekg(0, ss.beg);\n",
-                          "  std::unique_ptr<genericInterfaceBaseC> shared_baseobj;\n",
-                          "  {\n",
-                          "    cereal::BinaryInputArchive iarchive(ss);\n",
-                          "    iarchive(shared_baseobj);\n",
-                          "  }\n",
-                          ## paste0("std::shared_ptr<", self$name,
-                          ##        "> shared(dynamic_cast<", self$name, "*>(shared_baseobj.release()));\n"),
-                          ## paste0("SEXP Sans = PROTECT(return_nCompiler_object<", self$name ,">(shared));\n"),
-                          "SEXP Sans = PROTECT((shared_baseobj.release())->make_deserialized_return_SEXP());\n",
-                          "UNPROTECT(1);\n",
-                          "return(Sans);\n",
-                          "}\n"
-                          ),
-      name = defName
-    )
-  ans
+
+global_serialization_cppDef <-
+  cppMacroCallClass$new(
+    Hpreamble = nCompiler_plugin()$includes,
+    CPPpreamble = nCompiler_plugin()$includes,
+    Hincludes = c("<Rinternals.h>",
+              nCompilerIncludeFile("nCompiler_class_interface.h"),
+              nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
+              nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
+    CPPusings = c("using namespace Rcpp;",
+                  "// [[Rcpp::plugins(nCompiler_plugin)]]",
+                  "// [[Rcpp::depends(nCompiler)]]",
+                  "// [[Rcpp::depends(Rcereal)]]"),
+    cppContent = paste0(
+      "// [[Rcpp::export]]\n",
+      "SEXP new_serialization_mgr ( ) {\n",
+      "return CREATE_NEW_NCOMP_OBJECT(serialization_mgr);\n",
+      "}\n",
+      "\n",
+      "//[[Rcpp::export]]\n",
+      "RawVector ", "nComp_serialize_", ## name of serialization function here
+      "(SEXP Sfrom) {\n",
+      "genericInterfaceBaseC *baseobj =\n",
+      "reinterpret_cast<genericInterfaceBaseC*>(reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sfrom))->get_ptr());\n",
+      "std::unique_ptr<genericInterfaceBaseC> shared_baseobj(baseobj);\n",
+      "std::stringstream ss;\n",
+      "{\n",
+      "cereal::BinaryOutputArchive oarchive(ss);\n",
+      "oarchive(shared_baseobj);\n",
+      "}\n",
+      "shared_baseobj.release();\n",
+      "ss.seekg(0, ss.end);\n",
+      "RawVector retval(ss.tellg());\n",
+      "ss.seekg(0, ss.beg);\n",
+      "ss.read(reinterpret_cast<char*>(&retval[0]), retval.size());\n",
+      "return retval;\n",
+      "}\n",
+      "\n",
+      "//[[Rcpp::export]]\n",
+      "SEXP ", "nComp_deserialize_", ## name of deserialization function here
+      "(RawVector src) {\n",
+      "  std::stringstream ss;\n",
+      "  ss.write(reinterpret_cast<char*>(&src[0]), src.size());\n",
+      "  ss.seekg(0, ss.beg);\n",
+      "  std::unique_ptr<genericInterfaceBaseC> shared_baseobj;\n",
+      "  {\n",
+      "    cereal::BinaryInputArchive iarchive(ss);\n",
+      "    iarchive(shared_baseobj);\n",
+      "  }\n",
+      ## paste0("std::shared_ptr<", self$name,
+      ##        "> shared(dynamic_cast<", self$name, "*>(shared_baseobj.release()));\n"),
+      ## paste0("SEXP Sans = PROTECT(return_nCompiler_object<", self$name ,">(shared));\n"),
+      "SEXP Sans = PROTECT((shared_baseobj.release())->make_deserialized_return_SEXP());\n",
+      "UNPROTECT(1);\n",
+      "return(Sans);\n",
+      "}\n"
+    ),
+    name = "serialization" # internal name of cppDef here
+  )
+
+get_serialization_cppDef <- function() {
+  global_serialization_cppDef
 }
 
 # This is called from cppClassClass$addSerialization
-addSerialization_impl <- function(self,
-                                  include_DLL_funs = FALSE) {
+addSerialization_impl <- function(self) { #},
+                                  # include_DLL_funs = FALSE) {
   ## This function adds a C++ method like:
   ##   template<class Archive>
   ##   void _SERIALIZE_(Archive & archive) {
@@ -99,7 +109,7 @@ addSerialization_impl <- function(self,
 )
 , returnType = nCompiler:::cppVoid()
 )
-  self$cppFunctionDefs[["_SERIALIZE_"]] <- serialize_method
+  self$memberCppDefs[["_SERIALIZE_"]] <- serialize_method
 
   ##
   make_deserialized_return_SEXP_method <- nCompiler:::cppFunctionClass$new(
@@ -115,7 +125,7 @@ addSerialization_impl <- function(self,
    )
    , returnType = nCompiler:::cppSEXP()
   )
-  self$cppFunctionDefs[["make_deserialized_return_SEXP"]] <- make_deserialized_return_SEXP_method
+  self$memberCppDefs[["make_deserialized_return_SEXP"]] <- make_deserialized_return_SEXP_method
   
   ## The next code creates lines to force the needed specializations of the
   ## template methods above.  These lines will look like:
@@ -131,7 +141,7 @@ addSerialization_impl <- function(self,
                " &archive);",
                collapse = "\n")
     )
-  self$neededCppDefs[["cereal_template_instantiations"]] <-
+  self$internalCppDefs[["cereal_template_instantiations"]] <-
     cereal_template_instantiations
 
   ## A line like:
@@ -143,7 +153,7 @@ addSerialization_impl <- function(self,
                           "CEREAL_REGISTER_TYPE(genericInterfaceC<",self$name,">)\n",
                           "CEREAL_REGISTER_TYPE(loadedObjectHookC<",self$name,">)\n")
       )
-  self$neededCppDefs[["cereal_register_type_macro"]] <- cereal_register_type_macro
+  self$internalCppDefs[["cereal_register_type_macro"]] <- cereal_register_type_macro
 
   ## Lines to force dynamic initialization
   cereal_dynamic_init <-
@@ -151,7 +161,7 @@ addSerialization_impl <- function(self,
       cppContent = paste0("CEREAL_REGISTER_DYNAMIC_INIT(", self$name, ")\n"),
       hContent = paste0("CEREAL_FORCE_DYNAMIC_INIT(", self$name, ")\n")
     )
-  self$neededCppDefs[["cereal_dynamic_init"]] <- cereal_dynamic_init
+  self$internalCppDefs[["cereal_dynamic_init"]] <- cereal_dynamic_init
 
   self$Hpreamble <- c(self$Hpreamble, "#define _INCLUDE_SERIALIZE_AND_DESERIALIZE_FUNCTIONS\n")
   
@@ -159,8 +169,8 @@ addSerialization_impl <- function(self,
   # if (!identical(cleanname, self$name)) 
   #   warning("When serializing nClass ", self$name, " name for serialization ",
   #           " functions was changed to ", cleanname)
-  if(include_DLL_funs)
-    self$neededCppDefs[["cereal_serialize_deserialize"]] <- make_serialization_cppDef()
+  # if(include_DLL_funs)
+  self$externalCppDefs[["cereal_serialize_deserialize"]] <- get_serialization_cppDef()
   
   ## Was this a test or a way to avoid a possibly empty class?
   dummy <-
@@ -168,6 +178,6 @@ addSerialization_impl <- function(self,
       cppContent = paste0("#ifndef __dummy__\n#define __dummy__\n int dummy;\n#endif"),
       hContent = paste0("extern int dummy;\n")
     )
-  self$neededCppDefs[["dummy"]] <- dummy
+  self$internalCppDefs[["dummy"]] <- dummy
   invisible(NULL) 
 }

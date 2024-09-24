@@ -38,6 +38,7 @@ nCompile_nFunction <- function(NF,
   ## we leave that to the user.  E.g. That might set endStage even
   ## earlier.
   stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
+  stopAfterCppDef <- isTRUE(dotArgs$stopAfterCppDef)
   ## See options.R for defaults
   controlFull <- updateDefaults(
     get_nOption('compilerOptions'),
@@ -71,16 +72,20 @@ nCompile_nFunction <- function(NF,
     return(NF_Compiler)
   
   cppDef <- NF_Compiler$cppDef
+  if(stopAfterCppDef) return(cppDef)
+
+  # We might deprecate from here down and make all usages start from nCompile.
+
   ## We append "_c_" so that the filename does not match the function name.
   ## That prevents Rcpp's "context" system from making a mistake
   ## when we combine multiple RcppPacket contents into a single file.
   ## It seems to check if there are any .cpp files with names that
   ## match names of exported functions, and to think they should
   ## be compiled if so.  If one has compiled a nFunction individually
-  ## and the in combination with other files, this could cause a problem.
-  filebase <- make_cpp_filebase(cppDef$name) ## append _c_
-  RcppPacket <- cppDefs_2_RcppPacket(cppDef,
-                                     filebase = filebase)
+  ## and then in combination with other files, this could cause a problem.
+  #filebase <- make_cpp_filebase(cppDef$name) ## append _c_
+  RcppPacket <- cppDefs_2_RcppPacket(cppDef) # filebase now handles default
+#                                     filebase = filebase)
   NFinternals(NF)$RcppPacket <- RcppPacket
   NF_Compiler$stageCompleted <- stageName
   

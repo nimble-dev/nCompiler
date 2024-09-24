@@ -6,14 +6,21 @@ NC_InternalsClass <- R6::R6Class(
     symbolTable = NULL,
     methodNames = character(),
     fieldNames = character(),
+    classname = character(),
+    cpp_classname = character(),
     RcppPacket = NULL,
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
     enableDerivs = NULL,
+    enableSaving = NULL,
     predefined = FALSE,
-    initialize = function(Cpublic,
+    initialize = function(classname,
+                          Cpublic,
                           isOnlyC = FALSE,
                           enableDerivs = NULL,
+                          enableSaving = get_nOption("enableSaving"),
                           predefined = FALSE) {
+      self$classname <- classname
+      self$cpp_classname <- Rname2CppName(classname)
       self$isOnlyC = isOnlyC
       numEntries <- length(Cpublic)
       if(numEntries) {
@@ -44,6 +51,7 @@ NC_InternalsClass <- R6::R6Class(
         self$enableDerivs <- enableDerivs
         self$predefined <- predefined
       }
+      self$enableSaving <- enableSaving
     }
   )
 )

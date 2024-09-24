@@ -5,6 +5,14 @@
 ##
 
 ## Base class for C++ file and compilation information
+# This has only a filename, preambles (CPP and H),
+# usings (CPP only), includes (CPP and H), and
+# internalCppDefs and externalCppDefs.
+# (internalCppDefs will be kept in the same RcppPacket and ultimately C++ code files.
+#  externalCppDefs are needed but will be generated separately. externalCppDefs will be
+#  collected from all cppDefs in a compilation call and put through unique() to avoid
+#  duplication. internalCppDefs are assumed to be unique.)
+# cppDefinitionClass has getter methods but no generate method.
 cppDefinitionClass <- R6::R6Class(
   classname = 'cppDefinitionClass', 
   portable = FALSE,
@@ -13,7 +21,8 @@ cppDefinitionClass <- R6::R6Class(
     CPPpreamble = character(),
     Hpreamble = character(),
     CPPusings = character(),
-    neededCppDefs = list(),
+    internalCppDefs = list(),
+    externalCppDefs = list(),
     Hincludes = list(),
     CPPincludes = list(),
     initialize = function(...) {
@@ -29,11 +38,19 @@ cppDefinitionClass <- R6::R6Class(
     getCPPusings = function() {return(self$CPPusings)},
     ## return all objects to be included.  This allows adjunct objects
     ## like SEXPinterfaceFuns to be included
-    getDefs = function() {return(c(list(self),
-                                   do.call("c", lapply(neededCppDefs, function(x) x$getDefs()) ) ) )},
+    getInternalDefs = function() {return(c(list(self),
+                                           do.call("c", lapply(internalCppDefs, function(x) x$getInternalDefs()) ) ) )},
+    getExternalDefs = function() {return(c(do.call("c", lapply(internalCppDefs, function(x) x$getExternalDefs()) ),
+                                           externalCppDefs,
+                                           do.call("c", lapply(externalCppDefs, function(x) x$getExternalDefs()) ) ) )},
     get_post_cpp_compiler = function() NULL)
 )
 
+# cppMacroCallClass is the most rudimentary cppDef that can generate content.
+# It extends cppDefinitionClass with character vectors of hContent and cppContent
+# and has a generate method.
+# It was designed for things like preprocessor directives or global macro calls,
+# but it can be used in any case where arbitrary text should be included in C++.
 cppMacroCallClass <- R6::R6Class(
   'cppMacroCallClass',
   portable = FALSE,
@@ -54,6 +71,10 @@ cppMacroCallClass <- R6::R6Class(
   )
 )
 
+# cppGlobalObjectsClass include a symbolTable and flag for whether symbols are static.
+# The staticMembers is a flag shared by all symbols.
+# For the static case, no declaration is needed (only a definition).
+# For the non-static case, declarations use "extern".
 cppGlobalObjectClass <- R6::R6Class(
   'cppGlobalObjectClass',
   inherit = cppDefinitionClass,
@@ -78,10 +99,14 @@ cppGlobalObjectClass <- R6::R6Class(
       output
     }
   ))
-## class for C++ namespaces.
-## A namespace includes, objects, classes, functions, typedefs, and other namespaces
+
+## cppNamespaceClass is for C++ namespaces, which serve as a base class
+##   for the C++ class classDefs.
+## A namespace includes objects, classes, functions, typedefs, and other namespaces
 ## This is incomplete.  The typeDefs and nested namespaces are not used yet.
 ## The other components are used and so have been more developed.
+## objects are defined in the symbolTable.
+## functions are defined in cppFunctionDefs.
 cppNamespaceClass <- R6::R6Class(
   'cppNamespaceClass',
   inherit = cppDefinitionClass,
@@ -89,28 +114,28 @@ cppNamespaceClass <- R6::R6Class(
   public = list(
     name = character(),
     symbolTable = NULL, ## list or symbolTable
-    cppFunctionDefs = list(),
-    #     extraDefs = list(),
+    namespaceCppDefs = list(), # formerly cppFunctionDefs
     initialize = function(...) {
       super$initialize(...)
     },
-    addSym = function(newName, newObj) {
-      stop("figure out how objects or symbols should be added to cppNamespaceClass")
-      objectDefs[[newName]] <<- newObj # this looks deprecated.
-    },
-    addFunction = function(newName, newFun) {
-      cppFunctionDefs[[newName]] <<- newFun
-    },
-    generate = function() {
+    ## addSym = function(newName, newObj) {
+    ##   stop("figure out how objects or symbols should be added to cppNamespaceClass")
+    ##   objectDefs[[newName]] <<- newObj # this looks deprecated.
+    ## },
+    ## addFunction = function(newName, newFun) {
+    ##   cppFunctionDefs[[newName]] <<- newFun
+    ## },
+    generate = function(declaration=FALSE) {
       symbolsToUse <-
-        if(inherits(objectDefs, 'symbolTableClass'))
+        if(inherits(symbolTable, 'symbolTableClass'))
           symbolTable$getSymbols()
       else
-        list()
-      output <- c(generateNameSpaceHeader(name$generate()),
+        list() # Ways to hold symbols besides a symbolTable may be deprecated. This also catches NULL
+      blankName <- length(name)==0
+      output <- c(if(blankName) paste0("namespace ", name, " {\n") else NULL,
                   generateObjectDefs(symbolsToUse),
-                  generateAll(cppFunctionDefs, declaration = TRUE),
-                  '};'
+                  generateAll(namespaceCppDefs, declaration = declaration),
+                  if(blankName) '};' else NULL
                   )
       unlist(output)
     }
@@ -137,7 +162,7 @@ buildSEXPgenerator_impl <- function(self) {
   
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
-  self$SEXPgeneratorDef <-
+  self$internalCppDefs[["SEXPgenerator"]] <-
     cppFunctionClass$new(name = paste0('new_',self$name),
                          args = symbolTableClass$new(),
                          code = cppCodeBlockClass$new(code = allCode,
@@ -149,6 +174,9 @@ buildSEXPgenerator_impl <- function(self) {
   invisible(NULL)
 }
 
+# set_nClass_env is the function to be called from R that provides the
+# CnCenv (compiled nClass environment) that all loadedObjectEnv objects for
+# a particular nClass will use as a parent environment.
 build_set_nClass_env_impl <- function(self) {
   self$Hincludes <- c(self$Hincludes
                       , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
@@ -163,7 +191,7 @@ build_set_nClass_env_impl <- function(self) {
   allCode <- nParse(allCode)
   args <- symbolTableClass$new()
   args$addSymbol(cppSEXP(name = "env"))
-  self$set_nClass_envDef <-
+  self$internalCppDefs[["set_nClass_env"]] <-
     cppFunctionClass$new(name = paste0('set_CnClass_env_',self$name),
                          args = args,
                          code = cppCodeBlockClass$new(code = allCode,
@@ -211,14 +239,14 @@ addGenericInterface_impl <- function(self) {
   self$Hincludes <- c(self$Hincludes,
                       nCompilerIncludeFile("nCompiler_class_interface.h"))
 
-  methodNames <- names(self$cppFunctionDefs)
+  methodNames <- names(self$memberCppDefs)
   includeBool <- methodNames %in% self$functionNamesForInterface
   if(sum(includeBool) > 0) {
     # construct arg info sections like
     # args({{'x', ref}, {'y', copy}})
     cppArgInfos <- structure(character(length(methodNames)), names = methodNames)
     for(mName in methodNames) {
-      args <- self$cppFunctionDefs[[mName]]$args
+      args <- self$memberCppDefs[[mName]]$args
       argNames <-
         if(inherits(args, 'symbolTableClass')) {
           names(args$getSymbols())
@@ -226,7 +254,7 @@ addGenericInterface_impl <- function(self) {
           character()
         }
       if(length(argNames)) {
-        post_cpp <- self$cppFunctionDefs[[mName]]$get_post_cpp_compiler()[[1]]
+        post_cpp <- self$memberCppDefs[[mName]]$get_post_cpp_compiler()[[1]]
         passingTypes <-
           ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
           ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
@@ -240,7 +268,7 @@ addGenericInterface_impl <- function(self) {
       cppArgInfos[mName] <- step4
     }
 
-    cppMethodNames <- lapply(self$cppFunctionDefs, function(x) x$name)
+    cppMethodNames <- lapply(self$memberCppDefs, function(x) x$name)
     methodsContent <- paste0("method(\"",
                              methodNames[includeBool],
                              "\", &",
@@ -255,13 +283,16 @@ addGenericInterface_impl <- function(self) {
     methodsContent <- "NCOMPILER_METHODS()"
   fieldNames <- self$symbolTable$getSymbolNames()
   fieldNames <- fieldNames[fieldNames %in% self$variableNamesForInterface]
+  cpp_fieldNames <- unlist(
+    lapply(fieldNames,
+           function(x) self$symbolTable$getSymbol(x)$generateUse()))
   if(length(fieldNames) > 0) {
     fieldsContent <- paste0("field(\"",
                             fieldNames,
                             "\", &",
                             name,
                             "::",
-                            fieldNames,
+                            cpp_fieldNames,
                             ")", collapse = ",\n")
     fieldsContent <- paste0("NCOMPILER_FIELDS(\n", fieldsContent, "\n)")
   } else
@@ -273,22 +304,33 @@ addGenericInterface_impl <- function(self) {
                                    sep=",\n"),
                              "\n)")
   macroCallDef <- cppMacroCallClass$new(cppContent = macroCallContent)
-  self$neededCppDefs[["macroCall"]] <- macroCallDef
+  self$internalCppDefs[["macroCall"]] <- macroCallDef
   invisible(NULL)
 }
 
+# cppClassClass is the cppDef for a C++ class definition.
+# It is the base class for the cppDef hierarchy for C++ nClass content.
+#
+# It is a namespace with the added feature of inheritance labels,
+#  a SEXPgenerator function (callable from R to obtain a new C++ class object)
+#  a set_nClass_env function (callable from R to provide the CnCenv object from R)
+#  information for creating the generic interface to class objects
+#    (for calling from R via call_method, get_value, and set_value)
 cppClassClass <- R6::R6Class(
   'cppClassDef',
-  inherit = cppNamespaceClass,
+  inherit = cppDefinitionClass, # previously inherited from namespace, but that's not very helpful
   portable = FALSE,
   public = list(
-    inheritance = list(),           ## classes to be declared as public 
+    name = character(),
+    symbolTable = NULL, ## list or symbolTable
+    memberCppDefs = list(), # formerly cppFunctionDefs
+    inheritance = list(),           ## classes to be declared as public
     ## ancestors = 'list',             ## classes inherited by inherited classes, needed to make all cast pointers
     ##extPtrTypes = 'ANY',
-    ##private = 'list',		# 'list'. This field is a placeholder for future functionality.  Currently everything is generated as public
-    useGenerator = TRUE,		#'logical', ## not clear if or how this is needed in new system. ## toggled whether to include a SEXPgeneratorFun in old system
-    SEXPgeneratorDef = NULL,
-    set_nClass_envDef = NULL,
+    ##private = 'list',     # 'list'. This field is a placeholder for future functionality.  Currently everything is generated as public
+    useGenerator = TRUE,    # toggles whether to include a SEXPgeneratorFun.
+    # SEXPgeneratorDef = NULL, # put this in internalCppDefs
+    # set_nClass_envDef = NULL, # ditto
     functionNamesForInterface = character(),
     variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
@@ -296,17 +338,17 @@ cppClassClass <- R6::R6Class(
     
     initialize = function(...) {
       ##useGenerator <<- TRUE
-      Hincludes <<-	c(Hincludes, '<Rinternals.h>', nCompilerIncludeFile("nCompiler_core.h"))	
-      CPPincludes <<-	c(CPPincludes, '<iostream>') 
+      Hincludes <<- c(Hincludes, '<Rinternals.h>', nCompilerIncludeFile("nCompiler_core.h"))
+      CPPincludes <<- c(CPPincludes, '<iostream>')
       super$initialize(...)
     },
     getHincludes = function() {
       Hinc <- c(Hincludes,
-                if(!is.null(SEXPgeneratorDef))
-                  SEXPgeneratorDef$getHincludes(),
-                if(!is.null(set_nClass_envDef))
-                  set_nClass_envDef$getHincludes(),
-                unlist(lapply(cppFunctionDefs,
+                if(!is.null(internalCppDefs[["SEXPgenerator"]]))
+                  internalCppDefs[["SEXPgenerator"]]$getHincludes(),
+                if(!is.null(internalCppDefs[["set_nClass_env"]]))
+                  internalCppDefs[["set_nClass_env"]]$getHincludes(),
+                unlist(lapply(memberCppDefs,
                               function(x)
                                 x$getHincludes()),
                        recursive = FALSE))
@@ -314,11 +356,11 @@ cppClassClass <- R6::R6Class(
     },
     getCPPincludes = function() {
       CPPinc <- c(CPPincludes,
-                  if(!is.null(SEXPgeneratorDef))
-                    SEXPgeneratorDef$getCPPincludes(),
-                  if(!is.null(set_nClass_envDef))
-                    set_nClass_envDef$getCPPincludes(),
-                  unlist(lapply(cppFunctionDefs,
+                  if(!is.null(internalCppDefs[["SEXPgenerator"]]))
+                    internalCppDefs[["SEXPgenerator"]]$getCPPincludes(),
+                  if(!is.null(internalCppDefs[["set_nClass_env"]]))
+                    internalCppDefs[["set_nClass_env"]]$getCPPincludes(),
+                  unlist(lapply(memberCppDefs,
                                 function(x)
                                   x$getCPPincludes()),
                          recursive = FALSE))
@@ -326,28 +368,26 @@ cppClassClass <- R6::R6Class(
     },
     getCPPusings = function() {
       CPPuse <- unique(c(CPPusings,
-                         if(!is.null(SEXPgeneratorDef))
-                           SEXPgeneratorDef$getCPPusings(),
-                         if(!is.null(set_nClass_envDef))
-                           set_nClass_envDef$getCPPusings(),
-                         unlist(lapply(cppFunctionDefs,
+                         if(!is.null(internalCppDefs[["SEXPgenerator"]]))
+                           internalCppDefs[["SEXPgenerator"]]$getCPPusings(),
+                         if(!is.null(internalCppDefs[["set_nClass_env"]]))
+                           internalCppDefs[["set_nClass_env"]]$getCPPusings(),
+                         unlist(lapply(memberCppDefs,
                                        function(x)
                                          x$getCPPusings()))
                          ))
       CPPuse
     },
-    getDefs = function() {
-      ans <- if(isTRUE(useGenerator)) {
-        if(is.null(SEXPgeneratorDef))
-          stop('Trying to getDefs from a CppClassClass with useGenerator==TRUE but SEXPgeneratorDef not defined')
-        list(self, SEXPgeneratorDef, set_nClass_envDef)
-      } else {
-        list(self, set_nClass_envDef)
-      }
-      if(length(neededCppDefs) > 0)
-        ans <- c(ans, 
-                 do.call("c", lapply(neededCppDefs, function(x) x$getDefs())))
-      ans
+    getInternalDefs = function() {
+      c(super$getInternalDefs())
+      # Don't include memberCppDefs$getInternalDefs() because generate() will produce
+      # those recursively
+    },
+    getExternalDefs = function() {
+      c(super$getExternalDefs(),
+        do.call("c", lapply(memberCppDefs, function(x) x$getExternalDefs())))
+      # Do include memberCppDefs$getExternalDefs() because generate() will not produce
+      # those.
     },
     addInheritance = function(newI) {
       inheritance <<- c(inheritance, newI)
@@ -369,12 +409,12 @@ cppClassClass <- R6::R6Class(
                                ''
                            else
                              pasteSemicolon(x, indent = '  ')),
-                    generateAll(cppFunctionDefs, declaration = TRUE),
+                    generateAll(memberCppDefs, declaration = TRUE),
                     '};'
                     )
       } else {
-        if(length(cppFunctionDefs) > 0) {
-          output <- generateAll(cppFunctionDefs, scopes = name)
+        if(length(memberCppDefs) > 0) {
+          output <- generateAll(memberCppDefs, scopes = name)
         } else {
           output <- ""  
         }
@@ -393,10 +433,10 @@ cppClassClass <- R6::R6Class(
     addGenericInterface = function() {
       addGenericInterface_impl(self)
       add_obj_hooks_impl(self)
-      self$neededCppDefs[["R_generic_interface_calls"]]  <- make_R_interface_cppDef()
+      self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
     },
-    addSerialization = function(include_DLL_funs = FALSE) {
-      addSerialization_impl(self, include_DLL_funs)
+    addSerialization = function() { #include_DLL_funs = FALSE) {
+      addSerialization_impl(self) #, include_DLL_funs)
     }
     # , addLoadedObjectEnv = function() {
     #   addLoadedObjectEnv_impl(self)
@@ -407,6 +447,8 @@ cppClassClass <- R6::R6Class(
 ## A cppCodeBlock is an arbitrary collection of annotated syntax tree (exprClass)
 ## and other cppCodeBlocks (defined below).
 ## The parse tree can be either an R parse tree or one of our exprClass objects
+## This class is used for the body (code) of a nFunctions.
+## Note that it does not even inherit from cppDefinitionClass. It is entirely self-contained.
 cppCodeBlockClass <- R6::R6Class(
   classname = 'cppCodeBlockClass',
   portable = FALSE,

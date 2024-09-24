@@ -38,6 +38,7 @@ nCompile_nClass <- function(NC,
   ## we leave that to the user.  E.g. That might set endStage even
   ## earlier.
   stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
+  stopAfterCppDef <- isTRUE(dotArgs$stopAfterCppDef)
 
   controlFull <- updateDefaults(
     get_nOption('compilerOptions'),
@@ -47,7 +48,7 @@ nCompile_nClass <- function(NC,
     if(!is.character(NCinternals(NC)$predefined))
       stop("There is a predefined nClass whose predefined field is not character.  It should give the filename base of the predefined nClass.")
     predefined_filename <-  NCinternals(NC)$predefined
-    regular_filename <-  NC$classname
+    regular_filename <-  NCinternals(NC)$cpp_classname
     if(identical(predefined_filename, regular_filename))
       warning(paste0("There is a predefined class whose predefined_filename and regular_filename are both ", 
                      predefined_filename,". These should be different."))
@@ -70,22 +71,23 @@ nCompile_nClass <- function(NC,
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     ##
-    ## cppDef$buildSEXPgenerator()
-    if(isTRUE(get_nOption('serialize')))
-      cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
-    if(isTRUE(get_nOption('automaticDerivatives')))
-      cppDef$addADclassContent()
-    # if(!isTRUE(get_nOption("use_nCompLocal")) && !stopAfterRcppPacket)
-    #   cppDef$addLoadedObjectEnv()
-    
-    cppDef$addGenericInterface()
+    ## if(isTRUE(get_nOption('serialize')))
+    ##   cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
+    ## if(isTRUE(get_nOption('automaticDerivatives')))
+    ##   cppDef$addADclassContent()
+    ## cppDef$addGenericInterface()
     if(NFcompilerMaybeStop('makeRcppPacket', controlFull))
       return(NC_Compiler)
   }
+
+  if(stopAfterCppDef) return(cppDef)
+
+  # We might deprecate from here onward.
+  # Then nCompile_nClass would only be called via nCompile
   filebase <- controlFull$filename
   
   if(is.null(filebase))
-    filebase <- Rname2CppName(cppDef$name)
+    filebase <- make_cpp_filebase(cppDef$name)
   RcppPacket <- cppDefs_2_RcppPacket(cppDef,
                                      filebase = filebase)
   NCinternals(NC)$RcppPacket <- RcppPacket
@@ -93,7 +95,7 @@ nCompile_nClass <- function(NC,
   if(stopAfterRcppPacket) 
     return(NC)
   
-  newCobjFun <- cpp_nCompiler(RcppPacket,
+  compiledFuns <- cpp_nCompiler(RcppPacket,
                               dir = dir,
                               cacheDir = cacheDir,
                               env = env,
@@ -101,30 +103,30 @@ nCompile_nClass <- function(NC,
                               compile = !NFcompilerMaybeStop('compileCpp', controlFull),
                               ...)
   if(NFcompilerMaybeStop('compileCpp', controlFull)) {
-    return(newCobjFun)
+    return(compiledFuns)
   }
   
-  R6interface <- list(build_compiled_nClass(NC, newCobjFun, env = env))
-  names(R6interface) <- filebase
+  R6interface <- list(build_compiled_nClass(NC, compiledFuns, env = env))
+  names(R6interface) <- cppDef$name # formerly filebase
   
   interface <- match.arg(interface)
   
   newDLLenv <- make_DLLenv()
   # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
-  newCobjFun <- setup_nClass_environments(newCobjFun,
-                                       newDLLenv,
-                                       nC_names = filebase,
-                                       R6interface)
+  finalFun <- setup_nClass_environments(compiledFuns,
+                                        newDLLenv,
+                                        nC_names = NC$classname,
+                                        R6interfaces = R6interface)
   
-  if(length(newCobjFun) != 1)
+  if(length(finalFun) != 1)
     warning("There may be a problem with number of returned functions in nCompile_nClass.")
   #  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
   
   if(interface == "generic")
-    return(newCobjFun)
+    return(finalFun[[1]])
   if(interface == "full")
     return(R6interface[[1]])
   ## interface is "both"
-  return(list(full = R6interface[[1]], generic = newCobjFun))
+  return(list(full = R6interface[[1]], generic = finalFun[[1]]))
 }
 

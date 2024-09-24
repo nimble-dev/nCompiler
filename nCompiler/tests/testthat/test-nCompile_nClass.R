@@ -1,4 +1,13 @@
-context("Testing nClass compilation")
+library(nCompiler)
+library(testthat)
+#   debug(nCompile_nClass)
+
+# These currently don't work. They are out of date relative to nCompile.
+# I think the current issue is they need to do getExternalDefs() etc.
+# I am not sure there is a compelling use case for having
+# nCompile_nClass and nCompile_nFunction as stand-along end-to-end
+# functions. They are called with stopAfterCppDef=TRUE from nCompile,
+# and maybe that is all that is needed.
 
 test_that("nCompile_nClass works",
 {
@@ -18,7 +27,7 @@ test_that("nCompile_nClass works",
         )
     )
 #    set_nOption('showCompilerOutput', TRUE)
-    ans <- try(nCompile_nClass(nc1, interface = "generic"))
+    ans <- nCompile_nClass(nc1, interface = "generic")
     expect_true(is.function(ans)) ## compilation succeeded
     obj <- ans()
     expect_true(class(obj) == "loadedObjectEnv")

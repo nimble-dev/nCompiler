@@ -107,6 +107,7 @@ get_CnCenv <- function(obj) {
 
 # This will be called from nCompile and nCompile_nClass
 # and also from setup_nClass_environments_from_package
+# NB: The returnList argument may be defunct. I think all uses end up with lists.
 setup_nClass_environments <- function(compiledFuns,
                                       newDLLenv,
                                       nC_names = character(),

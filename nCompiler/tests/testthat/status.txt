@@ -75,11 +75,14 @@ vector set and get from a full interface
 
 nClass_uncompiled: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 8 ]
 
-nCompile_master: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 45 ]
+nCompile: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 47 ]
+  # Note: These should all be tested via packaging.
 
 nCompile_nClass: [ FAIL 17 | WARN 0 | SKIP 0 | PASS 0 ]
+  # These may be deprecated as we don't need nCompile_nClass in its previous form.
 
 nCompile_nFunction: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
+  # These may be deprecated as we don't need nCompile_nFunction in its previous form.
 
 nFunction_uncompiled: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]
 
@@ -104,8 +107,8 @@ seq: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 5 ]
 
 seqClass:
 
-serialization: BROKEN
-   - MESSY: Turns on debugs and compiler output
+serialization:
+   - renovating Sept 2024 while updating features
 
 setInputOutputTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
    - rename?

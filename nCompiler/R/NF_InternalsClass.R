@@ -94,7 +94,7 @@ NF_InternalsClass <- R6::R6Class(
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
       ## what this one's cpp function name will be:
-      cpp_code_name <<- paste(name,
+      cpp_code_name <<- paste(Rname2CppName(name),
                               nFunctionIDMaker(),
                               sep = "_")
       
