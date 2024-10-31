@@ -31,7 +31,8 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 #    - In nCompile, the cpp_name for that unitResult is the cpp_code_name
 
 #' @export
-nCompile <- function(...,
+# This was original but is replaced below by a version that integrates with packing as inherent workflow
+nCompile1 <- function(...,
                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                      cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                      env = parent.frame(),
@@ -189,8 +190,10 @@ nCompile <- function(...,
 get_nCompile_types <- function(units) {
   ans <- character(length(units))
   for(i in seq_along(units)) {
-      if(isNF(units[[i]])) ans[i] <- 'nF'
-    else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
+    if(isNF(units[[i]])) {
+      ans[i] <- if(NFinternals(units[[i]])$callFromR)
+                  'nF' else 'nF_noExport'
+    } else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
     else if(isNC(units[[i]])) 
       stop(paste0("The #", i, " object to be compiled is an nClass object.\n",
                   "Only nClass generators (the class definition, not an object of the class) should be compiled."),
@@ -210,7 +213,7 @@ createCppDefsInfo <- function(units,
   cpp_names <- character(length(units))
   # RcppPacket_list <- vector(length = length(units), mode = "list")
   for(i in seq_along(units)) {
-    if(unitTypes[i] == "nF") {
+    if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       unitResults[[i]] <- nCompile_nFunction(units[[i]],
                                              stopAfterCppDef = TRUE,
                                              env = env,
@@ -241,7 +244,7 @@ cppDefsList_2_RcppPacketList <- function(cppDefs) {
 # refactor to integrate with writePackage
 #
 #' @export
-nCompile2 <- function(...,
+nCompile <- function(...,
                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                      cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                      env = parent.frame(),
@@ -324,8 +327,9 @@ nCompile2 <- function(...,
       interfaces = interfaces,
       cppDefs = cppDefs
     )
+    temppkgname <- basename(tempfile("TEMPPKG", ""))
     return(
-      writePackage2(pkgName = "temp_pkg", # generalize this
+      writePackage2(pkgName = temppkgname,
                     dir = dir,
                     control = control,
                     unitControls = unitControls,
@@ -507,9 +511,11 @@ nCompile2_finish_nonpackage <- function(units,
   ## Next we re-order results using input names,
   ## in case the ordering in the C++ code or in Rcpp's handling
   ## does not match order of units.
-  ## cpp_names should be 1-to-1 with names(ans)
+  ## cpp_names should be 1-to-1 with names(ans), with the exception of nF's that are not exported to R via RcppExport
   ## We want to return with names(ans) changed to
-  ## names(units), in the order corresponding to cpp_names.
+  ## names(units), in the order corresponding to cpp_names, but skipping non-exported nF's.
+  unit_is_nF_noExport <- unitTypes=="nF_noExport"
+  num_named_results <- length(units) - sum(unit_is_nF_noExport)
   ans <- vector(mode="list", length = length(units))
   ans_names <- character(length = length(units))
   for(i in seq_along(units)) {
@@ -517,8 +523,8 @@ nCompile2_finish_nonpackage <- function(units,
       iRes <- which(cpp_names[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
     } else if(unitTypes[i] == "nCgen") {
       iRes <- which( paste0("new_", cpp_names[i]) == names(compiledFuns))
-    } else {
-      iRes <- integer()
+    } else if(unitTypes[i] == "nF_noExport") {
+      iRes <- -1 # will not get used
     }
     if(length(iRes) != 1) {
       warning(paste0("Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
@@ -538,6 +544,7 @@ nCompile2_finish_nonpackage <- function(units,
       else
         ans[[i]] <- compiledFuns[[iRes]]
     }
+    # ans[[i]] will be left NULL for nF_noExport. This is good as the result will always align with input and be fully named.
   }
   names(ans) <- ans_names
 
@@ -552,7 +559,7 @@ nCompile2_finish_nonpackage <- function(units,
 
 WP_check_unit_types <- function(units, unitTypes) {
   for(i in seq_along(units)) {
-    if((unitTypes[i] != "nF") & (unitTypes[i] != "nCgen"))
+    if((unitTypes[i] != "nF") && (unitTypes[i] != "nCgen") && (unitTypes[i] != "nF_noExport"))
       stop(paste("In writePackage: only nFunctions and nClass generators are",
                    "allowed. Cannot compile object of class ", paste(class(units[[i]]), collapse=" ")))
   }
@@ -751,7 +758,10 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, nClass_full_interfa
     # if (totalControl[[i]]$export && isNCgenerator(objs[[i]]))
     #    if (totalControl[[i]]$export) {
     if(TRUE) {
-      if (unitTypes[i]=="nF" || nClass_full_interface) {
+      if (unitTypes[i]=="nF" ||
+            (nClass_full_interface && !(unitTypes[i]=="nF_noExport"))) {
+        # The second condition in this if is klugey and needs
+        # to be cleaned up with nClass_full_interface becomes a vector
         # NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
         NAMESPACE <- c(NAMESPACE, paste0("export(", units[[i]]$name, ")"))
       }

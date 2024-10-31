@@ -17,6 +17,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
     auxEnv = new.env(),
     ##... to here
     const = NULL,
+    isAD = FALSE,
     needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
     needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
     initialTypeInferenceDone = FALSE,
@@ -40,6 +41,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
         else name <<- NFinternals$cpp_code_name
         origRcode <<- NFinternals$code
         newRcode <<- NFinternals$code
+        isAD <<- NFinternals$isAD
       }
     },
     showCpp = function() {

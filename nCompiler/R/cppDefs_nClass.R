@@ -164,7 +164,8 @@ cpp_nClassClass <- R6::R6Class(
         RCname <- names(Compiler$NFcompilers)[i]
         memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE)
         memberCppDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
-        self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
+        if(Compiler$NFcompilers[[RCname]]$NFinternals$callFromR)
+          self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
       }
     },
     buildParallelClassDefs = function() {

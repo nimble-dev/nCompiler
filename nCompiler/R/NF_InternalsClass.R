@@ -20,8 +20,11 @@ NF_InternalsClass <- R6::R6Class(
     Rwrapper = NULL,
     aux = NULL, ## Used for constructor initializers.
     needed_nFunctions = list(), ## formerly neededRCfuns
+    ADcontent = NULL,
+    callFromR = TRUE,
+    isAD = FALSE,
     ## Next two "includes" were only needed for making external calls:
-    ## If needed, these will be populated by.nCompilerExternalCall.
+    ## If needed, these will be populated by nCompilerExternalCall.
     ## It remains to be seen if they are needed in new system.
     externalHincludes = list(), 
     externalCPPincludes = list(),
@@ -31,7 +34,7 @@ NF_InternalsClass <- R6::R6Class(
                           refArgs = list(),
                           blockRefArgs = list(),
                           returnType = NULL,
-                          enableDerivs = list(),
+                          enableDerivs = FALSE,
                           check = FALSE,
                           ## methodNames, ## used only for nf_checkDSLcode
                           setupVarNames = NULL,
@@ -59,7 +62,7 @@ NF_InternalsClass <- R6::R6Class(
                                             explicitTypeList = argTypes,
                                             evalEnv = where)
 
-      ## nf_changeKeywords changes all.nCompiler keywords,
+      ## nf_changeKeywords changes all nCompiler keywords,
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
       code <<- nf_changeKeywords(body(fun)) 
@@ -97,7 +100,22 @@ NF_InternalsClass <- R6::R6Class(
       cpp_code_name <<- paste(Rname2CppName(name),
                               nFunctionIDMaker(),
                               sep = "_")
-      
+      ## Unpack enableDerivs into AD
+      if(!(isFALSE(enableDerivs) || is.null(enableDerivs))) {
+        if(isTRUE(enableDerivs)) enableDerivs <- list()
+        if(!is.list(enableDerivs)) stop("enableDerivs must be NULL, FALSE, TRUE, or a list.")
+        isAD <<- FALSE
+        if(isTRUE(enableDerivs$isAD)) {
+          isAD <<- TRUE
+          callFromR <<- FALSE
+        } else {
+          ADcontent <<- list()
+          ADcontent$ADfun <<- enableDerivs$ADfun
+          ADcontent$ignore <<- enableDerivs$ignore
+          # to-do: process types. make and AD__() function that returns ADfun from an nFunctionClass
+          ADcontent$cpp_code_name <<- paste0(cpp_code_name,"_AD__")
+        }
+      }
     },
     getFunction = function() {
       functionAsList <- list(as.name('function'))

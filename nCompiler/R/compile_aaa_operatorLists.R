@@ -4,11 +4,13 @@
 ## Check in which handlers below returnTypeCode is actually used
 
 returnTypeCodes <- list(
-    double = 1L,
-    integer = 2L,
-    logical = 3L,
-    promote = 4L,
-    promoteNoLogical = 5L)
+  AD = 1L,
+  double = 2L,
+  integer = 3L,
+  logical = 4L,
+  promote = 5L,
+  promoteToDoubleOrAD = 6L,
+  promoteNoLogical = 7L)
 
 operatorDefEnv <- new.env()
 ##Utility for assigning multiples
@@ -78,7 +80,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
+  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
   list(
     labelAbstractTypes = list(
       handler = 'InitData'),
@@ -87,8 +89,12 @@ assignOperatorDef(
   )
 )
 updateOperatorDef(
-  c('nNumeric', 'nInteger', 'nLogical'),
+  c('nAD','nNumeric', 'nInteger', 'nLogical'),
   'labelAbstractTypes', 'return_nDim', 1
+)
+updateOperatorDef(
+  'nAD',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$AD
 )
 updateOperatorDef(
   'nNumeric',

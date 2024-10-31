@@ -64,15 +64,15 @@ build_compiled_nClass <- function(NCgenerator,
   CinterfaceMethods <- mapply(buildMethod_for_compiled_nClass,
                               NCgenerator$public_methods[CmethodNames],
                               CmethodNames)
-  enableDerivs <- unlist(NCinternals(NCgenerator)$enableDerivs)
-  if (length(enableDerivs > 0)) {
-    ## add *_derivs_ method for methods in enableDerivs
-    derivsMethods <- mapply(buildMethod_derivs_for_compiled_nClass,
-                            NCgenerator$public_methods[enableDerivs],
-                            enableDerivs)
-    names(derivsMethods) <- paste0(enableDerivs, '_derivs_')
-    CinterfaceMethods <- c(CinterfaceMethods, derivsMethods)
-  }
+  ## enableDerivs <- unlist(NCinternals(NCgenerator)$enableDerivs)
+  ## if (length(enableDerivs > 0)) {
+  ##   ## add *_derivs_ method for methods in enableDerivs
+  ##   derivsMethods <- mapply(buildMethod_derivs_for_compiled_nClass,
+  ##                           NCgenerator$public_methods[enableDerivs],
+  ##                           enableDerivs)
+  ##   names(derivsMethods) <- paste0(enableDerivs, '_derivs_')
+  ##   CinterfaceMethods <- c(CinterfaceMethods, derivsMethods)
+  ## }
   CfieldNames <- NCI$fieldNames
   RfieldNames <- setdiff(names(NCgenerator$public_fields),
                          CfieldNames)
@@ -220,7 +220,17 @@ buildActiveBinding_for_compiled_nClass <- function(NCI) {
 
 buildMethod_for_compiled_nClass <- function(fun, name) {
   if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  argNames <- names(formals(fun))
+  if(!NFinternals(fun)$callFromR) {
+    ans <- function(...) {}
+    environment(ans) <- new.env()
+    body(ans) <- substitute(
+      stop("method ", NAME, " cannot be called directly from R."),
+      list(NAME = name)
+    )
+    return(ans)
+  }
+
+  # argNames <- names(formals(fun))
   ans <- fun
   environment(ans) <- new.env()
   ## The internet says that R6 methods are assigned their environments
@@ -243,21 +253,21 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ans
 }
 
-buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
-  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  ans <- fun
-  ## add the 'order' and 'wrt' args to the function's formals
-  formals(ans) <- c(formals(ans), list(order = c(0, 1, 2), wrt = NULL))
-  argNames <- names(formals(ans))
-  environment(ans) <- new.env()
-  listcode <- quote(list())
-  for(i in seq_along(argNames))
-    listcode[[i+1]] <- as.name(argNames[i])
-  body(ans) <- substitute({
-    obj_env <- private$DLLenv$call_method(
-      nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE
-    )
-    C_nC_derivClass$new(obj_env)
-  }, list(NAME = paste0(name, '_derivs_'), LISTCODE = listcode))
-  ans
-}
+## buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
+##   if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
+##   ans <- fun
+##   ## add the 'order' and 'wrt' args to the function's formals
+##   formals(ans) <- c(formals(ans), list(order = c(0, 1, 2), wrt = NULL))
+##   argNames <- names(formals(ans))
+##   environment(ans) <- new.env()
+##   listcode <- quote(list())
+##   for(i in seq_along(argNames))
+##     listcode[[i+1]] <- as.name(argNames[i])
+##   body(ans) <- substitute({
+##     obj_env <- private$DLLenv$call_method(
+##       nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE
+##     )
+##     C_nC_derivClass$new(obj_env)
+##   }, list(NAME = paste0(name, '_derivs_'), LISTCODE = listcode))
+##   ans
+## }
