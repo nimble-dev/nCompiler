@@ -865,6 +865,18 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'nDerivs',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nDerivs'
+    ),
+    cppOutput = list(
+      handler = 'nDerivs'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(

@@ -22,7 +22,7 @@ compile_labelAbstractTypes <- function(code,
         code$type <- symbolBasic$new(name = 'NONAME',
                                      type = 'double',
                                      nDim = 0)
-      } 
+      }
     } else if(is.logical(code$name)) {
       code$type <- symbolBasic$new(name = 'NONAME',
                                    type = 'logical',
@@ -1595,6 +1595,18 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  nDerivs <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo,
+                                          useArgs = c(FALSE, rep(TRUE, length(code$args)-1)))
+    # For now, we do not recurse into first argument. In future maybe that can be done.
+    code$type <- symbolNC$new(name = '',
+                              type = 'derivsClass',
+                              isArg = FALSE,
+                              NCgenerator = derivsClass)
+    invisible(inserts)
+  }
+)
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing

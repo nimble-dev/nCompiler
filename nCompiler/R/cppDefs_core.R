@@ -435,6 +435,19 @@ cppClassClass <- R6::R6Class(
       add_obj_hooks_impl(self)
       self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
     },
+    buildDefaultConstructor = function() {
+      if(is.null(self$memberCppDefs[[name]])) {
+        constructor <- cppFunctionClass$new(name = name,
+                                            args = symbolTableClass$new(),
+                                            code = cppCodeBlockClass$new(
+                                                                       code = nParse(quote({})),
+                                                                       symbolTable = symbolTableClass$new()
+                                                                     ),
+                                            initializerList = list(),
+                                            returnType = cppBlank())
+        self$memberCppDefs[[name]] <- constructor
+      }
+    },
     addSerialization = function() { #include_DLL_funs = FALSE) {
       addSerialization_impl(self) #, include_DLL_funs)
     }

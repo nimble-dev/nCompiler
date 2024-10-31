@@ -32,7 +32,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
       (new shared_ptr_holder<T>(sp_));
   }
   SEXP return_this_nCompiler_object() {
-    return return_nCompiler_object<T>(sp_);
+    return return_nCompiler_object<T>(sp_); // This gives a compiler warning because return_nCompiler_object is not yet defined. to-do: check on ordering of #includes etc.
   }
   std::shared_ptr<T> &sp() {return sp_;}
   shared_ptr_holder() {} // needed for cereal
