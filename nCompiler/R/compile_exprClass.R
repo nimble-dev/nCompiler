@@ -251,6 +251,9 @@ insertArg <- function(expr, ID, value, name = NULL) {
     }
   }
   setArg(expr, ID, value)
+  if(is.null(name))
+    if(!is.null(names(expr$args)))
+      name <- ""
   if(!is.null(name))
     names(expr$args)[ID] <- name
   invisible(value)
