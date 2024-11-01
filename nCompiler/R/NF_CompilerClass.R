@@ -263,6 +263,26 @@ processNFstages <- function(NFcompiler,
     if (logging) logAfterStage(stageName)
   }
 
+  ## NORMALIZE CALLS
+  stageName <- 'normalizeCalls'
+  if (logging) logBeforeStage(stageName)
+  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+    eval(NFcompilerMaybeDebug(stageName, controlFull))
+    ## Make modifications that do not need size processing
+    NFtry(
+      compilerStage_normalizeCalls(
+        NFcompiler,
+        debug),
+      stageName,
+      use_nCompiler_error_handling)
+    NFcompiler$stageCompleted <- stageName
+    if (logging) {
+      logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
+      logAfterStage(stageName)
+    }
+  }
+
   ## SIMPLE TRANSFORMATIONS (e.g. name changes)
   stageName <- 'simpleTransformations'
   if (logging) logBeforeStage(stageName)

@@ -41,20 +41,24 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'nFunction',
+  'NFCALL_',
   list(
     labelAbstractTypes = list(
-      handler = 'Generic_nFunction'),
+      handler = 'nFunction_or_method_call'),
+   normalizeCalls = list(
+      handler = 'nFunction_or_method_call'),
     cppOutput = list(
       handler = 'Generic_nFunction')
   )
 )
 
 assignOperatorDef(
-  'nClass_method',
+  'NCMETHOD_',
   list(
     labelAbstractTypes = list(
-      handler = 'Generic_nClass_method') ## will convert to nFunction
+      handler = 'nFunction_or_method_call'), ## will convert to nFunction
+    normalizeCalls = list(
+      handler = 'nFunction_or_method_call') ## will convert to nFunction
   )
 )
 

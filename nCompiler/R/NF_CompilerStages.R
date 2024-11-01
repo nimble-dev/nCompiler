@@ -4,9 +4,10 @@ NFcompilerStages <- list(
   substituteMangledArgumentNames = 2,
   initializeCode = 3,
   initializeAuxiliaryEnvironment = 4,
-  simpleTransformations = 5,
-  simpleIntermediates = 6,
-  labelAbstractTypes = 7,            # set 'type' field of every exprClass in a syntax tree
+  normalizeCalls = 5,
+  simpleTransformations = 6,
+  simpleIntermediates = 7,
+  labelAbstractTypes = 8,            # set 'type' field of every exprClass in a syntax tree
   ##    setToEigen = 8
   # Yes means eigen is required (e.g. %*%).  No means eigen can't be used (e.g. print).  Maybe means eigen can be used or not (e.g. +).  
   addInsertions = 9,                 # Convert insertions entries of exprClass objects into lines of code in the syntax tree.  (Currently there are none.)

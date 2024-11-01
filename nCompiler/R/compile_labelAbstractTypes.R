@@ -64,8 +64,8 @@ compile_labelAbstractTypes <- function(code,
         }
         if(!auxEnv$.AllowUnknowns)
           if(identical(code$name, 'pi')) {
-            ## unique because it may be encountered anew on a RHS
-            ## and be valid as a new variable name, or on the LHS
+            ## unique because it may be encountered anew on a LHS
+            ## and be valid as a new variable name, or on the RHS
             ## and be a constant if it's not yet a variable
             newSymbol <- symbolBasic$new(name = 'pi',
                                          type = 'double',
@@ -99,63 +99,7 @@ compile_labelAbstractTypes <- function(code,
 
     opInfo <- operatorDefEnv[[code$name]]
 
-    ## Check for nFunctions or nClass methods (also nFunctions)
-    if(is.null(opInfo)) {
-      ## First we check if we are in an nClass and code$name is a method.
-      obj <- NULL
-      if(isNCgenerator(auxEnv$where)) {## We are in a class method
-        obj <- auxEnv$where$public_methods[[code$name]]
-        if(!is.null(obj)) {
-          if(isNF(obj)) {
-            opInfo <- operatorDefEnv[['nClass_method']]
-          } else {
-            stop(exprClassProcessingErrorMsg(code,
-                                             paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
-                 call. = FALSE)
-          }
-        }
-      }
-      ## Next we check if code$name exists in the where.
-      ## Note that if we are in a method, auxEnv$where will be the 
-      ## generator, which is an environment.  However, we need
-      ## to use nGet instead of exists and get. 
-      if(is.null(obj)) {
-        obj <- nGet(code$name, where = auxEnv$where)
-        ## An nFunction will be transformed to
-        ## have code$name 'nFunction'.
-        if(!is.null(obj)) {
-          if(isNF(obj)) {
-            opInfo <- operatorDefEnv[['nFunction']]
-            uniqueName <- NFinternals(obj)$uniqueName
-            if(length(uniqueName)==0)
-              stop(
-                exprClassProcessingErrorMsg(
-                  code,
-                  paste0('nFunction ', code$name, 'is being called, ',
-                         'but it is malformed because it has no internal name.')),
-                call. = FALSE)
-            if(is.null(auxEnv$needed_nFunctions[[uniqueName]])) {
-              ## We could put the nFunction itself in the needed_nFunctions list,
-              ## but we do not as a way to avoid having many references to R6 objects
-              ## in a blind attempt to facilitate garbage collection based on past experience.
-              ## Instead, we provide what is needed to look up the nFunction again later.
-              auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
-            }
-          } else
-            stop(exprClassProcessingErrorMsg(
-              code,
-              paste0(code$name, ' is being used as a function, but it is not a nFunction.')),
-              call. = FALSE)
-        }
-      }
-    }        
     if(!is.null(opInfo)) {
-      match_def <- opInfo[["match_def"]]
-      if(!is.null(match_def)) {
-        matched_code <- exprClass_put_args_in_order(match_def, code)
-        code <- replaceArgInCaller(code, matched_code)
-      }
-
       handlingInfo <- opInfo[["labelAbstractTypes"]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
@@ -182,6 +126,26 @@ inLabelAbstractTypesEnv <- function(expr) {
   expr <- substitute(expr)
   eval(expr, envir = labelAbstractTypesEnv)
 }
+
+inLabelAbstractTypesEnv(
+  recurse_labelAbstractTypes <-
+    function(code, symTab, auxEnv, handlingInfo,
+             useArgs = rep(TRUE, length(code$args))) {
+      ## won't be here unless code is a call.  It will not be a {
+      inserts <- list()
+      for(i in seq_along(code$args)) {
+        if(useArgs[i]) {
+          if(inherits(code$args[[i]], 'exprClass')) {
+            inserts <- c(inserts,
+                         compile_labelAbstractTypes(code$args[[i]],
+                                                    symTab,
+                                                    auxEnv))
+          }
+        }
+      }
+      if(length(inserts)==0) NULL else inserts
+    }
+)
 
 inLabelAbstractTypesEnv(
   setReturnType <- function(handlingInfo, argType) {
@@ -289,7 +253,6 @@ inLabelAbstractTypesEnv(
         ## so we mark that here as a member.
         code$name <- '->member'
         code$args[[2]]$name <- NFinternals(method)$cpp_code_name
-          
       } else {  ## Is RHS a field?
         symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(code$args[[2]]$name)
         if(is.null(symbol))
@@ -313,40 +276,41 @@ inLabelAbstractTypesEnv(
 ## Called by Generic_nFunction and Generic_nFunction_method
 ## This converts foo(x) to nFunction(foo, x)
 ## if foo is either an nFunction or a method of the current class
-inLabelAbstractTypesEnv(
-  convert_nFunction_or_method_AST <-
-    function(code, obj) {
-      nFunctionName <- code$name
-      ## Note that the string `nFunction` matches the operatorDef entry.
-      ## Therefore the change-of-name here will automatically trigger use of
-      ## the 'nFunction' operatorDef in later stages.
-      code$name <- 'nFunction'
-      cpp_code_name <- NFinternals(obj)$cpp_code_name
-      fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
-                                   isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
-      ## We may need to add content to this symbol if
-      ## necessary for later processing steps.
-      fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
-      insertArg(code, 1, fxnNameExpr)
-      ## TO-DO: Add error-trapping of argument types
-      returnSym <- NFinternals(obj)$returnSym
-      if(is.null(returnSym))
-        stop(
-          exprClassProcessingErrorMsg(
-            code, paste('In convert_nFunction_or_method_AST: the nFunction (or method) ',
-                        code$name, 
-                        ' does not have a valid returnType.')
-          ), call. = FALSE
-        )
-      code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
-      invisible(NULL)
-    }
-)
+## inLabelAbstractTypesEnv(
+##   convert_nFunction_or_method_AST <-
+##     function(code, obj) {
+##       nFunctionName <- code$name
+##       ## Note that the string `nFunction` matches the operatorDef entry.
+##       ## Therefore the change-of-name here will automatically trigger use of
+##       ## the 'nFunction' operatorDef in later stages.
+##       code$name <- 'nFunction'
+##       cpp_code_name <- NFinternals(obj)$cpp_code_name
+##       fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
+##                                    isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+##       ## We may need to add content to this symbol if
+##       ## necessary for later processing steps.
+##       fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
+##       insertArg(code, 1, fxnNameExpr)
+##       ## TO-DO: Add error-trapping of argument types
+##       returnSym <- NFinternals(obj)$returnSym
+##       if(is.null(returnSym))
+##         stop(
+##           exprClassProcessingErrorMsg(
+##             code, paste('In convert_nFunction_or_method_AST: the nFunction (or method) ',
+##                         code$name,
+##                         ' does not have a valid returnType.')
+##           ), call. = FALSE
+##         )
+##       code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+##       invisible(NULL)
+##     }
+## )
 
 ## Called by main compile_labelAbstractTypes loop
 ## This converts use of the function foo as an object to 
 ## nFunctionRef(foo, namespace)
 ## if foo is either an nFunction or a method of the current class
+## I think this could be moved to the normalizeCalls compile stage
 inLabelAbstractTypesEnv(
   reference_nFunction_or_method_AST <- function(code, obj) {
     
@@ -401,30 +365,53 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  Generic_nFunction <-
+  nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {
+      useArgs <- c(FALSE, rep(TRUE, length(code$args)-1))
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo)
-      ## This is slightly wasteful because obj was already looked up
-      ## in compile_labelAbstractTypes (which recurses down the syntax tree).
-      ## If it becomes noticeably costly, we can arrange to save it from
-      ## the first look-up.
-      obj <- nGet(code$name, where = auxEnv$where)
-      convert_nFunction_or_method_AST(code, obj)
-      if(length(inserts) == 0) NULL else inserts
+                                            handlingInfo, useArgs)
+      obj_internals <- code$args[[1]]$aux$obj_internals
+      nFunctionName <- code$args[[1]]$aux$nFunctionName
+      code$args[[1]]$type <- symbolNF$new(name = nFunctionName)
+      returnSym <- obj_internals$returnSym
+      if(is.null(returnSym))
+        stop(
+          exprClassProcessingErrorMsg(
+            code, paste('In nFunction_or_method_call: the nFunction (or method) ',
+                        code$name,
+                        ' does not have a valid returnType.')
+          ), call. = FALSE
+        )
+      code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      invisible(NULL)
     }
 )
 
-inLabelAbstractTypesEnv(
-  Generic_nClass_method <-
-    function(code, symTab, auxEnv, handlingInfo) {
-      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo)
-      obj <-  auxEnv$where$public_methods[[code$name]]
-      convert_nFunction_or_method_AST(code, obj)
-      if(length(inserts) == 0) NULL else inserts
-    }
-)
+## inLabelAbstractTypesEnv(
+##   Generic_nFunction <-
+##     function(code, symTab, auxEnv, handlingInfo) {
+##       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+##                                             handlingInfo)
+##       ## This is slightly wasteful because obj was already looked up
+##       ## in compile_labelAbstractTypes (which recurses down the syntax tree).
+##       ## If it becomes noticeably costly, we can arrange to save it from
+##       ## the first look-up.
+##       obj <- nGet(code$name, where = auxEnv$where)
+##       convert_nFunction_or_method_AST(code, obj)
+##       if(length(inserts) == 0) NULL else inserts
+##     }
+## )
+
+## inLabelAbstractTypesEnv(
+##   Generic_nClass_method <-
+##     function(code, symTab, auxEnv, handlingInfo) {
+##       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+##                                             handlingInfo)
+##       obj <-  auxEnv$where$public_methods[[code$name]]
+##       convert_nFunction_or_method_AST(code, obj)
+##       if(length(inserts) == 0) NULL else inserts
+##     }
+## )
 
 inLabelAbstractTypesEnv(
   RecurseAndLabel <- function(code, symTab, auxEnv, handlingInfo) {
@@ -852,26 +839,6 @@ inLabelAbstractTypesEnv(
     ## }
     invisible(inserts)
   }
-)
-
-inLabelAbstractTypesEnv(
-  recurse_labelAbstractTypes <- 
-    function(code, symTab, auxEnv, handlingInfo,
-             useArgs = rep(TRUE, length(code$args))) {
-      ## won't be here unless code is a call.  It will not be a {
-      inserts <- list()
-      for(i in seq_along(code$args)) {
-        if(useArgs[i]) {
-          if(inherits(code$args[[i]], 'exprClass')) {
-            inserts <- c(inserts,
-                         compile_labelAbstractTypes(code$args[[i]],
-                                                    symTab,
-                                                    auxEnv))
-          }
-        }
-      }
-      if(length(inserts)==0) NULL else inserts
-    }
 )
 
 inLabelAbstractTypesEnv(
