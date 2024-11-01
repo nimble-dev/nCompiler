@@ -30,7 +30,7 @@ compile_normalizeCalls <- function(code,
     ## Check for nFunctions or nClass methods (also nFunctions)
     if(is.null(opInfo)) {
       obj <- NULL
-      if(isNCgenerator(auxEnv$where)) {## We are in a class method
+      if(isNCgenerator(auxEnv$where)) {## We are in a class method (by direct call within another class method, no `$` involved)
         obj <- auxEnv$where$public_methods[[code$name]]
         if(!is.null(obj)) {
           code$aux$obj_internals <- NFinternals(obj)
@@ -160,34 +160,5 @@ inNormalizeCallsEnv(
                              handlingInfo)
       convert_nFunction_or_method_AST(code)
       NULL
-    }
-)
-
-inNormalizeCallsEnv(
-  DollarSign <-
-    function(code, symTab, auxEnv, handlingInfo) {
-      ## TO-DO: Check for exactly 2 arguments
-      # Special handling for "new"
-      recurse_normalizeCalls(code, symTab, auxEnv,
-                             handlingInfo,
-                             useArgs = c(TRUE, FALSE))
-      ## TO-DO: Check that LHS type is symbolNC or symbolNCgenerator
-      ## TO-DO: Improve these error messages
-
-      if(!code$args[[2]]$isName)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'right-hand-side of `$` is not a name.'
-        ), call. = FALSE)
-
-      ## 1. Check if RHS is a method
-      ## 2. Check if RHS is a field
-      code$name <- '->member'
-
-      method <- code$args[[1]]$type$NCgenerator$public_methods[[
-        code$args[[2]]$name]]
-      if(!is.null(method)) { ## Is RHS a method?
-        code$args[[2]]$name <- NFinternals(method)$cpp_code_name
-      }
     }
 )

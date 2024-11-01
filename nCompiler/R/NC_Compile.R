@@ -44,7 +44,8 @@ nCompile_nClass <- function(NC,
     get_nOption('compilerOptions'),
     control
   )
-  if(isFALSE(controlFull$generate_predefined) && !isFALSE(NCinternals(NC)$predefined)) {
+  is_predefined <- !isFALSE(NCinternals(NC)$predefined)
+  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     if(!is.character(NCinternals(NC)$predefined))
       stop("There is a predefined nClass whose predefined field is not character.  It should give the filename base of the predefined nClass.")
     predefined_filename <-  NCinternals(NC)$predefined
@@ -60,14 +61,16 @@ nCompile_nClass <- function(NC,
       name =  regular_filename,
       Hpreamble = paste0("#define PREDEFINED_", regular_filename," ", predefined_filename),
       Hincludes = nCompilerIncludeFile(paste0(predefined_filename, ".h")),
-      cppContent = cppContent
+      cppContent = cppContent,
+      externalCppDefs = list(R_generic_interface_calls = get_R_interface_cppDef())
     )
   } else {    
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC)
     ## Use the compiler to generate a cppDef
     NC_Compiler$createCpp(control = controlFull,
-                          sourceObj = NC) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
+                          sourceObj = NC,
+                          interfaceCalls = !is_predefined) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     ##

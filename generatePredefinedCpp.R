@@ -6,7 +6,7 @@
 # 2. Include a classname in the nClass call, so it is not randomly generated.
 #    Include a argument like predefined="my_predefined_local" in the nClass call,
 #                            with a character value that is different from classname.
-#    Be sure the nClass is an exported R object in the paackage (usually).
+#    Be sure the nClass is an exported R object in the package (usually).
 #    The class name will be used for the C++ code that will be generated each time you use the nClass.
 #    The predefined name will be used for permanent files of generated C++ that you will copy to package source code and modify.
 #    The example here will be my_predefined <- nClass(classname = "my_predefined", predefined = "my_predefined_pkg", ...)
@@ -16,7 +16,7 @@
 # 4. Load nCompiler and do nCompile(my_predefined, control = list(generate_predefined = TRUE)).
 #    Be sure you know where code is being generated (default is tempdir(), can be changed by dir argument to nCompile).
 #
-# 5. Copy my_predefined.h to my_predefined_pkg.h in package source code (i.e. inst/include/nCompiler).
+# 5. Copy my_predefined.h (or my_predefined_c_.h) to my_predefined_pkg.h in package source code (i.e. inst/include/nCompiler).
 #
 # 6. Copy the cpp file, which will have an automatically generated name like "nCompiler_units_1.cpp", to
 #    my_predfined_pkg.cpp in the package source code. (Note these names match the predefined argument in the nClass class.)

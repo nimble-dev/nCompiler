@@ -2,6 +2,16 @@
 # This file is not in the R source directory.  It is in the GitHub repository
 # above the package directory.
 
+# Note: doing nCompile with generate_predefined = TRUE
+# will no longer result in a useable object because it will be missing interface calls.
+# These are omitted because we don't want them when copying over to package source (inst).
+# Hence one can check a predefined nClass either by setting NFinternals(predefined) <- FALSE
+# or by including something else in the nCompile that is not predefined and hence
+# will trigger inclusion of the interface calls.
+#
+# This change is not reflected in the testing code below, which will thus have
+# lots of failures after generate_predefined=TRUE.
+
 test_that("test_predefined class works",
 {
   # Generate new code.
@@ -128,7 +138,10 @@ test_that("test_predefined class works",
 test_that("predefined derivClass class works",
 {
   # Generate new code.
-  ctest <- nCompile(derivClass, control = list(generate_predefined = TRUE))
+  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
+  ctest <- nCompile(derivClass, foo, control = list(generate_predefined = TRUE))
+  ctest <- ctest$derivClass
+  # using the object will not work because the interface calls are now omitted
   obj <- ctest$new()
   obj$gradient <- matrix(1:4, nrow = 2)
   expect_equal(obj$gradient, matrix(1:4, nrow = 2))
