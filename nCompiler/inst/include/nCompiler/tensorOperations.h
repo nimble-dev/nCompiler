@@ -1390,12 +1390,13 @@ bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
   for(int i = 0; i < nrows; i++){
     for(int j = i + 1; j < ncols; j++){
       if(x(i,j) != x(j,i)){
-	return(false);
+        return(false);
       }
     }
   }
   return(true);
 }
+
 
 #ifdef PREDEFINED_SVDDecomp
 std::shared_ptr<SVDDecomp> nSvd(
@@ -1429,11 +1430,11 @@ std::shared_ptr<SVDDecomp> nSvd(
  	        svd.compute(xm, Eigen::ComputeFullU | Eigen::ComputeFullV);
  	    }
 
- 	    ans->u.resize({{n, leftSVs}});
+ 	    ans->u.resize(std::array<Eigen::Index, 2>({{n, leftSVs}}));
  	    auto u = matmap(ans->u);
  	    u = svd.matrixU();
 
- 	    ans->v.resize({{p, rightSVs}});
+ 	    ans->v.resize(std::array<Eigen::Index, 2>({{p, rightSVs}}));
  	    auto v = matmap(ans->v);
         v = svd.matrixV();
  	}
@@ -1453,10 +1454,10 @@ std::shared_ptr<SVDDecomp> nSvd(
     int ncols(x_map.cols());
     // potentially error-trap of nrows == ncols.
     std::shared_ptr<EigenDecomp> ans(new EigenDecomp);
-    ans->values.resize({{nrows}});
+    ans->values.resize(nrows);
     auto values_map = matmap(ans->values);
     if(!valuesOnly){
-      ans->vectors.resize({{nrows, ncols}});
+      ans->vectors.resize(std::array<Eigen::Index, 2>({{nrows, ncols}}));
     }
     Eigen::DecompositionOptions eigOpts = valuesOnly ? Eigen::EigenvaluesOnly : Eigen::ComputeEigenvectors;
     if(symmetric) {
@@ -1464,7 +1465,7 @@ std::shared_ptr<SVDDecomp> nSvd(
       values_map = solver1.eigenvalues().reverse();
       if(!valuesOnly){
 	Eigen::Map<Eigen::MatrixXd> vecs_map = matmap(ans->vectors);
-	vecs_map = solver1.eigenvectors().rowwise().reverse();	
+	vecs_map = solver1.eigenvectors().rowwise().reverse();
       }
     } else {
       Eigen::EigenSolver<Eigen::MatrixXd> solver2(x_map, eigOpts);

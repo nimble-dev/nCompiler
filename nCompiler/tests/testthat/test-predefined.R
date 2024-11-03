@@ -2,10 +2,21 @@
 # This file is not in the R source directory.  It is in the GitHub repository
 # above the package directory.
 
+# Note: doing nCompile with generate_predefined = TRUE
+# may no longer result in a useable object because it will be missing interface calls.
+# These are omitted because we don't want them when copying over to package source (inst).
+# Hence one can check a predefined nClass either by setting NFinternals(predefined) <- FALSE
+# or by including something else in the nCompile that is not predefined and hence
+# will trigger inclusion of the interface calls. Tests here take the latter approach.
+#
+
 test_that("test_predefined class works",
 {
+  # dummy nClass to include in nCompile so that interface calls are included.
+  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
   # Generate new code.
-  ctest <- nCompile(test_predefined, control = list(generate_predefined = TRUE))
+  ctest <- nCompile(test_predefined, foo, control = list(generate_predefined = TRUE))
+  ctest <- ctest$test_predefined
   obj <- ctest$new()
   obj$a <- 1.2
   expect_equal(obj$a, 1.2)
@@ -127,8 +138,12 @@ test_that("test_predefined class works",
 
 test_that("predefined derivClass class works",
 {
+  # dummy to include interface calls
+  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
   # Generate new code.
-  ctest <- nCompile(derivClass, control = list(generate_predefined = TRUE))
+  ctest <- nCompile(derivClass, foo, control = list(generate_predefined = TRUE))
+  ctest <- ctest$derivClass
+  # using the object will not work because the interface calls are now omitted
   obj <- ctest$new()
   obj$gradient <- matrix(1:4, nrow = 2)
   expect_equal(obj$gradient, matrix(1:4, nrow = 2))
@@ -250,8 +265,11 @@ test_that("predefined derivClass class works",
 
 test_that("predefined EigenDecomp class works",
 {
+  # dummy to include interface calls
+  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
   # Generate new code.
-  ctest <- nCompile(EigenDecomp, control = list(generate_predefined = TRUE))
+  ctest <- nCompile(EigenDecomp, foo, control = list(generate_predefined = TRUE))
+  ctest <- ctest$EigenDecomp
   obj <- ctest$new()
   obj$vectors <- matrix(1:4, nrow = 2)
   expect_equal(obj$vectors, matrix(1:4, nrow = 2))
@@ -259,7 +277,9 @@ test_that("predefined EigenDecomp class works",
   obj <- EigenDecomp$new()
   obj$vectors <- matrix(1:4, nrow = 2)
   expect_equal(obj$vectors, matrix(1:4, nrow = 2))
-  
+
+  ## STOPPED HERE - SOMETHING WRONG.
+
   # Use existing (predefined) code
   ctest <- nCompile(EigenDecomp, control = list(generate_predefined = FALSE))
   obj <- ctest$new()
@@ -444,12 +464,14 @@ test_that("predefined EigenDecomp class works",
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
 })
 
 test_that("predefined SVDDecomp class works", {
+  # dummy to include interface calls
+  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
   # Generate new code.
-  ctest <- nCompile(SVDDecomp, control = list(generate_predefined = TRUE))
+  ctest <- nCompile(SVDDecomp, foo, control = list(generate_predefined = TRUE))
+  ctest <- ctest$SVDDecomp
   obj <- ctest$new()
   obj$v <- matrix(1:4, nrow = 2)
   expect_equal(obj$v, matrix(1:4, nrow = 2))

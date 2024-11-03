@@ -314,13 +314,13 @@ cpp_nClassClass <- R6::R6Class(
       addStaticInitClass()
       invisible(NULL)
     },
-    buildAll = function(where = where) {
+    buildAll = function(interfaceCalls = TRUE, where = where) {
       super$buildAll(where)
       if(isTRUE(get_nOption('serialize')))
         addSerialization()
       if(isTRUE(get_nOption('automaticDerivatives')))
         addADclassContent()
-      addGenericInterface()
+      addGenericInterface(interfaceCalls = interfaceCalls)
     }
   )
 )

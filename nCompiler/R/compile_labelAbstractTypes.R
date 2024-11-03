@@ -184,7 +184,7 @@ inLabelAbstractTypesEnv(
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
       ## TO-DO: Add check that first arg is symbolNF
-      code$name <- 'nFunction'
+      code$name <- 'NFCALL_'
       if(!inherits(code$args[[1]]$type, "symbolNF"))
         stop(exprClassProcessingErrorMsg(
           code,
@@ -239,12 +239,14 @@ inLabelAbstractTypesEnv(
 
       ## 1. Check if RHS is a method
       ## 2. Check if RHS is a field
+      innerName <- code$args[[2]]$name
       method <- code$args[[1]]$type$NCgenerator$public_methods[[
-        code$args[[2]]$name]]
+        innerName]]
       if(!is.null(method)) { ## Is RHS a method?
+        obj_internals <- NFinternals(method)
         returnSym <- symbolNF$new(
           name = '',
-          returnSym = NFinternals(method)$returnSym$clone(deep = TRUE)
+          returnSym = obj_internals$returnSym$clone(deep = TRUE)
         )
         code$type <- returnSym
         ## Logically it might seem this should become ->method.
@@ -252,9 +254,12 @@ inLabelAbstractTypesEnv(
         ## In stage generateCpp, the nFunction packs the arguments after A->foo,
         ## so we mark that here as a member.
         code$name <- '->member'
+        code$args[[2]]$aux$obj_internals <- obj_internals
+        code$args[[2]]$aux$nFunctionName <- innerName
         code$args[[2]]$name <- NFinternals(method)$cpp_code_name
+        obj_internals <- NULL
       } else {  ## Is RHS a field?
-        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(code$args[[2]]$name)
+        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName)
         if(is.null(symbol))
           stop(exprClassProcessingErrorMsg(
             code,

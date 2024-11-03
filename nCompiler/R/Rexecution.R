@@ -195,7 +195,7 @@ makeReturnVector <- function(fillValue, length, recycle) {
 #'
 #' @export
 #' 
-nEigen <- function(x, symmetric, valuesOnly) {
+nEigen <- function(x, symmetric, valuesOnly = FALSE) {
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
   ans$values <- res$values
