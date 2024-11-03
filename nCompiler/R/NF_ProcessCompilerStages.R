@@ -37,6 +37,25 @@ nimUndebugHandlerEnv <- function(env) {
   }
 }
 
+compilerStage_normalizeCalls <-
+  function(NFcompiler,
+           debug) {
+    if(debug) {
+      browser()
+      normalizeCallsEnv$.debug <- TRUE
+      nimDebug(compile_normalizeCalls)
+      nimDebugHandlerEnv(normalizeCallsEnv)
+      on.exit({
+        normalizeCallsEnv$.debug <- FALSE
+        nimUndebug(compile_normalizeCalls)
+        nimUndebugHandlerEnv(normalizeCallsEnv)
+      })
+    }
+    compile_normalizeCalls(NFcompiler$code,
+                           NFcompiler$symbolTable,
+                           NFcompiler$auxEnv)
+  }
+
 compilerStage_simpleTransformations <-
   function(NFcompiler,
            debug) {

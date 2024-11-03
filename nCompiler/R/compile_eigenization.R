@@ -240,7 +240,7 @@ inEigenizeEnv(
     } else if(LHS$name == '[') {
       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
       return(list(nested[[1]], TRUE))
-    } else if(LHS$name=='$') {
+    } else if(LHS$name=='->member') { # covers methods. no `$` should remain
       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
       return(list(c(nested[[1]], LHS$args[[2]]$name), FALSE ))
     }
@@ -307,9 +307,10 @@ inEigenizeEnv(
     ## so much on the C++ side including casting, and the casting is
     ## tricky because Eigen reduction operations (e.g. sum()) return
     ## 0-dimensional tensors rather than true scalars.
-    if(code$args[[1]]$type$nDim != 0) {
-      promoteArgTypes(code, assignment=TRUE)
-    }
+    if(inherits(code$args[[1]]$type, "symbolBasic"))
+      if(code$args[[1]]$type$nDim != 0) {
+        promoteArgTypes(code, assignment=TRUE)
+      }
     ##
     ## Right now this is done in generateCpp$MidOperator, and for scalars only
     ## if(isTRUE(get_nOption("use_flexible_assignment"))) {

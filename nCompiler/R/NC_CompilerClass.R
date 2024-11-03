@@ -72,7 +72,8 @@ NC_CompilerClass <- R6::R6Class(
                        className = className)
     },
     createCpp = function(control = list(),
-                         sourceObj) {
+                         sourceObj,
+                         interfaceCalls = TRUE) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control
@@ -83,7 +84,7 @@ NC_CompilerClass <- R6::R6Class(
         Compiler = self,
         name = self$name
       )
-      cppDef$buildAll()
+      cppDef$buildAll(interfaceCalls = interfaceCalls)
       invisible(NULL)
     },
     process = function(control = list(),

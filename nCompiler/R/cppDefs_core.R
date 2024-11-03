@@ -430,10 +430,12 @@ cppClassClass <- R6::R6Class(
     build_set_nClass_env = function() {
       build_set_nClass_env_impl(self)
     },
-    addGenericInterface = function() {
+    addGenericInterface = function(interfaceCalls = TRUE) {
       addGenericInterface_impl(self)
       add_obj_hooks_impl(self)
-      self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
+      # The only case that would omit interface calls is generated predefined code.
+      if(interfaceCalls)
+        self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
     },
     buildDefaultConstructor = function() {
       if(is.null(self$memberCppDefs[[name]])) {
