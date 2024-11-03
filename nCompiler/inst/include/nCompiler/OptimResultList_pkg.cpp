@@ -44,7 +44,7 @@ using namespace Rcpp;
 #endif
 #include <iostream>
 #include <nCompiler/nCompiler_core.h>
-#include "OptimResultList.h"
+#include "OptimResultList_c_.h"
 #include <nCompiler/nCompiler_Eigen_fxns.h>
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]

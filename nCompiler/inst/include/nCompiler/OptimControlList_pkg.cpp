@@ -48,7 +48,7 @@ using namespace Rcpp;
 #include <nCompiler/nCompiler_TBB.h>
 #include <Rmath.h>
 #include <math.h>
-#include "OptimControlList.h"
+#include "OptimControlList_c_.h"
 #include <nCompiler/nCompiler_Eigen_fxns.h>
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]

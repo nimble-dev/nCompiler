@@ -184,7 +184,7 @@ inLabelAbstractTypesEnv(
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
       ## TO-DO: Add check that first arg is symbolNF
-      code$name <- 'nFunction'
+      code$name <- 'NFCALL_'
       if(!inherits(code$args[[1]]$type, "symbolNF"))
         stop(exprClassProcessingErrorMsg(
           code,
