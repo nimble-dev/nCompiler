@@ -5,6 +5,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <nCompiler/derivClass_pkg.h>
 
 template<typename... ARGS>
 struct pack {
@@ -288,23 +289,26 @@ struct ARGS_MATCH< pack<ARGS1...>, pack<ARGS2...> > {
   static constexpr bool value =  firstMatch && restMatch;
 };
 
-class AD_tape_mgr {
+class ADtapeMgrClass {
 public:
   CppAD::ADFun<double> *ADtape_;
   CppAD::ADFun<double>* &ADtape() {return ADtape_;};
-
+  std::vector<double> var_values;
+  std::vector<double> dyn_values;
+  std::vector<CppAD::AD<double> > ADvar_values;
+  std::vector<CppAD::AD<double> > ADdyn_values;
   // we'll move starts_ends and total_length here.
 };
 
-class AD_base_class {
-public:
-};
+// class AD_base_class {
+// public:
+// };
 
 template<typename ADfunTypes, typename ADhandlingTypes, typename funTypes=void >
-class deriv_mgr2 {
+class nDerivsMgrClass {
   // example: ADfunTypes will be METHOD_TYPES( &CppAD::AD<double>(NC, CppAD::AD<double>) ), aka ADmethodInfo(NC, CppAD::AD<double>, CppAD::AD<double>)
   // example AD handlingTypes will be ADhandling<RETURN, WRT>
-  using thisType = deriv_mgr2<ADfunTypes, ADhandlingTypes, funTypes>;
+  using thisType = nDerivsMgrClass<ADfunTypes, ADhandlingTypes, funTypes>;
   public:
   using allInfo = ADfunAllInfo<ADfunTypes, ADhandlingTypes, funTypes>;
   allInfo tm; // make static assertions run.
@@ -314,7 +318,7 @@ class deriv_mgr2 {
   using fnType = typename ADfunTypes::fnType;
   fnType fn;
   classType* const obj;
-  deriv_mgr2( fnType f, classType *obj_ ) : fn(f), obj(obj_) {};
+  nDerivsMgrClass( fnType f, classType *obj_ ) : fn(f), obj(obj_) {};
 
   using ADargTupleType = typename ADfunTypes::ADargsPackType::tupleType; // e.g. std::tuple< CppAD::AD<double> >
   ADargTupleType ADargTuple;
@@ -330,24 +334,21 @@ class deriv_mgr2 {
   start_end_array ADdyn_start_ends;
   size_t ADvar_total_length;
   size_t ADdyn_total_length;
-  std::vector<double> var_values;
-  std::vector<double> dyn_values;
-  std::vector<CppAD::AD<double> > ADvar_values;
-  std::vector<CppAD::AD<double> > ADdyn_values;
+  ADtapeMgrClass ADtapeMgr;
 
   template<size_t... INDS, typename... NONADARGS, typename... ADARGTYPEINFOS >
   void set_lengths(std::index_sequence<INDS...>, pack<ADARGTYPEINFOS...>, NONADARGS... nonadargs  ) {
     ADvar_lengths = {GETLENGTH2<INDS, ADARGTYPEINFOS, NONADARGS, true>(nonadargs)...};
     ADvar_total_length = std::accumulate(ADvar_lengths.begin(), ADvar_lengths.end(), 0);
-    var_values.resize(ADvar_total_length);
-    ADvar_values.resize(ADvar_total_length);
+    ADtapeMgr.var_values.resize(ADvar_total_length);
+    ADtapeMgr.ADvar_values.resize(ADvar_total_length);
     ADvar_start_ends[0] = 0;
     std::partial_sum(ADvar_lengths.begin(), ADvar_lengths.end(), ADvar_start_ends.begin()+1);
 
     ADdyn_lengths = {GETLENGTH2<INDS, ADARGTYPEINFOS, NONADARGS, false>(nonadargs)...};
     ADdyn_total_length = std::accumulate(ADdyn_lengths.begin(), ADdyn_lengths.end(), 0);
-    dyn_values.resize(ADdyn_total_length);
-    ADdyn_values.resize(ADdyn_total_length);
+    ADtapeMgr.dyn_values.resize(ADdyn_total_length);
+    ADtapeMgr.ADdyn_values.resize(ADdyn_total_length);
     ADdyn_start_ends[0] = 0;
     std::partial_sum(ADdyn_lengths.begin(), ADdyn_lengths.end(), ADdyn_start_ends.begin()+1);
   }
@@ -366,9 +367,9 @@ class deriv_mgr2 {
   template<size_t... INDS, typename... NONADARGS, typename... ADARGTYPEINFOS >
   void flatten_args(std::index_sequence<INDS...>, pack<ADARGTYPEINFOS...>, NONADARGS... nonadargs  ) {
     dummy = {ARG_FLATTENER2<INDS, ADARGTYPEINFOS, NONADARGS, start_end_array, true>
-             (nonadargs, var_values, ADvar_start_ends)...};
+             (nonadargs, ADtapeMgr.var_values, ADvar_start_ends)...};
     dummy = {ARG_FLATTENER2<INDS, ADARGTYPEINFOS, NONADARGS, start_end_array, false>
-             (nonadargs, dyn_values, ADdyn_start_ends)...};
+             (nonadargs, ADtapeMgr.dyn_values, ADdyn_start_ends)...};
   }
 
   using maps = typename allInfo::maps;
@@ -379,7 +380,7 @@ class deriv_mgr2 {
   template<size_t... INDS, typename... ADARGTYPEINFOS, typename... NONADARGS >
   ADreturnType runfun_internal(std::index_sequence<INDS...>, pack<ADARGTYPEINFOS...>, NONADARGS... nonadargs  ) {
     return fn(obj, ARGS_UNFLATTENER2<INDS, ADARGTYPEINFOS, NONADARGS, ADargTupleType, start_end_array, CppAD::AD<double> >
-              (nonadargs, ADargTuple, ADvar_values, ADvar_start_ends, ADdyn_values, ADdyn_start_ends ) ...);
+              (nonadargs, ADargTuple, ADtapeMgr.ADvar_values, ADvar_start_ends, ADtapeMgr.ADdyn_values, ADdyn_start_ends ) ...);
   }
 
    template<typename... ADARGTYPEINFOS>
@@ -395,10 +396,10 @@ class deriv_mgr2 {
   }
 
   template<typename... NONADARGS>
-  void record_tape(AD_tape_mgr &ADTM, NONADARGS... nonadargs) {
+  void record_tape(NONADARGS... nonadargs) {
     set_lengths(indices(), ADargTypeInfoPack(), nonadargs...);
     flatten_args(indices(), ADargTypeInfoPack(), nonadargs...);
-    std::transform(var_values.begin(), var_values.end(), ADvar_values.begin(), [](double x)->CppAD::AD<double>{return CppAD::AD<double>(x);});
+    std::transform(ADtapeMgr.var_values.begin(), ADtapeMgr.var_values.end(), ADtapeMgr.ADvar_values.begin(), [](double x)->CppAD::AD<double>{return CppAD::AD<double>(x);});
     ADreturnType res;
     check1(ADargTypeInfoPack());
     std::cout<< "check 2 "<< CHECK2<ADfunTypes>::value  <<std::endl;
@@ -409,14 +410,17 @@ class deriv_mgr2 {
   }
 
   template<typename... NONADARGS>
-  void nDerivs(bool do_update, bool reset, AD_tape_mgr &ADTM, NONADARGS... nonadargs ) {
+  std::shared_ptr<derivClass> nDerivs(bool do_update, bool reset, NONADARGS... nonadargs ) {
     static_assert( ARGS_MATCH< pack<NONADARGS...>,
                    typename ADfunTypes::argsPackType >::value,
                    "nDerivs was coded with arguments that don't match its function.");
+    std::shared_ptr<derivClass> ans;
+    ans = nClass_builder<derivClass>()();
     if(true) { // if(reset)
-      record_tape(ADTM, nonadargs...);
+      record_tape(nonadargs...);
       // run_for_taping;
     }
+    return(ans);
   }
 };
 

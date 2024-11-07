@@ -314,8 +314,8 @@ cpp_nClassClass <- R6::R6Class(
     ##   addStaticInitClass()
     ##   invisible(NULL)
     ## },
-    addADClassContent = function() {
-
+    addADclassContent = function() {
+      addADclassContent_impl(self)
     },
     buildAll = function(interfaceCalls = TRUE, where = where) {
       super$buildAll(where)
@@ -328,3 +328,22 @@ cpp_nClassClass <- R6::R6Class(
     }
   )
 )
+
+addADclassContent_impl <- function(cppDef) {
+  for(i in seq_along(cppDef$Compiler$NFcompilers)) {
+    derivsContent <- cppDef$Compiler$NFcompilers[[i]]$auxEnv$derivsContent
+    ADtapeMgrSymbols <- derivsContent$ADtapeMgrSymbols
+    if(!is.null(ADtapeMgrSymbols)) {
+      for(iSym in seq_along(ADtapeMgrSymbols))
+        cppDef$symbolTable$addSymbol(ADtapeMgrSymbols[[iSym]]$clone(deep=TRUE))
+    }
+    ADconstructorInits <- derivsContent$ADconstructorInits
+    if(!is.null(ADconstructorInits)) {
+      constructorDef <- cppDef$memberCppDefs[[ cppDef$name ]]
+      if(is.null(constructorDef))
+        warning("Could not find class constructor for ", cppDef$name, " when setting up AD tape managers.")
+      constructorDef$initializerList <- c(constructorDef$initializerList,
+                                          ADconstructorInits)
+    }
+  }
+}

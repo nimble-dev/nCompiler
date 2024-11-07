@@ -27,10 +27,13 @@ cADfoo <- nCompile(ADfoo)
 # the control over full vs generic interfaces via packaging pipeline needs attention
 # in addition, nCompile(..., package=TRUE) stops after writing package and needs to build/install it.
 
+library(nCompiler)
+
 nc1 <- nClass(
   # put a method in here that has isAD=TRUE
   classname = "bar",
   Cpublic = list(
+    x = 'numericScalar',
     Cfoo = nFunction(
       fun = function(x = ADScalar()) {
         ans <- 2*x
@@ -42,18 +45,30 @@ nc1 <- nClass(
     derivsCfoo = nFunction(
       fun = function(x = numericScalar) {
         ans <- nDerivs(Cfoo(x))
+        return(ans)
+        returnType('derivClass')
       }
     )
   )
 )
 
-debug(nCompiler:::labelAbstractTypesEnv$nDerivs)
+# Very close
+# To-do:
+# remove method name from nDerivs methods call
+# add this to constructor call
+# removed ADtapeMgr from nDerivs method prototype and update nDerivsMgrClass to contain an ADtapeMgrClass
 
+
+nOptions(enableDerivs=TRUE)
+#debug(nCompiler:::labelAbstractTypesEnv$nDerivs)
+#undebug(nCompiler:::processADEnv$nDerivs)
+#debug(nCompiler:::processNFstages)
 nOptions(pause_after_writing_files=TRUE)
-Cnc1 <- nCompile(nc1)
-test <- Cnc1$new()
+Cnc1 <- nCompile(nc1, derivClass)
+test <- Cnc1$nc1$new()
 test
-test$Cfoo(2)
+test$Cfoo(2) # correctly gives an error.
+test$derivsCfoo(2) # correctly emits messages and return an empty derivsClass object
 
 # To do:
 # - normalize fn and method call arguments. is that already in place?

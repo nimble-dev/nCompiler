@@ -19,7 +19,7 @@ NF_InternalsClass <- R6::R6Class(
     RcppPacket = NULL,
     Rwrapper = NULL,
     aux = NULL, ## Used for constructor initializers.
-    needed_nFunctions = list(), ## formerly neededRCfuns
+    # needed_nFunctions = list(), ## formerly neededRCfuns
     ADcontent = NULL,
     callFromR = TRUE,
     isAD = FALSE,

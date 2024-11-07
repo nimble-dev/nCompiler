@@ -1573,12 +1573,13 @@ inLabelAbstractTypesEnv(
                                           useArgs = c(FALSE, rep(TRUE, length(code$args)-1)))
     # For now, we do not recurse into first argument. In future maybe that can be done.
     code$type <- symbolNC$new(name = '',
-                              type = 'derivsClass',
+                              type = 'derivClass',
                               isArg = FALSE,
-                              NCgenerator = derivsClass)
+                              NCgenerator = derivClass)
     invisible(inserts)
   }
 )
+
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing

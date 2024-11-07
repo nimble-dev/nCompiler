@@ -187,8 +187,10 @@ test_that("predefined derivClass class works",
   classname = "nc1",
   Cpublic = list(
     foo = nFunction(
-      fun = function() {
-        return(derivClass$new())
+      fun = function(x = 'numericVector') {
+        ans <- derivClass$new()
+        ans$value <- x
+        return(ans)
       },
       returnType = 'derivClass'
     )

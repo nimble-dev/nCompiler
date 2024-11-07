@@ -875,7 +875,11 @@ assignOperatorDef(
 assignOperatorDef(
   'nDerivs',
   list(
+    match_def = function(call, wrt, order, update = TRUE, reset = FALSE, roles) {},
     labelAbstractTypes = list(
+      handler = 'nDerivs'
+    ),
+    processAD = list(
       handler = 'nDerivs'
     ),
     cppOutput = list(

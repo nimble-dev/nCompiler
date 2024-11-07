@@ -403,13 +403,17 @@ cppClassClass <- R6::R6Class(
         }
         output <- c(generateClassHeader(name, inheritance),
                     list('public:'), ## In the future we can separate public and private
+                    generateAll(memberCppDefs, declaration = TRUE),
+                    # it is important to declare methods before variables
+                    # because nDerivsMgrClass variables are templated using a macro
+                    # that invokes a method address to get its type, so the method
+                    # must have been declared before the variable.
                     lapply(generateObjectDefs(symbolsToUse),
                            function(x)
                              if(length(x)==0)
                                ''
                            else
                              pasteSemicolon(x, indent = '  ')),
-                    generateAll(memberCppDefs, declaration = TRUE),
                     '};'
                     )
       } else {
@@ -626,7 +630,7 @@ cppFunctionClass <- R6::R6Class(
                       ' ',
                       
                       if(!is.null(self$initializerList))
-                        generatorinitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
+                        generateInitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
                       else
                         character(0),
                       '{'
@@ -647,7 +651,7 @@ cppFunctionClass <- R6::R6Class(
                 )
 )
 
-generatorinitializerList <- function(initializerList) { 
+generateInitializerList <- function(initializerList) {
   ## initializerList should be a list of exprClass objects
   if(length(initializerList) == 0) return(character(0))
   ## When no symbolTable is provided to compile_generateCpp, it just outputs
