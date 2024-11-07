@@ -72,7 +72,7 @@ NC_CompilerClass <- R6::R6Class(
                        className = className)
     },
     createCpp = function(control = list(),
-                         sourceObj,
+                         sourceObj, #this will be the same as NC, so seems redundant and should be considered for removal/cleanup
                          interfaceCalls = TRUE) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
