@@ -203,8 +203,12 @@ cpp_nFunction_buildFunction <- function(cppDef,
     )
   cppDef$returnType <-
     NF_Compiler$returnSymbol$genCppVar()
-  if(!cppDef$classMethod)
+  if(!cppDef$classMethod && !NF_Compiler$isAD)
     cppDef$commentsAbove <- paste0('// [[Rcpp::export]]')
+  if(NF_Compiler$isAD)
+    cppDef$CPPincludes <- c(
+      cppDef$CPPincludes,
+      nCompilerIncludeFile("nCompiler_CppAD.h"))
   ## For external calls:
   ## cppDef$CPPincludes <-
   ##     c(cppDef$CPPincludes,

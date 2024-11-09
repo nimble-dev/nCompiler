@@ -112,6 +112,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
   NFcompiler$auxEnv[['needed_nClasses']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()
+  NFcompiler$auxEnv[["derivsContent"]] <- list()
   NFcompiler$auxEnv[['.AllowUnknowns']] <- TRUE ## will be FALSE for RHS recursion in setSizes
   NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.
   ##NFcompiler$auxEnv[['.nCompilerProject']] <- nimbleProject
@@ -120,13 +121,11 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                               names = passedArgNames)
   NFcompiler$auxEnv[['passedArgumentNames']] <- passedArgNames ## only the names are used.
   NFcompiler$auxEnv[['nameSubList']] <- nameSubList
-  NFcompiler$auxEnv[['where']] <- if(is.null(sourceObj))
-                                      NFcompiler$NFinternals$where
-  else
-    sourceObj
+  NFcompiler$auxEnv[['where']] <-
+    if(is.null(sourceObj)) NFcompiler$NFinternals$where
+    else sourceObj
   invisible(NULL)
 }
-
 
 compilerStage_labelAbstractTypes <-
   function(compileInfo,
@@ -148,6 +147,28 @@ compilerStage_labelAbstractTypes <-
                                compileInfo$auxEnv)
     invisible(NULL)
   }
+
+
+compilerStage_processAD <-
+  function(compileInfo,
+           debug = FALSE) {
+    if(debug) {
+      browser()
+      processADEnv$.debug <- TRUE
+      nimDebug(compile_processAD)
+      nimDebugHandlerEnv(processADEnv)
+      on.exit({
+        processADEnv$.debug <- FALSE
+        nimUndebug(compile_processAD)
+        nimUndebugHandlerEnv(processADEnv)
+      })
+    }
+    compile_processAD(compileInfo$code,
+                      compileInfo$symbolTable,
+                      compileInfo$auxEnv)
+    invisible(NULL)
+  }
+
 
 compileInfo_insertAssertions <- function(compileInfo,
                                          debug = FALSE) {

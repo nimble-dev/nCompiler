@@ -14,16 +14,20 @@ NFvirtual_CompilerClass <- R6::R6Class(
     symbolTable = NULL,
     returnSymbol = NULL,
     code = NULL,
-    auxEnv = new.env(),
+    auxEnv = NULL,
     ##... to here
     const = NULL,
-    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
-    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
+    isAD = FALSE,
+#    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
+#    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
+    derivsContent = list(),
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
                           ## funName,
                           const = FALSE,
                           useUniqueNameInCpp = FALSE) {
+      auxEnv <<- new.env() # We can't put this above as auxEnv = new.env() because then
+      # all objects would end up with the same auxEnv. See help(R6Class)
       const <<- const
       if(!is.null(f)) {
         isNFinternals <- inherits(f, 'NF_InternalsClass')
@@ -40,6 +44,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
         else name <<- NFinternals$cpp_code_name
         origRcode <<- NFinternals$code
         newRcode <<- NFinternals$code
+        isAD <<- NFinternals$isAD
       }
     },
     showCpp = function() {
@@ -237,7 +242,6 @@ processNFstages <- function(NFcompiler,
           lapply(NFcompiler$NFinternals$aux$initializerList, nParse)
       }
     }
-
   }
 
   stageName <- 'initializeAuxiliaryEnvironment'
@@ -336,13 +340,13 @@ processNFstages <- function(NFcompiler,
       # This will only collect nClasses from classGenerator$new()
       # Other nClasses will end up in the symbolTable and be 
       # collected later.
-      NFcompiler$needed_nClasses <-
-        c(NFcompiler$needed_nClasses,
-          NFcompiler$auxEnv[['needed_nClasses']])
-      
-      NFcompiler$needed_nFunctions <-
-        c(NFcompiler$needed_nFunctions,
-          NFcompiler$auxEnv[['needed_nFunctions']])
+      ## NFcompiler$needed_nClasses <-
+      ##   c(NFcompiler$needed_nClasses,
+      ##     NFcompiler$auxEnv[['needed_nClasses']])
+
+      ## NFcompiler$needed_nFunctions <-
+      ##   c(NFcompiler$needed_nFunctions,
+      ##     NFcompiler$auxEnv[['needed_nFunctions']])
     },
     paste(stageName, nameMsg),
     use_nCompiler_error_handling)
@@ -353,6 +357,31 @@ processNFstages <- function(NFcompiler,
     }
   }
 
+
+  ## annotate sizes and types
+  stageName <- 'processAD'
+  if (logging) logBeforeStage(stageName)
+  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
+  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+    eval(NFcompilerMaybeDebug(stageName, controlFull))
+    NFtry({
+      compilerStage_processAD(NFcompiler,
+                              debug)
+      # This will only collect nClasses from classGenerator$new()
+      # Other nClasses will end up in the symbolTable and be
+                                        # collected later.
+      NFcompiler$derivsContent <-
+        NFcompiler$auxEnv$derivsContent
+    },
+    paste(stageName, nameMsg),
+    use_nCompiler_error_handling)
+    NFcompiler$stageCompleted <- stageName
+    if (logging) {
+      logAST(NFcompiler$code, showImpl = FALSE)
+      logAfterStage(stageName)
+    }
+  }
+  
   ## insert new lines created by size processing
   stageName <- 'addInsertions'
   if (logging) logBeforeStage(stageName)

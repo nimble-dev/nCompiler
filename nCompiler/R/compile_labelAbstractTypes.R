@@ -22,7 +22,7 @@ compile_labelAbstractTypes <- function(code,
         code$type <- symbolBasic$new(name = 'NONAME',
                                      type = 'double',
                                      nDim = 0)
-      } 
+      }
     } else if(is.logical(code$name)) {
       code$type <- symbolBasic$new(name = 'NONAME',
                                    type = 'logical',
@@ -153,11 +153,13 @@ inLabelAbstractTypesEnv(
     if(is.null(returnTypeCode)) return('double')
     switch(
       returnTypeCode,
-      'double', ##1
-      'integer', ##2
-      'logical', ##3
-      argType, ##4
-      if(argType == 'logical') 'integer' else argType ##5
+      'AD', ##1
+      'double', ##2
+      'integer', ##3
+      'logical', ##4
+      argType, ##5
+      if(argType == 'AD') 'AD' else 'double', ## 6
+      if(argType == 'logical') 'integer' else argType ##7
     )
   }
 )
@@ -1565,6 +1567,19 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  nDerivs <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo,
+                                          useArgs = c(FALSE, rep(TRUE, length(code$args)-1)))
+    # For now, we do not recurse into first argument. In future maybe that can be done.
+    code$type <- symbolNC$new(name = '',
+                              type = 'derivClass',
+                              isArg = FALSE,
+                              NCgenerator = derivClass)
+    invisible(inserts)
+  }
+)
+
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()
   origValue <- nOptions$debugSizeProcessing
@@ -1576,15 +1591,18 @@ sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   return(ans)
 }
 
-## promote numeric output to most information-rich type, double > integer > logical
+## promote numeric output to most information-rich type, AD > double > integer > logical
 arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
-  if (!is.null(returnTypeCode) && returnTypeCode %in% c(1L, 2L, 3L))
+  if (!is.null(returnTypeCode) && returnTypeCode %in% 1L:4L)
     return(names(returnTypeCodes)[[returnTypeCode]])
+  if (t1 == 'AD') return ('AD')
+  if (!is.null(t2) && t2 == 'AD') return('AD')
   if (t1 == 'double') return('double')
   if (!is.null(t2) && t2 == 'double') return('double')
   if (t1 == 'integer') return('integer')
   if (!is.null(t2) && t2 == 'integer') return('integer')
-  if (!is.null(returnTypeCode) && returnTypeCode == 5L) return('integer')
+  if (!is.null(returnTypeCode) && returnTypeCode == 6L) return('double')
+  if (!is.null(returnTypeCode) && returnTypeCode == 7L) return('integer')
   return('logical')
 }
 

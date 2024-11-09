@@ -34,6 +34,7 @@ Collate:
     compile_labelAbstractTypes.R
     compile_liftMaps.R
     compile_normalizeCalls.R
+    compile_processAD.R
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
     compile_finalTransformations.R

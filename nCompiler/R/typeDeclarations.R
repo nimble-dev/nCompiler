@@ -98,6 +98,23 @@ typeDeclarationList <- list(
                           ...) {
     nType("double", nDim, ...)
   },
+  ## AD types
+  ADScalar = function(value) {
+    nType("AD", 0)
+  },
+  ADVector = function(length = NA,
+                      ...) {
+    nType("AD", 1, size = length, ...)
+  },
+  ADMatrix = function(value,
+                      ...) {
+    nType("AD", 2, ...)
+  },
+  ADArray = function(value,
+                     nDim = 1,
+                     ...) {
+    nType("AD", nDim, ...)
+  },
   ## versions with type as a declared argument
   nScalar = function(...,
                      type = "double") {
@@ -133,7 +150,7 @@ typeDeclarationList <- list(
                       ...) {
     nType("double", 1)
   },
-  ## versions from original.nCompiler
+  ## versions from original nimble
   double = function(nDim = 0,
                     ...) {
     nType("double", nDim)
@@ -252,8 +269,8 @@ typeDeclarationList <- list(
     if(!(scalarType %in% c("integer",
                            "double",
                            "logical"))) {
-      stop(paste0("storage.mode of an object used to declare a.nCompiler ",
-                  "argument must be integer, double or logical."),
+      stop(paste0("storage.mode of an object used to declare an Compiler ",
+                  "argument must be integer, double, or logical."),
            call. = FALSE)
     }
     nDim <- length(nDim(x))
@@ -287,7 +304,7 @@ argType2symbol <- function(argType,
     typeToUse <- parse(text = typeToUse, keep.source = FALSE)[[1]]
     inputAsCharacter <- TRUE
   }
-  ## allow 'scalarInteger' to become scalarInteger()
+  ## allow e.g. 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse))
     typeToUse <- as.call(list(typeToUse))
   

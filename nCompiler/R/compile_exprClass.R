@@ -488,7 +488,7 @@ exprClass_match_call <- function(def, expr) {
   result
 }
 
-exprClass_put_args_in_order <- function(def, expr) {
+exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
   match_res <- exprClass_match_call(def, expr)
   # there is a function reorderArgs above which appears to have been written
   # for eigenization of nDiag.
@@ -499,8 +499,23 @@ exprClass_put_args_in_order <- function(def, expr) {
     if(i==1) next # "foo"
     insertArg(expr = expr, ID=i-1, value = args[[match_res[[i]] ]], name = names(match_res)[i] )
   }
-  missing_names <- setdiff(names(formals(def)), names(match_res)[-1] )
-  if(length(missing_names))
-    expr$aux[["missing_names"]] <- missing_names
+  formals_def <- formals(def)
+  missing_names <- setdiff(names(formals_def), names(match_res)[-1] )
+  expr$aux[["provided_as_missing"]] <- missing_names
+  expr$aux[["missing"]] <- missing_names
+  if(insertDefaults) {
+    new_missing_names <- character()
+    for(mname in missing_names) {
+      if(!is.blank(formals_def[[mname]])) {
+        i <- which(mname == names(formals_def))
+        if(i > length(expr$args))
+          i <- length(expr$args)+1
+        insertArg(expr, i, value = nParse(formals_def[[mname]]), name = mname)
+      } else {
+        new_missing_names <- c(new_missing_names, mname)
+      }
+    }
+    expr$aux[["missing"]] <- new_missing_names
+  }
   expr
 }

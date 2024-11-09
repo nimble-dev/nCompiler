@@ -178,9 +178,12 @@ sourceCpp_nCompiler <- function(file,
     if(!requireLocalDLLpackage()) {
       stop("Unable to load or create nCompLocal.")
     }
-    ## In the future, this function can store "exported"
-    ## in the nFunction somewhere if it is needed later.
-    ## For now it just calls Rcpp::sourceCpp
+  ## In the future, this function can store "exported"
+  ## in the nFunction somewhere if it is needed later.
+  ## For now it just calls Rcpp::sourceCpp
+  rcpp.warnNoExports <- getOption("rcpp.warnNoExports")
+  options(rcpp.warnNoExports=FALSE)
+  on.exit(options(rcpp.warnNoExports = rcpp.warnNoExports))
   if(!isTRUE(get_nOption("showCompilerOutput"))) {
     exported <- QuietSourceCpp(file = file,
                                cacheDir = cacheDir,

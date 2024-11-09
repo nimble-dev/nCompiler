@@ -52,6 +52,7 @@ symbolBasic <-
                       double = 'D',
                       integer = 'I',
                       logical = 'L',
+                      AD = 'AD',
                       'Other'),
                self$nDim)
       },
@@ -75,6 +76,7 @@ symbolBasic <-
         else if(type == 'integer') cType <- 'int'
         else if(type == 'double') cType <- 'double'
         else if(type == 'logical') cType <- 'bool'
+        else if(type == 'AD') cType <- 'CppAD::AD<double>'
         else if(type == 'string') cType <- 'std::string'
         else warning(paste("in genCppVar method for",
                            self$name,
@@ -437,6 +439,7 @@ symbolSparse <- R6::R6Class(
                     double = 'D',
                     integer = 'I',
                     logical = 'L',
+                    AD = 'AD',
                     'Other'),
              self$nDim)
     },
@@ -460,6 +463,7 @@ symbolSparse <- R6::R6Class(
       else if(type == 'integer') cType <- 'int'
       else if(type == 'double') cType <- 'double'
       else if(type == 'logical') cType <- 'bool'
+      else if(type == 'AD') cType <- 'CppAD::AD<double>'
       else warning(paste("in genCppVar method for",
                          self$name,
                          "in symbolSparse class,",
@@ -496,6 +500,7 @@ symbolSparse <- R6::R6Class(
 
 ## This was an exercise in conversion from the old system.
 ## I'm not sure this is or will be needed.
+## If it is needed, it does not have AD included in the options below.
 symbolEigenMap <- R6::R6Class(
   classname = 'symbolEigenMap',
   inherit = symbolBase,

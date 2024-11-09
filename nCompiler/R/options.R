@@ -14,7 +14,7 @@ updateDefaults <- function(defaults, controls) {
     use_nCompLocal = FALSE,
     debugSizeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
-    automaticDerivatives = FALSE,# if TRUE, include automatic differentiation code in generated C++
+    enableDerivs = FALSE,
     compilerOptions = list(
       use_nCompiler_error_handling = TRUE,
       rebuild = FALSE,

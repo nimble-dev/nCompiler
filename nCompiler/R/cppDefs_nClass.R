@@ -164,7 +164,8 @@ cpp_nClassClass <- R6::R6Class(
         RCname <- names(Compiler$NFcompilers)[i]
         memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE)
         memberCppDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
-        self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
+        if(Compiler$NFcompilers[[RCname]]$NFinternals$callFromR)
+          self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
       }
     },
     buildParallelClassDefs = function() {
@@ -204,123 +205,145 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
     },
-    addTypeTemplateFunction = function( funName ) {
-      newFunName <- paste0(funName, '_AD_')
-      regularFun <- memberCppDefs[[funName]]
-      memberCppDefs[[newFunName]] <<- makeTypeTemplateFunction(newFunName, regularFun)
-      invisible(NULL)
-    },
-    addADtapingFunction = function( funName, 
-                                    independentVarNames, 
-                                    dependentVarNames ) {
-      ADfunName <- paste0(funName, '_AD_')
-      regularFun <- memberCppDefs[[funName]]
-      newFunName <- paste0(funName, '_callForADtaping_')
-      memberCppDefs[[newFunName]] <<- makeADtapingFunction(newFunName,
-                                                             regularFun, 
-                                                             ADfunName, 
-                                                             independentVarNames, 
-                                                             dependentVarNames, 
-                                                             isNode = FALSE,
-                                                             memberCppDefs)
-      invisible(NULL)
-    },
-    addADmethodMacros = function(funName, args) {
-      ## fun will be named foo_derivs_.
-      newName <- paste0(funName, "_derivs_")
-      memberCppDefs[[newName]] <<- cppADmethodMacroClass$new(name = newName,
-                                                               base_name = funName,
-                                                               args = args)
-      self$functionNamesForInterface <<- c(self$functionNamesForInterface, newName)
-      invisible(NULL)
-    },
-    addADargumentTransferFunction = function( funName, independentVarNames ) {
-      newFunName <- paste0(funName, '_ADargumentTransfer_')
-      regularFun <- memberCppDefs[[funName]]
-      funIndex <- which(NCinternals(self$Compiler$NCgenerator)$enableDerivs == funName) ## needed for correct index for allADtapePtrs_
-      memberCppDefs[[newFunName]] <<- makeADargumentTransferFunction(newFunName,
-                                                                       regularFun, 
-                                                                       independentVarNames, 
-                                                                       funIndex 
-                                                                       #, parentsSizeAndDims #was relevant to nodeFuns
-      )
-    },
-    addStaticInitClass = function() {
-      internalCppDefs[['staticInitClass']] <<- makeStaticInitClass(self,
-                                                                 NCinternals(self$Compiler$NCgenerator)$enableDerivs) ##
-      invisible(NULL)
-    },
-    addADclassContentOneFun = function(funName) {
-      outSym <- self$Compiler$NFcompilers[[funName]]$returnSymbol
-      checkADargument(funName, outSym, returnType = TRUE)
-      if(length(self$Compiler$NFcompilers[[funName]]$nameSubList) == 0)
-        stop(paste0('Derivatives cannot be enabled for method ', 
-                    funName, 
-                    ', since this method has no arguments.'))
-      ## Not updated:
-      if(FALSE) {
-        if(!nfProc$isNode){
-          for(iArg in seq_along(functionDefs[[funName]]$args$symbols)){
-            arg <- functionDefs[[funName]]$args$symbols[[iArg]]
-            argSym <- nfProc$RCfunProcs[[funName]]$compileInfo$origLocalSymTab$getSymbolObject(arg$name)
-            argName <- names(nfProc$RCfunProcs[[funName]]$nameSubList)[iArg]
-            checkADargument(funName, argSym, argName = argName)
-          }
-        }
-      }
-      addTypeTemplateFunction(funName)
-      independentVarNames <- self$memberCppDefs[[funName]]$args$getSymbolNames() ## Is this the right layer?
-      if(FALSE)
-        if(nfProc$isNode) independentVarNames <- independentVarNames[-1]  ## remove ARG1_INDEXEDNODEINFO__ from independentVars
-      
-      addADtapingFunction(funName,
-                          independentVarNames = independentVarNames,
-                          dependentVarNames = 'ANS_' )
-      addADargumentTransferFunction(funName,
-                                    independentVarNames = independentVarNames)
-      addADmethodMacros(funName,
-                        self$memberCppDefs[[funName]]$args)
-    },
-    checkADargument = function(funName, 
-                               argSym, 
-                               argName = NULL,
-                               returnType = FALSE){
-      argTypeText <- if(returnType) 
-        'returnType'
-      else
-        'argument'
-      if(argSym$type != 'double')
-        stop(paste0('The ', argName, ' ', argTypeText, ' of the ', funName, ' method is not a double.  Therefore this method cannot have derivatives enabled.'))
-      if(!(argSym$nDim %in% c(0,1)))
-        stop(paste0('The ', argName, ' ', argTypeText, ' of the ', funName, ' method must be a double scalar or double vector for derivatives to be enabled.'))
-      if((argSym$nDim == 1) && is.na(argSym$size)) stop(paste0('To enable derivatives, size must be given for the ', argName, ' ', argTypeText, ' of the ', funName,
-                                                               ' method,  e.g. double(1, 3) for a length 3 vector.' ))
-    },
-    
+    ## addTypeTemplateFunction = function( funName ) {
+    ##   newFunName <- paste0(funName, '_AD_')
+    ##   regularFun <- memberCppDefs[[funName]]
+    ##   memberCppDefs[[newFunName]] <<- makeTypeTemplateFunction(newFunName, regularFun)
+    ##   invisible(NULL)
+    ## },
+    ## addADtapingFunction = function( funName,
+    ##                                 independentVarNames,
+    ##                                 dependentVarNames ) {
+    ##   ADfunName <- paste0(funName, '_AD_')
+    ##   regularFun <- memberCppDefs[[funName]]
+    ##   newFunName <- paste0(funName, '_callForADtaping_')
+    ##   memberCppDefs[[newFunName]] <<- makeADtapingFunction(newFunName,
+    ##                                                          regularFun,
+    ##                                                          ADfunName,
+    ##                                                          independentVarNames,
+    ##                                                          dependentVarNames,
+    ##                                                          isNode = FALSE,
+    ##                                                          memberCppDefs)
+    ##   invisible(NULL)
+    ## },
+    ## addADmethodMacros = function(funName, args) {
+    ##   ## fun will be named foo_derivs_.
+    ##   newName <- paste0(funName, "_derivs_")
+    ##   memberCppDefs[[newName]] <<- cppADmethodMacroClass$new(name = newName,
+    ##                                                            base_name = funName,
+    ##                                                            args = args)
+    ##   self$functionNamesForInterface <<- c(self$functionNamesForInterface, newName)
+    ##   invisible(NULL)
+    ## },
+    ## addADargumentTransferFunction = function( funName, independentVarNames ) {
+    ##   newFunName <- paste0(funName, '_ADargumentTransfer_')
+    ##   regularFun <- memberCppDefs[[funName]]
+    ##   funIndex <- which(NCinternals(self$Compiler$NCgenerator)$enableDerivs == funName) ## needed for correct index for allADtapePtrs_
+    ##   memberCppDefs[[newFunName]] <<- makeADargumentTransferFunction(newFunName,
+    ##                                                                    regularFun,
+    ##                                                                    independentVarNames,
+    ##                                                                    funIndex
+    ##                                                                    #, parentsSizeAndDims #was relevant to nodeFuns
+    ##   )
+    ## },
+    ## addStaticInitClass = function() {
+    ##   internalCppDefs[['staticInitClass']] <<- makeStaticInitClass(self,
+    ##                                                              NCinternals(self$Compiler$NCgenerator)$enableDerivs) ##
+    ##   invisible(NULL)
+    ## },
+    ## addADclassContentOneFun = function(funName) {
+    ##   outSym <- self$Compiler$NFcompilers[[funName]]$returnSymbol
+    ##   checkADargument(funName, outSym, returnType = TRUE)
+    ##   if(length(self$Compiler$NFcompilers[[funName]]$nameSubList) == 0)
+    ##     stop(paste0('Derivatives cannot be enabled for method ',
+    ##                 funName,
+    ##                 ', since this method has no arguments.'))
+    ##   ## Not updated:
+    ##   if(FALSE) {
+    ##     if(!nfProc$isNode){
+    ##       for(iArg in seq_along(functionDefs[[funName]]$args$symbols)){
+    ##         arg <- functionDefs[[funName]]$args$symbols[[iArg]]
+    ##         argSym <- nfProc$RCfunProcs[[funName]]$compileInfo$origLocalSymTab$getSymbolObject(arg$name)
+    ##         argName <- names(nfProc$RCfunProcs[[funName]]$nameSubList)[iArg]
+    ##         checkADargument(funName, argSym, argName = argName)
+    ##       }
+    ##     }
+    ##   }
+    ##   addTypeTemplateFunction(funName)
+    ##   independentVarNames <- self$memberCppDefs[[funName]]$args$getSymbolNames() ## Is this the right layer?
+    ##   if(FALSE)
+    ##     if(nfProc$isNode) independentVarNames <- independentVarNames[-1]  ## remove ARG1_INDEXEDNODEINFO__ from independentVars
+
+    ##   addADtapingFunction(funName,
+    ##                       independentVarNames = independentVarNames,
+    ##                       dependentVarNames = 'ANS_' )
+    ##   addADargumentTransferFunction(funName,
+    ##                                 independentVarNames = independentVarNames)
+    ##   addADmethodMacros(funName,
+    ##                     self$memberCppDefs[[funName]]$args)
+    ## },
+    ## checkADargument = function(funName,
+    ##                            argSym,
+    ##                            argName = NULL,
+    ##                            returnType = FALSE){
+    ##   argTypeText <- if(returnType)
+    ##     'returnType'
+    ##   else
+    ##     'argument'
+    ##   if(argSym$type != 'double')
+    ##     stop(paste0('The ', argName, ' ', argTypeText, ' of the ', funName, ' method is not a double.  Therefore this method cannot have derivatives enabled.'))
+    ##   if(!(argSym$nDim %in% c(0,1)))
+    ##     stop(paste0('The ', argName, ' ', argTypeText, ' of the ', funName, ' method must be a double scalar or double vector for derivatives to be enabled.'))
+    ##   if((argSym$nDim == 1) && is.na(argSym$size)) stop(paste0('To enable derivatives, size must be given for the ', argName, ' ', argTypeText, ' of the ', funName,
+    ##                                                            ' method,  e.g. double(1, 3) for a length 3 vector.' ))
+    ## },
+    ## addADclassContent = function() {
+    ##   self$Hincludes <- c(
+    ##     nCompilerIncludeFile("nCompiler_CppAD.h"), Hincludes)
+    ##   self$symbolTable$addSymbol(cppVectorOfADFunPtr(name = 'allADtapePtrs_', static = TRUE))
+    ##   self$symbolTable$addSymbol(cppADinfo(name = 'ADtapeSetup'))
+    ##   for(adEnabledFun in NCinternals(self$Compiler$NCgenerator)$enableDerivs){
+    ##     addADclassContentOneFun(adEnabledFun)
+    ##   }
+    ##   ## static declaration in the class definition
+    ##   ## globals to hold the global static definition
+    ##   globals <- cppGlobalObjectClass$new(name = paste0('staticGlobals_', name),
+    ##                                       staticMembers = TRUE)
+    ##   globals$symbolTable$addSymbol(cppVectorOfADFunPtr(name = paste0(name,'::allADtapePtrs_')))
+    ##   internalCppDefs[['allADtapePtrs_']] <<- globals
+    ##   addStaticInitClass()
+    ##   invisible(NULL)
+    ## },
     addADclassContent = function() {
-      self$Hincludes <- c(
-        nCompilerIncludeFile("nCompiler_CppAD.h"), Hincludes)
-      self$symbolTable$addSymbol(cppVectorOfADFunPtr(name = 'allADtapePtrs_', static = TRUE))
-      self$symbolTable$addSymbol(cppADinfo(name = 'ADtapeSetup'))
-      for(adEnabledFun in NCinternals(self$Compiler$NCgenerator)$enableDerivs){
-        addADclassContentOneFun(adEnabledFun)
-      }
-      ## static declaration in the class definition
-      ## globals to hold the global static definition
-      globals <- cppGlobalObjectClass$new(name = paste0('staticGlobals_', name),
-                                          staticMembers = TRUE)
-      globals$symbolTable$addSymbol(cppVectorOfADFunPtr(name = paste0(name,'::allADtapePtrs_')))
-      internalCppDefs[['allADtapePtrs_']] <<- globals
-      addStaticInitClass()
-      invisible(NULL)
+      addADclassContent_impl(self)
     },
     buildAll = function(interfaceCalls = TRUE, where = where) {
       super$buildAll(where)
+      buildDefaultConstructor()
       if(isTRUE(get_nOption('serialize')))
         addSerialization()
-      if(isTRUE(get_nOption('automaticDerivatives')))
+      if(isTRUE(get_nOption('enableDerivs')))
         addADclassContent()
       addGenericInterface(interfaceCalls = interfaceCalls)
     }
   )
 )
+
+addADclassContent_impl <- function(cppDef) {
+  for(i in seq_along(cppDef$Compiler$NFcompilers)) {
+    derivsContent <- cppDef$Compiler$NFcompilers[[i]]$auxEnv$derivsContent
+    ADtapeMgrSymbols <- derivsContent$ADtapeMgrSymbols
+    if(!is.null(ADtapeMgrSymbols)) {
+      for(iSym in seq_along(ADtapeMgrSymbols))
+        cppDef$symbolTable$addSymbol(ADtapeMgrSymbols[[iSym]]$clone(deep=TRUE))
+    }
+    ADconstructorInits <- derivsContent$ADconstructorInits
+    if(!is.null(ADconstructorInits)) {
+      constructorDef <- cppDef$memberCppDefs[[ cppDef$name ]]
+      if(is.null(constructorDef))
+        warning("Could not find class constructor for ", cppDef$name, " when setting up AD tape managers.")
+      constructorDef$initializerList <- c(constructorDef$initializerList,
+                                          ADconstructorInits)
+    }
+  }
+}
