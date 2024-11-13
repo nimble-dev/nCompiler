@@ -150,9 +150,13 @@ cppNamespaceClass <- R6::R6Class(
 ## The generator can be called via .Call to return an external pointer to a new object of the class
 ## The finalizer is the finalizer assigned to the object when the external pointer is made
 buildSEXPgenerator_impl <- function(self) {
-  self$Hincludes <- c(self$Hincludes
+#  self$Hincludes <- c(self$Hincludes
                       # , nCompilerIncludeFile("nCompiler_class_factory.h")
-                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+#                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+  self$Hpreamble <- c(self$Hpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+  self$CPPpreamble <- c(self$CPPpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
   returnLine <- paste0("return CREATE_NEW_NCOMP_OBJECT(",self$name,");")
   allCodeList <-
     list(
@@ -178,8 +182,10 @@ buildSEXPgenerator_impl <- function(self) {
 # CnCenv (compiled nClass environment) that all loadedObjectEnv objects for
 # a particular nClass will use as a parent environment.
 build_set_nClass_env_impl <- function(self) {
-  self$Hincludes <- c(self$Hincludes
-                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+  #  self$Hincludes <- c(self$Hincludes
+  #                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
+  self$Hpreamble <- c(self$Hpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
   setterLine <- paste0("SET_CNCLASS_ENV(",self$name,", env);")
   allCodeList <-
     list(
@@ -236,8 +242,12 @@ addGenericInterface_impl <- function(self) {
   self$addInheritance(paste0("genericInterfaceC<",
                              name,
                              ">"))
-  self$Hincludes <- c(self$Hincludes,
-                      nCompilerIncludeFile("nCompiler_class_interface.h"))
+#  self$Hincludes <- c(self$Hincludes,
+#                      nCompilerIncludeFile("nCompiler_class_interface.h"))
+  self$Hpreamble <- c(self$Hpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+  self$CPPpreamble <- c(self$CPPpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
 
   methodNames <- names(self$memberCppDefs)
   includeBool <- methodNames %in% self$functionNamesForInterface
@@ -308,6 +318,13 @@ addGenericInterface_impl <- function(self) {
   invisible(NULL)
 }
 
+cppClassClass_init_impl <- function(cppDef) {
+  cppDef$Hincludes <- c(cppDef$Hincludes, '<Rinternals.h>',
+                        nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
+#                        nCompilerIncludeFile("nCompiler_core.h"))
+  cppDef$CPPincludes <- c(cppDef$CPPincludes, '<iostream>')
+}
+
 # cppClassClass is the cppDef for a C++ class definition.
 # It is the base class for the cppDef hierarchy for C++ nClass content.
 #
@@ -338,8 +355,8 @@ cppClassClass <- R6::R6Class(
     
     initialize = function(...) {
       ##useGenerator <<- TRUE
-      Hincludes <<- c(Hincludes, '<Rinternals.h>', nCompilerIncludeFile("nCompiler_core.h"))
-      CPPincludes <<- c(CPPincludes, '<iostream>')
+      force(self)
+      cppClassClass_init_impl(self)
       super$initialize(...)
     },
     getHincludes = function() {
@@ -539,6 +556,15 @@ cppCodeBlockClass <- R6::R6Class(
   )
 )
 
+cppFunctionClass_init_impl <- function(cppDef) {
+  cppDef$CPPincludes <- as.list(
+    c(cppDef$CPPincludes,
+      '<iostream>',
+      nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
+    #                      nCompilerIncludeFile("nCompiler_core.h"))
+  )
+}
+
 ## C++ function definitions
 ##
 cppFunctionClass <- R6::R6Class(
@@ -560,11 +586,7 @@ cppFunctionClass <- R6::R6Class(
                 commentsAbove = character(),
                 initialize = function(...) {
                   self$name <- character()
-                  self$CPPincludes <- as.list(
-                    c(self$CPPincludes,
-                      '<iostream>',
-                      nCompilerIncludeFile("nCompiler_core.h"))
-                  )
+                  cppFunctionClass_init_impl(self)
                   dotsList <- list(...)
                   for(v in names(dotsList))
                     self[[v]] <- dotsList[[v]]

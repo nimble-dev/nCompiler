@@ -1,6 +1,10 @@
 library(nCompiler)
 library(testthat)
 
+message("There will be a problem with serialization and pre-defined nClasses.\n",
+        "I think all serialization code needs to be #ifdef protected so that in\n",
+        "future compilations it will be dynamically included or not.")
+
 old_serialize_option <- get_nOption("serialize")
 set_nOption("serialize", TRUE)
 
