@@ -1,8 +1,10 @@
 global_R_interface_cppDef <-
   cppMacroCallClass$new(
-                      Hincludes = c(nCompilerIncludeFile("nCompiler_class_interface.h"),
-                                    nCompilerIncludeFile("shared_ptr_holder.h")
-                                    ),
+#                      Hincludes = c(nCompilerIncludeFile("nCompiler_class_interface.h"),
+#                                    nCompilerIncludeFile("shared_ptr_holder.h")
+                                        #                                    ),
+                      Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+                      Hpreamble = "#define NCOMPILER_USES_NCLASS_INTERFACE",
                       cppContent = paste0(
                         "inline genericInterfaceBaseC *get_genericInterfaceBaseC(SEXP Xptr) {\n",
                         "  return reinterpret_cast<genericInterfaceBaseC*>\n",

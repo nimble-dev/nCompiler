@@ -1,0 +1,6 @@
+#ifndef NCOMPILER_RCPP_FORWARD_DECLARATIONS_H_
+#define NCOMPILER_RCPP_FORWARD_DECLARATIONS_H_
+
+// Actually the only need for this is in Eigen stuff.
+
+#endif // NCOMPILER_RCPP_FORWARD_DECLARATIONS_H_

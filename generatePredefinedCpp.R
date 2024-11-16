@@ -15,6 +15,13 @@
 #
 # 4. Load nCompiler and do nCompile(my_predefined, control = list(generate_predefined = TRUE)).
 #    Be sure you know where code is being generated (default is tempdir(), can be changed by dir argument to nCompile).
+#    Note that the results from nCompile(my_predefined, control = list(generate_predefined = TRUE)) will not result in
+#     usable objects right in the current R session. That is because the generated code will lack the interface calls such as
+#     get_value, set_value, and call_method. The reason is that these must only be created once in any compilation,
+#     and when the predefined nClass is used later, it should not be the place where those functions are defined.
+#     If you want to test the predefined class, include some other nFunction or nClass in the call to nCompile.
+#     Since that will not be predefined, it will trigger inclusion of the interface functions.
+#     See test-predefined.R for examples.
 #
 # 5. Copy my_predefined.h (or my_predefined_c_.h) to my_predefined_pkg.h in package source code (i.e. inst/include/nCompiler).
 #

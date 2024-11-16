@@ -1,3 +1,58 @@
+cpp_nFunctionClass_init_impl <- function(cppDef) {
+  usingEigen <- TRUE
+  pluginIncludes <- if(usingEigen) {
+                      nCompiler_Eigen_plugin()$includes
+                    } else {
+                      nCompiler_plugin()$includes
+                    }
+  cppDef$Hpreamble <- pluginIncludes
+  cppDef$Hpreamble <- c(cppDef$Hpreamble,
+                        "#define NCOMPILER_USES_EIGEN")
+  cppDef$CPPpreamble <- pluginIncludes
+  cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
+                        "#define NCOMPILER_USES_EIGEN")
+  cppDef$Hincludes <- c(cppDef$Hincludes,
+                        nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
+  ## cppDef$CPPincludes <- c(cppDef$CPPincludes,
+  ##                       nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
+  ## cppDef$Hincludes <- c(cppDef$Hincludes,
+  ##                     "<Rinternals.h>",
+  ##                     nCompilerIncludeFile("nCompiler_Eigen.h"),
+  ##                     nCompilerIncludeFile("nCompiler_TBB.h")
+  ##                     )
+  ## cppDef$CPPincludes <- c(cppDef$CPPincludes,
+  ##                       nCompilerIncludeFile("nCompiler_Eigen.h"),
+  ##                       nCompilerIncludeFile("nCompiler_TBB.h"),
+  ##                       '<Rmath.h>',
+  ##                       '<math.h>'
+  ##                       )
+  usingEigen <- TRUE
+  if(usingEigen) {
+    checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
+                                 quiet = TRUE)
+    if(length(checkPackage)!=2) {
+      stop("Packages RcppEigenAD and Rcereal must be installed.")
+    }
+    ## require(RcppEigenAD)
+    ## require(Rcereal)
+                                        # We can put includes here that need to occur after the file's own .h is included.
+    cppDef$CPPusings <- c(cppDef$CPPusings,
+                     #   paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
+                        "using namespace Rcpp;",
+                        "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
+                        "// [[Rcpp::depends(RcppEigenAD)]]",
+                        "// [[Rcpp::depends(RcppParallel)]]",
+                        "// [[Rcpp::depends(nCompiler)]]",
+                        "// [[Rcpp::depends(Rcereal)]]")
+  } else {
+    cppDef$CPPusings <- c(cppDef$CPPusings,
+                        "using namespace Rcpp;",
+                        "// [[Rcpp::plugins(nCompiler_plugin)]]",
+                        "// [[Rcpp::depends(nCompiler)]]")
+  }
+  NULL
+}
+
 cpp_nFunctionClass <- R6::R6Class(
   classname = 'cpp_nFunctionClass',
   inherit = cppFunctionClass,
@@ -10,50 +65,7 @@ cpp_nFunctionClass <- R6::R6Class(
       ## conflicting protocols:.nCompiler inserts #include later
       ## inline/Rcpp plugins do not, so we strip them out here
       ## so that they can be inserted later.
-      usingEigen <- TRUE
-      pluginIncludes <- if(usingEigen) {
-        nCompiler_Eigen_plugin()$includes
-      } else {
-        nCompiler_plugin()$includes
-      }
-      self$Hpreamble <- pluginIncludes
-      self$CPPpreamble <- pluginIncludes
-      self$Hincludes <- c(self$Hincludes,
-                          "<Rinternals.h>",
-                          nCompilerIncludeFile("nCompiler_Eigen.h"),
-                          nCompilerIncludeFile("nCompiler_TBB.h")
-      )
-      self$CPPincludes <- c(self$CPPincludes,
-                            nCompilerIncludeFile("nCompiler_Eigen.h"),
-                            nCompilerIncludeFile("nCompiler_TBB.h"),
-                            '<Rmath.h>',
-                            '<math.h>'
-      )
-      usingEigen <- TRUE
-      if(usingEigen) {
-        checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
-                                     quiet = TRUE)
-        if(length(checkPackage)!=2) {
-          stop("Packages RcppEigenAD and Rcereal must be installed.")
-        }
-        ## require(RcppEigenAD)
-        ## require(Rcereal)
-        # We can put includes here that need to occur after the file's own .h is included.
-        self$CPPusings <- c(self$CPPusings,
-                            paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
-                            "using namespace Rcpp;",
-                            "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
-                            "// [[Rcpp::depends(RcppEigenAD)]]",
-                            "// [[Rcpp::depends(RcppParallel)]]",
-                            "// [[Rcpp::depends(nCompiler)]]",
-                            "// [[Rcpp::depends(Rcereal)]]")
-      } else {
-        self$CPPusings <- c(self$CPPusings,
-                            "using namespace Rcpp;",
-                            "// [[Rcpp::plugins(nCompiler_plugin)]]",
-                            "// [[Rcpp::depends(nCompiler)]]")
-        
-      }
+      cpp_nFunctionClass_init_impl(self)
       ## nCompiler_plugin()$includes already have #include, so they go here
       super$initialize(...)
     },

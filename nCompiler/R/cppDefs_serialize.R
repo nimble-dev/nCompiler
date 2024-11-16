@@ -2,12 +2,16 @@
 
 global_serialization_cppDef <-
   cppMacroCallClass$new(
-    Hpreamble = nCompiler_plugin()$includes,
-    CPPpreamble = nCompiler_plugin()$includes,
-    Hincludes = c("<Rinternals.h>",
-              nCompilerIncludeFile("nCompiler_class_interface.h"),
-              nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
-              nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
+    Hpreamble = c(nCompiler_plugin()$includes,
+                  "#define NCOMPILER_USES_CEREAL"),
+    CPPpreamble = c(nCompiler_plugin()$includes,
+                    "#define NCOMPILER_USES_CEREAL"),
+    ## Hincludes = c("<Rinternals.h>",
+    ##           nCompilerIncludeFile("nCompiler_class_interface.h"),
+    ##           nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
+    ##           nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
+
+
     CPPusings = c("using namespace Rcpp;",
                   "// [[Rcpp::plugins(nCompiler_plugin)]]",
                   "// [[Rcpp::depends(nCompiler)]]",
@@ -73,6 +77,10 @@ addSerialization_impl <- function(self) { #},
   ##           CEREAL_NVP(x),
   ##           CEREAL_NVP(y));
   ## }
+  self$Hpreamble = c(self$Hpreamble,
+                     "#define NCOMPILER_USES_CEREAL")
+  self$CPPpreamble = c(self$CPPpreamble,
+                       "#define NCOMPILER_USES_CEREAL")
 
   ## construct the central call to archive:
   namesToArchive <- self$symbolTable$getSymbolNames()

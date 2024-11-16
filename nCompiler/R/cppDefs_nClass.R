@@ -1,5 +1,52 @@
 ## cpp_nClassBaseClass defines commonalities for potential future use.
 ## Currently, it is only inherited by cpp_nClassClass, below.
+
+nClassBaseClass_init_impl <- function(cppDef) {
+  usingEigen <- TRUE
+  pluginIncludes <- if(usingEigen) {
+                      nCompiler_Eigen_plugin()$includes
+                    } else {
+                      nCompiler_plugin()$includes
+                    }
+  cppDef$Hpreamble <- pluginIncludes
+  cppDef$Hpreamble <- c(cppDef$Hpreamble,
+                        "#define NCOMPILER_USES_EIGEN")
+  cppDef$CPPpreamble <- pluginIncludes
+  cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
+                        "#define NCOMPILER_USES_EIGEN")
+
+  cppDef$Hincludes <- c(cppDef$Hincludes,
+                      "<Rinternals.h>")#,
+#                      nCompilerIncludeFile("nCompiler_Eigen.h"),
+#                      nCompilerIncludeFile("nCompiler_TBB.h"))
+  CPPincludes <<- list()
+  usingEigen <- TRUE
+  ## The following need to be here, not just in cpp_nFunction, in case there is a nClass with no methods.
+  if(usingEigen) {
+    checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
+                                 quiet = TRUE)
+    if(length(checkPackage)!=2) {
+      stop("Packages RcppEigenAD and Rcereal must be installed.")
+    }
+    ##                require(RcppEigenAD)
+    ##                require(Rcereal)
+    cppDef$CPPusings <- c(cppDef$CPPusings,
+                        ##paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
+                        "using namespace Rcpp;",
+                        "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
+                        "// [[Rcpp::depends(RcppEigenAD)]]",
+                        "// [[Rcpp::depends(RcppParallel)]]",
+                        "// [[Rcpp::depends(nCompiler)]]",
+                        "// [[Rcpp::depends(Rcereal)]]")
+  } else {
+    cppDef$CPPusings <- c(cppDef$CPPusings,
+                        "using namespace Rcpp;",
+                        "// [[Rcpp::plugins(nCompiler_plugin)]]",
+                        "// [[Rcpp::depends(nCompiler)]]")
+  }
+  NULL
+}
+
 cpp_nClassBaseClass <- R6::R6Class(
   'cpp_nClassBaseClass',
   inherit = cppClassClass,##'cppNamedObjectsClass',
@@ -34,45 +81,9 @@ cpp_nClassBaseClass <- R6::R6Class(
     initialize = function(Compiler,
                           debugCpp = FALSE,
                           fromModel = FALSE, ...) {
-      usingEigen <- TRUE
-      pluginIncludes <- if(usingEigen) {
-        nCompiler_Eigen_plugin()$includes
-      } else {
-        nCompiler_plugin()$includes
-      }
-      self$Hpreamble <- pluginIncludes
-      self$CPPpreamble <- pluginIncludes
-      
-      self$Hincludes <- c(self$Hincludes,
-                          "<Rinternals.h>",
-                          nCompilerIncludeFile("nCompiler_Eigen.h"),
-                          nCompilerIncludeFile("nCompiler_TBB.h"))
-      CPPincludes <<- list()
-      usingEigen <- TRUE
-      ## The following need to be here, not just in cpp_nFunction, in case there is a nClass with no methods.
-      if(usingEigen) {
-        checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
-                                     quiet = TRUE)
-        if(length(checkPackage)!=2) {
-          stop("Packages RcppEigenAD and Rcereal must be installed.")
-        }
-        ##                require(RcppEigenAD)
-        ##                require(Rcereal)
-        self$CPPusings <- c(self$CPPusings,
-                            paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
-                            "using namespace Rcpp;",
-                            "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
-                            "// [[Rcpp::depends(RcppEigenAD)]]",
-                            "// [[Rcpp::depends(RcppParallel)]]",
-                            "// [[Rcpp::depends(nCompiler)]]",
-                            "// [[Rcpp::depends(Rcereal)]]")
-      } else {
-        self$CPPusings <- c(self$CPPusings,
-                            "using namespace Rcpp;",
-                            "// [[Rcpp::plugins(nCompiler_plugin)]]",
-                            "// [[Rcpp::depends(nCompiler)]]")
-      }
-      
+      #self$Hpreamble <- NULL # Evidently we need to just touch self or it doesn't exist yet for the next call
+      force(self)
+      nClassBaseClass_init_impl(self)
       super$initialize(...) ## must call this first because it sets objectDefs to list()
       if(!missing(Compiler))
         process_Compiler(Compiler,
