@@ -2,9 +2,11 @@
 #define _NCOMP_SERIALIZATION_MGR
 
 #include <nCompiler/nClass_cereal/archives.h>
-#include <nCompiler/nClass_cereal/Rcpp_types_cereal.h>
+#include <nCompiler/nClass_cereal/post_Rcpp/Rcpp_types_cereal.h>
 #include <nCompiler/nClass_interface/generic_class_interface.h>
+#include <nCompiler/nClass_interface/post_Rcpp/generic_class_interface_Rcpp_steps.h>
 #include <nCompiler/nClass_interface/loadedObjectsHook.h>
+#include <nCompiler/nClass_interface/post_Rcpp/loadedObjectHookC_impl.h>
 #include <nCompiler/nClass_interface/nClass_factory.h>
 // Rough draft of C++ serialization manager class
 // I want to make this as similar as possible to the design of an nClass

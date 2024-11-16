@@ -48,7 +48,7 @@
       #define eigen_assert(X) {if(!eigen_did_assert && !(X)) { eigen_did_assert = true; throw std::runtime_error(#X); }}
     #endif
 
-    #include <RcppEigen.h>
+    #include <RcppEigenForward.h>
     #include <nCompiler/EigenTensor_extensions/EigenTensor_extensions_pre_Rcpp.h>
     #include <nCompiler/EigenTensor_Rcpp_extensions/EigenTensor_Rcpp_extensions_pre_Rcpp.h>
 

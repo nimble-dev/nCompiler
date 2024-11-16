@@ -30,6 +30,9 @@
 // Main RCPP include
 #include <Rcpp.h>
 // We will want to remove using namespace statements.
+#ifdef NCOMPILER_USES_EIGEN
+#include <RcppEigenWrap.h>
+#endif
 using namespace Rcpp;
 
  // I believe the next two are defensive, so that if for some reason

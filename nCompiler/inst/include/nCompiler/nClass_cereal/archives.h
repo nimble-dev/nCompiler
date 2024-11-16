@@ -7,6 +7,6 @@
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/types/vector.hpp>
 #include <type_traits>
-#include "Rcpp_types_cereal.h"
+//#include "Rcpp_types_cereal.h"
 
 #endif // ARCHIVES_H_

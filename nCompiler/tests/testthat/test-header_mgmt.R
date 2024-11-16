@@ -14,6 +14,11 @@
 # OR possibly by relying on the packaging pathway when there are multiple things to compile.
 # Unfortunately the latter is not currently working.
 
+# Another potential problem is if an Rcpp type is a member variable of an nClass.
+# In that case, we need <Rcpp.h> included while still processing a generated .h file.
+# On the other hand, maybe declaring Rcpp variables is ok if not yet used?
+# I did have a problem with Rcpp:Environment even being declared, although
+# right now that is not an available type.
 library(nCompiler)
 library(testthat)
 
@@ -88,7 +93,8 @@ expect_equal(x, y)
 nc1 <- nClass(
   Cpublic = list(
     x = 'numericScalar',
-    y = 'RcppNumericVector'
+    y = 'RcppNumericVector',
+    z = 'RcppList'
   )
 )
 Cnc1 <- nCompile(nc1)
@@ -126,7 +132,7 @@ expect_equal(obj$foo(x), 1:3 + 1)
 
 # nClass, Eigen via method, with cereal
 nOptions(serialize=TRUE)
-nOptions(showCompilerOutput=TRUE)
+#nOptions(showCompilerOutput=TRUE)
 nc1 <- nClass(
   Cpublic = list(
     x = 'numericScalar',

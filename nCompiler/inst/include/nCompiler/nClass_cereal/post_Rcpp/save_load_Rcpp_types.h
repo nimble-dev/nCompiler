@@ -2,6 +2,7 @@
 #define NCOMPILER_CEREAL_SAVE_LOAD_RCPP_TYPES_H_
 
 #include <nCompiler/nClass_cereal/archives.h>
+#include "Rcpp_types_cereal.h"
 
 template<class Archive, class RcppType>
   void save_Rcpp_cereal(Archive & archive, RcppType const & m) {

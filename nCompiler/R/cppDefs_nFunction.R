@@ -49,7 +49,6 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
                         "using namespace Rcpp;",
                         "// [[Rcpp::plugins(nCompiler_plugin)]]",
                         "// [[Rcpp::depends(nCompiler)]]")
-
   }
   NULL
 }

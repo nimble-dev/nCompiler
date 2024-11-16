@@ -1,6 +1,8 @@
 #ifndef RCPP_TYPES_CEREAL_H_
 #define RCPP_TYPES_CEREAL_H_
 
+#include <nCompiler/nClass_cereal/archives.h>
+
 template <class possibleRcppType>
 struct is_RcppType {
   static const bool value = false;
