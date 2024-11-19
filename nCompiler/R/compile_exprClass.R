@@ -268,7 +268,7 @@ replaceArgInCaller <- function(expr, value) {
 
 setArg <- function(expr, ID, value, add = FALSE) {
   arg_names <- names(expr$args)
-  expr$args[[ID]] <- value
+  expr$args[ID] <- list(value)
   if(inherits(value, 'exprClass')) {
     if (is.character(ID)) {
       arg_name <- ID
@@ -497,7 +497,8 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
   expr$args <- NULL
   for(i in seq_along(match_res)) {
     if(i==1) next # "foo"
-    insertArg(expr = expr, ID=i-1, value = args[[match_res[[i]] ]], name = names(match_res)[i] )
+    insertArg(expr = expr, ID=i-1, value = args[[match_res[[i]] ]],
+              name = names(match_res)[i] )
   }
   formals_def <- formals(def)
   missing_names <- setdiff(names(formals_def), names(match_res)[-1] )
@@ -519,3 +520,10 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
   }
   expr
 }
+
+expr <- nParse(quote(foo(a = 1, NULL)))
+def <- \(a, b, c = 1) {}
+exprClass_match_call(def, expr)
+test <- exprClass_put_args_in_order(def, expr)
+test
+test$aux

@@ -180,7 +180,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nRep'),
   list(
-    match_def = function(x, times, length.out, each){},
+    matchDef = function(x, times, length.out, each){},
     labelAbstractTypes = list(
       handler = 'VectorReturnType',
       returnTypeCode = returnTypeCodes$promote),
@@ -202,7 +202,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nSeq'),
   list(
-    match_def = function(from, to, by, length.out) {},
+    matchDef = function(from, to, by, length.out) {},
     labelAbstractTypes = list(
       handler = 'Seq'),
     eigenImpl = list(
@@ -463,6 +463,8 @@ assignOperatorDef(
 assignOperatorDef(
   'cppLiteral',
   list(
+    matchDef = function(text, types) {},
+    compileArgs = "types",
     help = 'cppLiteral("x = y;") inserts x = y; directly into the C++ output.',
     labelAbstractTypes = list(handler = 'Literal'),
     cppOutput = list(handler = 'Literal')
@@ -844,7 +846,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nEigen',
   list(
-    match_def = function(x, symmetric, valuesOnly=FALSE) {},
+    matchDef = function(x, symmetric, valuesOnly=FALSE) {},
     labelAbstractTypes = list(
       handler = 'nEigen'
     )
@@ -875,7 +877,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nDerivs',
   list(
-    match_def = function(call, wrt, order, update = TRUE, reset = FALSE, roles) {},
+    matchDef = function(call, wrt, order, update = TRUE, reset = FALSE, roles) {},
     labelAbstractTypes = list(
       handler = 'nDerivs'
     ),

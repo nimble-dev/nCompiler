@@ -1,9 +1,14 @@
 
-cppLiteral <- function(text) {
-    template <- quote(cppLiteral(text))
-    template[[2]] <- text
-    template
-}
+## old version
+## cppLiteral <- function(text) {
+##     template <- quote(cppLiteral(text))
+##     template[[2]] <- text
+##     template
+## }
+##
+## potential new version
+## cppLiteral <- function(text, types) {match.call()} # only used for idempotentcy
+## wait to check if either would ever need to be evaluated in R.
 
 writeCode <- function(x, ...) writeLines(unlist(x), ...)
 
