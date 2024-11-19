@@ -432,15 +432,22 @@ namespace Eigen {
     typedef Dimensions Strides;
     static const int NumDims = internal::array_size<Strides>::value;
     typedef PlainObjectType ArgType; /* Defined for StridedTensorMap.  ArgType is a template parameter in StridingSlicingOp. Is this a correct replacement? */
+
     enum {
       // Alignment can't be guaranteed at compile time since it depends on the
       // slice offsets and sizes.
       IsAligned = false,
       PacketAccess = false,
       BlockAccess = false,
+      PreferBlockAccess = TensorEvaluator<ArgType, Device>::PreferBlockAccess,
       Layout = TensorEvaluator<ArgType, Device>::Layout,
       RawAccess = false
     };
+
+    //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
+    typedef internal::TensorBlockNotImplemented TensorBlock;
+    //===--------------------------------------------------------------------===//
+
   
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorEvaluator(const XprType& STM, const Device& device)
       : m_STM(STM),

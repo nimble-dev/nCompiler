@@ -53,7 +53,7 @@ Eigen::Tensor<double, 3>  STM4 ( Eigen::Tensor<double, 3> x )  {
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 3>  STM5 ( Eigen::Tensor<double, 3> x )  {
-  // This test checkes use of a map on the LHS of an assignment.
+  // This test checks use of a map on the LHS of an assignment.
   // Make a 3D tensor within the 3D origin
   Eigen::Tensor<double, 3> ans;
   ans = x; // just for dimensions
@@ -65,8 +65,7 @@ Eigen::Tensor<double, 3>  STM5 ( Eigen::Tensor<double, 3> x )  {
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 2>  STM6 ( Eigen::Tensor<double, 3> x )  {
-  // This test checkes use of a map on the LHS of an assignment.
-  // Make a 3D tensor within the 3D origin
+  // This test checks making a 2D tensor from a 3D map with singleton dimension.
   Eigen::Tensor<double, 2> ans;
   // x[2:5, 3, 2:3]
   ans = Eigen::MakeStridedTensorMap<2>::make(x, Eigen::MakeIndexBlocks(b__(1, 4), b__(2), b__(1, 2)));
@@ -75,8 +74,7 @@ Eigen::Tensor<double, 2>  STM6 ( Eigen::Tensor<double, 3> x )  {
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 2>  STM7 ( Eigen::Tensor<double, 3> x )  {
-  // This test checkes use of a map on the LHS of an assignment.
-  // Make a 3D tensor within the 3D origin
+  // This test checks making a 2D tensor from a 3D map with singleton dimension in first slot.
   Eigen::Tensor<double, 2> ans;
   // x[5, 1:3, 2:3]
   ans = Eigen::MakeStridedTensorMap<2>::make(x, Eigen::MakeIndexBlocks(b__(4), b__(0, 2), b__(1, 2)));
@@ -85,8 +83,7 @@ Eigen::Tensor<double, 2>  STM7 ( Eigen::Tensor<double, 3> x )  {
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 1>  STM8 ( Eigen::Tensor<double, 3> x )  {
-  // This test checkes use of a map on the LHS of an assignment.
-  // Make a 3D tensor within the 3D origin
+  // This test checks making a 1D tensor from a 3D map.
   Eigen::Tensor<double, 1> ans;
   // x[5, 1:3, 2]
   ans = Eigen::MakeStridedTensorMap<1>::make(x, Eigen::MakeIndexBlocks(b__(4), b__(0, 2), b__(1)));
@@ -95,7 +92,7 @@ Eigen::Tensor<double, 1>  STM8 ( Eigen::Tensor<double, 3> x )  {
 
 // [[Rcpp::export]]
 Eigen::Tensor<double, 2>  STM9 ( Eigen::Tensor<double, 3> x )  {
-  // This test checkes use of a map on the LHS of an assignment.
+  // This test checks making a 1D tensor from a 3D map with a blank.
   // Make a 3D tensor within the 3D origin
   Eigen::Tensor<double, 2> ans;
   // x[5, , 2:3]

@@ -1,19 +1,8 @@
-#include <RcppEigen.h>
-#include <Rcpp.h>
+#define NCOMPILER_USES_EIGEN
+#define NCOMPILER_USES_NCLASS_INTERFACE
 
-#ifndef BEGIN_RCPP
-#define BEGIN_RCPP
-#endif
+#include <nCompiler/nCompiler_omnibus_first_cpp.h>
 
-#ifndef END_RCPP
-#define END_RCPP
-#endif
-
-using namespace Rcpp;
-#ifndef R_NO_REMAP
-#define R_NO_REMAP
-#endif
-#include <nCompiler/nCompiler_Eigen.h>
 #include <Rmath.h>
 #include <math.h>
 // #include <nCompiler/cWiseUnary_external.cpp>
