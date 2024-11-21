@@ -768,7 +768,7 @@ inLabelAbstractTypesEnv(
       code_type <- "integer"
     } else if(length(code$args) == 1 && ('by' %in% names(code$args))) {
 #      code$type <- symbolBasic$new(nDim = 1, type = 'double')
-      code_type <- "integer"
+      code_type <- "double"
     } else {
       fromProvided <- 'from' %in% names(code$args)
       toProvided <- 'to' %in% names(code$args)

@@ -1,0 +1,29 @@
+Nov 2024
+I am moving old tests from v1tests up to testthat one by one with checking and fixing or updating.
+Often I am putting a message()d note at the top about status.
+I am not putting broken tests in place, except where a file is marked NOTWORKING.
+
+Tests that do not need to be retained:
+
+test-compilerStages -- lacks clear tests and is weird and old
+
+test-compilerStages-setToEigen -- ditto
+
+test-cpp_nFunctionClass -- has one narrow use case of the inner class that is so out of date that it breaks. Now we can consider that full pipeline tests of compilation test the class. Or we can add narrower unit tests later based on stable class features.
+
+test-header_mgmt -- This is a relatively recent file created when I reorganized header management. However, I think as a test file it may be superfluous. Can refer to the file in v1tests.
+
+test-labelAbstractTypes -- in same group as test-compilerStages-setToEigen, maybe deprecate.
+   (should have been called test-compilerStages-labelAbstractTypes)
+
+test-math -- DEFERRED BECAUSE IT IS SO BIG. DEF IMP.
+
+test-nCompile_nClass -- I think this should be deprecated with nCompile becoming the single pathway
+
+test-nCompile_nFunction -- ditto
+
+test-normalizeCalls -- not sure if this should stand as its own test. It was a development working file.
+
+test-setInputOutputTpes -- again this is a compiler stage and not sure should test separately.
+
+test-substituteMangledArgumentNames -- ditto

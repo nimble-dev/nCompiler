@@ -1,14 +1,14 @@
 
-## old version
-## cppLiteral <- function(text) {
-##     template <- quote(cppLiteral(text))
+# This seemingly redundant or idempotent function makes it easier to code. E.g.
+# nParse(cppLiteral(paste("some code with a ", var)))
+# This gets the expressions evaluated.
+# Well... I'm trying to not need this.
+## cppLiteral <- function(text, types = NULL) {
+##     template <- quote(cppLiteral(text, types))
 ##     template[[2]] <- text
+##     template[[3]] <- types
 ##     template
 ## }
-##
-## potential new version
-## cppLiteral <- function(text, types) {match.call()} # only used for idempotentcy
-## wait to check if either would ever need to be evaluated in R.
 
 writeCode <- function(x, ...) writeLines(unlist(x), ...)
 

@@ -1,4 +1,4 @@
-# Works
+# (These work when run directly, but not when run through test_package().)
 
 test_that(
   "Basic and full interfaces work",

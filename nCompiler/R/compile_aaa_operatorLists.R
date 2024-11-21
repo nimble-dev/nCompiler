@@ -464,7 +464,7 @@ assignOperatorDef(
   'cppLiteral',
   list(
     matchDef = function(text, types) {},
-    compileArgs = "types",
+    compileArgs = c("text","types"),
     help = 'cppLiteral("x = y;") inserts x = y; directly into the C++ output.',
     labelAbstractTypes = list(handler = 'Literal'),
     cppOutput = list(handler = 'Literal')

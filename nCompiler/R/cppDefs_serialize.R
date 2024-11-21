@@ -115,23 +115,24 @@ addSerialization_impl <- function(self) { #},
   symbolTable = symbolTableClass$new(),
   skipBrackets = TRUE
 )
-, returnType = nCompiler:::cppVoid()
+, returnType = cppVoid()
 )
   self$memberCppDefs[["_SERIALIZE_"]] <- serialize_method
 
   ##
-  make_deserialized_return_SEXP_method <- nCompiler:::cppFunctionClass$new(
+  inner_code <- substitute(cppLiteral(MSG),
+                           list(MSG = paste0(
+                                  "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
+                                )))
+  make_deserialized_return_SEXP_method <- cppFunctionClass$new(
     name = "make_deserialized_return_SEXP"
-  , args = nCompiler:::symbolTableClass$new()
-   , code = nCompiler:::cppCodeBlockClass$new(
-     code = nCompiler:::nParse(nCompiler:::cppLiteral(
-       paste0(
-         "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
-       ))),
-     symbolTable = nCompiler:::symbolTableClass$new(),
+  , args = symbolTableClass$new()
+   , code = cppCodeBlockClass$new(
+     code = nParse(inner_code),
+     symbolTable = symbolTableClass$new(),
      skipBrackets = TRUE
    )
-   , returnType = nCompiler:::cppSEXP()
+   , returnType = cppSEXP()
   )
   self$memberCppDefs[["make_deserialized_return_SEXP"]] <- make_deserialized_return_SEXP_method
   

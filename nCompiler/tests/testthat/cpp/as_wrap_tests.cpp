@@ -1,10 +1,7 @@
-#include <RcppEigen.h>
-#include <Rcpp.h>
-#ifndef R_NO_REMAP
-#define R_NO_REMAP
-#endif
+#define NCOMPILER_USES_EIGEN
 
-#include <nCompiler/nCompiler_Eigen.h>
+#include<nCompiler/nCompiler_omnibus_first_cpp.h>
+
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(nCompiler)]]
@@ -16,7 +13,7 @@ BEGIN_RCPP
 // This is necessary to trigger the delayed export of x.
 // This would normally be done when calling the actual function of interest.
  Eigen::Tensor<double, 3> y = Eigen::Tensor<double, 3>(x);
- SEXP Sans; // Rcpp:Robject Sans 
+ SEXP Sans; // Rcpp:Robject Sans
  Sans = Rcpp::wrap(y);
  return Sans;
 END_RCPP
@@ -29,9 +26,8 @@ BEGIN_RCPP
 // This is necessary to trigger the delayed export of x.
 // This would normally be done when calling the actual function of interest.
  Eigen::Tensor<double, 3> y = Eigen::Tensor<double, 3>(x);
- SEXP Sans; // Rcpp:Robject Sans 
+ SEXP Sans; // Rcpp:Robject Sans
  Sans = Rcpp::wrap(y);
  return Sans;
 END_RCPP
 }
-

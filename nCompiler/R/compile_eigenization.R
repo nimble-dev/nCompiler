@@ -1012,8 +1012,9 @@ inEigenizeEnv(
       ), call. = FALSE)
     }
     if(length(code$args) == 0) {
-      #insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
-      code$name <- 'nSeqEmpty'
+      insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
+      insertArg(code, 2, copyExprClass(handlingInfo$i1), 'to')
+      code$name <- 'nSeqFromTo'
       return(invisible(NULL))
     }
     fromProvided <- 'from' %in% names(code$args)
@@ -1022,20 +1023,22 @@ inEigenizeEnv(
     lengthProvided <- 'length.out' %in% names(code$args)
 
     if (length(code$args) == 1) {
-      if(fromProvided) {
-        code$name <- "nSeqSingle"
-      } else if(byProvided) {
-        code$name <- 'nSeqEmpty'
-        removeArg(code, 1) # equivalent to code$args <- list()
-      } else if(toProvided) {
-        code$name <- "nSeqTo"
-      } else { # lengthProvided must be TRUE
-#        insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
-        code$name <- "nSeqLen"
+      if(!byProvided) {
+        if(fromProvided) {
+          code$name <- "nSeqSingle"
+      ## } else if(byProvided) {
+      ##   code$name <- 'nSeqEmpty'
+      ##   removeArg(code, 1) # equivalent to code$args <- list()
+        } else if(toProvided) {
+          code$name <- "nSeqTo"
+        } else { # lengthProvided must be TRUE
+         insertArg(code, 1, copyExprClass(handlingInfo$i1), 'from')
+          code$name <- "nSeqLenFrom"
+        }
+        return(invisible(NULL))
       }
-      return(invisible(NULL))
     }
-    #  At this point, length(code$args) >= 2
+    #  At this point, length(code$args) >= 2, or by was provided will end up in nSeqBy case.
     if(byProvided) {
       if(toProvided && lengthProvided) {
         code$name <- "nSeqByLenTo"
@@ -1070,6 +1073,8 @@ inEigenizeEnv(
       promoteTypes(code) # redundant in this case
       return(invisible(NULL))
     }
+
+
 
     stop(exprClassProcessingErrorMsg(
       code, 'unexpected case of seq()'

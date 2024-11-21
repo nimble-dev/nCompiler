@@ -459,7 +459,8 @@ inGenCppEnv(
 
 inGenCppEnv(
   Literal <- function(code, symTab) {
-    code$args[[1]]$name
+    code$aux$compileArgs$text
+#    code$args[[1]]$name
   }
 )
 

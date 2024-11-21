@@ -1,7 +1,4 @@
-#include <RcppEigen.h>
-#include <nCompiler/nCompiler_Eigen.h>
-#include <nCompiler/tensorOperations.h>
-
+#include "preamble.h"
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
 // [[Rcpp::depends(nCompiler)]]

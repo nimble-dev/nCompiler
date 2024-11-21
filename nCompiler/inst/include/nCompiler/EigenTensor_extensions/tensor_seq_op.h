@@ -102,8 +102,14 @@ struct TensorEvaluator<const SeqOp<Scalar_>, Device>
     IsAligned = true,
     PacketAccess = TensorEvaluator<ArgType, Device>::PacketAccess,
     Layout = TensorEvaluator<ArgType, Device>::Layout,
+    BlockAccess = false,
+    PreferBlockAccess = TensorEvaluator<ArgType, Device>::PreferBlockAccess,
     RawAccess = false
   };
+
+  //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
+  typedef internal::TensorBlockNotImplemented TensorBlock;
+  //===--------------------------------------------------------------------===//
 
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorEvaluator(const XprType& op, const Device& device)
     : m_Start(op.Start()),m_End(op.End()),m_By(op.By()),m_LengthOut(op.LengthOut())
@@ -197,10 +203,13 @@ auto nSeqBy(const Scalar_& Start, const Scalar_& End, const Scalar_& By ) -> Eig
   //   e.g. for all integer, result is integer.  But for any double, result is double.
 
   // The relative buffer of 1e-10 comes from the description in help(seq)
+  typename Eigen::template Tensor<Scalar_, 1>::Index LengthOut;
   if(By==0) {
-    Rcpp::stop("Bad argument: by=0 is not allowed.");
-  }
-  const typename Eigen::template Tensor<Scalar_, 1>::Index LengthOut( 1 + ((1.+1e-10)*(static_cast<double>(End)-static_cast<double>(Start)))/static_cast<double>(By) );
+    if(Start != End)
+      Rcpp::stop("Bad argument: by=0 is not allowed.");
+    else LengthOut = 1;
+  } else
+    LengthOut = ( 1 + ((1.+1e-10)*(static_cast<double>(End)-static_cast<double>(Start)))/static_cast<double>(By) );
   if(LengthOut <= 0) {
     Rcpp::stop("Bad arguments in seq() using by=.");
   }
@@ -262,6 +271,24 @@ auto nSeqLenFrom(const Scalar_& Start,
 }
 
 template<typename Scalar_>
+auto nSeqByLenFrom(const Scalar_& Start,
+                   const Scalar_& By,
+                   const double& LengthOut_ ) -> Eigen::SeqOp<Scalar_> {
+// seq(length.out) uses from = 1, by = 1, which will be code-generated to seq(1, length.out)
+// seq(from, length.out) uses by = 1
+//
+// Type issues: We always take length as double so that we do ceil, rather a possibly rounded cast to int
+// In R, if both from (Start) and length.out are integer, result is integer.
+// We will type-promote in code-generation, so the Scalar_ will be what we want.
+  const typename Eigen::template Tensor<Scalar_, 1>::Index LengthOut = ceil(LengthOut_);
+  if(LengthOut < 0) {
+    Rcpp::stop("Invalid seq call with negative length.out.");
+  }
+  Scalar_ End = LengthOut == 1 ? Start : (LengthOut == 0 ? Start : Start + By*(LengthOut-1));
+  return Eigen::SeqOp<Scalar_>(Start, End, By, LengthOut);
+}
+
+template<typename Scalar_>
 auto nSeqLenTo(const Scalar_& End,
                const double& LengthOut_ ) -> Eigen::SeqOp<Scalar_> {
 // seq(to, length.out) uses by = 1
@@ -275,6 +302,19 @@ auto nSeqLenTo(const Scalar_& End,
   Scalar_ Start = LengthOut == 1 ? End : (LengthOut == 0 ? End : End - By*(LengthOut-1));
   return Eigen::SeqOp<Scalar_>(Start, End, By, LengthOut);
 }
+
+template<typename Scalar_>
+auto nSeqByLenTo(const Scalar_& End,
+                 const Scalar_& By,
+                 const double& LengthOut_ ) -> Eigen::SeqOp<Scalar_> {
+  const typename Eigen::template Tensor<Scalar_, 1>::Index LengthOut = ceil(LengthOut_);
+  if(LengthOut < 0) {
+    Rcpp::stop("Invalid seq call with negative length.out.");
+  }
+  Scalar_ Start = LengthOut == 1 ? End : (LengthOut == 0 ? End : End - By*(LengthOut-1));
+  return Eigen::SeqOp<Scalar_>(Start, End, By, LengthOut);
+}
+
 
 template<typename Scalar_>
 auto nSeqFromTo(const Scalar_ Start, const double& End) -> Eigen::SeqOp<Scalar_> {

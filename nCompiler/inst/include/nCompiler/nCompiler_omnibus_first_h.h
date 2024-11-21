@@ -95,7 +95,9 @@
 // Note that _INCLUDE_SERIALIZE_AND_DESERIALIZE_FUNCTIONS will become NCOMPILER_USES_CEREAL
 
 #ifdef NCOMPILER_USES_TBB
-#include "nCompiler_TBB.h"
+// Including TBB header before Rcpp.h causes a bug from redefining TRUE and FALSE, I think based on
+// https://github.com/RcppCore/Rcpp/issues/1148
+// The bug manifests with the same error as in that issue: no matching function call for R_lsInternal
 #endif
 
 // Main Rinternals include
