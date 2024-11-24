@@ -1,6 +1,9 @@
 library(nCompiler)
 library(testthat)
 library(Matrix)
+
+message("Diag testing (in accessors) might lack the case of diag(matrix)")
+
 #
 # test the ability to read/write using nCompiler C++ implementations of diag(), 
 # and related accessor functions
@@ -162,6 +165,14 @@ cDiagRC <- nCompile(nDiagRC)
 cDiagXv <- nCompile(nDiagXv) # # error during eigenize
 cDiagX <- nCompile(nDiagX)
 cDiagR <- nCompile(nDiagR)
+
+# possible issues:
+# In XCv case, nrow is set to 1. Should be length(x)
+# When length(x) is inserted, it could waste effort if x is an expression
+# diag(matrix) to extract diagonal -- is it covered?
+# is recycling rule for x used? NO!
+# different behavior for diag(length one vector) vs diag(scalar), giving inconsistency with R
+# but arguably sensible? But in that case we need uncompiled nDiag to make the distinction, and it can't.
 
 #
 # creation usage tests

@@ -228,9 +228,9 @@ inEigenizeEnv(
   # before copying into LHS elements.
   #
   # We could have situations like A$B$x[1:4].
-  # We deine an EigenVarInfo object as a list of two elements:
+  # We define an EigenVarInfo object as a list of two elements:
   # First element would be c("A", "B", "x")
-  # Second element would be TURE to indicate there is a '[' involved
+  # Second element would be TRUE to indicate there is a '[' involved
   getVarInfoForAliasChecking <- function(LHS) {
     # How intricate will we go in matching objects for alias risk?
     LHSvarName <- NULL
@@ -240,7 +240,7 @@ inEigenizeEnv(
     } else if(LHS$name == '[') {
       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
       return(list(nested[[1]], TRUE))
-    } else if(LHS$name=='->member') { # covers methods. no `$` should remain
+    } else if(LHS$name %in% c('->member')) { # Expand to handle nDiag and other possible LHS operators
       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
       return(list(c(nested[[1]], LHS$args[[2]]$name), FALSE ))
     }

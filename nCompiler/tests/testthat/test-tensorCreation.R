@@ -1,5 +1,7 @@
 # The last test breaks because of C++ error on casting a double to long.
 
+message("Need to add a test of creating a tensor initialized from a refBlock (StridedTensorMap) or TensorMap.")
+
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
