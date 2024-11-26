@@ -217,7 +217,8 @@ cpp_nFunction_buildFunction <- function(cppDef,
   cppDef$returnType <-
     NF_Compiler$returnSymbol$genCppVar()
   if(!cppDef$classMethod && !NF_Compiler$isAD)
-    cppDef$commentsAbove <- paste0('// [[Rcpp::export]]')
+    if(isTRUE(cppDef$export))
+      cppDef$commentsAbove <- paste0('// [[Rcpp::export(name = "',cppDef$compileInfo$exportName,'")]]')
   if(NF_Compiler$isAD)
     cppDef$CPPincludes <- c(
       cppDef$CPPincludes,

@@ -113,8 +113,10 @@ build_compiled_nClass <- function(NCgenerator,
     ),
     env = list(
       CLASSNAME = classname,
-      NEWCOBJFUN = parse(text = paste0('new_', NCgenerator$classname),
-                         keep.source = FALSE)[[1]],
+      NEWCOBJFUN = if(quoted) as.name(newCobjFun)
+                   else quote(parent.env(parent.env(self))$.newCobjFun),
+                     #parse(text = paste0('new_', NCgenerator$classname),
+                     #         keep.source = FALSE)[[1]],
       RPUBLIC = parse(text = deparse(
         NCgenerator$public_methods[RmethodNames]
       ), keep.source = FALSE)[[1]],
@@ -131,16 +133,16 @@ build_compiled_nClass <- function(NCgenerator,
   if (quoted) return(ans)
 
   ans <- eval(ans)
-  ans$public_methods$initialize <- function(CppObj) {
-    if(missing(CppObj)) {
-      newCobjFun <- parent.env(parent.env(self))$.newCobjFun
-      if(is.null(newCobjFun))
-        stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
-      CppObj <- newCobjFun()
-    }
-    private$CppObj <- CppObj
-    private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
-  }
+  ## ans$public_methods$initialize <- function(CppObj) {
+  ##   if(missing(CppObj)) {
+  ##     newCobjFun <- parent.env(parent.env(self))$.newCobjFun
+  ##     if(is.null(newCobjFun))
+  ##       stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+  ##     CppObj <- newCobjFun()
+  ##   }
+  ##   private$CppObj <- CppObj
+  ##   private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
+  ## }
 
   new_env <- new.env(parent = env)
   ans$parent_env <- new_env

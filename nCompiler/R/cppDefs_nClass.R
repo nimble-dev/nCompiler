@@ -93,6 +93,8 @@ cpp_nClassBaseClass <- R6::R6Class(
                          fromModel = fromModel)
       if(length(name)==0)
         name <<- Compiler$name
+      if(length(self$compileInfo$exportName)==0)
+        self$compileInfo$exportName <- self$name
       built <<- FALSE
       loaded <<- FALSE
       Cwritten <<- FALSE

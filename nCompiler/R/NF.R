@@ -75,7 +75,7 @@ nFunctionClass <- setClass(
 #' }
 #' @export
 nFunction <- function(fun,
-                      name = NA,
+                      name,
                       argTypes = list(),
                       refArgs = character(),
                       blockRefArgs = character(),
@@ -83,13 +83,12 @@ nFunction <- function(fun,
                       enableDerivs = list(),
                       check = get_nOption('check_nFunction'),
                       returnCallable = TRUE,
+                      compileInfo = list(),
                       where = parent.frame(),
                       ...
-) {
-  ## Provide a default label is one is needed.
-  if(is.na(name))
+                      ) {
+  if(missing(name))
     name <- nFunctionLabelMaker()
-  
   ## Create internals that will be used for compilation.
   internals <- NF_InternalsClass$new(fun,
                                      name = name,
@@ -98,6 +97,7 @@ nFunction <- function(fun,
                                      blockRefArgs = blockRefArgs,
                                      returnType = returnType,
                                      enableDerivs = enableDerivs,
+                                     compileInfo = compileInfo,
                                      check = check,
                                      where = where)
   ## Return a callable function.

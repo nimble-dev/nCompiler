@@ -24,6 +24,7 @@ nCompile_nFunction <- function(NF,
                                dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                                cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                                env = parent.frame(),
+                               compileInfo = NULL,
                                control = list(),
                               ## name,
                                ...) {
@@ -53,10 +54,13 @@ nCompile_nFunction <- function(NF,
     ## reset compilerOptions$logging to previous value
     on.exit(set_nOption('logging', loggingOpt, 'compilerOptions'))
   }
-  
+
+  if(is.null(compileInfo)) compileInfo <- NFinternals(NF)$compileInfo
+
   NF_Compiler <- NF_CompilerClass$new(f = NF, 
                                       useUniqueNameInCpp = 
-                                        controlFull$useUniqueNameInCode)
+                                        controlFull$useUniqueNameInCode,
+                                      compileInfo = compileInfo)
                                       ## , funName = funName)
   NF_Compiler$createCpp(control = controlFull)
   if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,

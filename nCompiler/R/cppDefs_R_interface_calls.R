@@ -3,8 +3,11 @@ global_R_interface_cppDef <-
 #                      Hincludes = c(nCompilerIncludeFile("nCompiler_class_interface.h"),
 #                                    nCompilerIncludeFile("shared_ptr_holder.h")
                                         #                                    ),
-                      Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+                      Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
+                      CPPincludes = c(nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+                        nCompilerIncludeFile("nClass_interface/post_Rcpp/process_call_args.h")),
                       Hpreamble = "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                      CPPpreamble = "#define NCOMPILER_USES_NCLASS_INTERFACE",
                       cppContent = paste0(
                         "inline genericInterfaceBaseC *get_genericInterfaceBaseC(SEXP Xptr) {\n",
                         "  return reinterpret_cast<genericInterfaceBaseC*>\n",

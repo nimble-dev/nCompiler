@@ -10,6 +10,7 @@ NF_InternalsClass <- R6::R6Class(
     blockRefArgs = NULL,
     argSymTab = list(),
     returnSym = NULL,
+    compileInfo = NULL,
     where = NULL,
     isMethod = FALSE,
     uniqueName = character(),
@@ -35,6 +36,7 @@ NF_InternalsClass <- R6::R6Class(
                           blockRefArgs = list(),
                           returnType = NULL,
                           enableDerivs = FALSE,
+                          compileInfo = list(),
                           check = FALSE,
                           ## methodNames, ## used only for nf_checkDSLcode
                           setupVarNames = NULL,
@@ -44,7 +46,8 @@ NF_InternalsClass <- R6::R6Class(
       if(!missing(name))
         uniqueName <<- name
       arguments <<- as.list(formals(fun))
-      where <<- where
+      self$compileInfo <<- compileInfo
+      self$where <- where
       if(is.character(refArgs)) {
         refArgs <- structure(as.list(rep(TRUE, length(refArgs))),
                              names = refArgs)

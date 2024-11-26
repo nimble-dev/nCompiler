@@ -6,9 +6,128 @@ library(testthat)
 ## debug(nCompile_nFunction)
 ## debug(nCompile_nClass)
 
+
+# Notes:
+# Three pathways:
+# A. nCompile(package =FALSE)
+# B. nCompile(package = TRUE)
+# C. writePackage
+#
+# Pathway A will be faster but does not allow work to be saved.
+# Pathway B allows work to be saved with all package details managed internally.
+# Pathway C allows development of one's own package, requiring some attention to package details.
+#
+# For B, the returned functions or list of functions should match those of A but be obtained via `::`.
+#  This will allow repeated re-compiling without needing to unload DLLs.
+#  It will also require some tracking of assigned names when saving. That could get messy.
+# For C, one needs control of the exported R names, perhaps to be called compiledName and defaulting to name.
+# Return object of nCompile(package = TRUE) needs attention.
+
+library(nCompiler)
+debug(nCompile)
+debug(writePackage)
+
+add.Scalars <- nFunction(
+  name = 'Cadd.scalars',
+  fun = function(x = double(0),
+                 y = double(0)) {
+    returnType(double(0))
+    ans <- x + y
+    return(ans)
+  }
+)
+
+add.Scalars <- nFunction(
+  name = 'Cadd.scalars',
+  compileInfo = list(exportName = "C_add_scalars_check"),
+  fun = function(x = double(0),
+                 y = double(0)) {
+    returnType(double(0))
+    ans <- x + y
+    return(ans)
+  }
+)
+
+add.Scalars <- nFunction(
+  # name = 'Cadd.scalars',
+  fun = function(x = double(0),
+                 y = double(0)) {
+    returnType(double(0))
+    ans <- x + y
+    return(ans)
+  }
+)
+
+add.Scalars <- nFunction(
+  # name = 'Cadd.scalars',
+  compileInfo = list(exportName = "foo1"),
+  fun = function(x = double(0),
+                 y = double(0)) {
+    returnType(double(0))
+    ans <- x + y
+    return(ans)
+  }
+)
+
+debug(nCompiler:::nCompile_finish_nonpackage)
+test <- nCompile(add.Scalars, package = FALSE, returnList = TRUE)
+test <- nCompile(add.Scalars, package = FALSE, returnList = FALSE)
+test <- nCompile(foo2 = add.Scalars, package = FALSE, returnList = TRUE)
+test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE)
+test <- nCompile(foo2 = add.Scalars, package = TRUE, returnList = TRUE)
+test <- nCompile(f1 = add.Scalars, package = FALSE, returnList = TRUE)
+test <- nCompile(f1 = add.Scalars, package = TRUE, returnList = TRUE)
+erasePackage("testpackage", error = FALSE)
+test <- writePackage(add.Scalars, pkgName = "testpackage")
+#test <- nCompile2(add.Scalars, returnList = TRUE)
+expect_equal(test$add.Scalars(2, 3), 5)
+test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE) # Breaks
+
+
+
+library(nCompiler)
+debug(nCompile)
+debug(writePackage)
+debug(nCompiler:::nCompile_finish_nonpackage)
+
+nc <- nClass(
+  classname = "nc.1",
+  Cpublic = list(
+    v.1 = 'numericVector',
+    go.1 = nFunction(
+      fun = function(c = 'numericScalar') {
+        return(c * v.1)
+      },
+      returnType = 'numericVector'
+    )
+  )
+)
+
+nc <- nClass(
+  Cpublic = list(
+    v.1 = 'numericVector',
+    go.1 = nFunction(
+      fun = function(c = 'numericScalar') {
+        return(c * v.1)
+      },
+      returnType = 'numericVector'
+    )
+  )
+)
+
+test <- nCompile(nc, package=FALSE, returnList = TRUE)
+test <- nCompile(nc, package=FALSE, interfaces = "generic", returnList = TRUE)
+test <- nCompile(nc, package=TRUE, returnList = TRUE)
+test <- writePackage(nc, pkgName = "testpackage2")
+libdir <- file.path(tempdir(), "mytest")
+dir.create(libdir, recursive=TRUE)
+withr::with_libpaths(libdir, devtools::install("testpackage2"))
+withr::with_libpaths(libdir, library("testpackage2"))
+
 test_that("Compile one nFunction via nCompile, returning a list (and testing external R name invalid for C++).",
 { 
   add.Scalars <- nFunction(
+    name = 'Cadd.scalars',
     fun = function(x = double(0),
                    y = double(0)) {
       returnType(double(0))
@@ -19,7 +138,7 @@ test_that("Compile one nFunction via nCompile, returning a list (and testing ext
   test <- nCompile(add.Scalars, package = FALSE, returnList = TRUE)
   #test <- nCompile2(add.Scalars, returnList = TRUE)
   expect_equal(test$add.Scalars(2, 3), 5)
- # test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE) # Breaks
+  test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE) # Breaks
 }
 )
 

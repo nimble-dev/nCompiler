@@ -23,6 +23,7 @@ nCompile_nClass <- function(NC,
                             dir = file.path(tempdir(), 'nCompiler_generatedCode'),
                             cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
                             env = parent.frame(),
+                            compileInfo = NULL,
                             control = list(),
                             interface = c("full", "generic", "both"),
                             ...) {
@@ -64,9 +65,11 @@ nCompile_nClass <- function(NC,
       cppContent = cppContent,
       externalCppDefs = list(R_generic_interface_calls = get_R_interface_cppDef())
     )
-  } else {    
+  } else {
+    if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
-    NC_Compiler <- NC_CompilerClass$new(NC)
+    NC_Compiler <- NC_CompilerClass$new(NC,
+                                        compileInfo = compileInfo)
     ## Use the compiler to generate a cppDef
     NC_Compiler$createCpp(control = controlFull,
                           sourceObj = NC,

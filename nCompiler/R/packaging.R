@@ -75,369 +75,371 @@
 #'   package initialization tools on which \code{writePackage} depends see
 #'   \code{\link[Rcpp]{Rcpp.package.skeleton}} and
 #'   \code{\link[utils]{package.skeleton}}.
-writePackage <- function(...,
-                         pkgName,
-                         dir = ".",
-                         control = list(),
-                         modify = get_nOption("modifyPackageFiles"),
-                         memberData = list(),
-                         roxygen = list(),
-                         nClass_full_interface = TRUE) {
 
-  modify <- match.arg(modify, c("no", "add", "clear"))
- ## any_modify <- modify %in% c("add", "clear")
- ##  if (any_modify && !dir.exists(file.path(dir, pkgName))) {
- ##      warning(paste0("No package named '", pkgName,
- ##                     "' exists in directory '", dir,
- ##                     "' so one will be created."))
- ##  }
 
-  require(Rcpp)
-  if(grepl("_", pkgName))
-    stop("Package names are not allowed to have underscore characters.")
-  objs <- list(...)
+## writePackage <- function(...,
+##                          pkgName,
+##                          dir = ".",
+##                          control = list(),
+##                          modify = get_nOption("modifyPackageFiles"),
+##                          memberData = list(),
+##                          roxygen = list(),
+##                          nClass_full_interface = TRUE) {
 
-  # Handle the case where the user passes a list rather than using ...
-  if (length(objs)==1) {
-    if (is.list(objs[[1]])) {
-      objs <- objs[[1]]
-    }
-  }
-  
-  # Handle roxygen input
-  if (!is.list(roxygen)) {
-    if (is.character(roxygen)) roxygen <- list(roxygen)
-    else stop("in writePackage: unknown roxygen type")
-  }
-  
-  if (length(roxygen) == 0) {
-    roxygenFlag <- "none"
-  } else if (sum(nchar(names(roxygen)) > 0) == length(roxygen)) { # Are all rox entries named?
-    roxygenFlag <- "names"
-  } else if (length(roxygen) == length(objs)) { # Are there as many rox entries as objs?
-    roxygenFlag <- "indices"
-  } else { # If neither, we don't know what to do about it
-    stop("If fewer roxygen entries are provided than objects, they must be named",
-         " in the input list to indicate the objects to which they correspond.")
-  }
-  
-  # Check if control is specified properly.
-  # The user has the following options:
-  # 1) Provide nothing. Defaults are used for all NF/NC objects.
-  # 2) Provide a single unnamed list. This control list will be shared by every object.
-  # 3a) Provide 1 or more named lists. These lists are used for the objects whose
-  #    names they match, while all others get defaults.
-  # 3b) Provided 2 or more named lists, one of which is called "default." 
-  #     "default" is used to control all elements.
-  
-  if (!is.list(control))
-    stop("In writePackage, argument 'control' must be a list with controls for all
-    or else a list of named lists with controls for each object")
-  if (length(control) > 0 && !is.list(control[[1]])) control <- list(control)
-  
-  # shareControl is a boolean flag indicating if all objects will take the same
-  # control variable. If so, it'll be stored in the object globalControl for now
-  sharedControl <- FALSE
-  globalControl <- defaultControl <- get_nOption("packagingOptions")
-  if (length(control) == 0) { # We're in option 1.
-    sharedControl <- TRUE
-  } else if (sum(nchar(names(control)) > 0) < length(control)) { # If any elements are unnamed...
-    if (length(control) == 1) { # We're in option 2
-      sharedControl <- TRUE
-      globalControl <- updateDefaults(defaultControl, control[[1]])
-    } else { # If no names were provided but control was length >1, that's a problem
-      stop(paste("More than one control list detected, but not all were named.",
-                 "Control lists can only be unnamed if exactly one is provided."))
-    }
-  }
+##   modify <- match.arg(modify, c("no", "add", "clear"))
+##  ## any_modify <- modify %in% c("add", "clear")
+##  ##  if (any_modify && !dir.exists(file.path(dir, pkgName))) {
+##  ##      warning(paste0("No package named '", pkgName,
+##  ##                     "' exists in directory '", dir,
+##  ##                     "' so one will be created."))
+##  ##  }
 
-  # Build a fully fleshed out control list. The ith element of totalControl is a 
-  # controls compilation options for the ith element of objs.
-  totalControl <- list()
-  
-  # I retrieve the names of each object. Is there a better way to do this?
-  objNames <- unlist(lapply(objs, function(x) {
-    if (isNF(x)) return(NFinternals(x)$uniqueName)
-    else if (isNCgenerator(x)) return(x$classname)
-    else stop(paste("In writePackage: only nFunctions and nClass generators are",
-                    "allowed. Cannot compile object of class ", class(x)))}))
-  if (length(unique(objNames)) < length(objNames)) stop(paste(
-    "in writePackage: Duplicate internal object names detected."
-  ))
-  
-  # If options 1 or 2 were hit, we can just use the globalControl option set we
-  # already built for every element. If neither, we still do this to set up the
-  # architecture and think of user specifications as modifying this default
-  # structure
-  if (sharedControl) {
-    for (i in 1:length(objs)) totalControl[[i]] <- globalControl
-  } else { # Option 3
+##   require(Rcpp)
+##   if(grepl("_", pkgName))
+##     stop("Package names are not allowed to have underscore characters.")
+##   objs <- list(...)
 
-    if ("default" %in% names(control)) {
-      globalControl <- updateDefaults(defaultControl, controls[["default"]])
-    } 
-    # If no defaults were specified, globalControl is still all defaults
-    # for (i in 1:length(objs)) totalControl[[i]] <- globalControl
-    
-    if (length(unique(objNames)) < length(objNames)) {
-      stop("In writePackage: multiple objects with the same name were provided.")
-    }
-    
-    # Iterate over each specified control list and add it. Throw an error (maybe
-    # a warning, but this seems like a big enough problem) if the user provided
-    # an unrecognized name.
-    for (i in 1:length(control)) {
-      if (names(control)[[i]] %in% objNames) {
-        totalControl[[which(objNames == names(control)[[i]])]] <-
-          updateDefaults(globalControl, control[[i]])
-      } else {
-        if (!identical(names(control)[[i]], "default")) {
-          stop(paste0('In writePackage: Control specified for object named "', 
-                      names(control)[[i]],
-                      '"\n\t but no object with that name was provided.'))
-        }
-      }
-    }
-  } # Now we have a control object, totalControl, which contains all control
-    # options for every element in objs.
-  # Used to test if this works: return(totalControl)
-    
-  # if(length(objs) > 1)
-  #   stop("writePackage only supports one object as a first step of development")
-  
-  pkgDir <- file.path(dir, pkgName)
-  Rdir <- file.path(pkgDir, "R")
-  srcDir <- file.path(pkgDir, "src")
-  instDir <- file.path(pkgDir, "inst")
-  codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
-  datDir <- file.path(pkgDir, "data")
-  
-  full_interface <- list(); RcppPackets <- list()
-  for (i in 1:length(objs)) {
-    if(isNF(objs[[i]])) {
-      if (!identical(nCompiler:::Rname2CppName(objNames[[i]]), objNames[[i]])) {
-        warning(paste0("The nFunction name ", objNames[[i]], " isn't valid for ",
-                       "C++.\n Using the modified name ", 
-                       Rname2CppName(objNames[[i]]), " instead."))
-      }
-      nCompile_nFunction(objs[[i]],
-                            control = list(endStage = "writeCpp",
-                                           useUniqueNameInCode = TRUE))
-      RcppPackets[[i]] <- NFinternals(objs[[i]])$RcppPacket
-      thisRox <- switch(roxygenFlag,
-                        none = NULL,
-                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                        names = if (objNames[[i]] %in% names(roxygen)) 
-                          roxygen[[ objNames[i] ]] 
-                        else NULL)
-      if (!is.null(thisRox)) {
-        exportIndex <- which(RcppPackets[[i]]$cppContent == "// [[Rcpp::export]]")
-        RcppPackets[[i]]$cppContent <-
-          c(RcppPackets[[i]]$cppContent[1:(exportIndex - 1)],
-            thisRox$header, 
-            RcppPackets[[i]]$cppContent[exportIndex:length(RcppPackets[[i]]$cppContent)])
-      }
-    } else if (isNCgenerator(objs[[i]])) {
-      writtenNC1 <- nCompile_nClass(objs[[i]],
-                                    control = list(endStage = "writeCpp"))
-      RcppPackets[[i]] <- NCinternals(objs[[i]])$RcppPacket
-      if (isTRUE(nClass_full_interface)) {
-        full_interface[[i]] <- build_compiled_nClass(objs[[i]], quoted = TRUE)
-      }
-      
-      # I thought maybe I could put methods doc in C++ as follows but I had issues
-      # thisRox <- switch(roxygenFlag,
-      #                   none = NULL,
-      #                   indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-      #                   names = if (objNames[[i]] %in% names(roxygen)) 
-      #                     roxygen[[ objNames[i] ]] 
-      #                   else NULL)
-      # if (!is.null(thisRox)) {
-      #   # givenNames <- names(objs[[i]]$public_methods)
-      #   cppCodeNames <- lapply(objs[[i]]$public_methods, 
-      #                          function(x) if (isNF(x)) 
-      #                            NFinternals(x)$cpp_code_name)
-      #   for (m in 1:length(thisRox$methods)) {
-      #     thisFnDefIndex <- grep(paste0(cppCodeNames[names(thisRox$methods)[m]], " ("), 
-      #                             RcppPackets[[i]]$cppContent, fixed = TRUE)
-      #     
-      #     RcppPackets[[i]]$cppContent <-
-      #       c(RcppPackets[[i]]$cppContent[1:(thisFnDefIndex - 1)],
-      #         thisRox$methods[[m]], 
-      #         RcppPackets[[i]]$cppContent[(thisFnDefIndex):length(RcppPackets[[i]]$cppContent)])
-      #   }
-      # }
-      
-    } else {
-      stop(paste("In writePackage: only nFunctions and nClass generators are",
-                 "allowed. Cannot compile object of class ", class(objs[[i]])))
-    }
-  }
-  
-  initializePkg <- FALSE
-  if (dir.exists(pkgDir)) {
-    if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
-                                    ". Change 'modify' argument to add to or clear it."))
-  } else initializePkg <- TRUE
-  ## The following eval(substitute(...), ...) construction is necessary because
-  ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
-  ## directly as needed here from inside a function.
-  
-  if (initializePkg) {
-    nCompiler_placeholder <<- function() NULL
-    suppressMessages(
-      eval(
-        substitute(
-          Rcpp.package.skeleton(PN,
-               path = DIR,
-               # list = "nCompiler_placeholder",
-               author = "This package was generated by the nCompiler",
-               force = FORCE),
-          list(DIR = dir,
-               PN = pkgName,
-               FORCE = modify == "clear")),
-        envir = .GlobalEnv)
-    )
-    if(file.exists(file.path(pkgDir, "Read-and-delete-me")))
-      file.remove(file.path(pkgDir, "Read-and-delete-me"))
-    dir.create(instDir)
-    dir.create(datDir)
-    dir.create(codeDir, recursive = TRUE)
-  }
-  
-  Rfilepath <- character(length(objs))
-  
-  # Loop over each object again
-  for (i in 1:length(objs)) {
-    
-    ## We write the code once for the package's DLL...
-    nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
-                                    dir = srcDir)
-    ## ... and again for other packages that need to 
-    ## compile against this package's source code.
-    ## Otherwise, C++ source code is not present in an installed package.
-    ## Compiling against source code is necessary because of
-    ## heavy use of C++ templates.
-    nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
-                                   dir = codeDir)
-    if (isNCgenerator(objs[[i]]) && isTRUE(nClass_full_interface)) {
-      ## Write the nClass full interface to the package's R directory
-      generator_name <- objs[[i]]$classname
-      Rfile <- paste0(generator_name, '.R')
-      Rfilepath[i] <- file.path(Rdir, Rfile)
-      con <- file(Rfilepath[i], open = 'w')
-      deparsed_full_interface <- deparse(full_interface[[i]])
-      deparsed_full_interface[1] <- paste0(
-        generator_name, ' <- ', deparsed_full_interface[1]
-      )
-      exportTag <- if (totalControl[[i]]$export) "#' @export\n" else NULL
-      # Retrieve roxygen entry
-      thisRox <- switch(roxygenFlag,
-                        none = NULL,
-                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                        names = if (objNames[[i]] %in% names(roxygen)) 
-                                  roxygen[[ objNames[i] ]] 
-                                else NULL
-                        )
-      
-      if (!is.null(thisRox)) {
-        # Find the spot where each documented method is defined
-        for (m in 1:length(thisRox$methods)) {
-          thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
-                           deparsed_full_interface, fixed = TRUE)
-          targetStr <- deparsed_full_interface[thisDefn]
-          deparsed_full_interface[thisDefn] <- 
-            gsub(pattern = names(thisRox$methods)[m],
-                 replacement = paste0(
-                   "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
-                 ),
-                 x = deparsed_full_interface[thisDefn], 
-                 fixed = TRUE)
-        }
-      }
-      
-      deparsed_full_interface <- c(
-        '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
-        if (is.list(thisRox)) thisRox[["header"]] else thisRox,
-        exportTag,
-        deparsed_full_interface,
-        paste0(generator_name, '$parent_env <- new.env()'),
-        paste0(generator_name, '$.newCobjFun <- NULL')
-      )
-      writeLines(deparsed_full_interface, con)
-      close(con)
-    }
-  }
-  
-  # Write out data
-  if (length(memberData) > 0) {
-    datEnv <- as.environment(memberData)
-    for (i in 1:length(ls(datEnv))) {
-      save(list = ls(datEnv)[i], envir = datEnv, 
-           file = file.path(datDir, paste0(ls(datEnv)[i], ".RData")))
-    }
-  }
+##   # Handle the case where the user passes a list rather than using ...
+##   if (length(objs)==1) {
+##     if (is.list(objs[[1]])) {
+##       objs <- objs[[1]]
+##     }
+##   }
 
-  # Write .onLoad
-  nClass_names <- unlist(lapply(objs, function(x)
-    if(isNCgenerator(x)) x$classname else NULL
-    ))
-  if(length(nClass_names)) {
-    onLoad_lines <- c(".onLoad <- function(libName, pkgName) {\n",
-                      paste0(" nCompiler::setup_nClass_environments_from_package(c(", paste0("\"",nClass_names,"\"", collapse = ", "),  "))\n"),
-                      "NULL}\n")
-    writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
-  }
+##   # Handle roxygen input
+##   if (!is.list(roxygen)) {
+##     if (is.character(roxygen)) roxygen <- list(roxygen)
+##     else stop("in writePackage: unknown roxygen type")
+##   }
 
-  DESCfile <- file.path(pkgDir, "DESCRIPTION")
-  NAMEfile <- file.path(pkgDir, "NAMESPACE")
-  if (initializePkg) {
-    DESCRIPTION <- read.dcf(DESCfile)
-    ## TO-DO: Make choice of what to include be smart about what is really needed.
-    ## A nFunction might only need:
-    ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
-    ## A nClass might need:
-    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
-    # DESCRIPTION$Encoding <- "UTF-8"
-      ## It is conceivable that nCompLocal will need to be added to this at some point.
-      ## If so, it will need to be installed in R's main library, not some local location.
-    # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
-    write.dcf(DESCRIPTION, DESCfile)
-    
-    NAMESPACE <- c(paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
-                   "importFrom(Rcpp, evalCpp)",
-                   "export(nComp_serialize_)",
-                   "export(nComp_deserialize_)",
-                   "export(call_method)",
-                   "export(get_value)",
-                   "export(set_value)"
-                   )
-  } else {
-    NAMESPACE <- readLines(NAMEfile)
-  }
-  
-  for (i in 1:length(objs)) {
-    # if (totalControl[[i]]$export && isNCgenerator(objs[[i]])) 
-    if (totalControl[[i]]$export) {
-      if (isNF(objs[[i]]) || nClass_full_interface) {
-        NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
-      }
-      if (isNCgenerator(objs[[i]])) 
-          NAMESPACE <- c(NAMESPACE, paste0("export(new_", objNames[i], ")"))
-    }
-  }
-  NAMESPACE <- unique(NAMESPACE)
-  writeLines(NAMESPACE, con = NAMEfile)
+##   if (length(roxygen) == 0) {
+##     roxygenFlag <- "none"
+##   } else if (sum(nchar(names(roxygen)) > 0) == length(roxygen)) { # Are all rox entries named?
+##     roxygenFlag <- "names"
+##   } else if (length(roxygen) == length(objs)) { # Are there as many rox entries as objs?
+##     roxygenFlag <- "indices"
+##   } else { # If neither, we don't know what to do about it
+##     stop("If fewer roxygen entries are provided than objects, they must be named",
+##          " in the input list to indicate the objects to which they correspond.")
+##   }
 
-  if (!initializePkg) {
-    compiledObjs <- list.files(srcDir, pattern = "o$")
-    # message("Deleting ", compiledObjs)
-    unlink(compiledObjs)
-  }
-  compileAttributes(pkgdir = pkgDir)
-  
-  invisible(NULL)
-}
+##   # Check if control is specified properly.
+##   # The user has the following options:
+##   # 1) Provide nothing. Defaults are used for all NF/NC objects.
+##   # 2) Provide a single unnamed list. This control list will be shared by every object.
+##   # 3a) Provide 1 or more named lists. These lists are used for the objects whose
+##   #    names they match, while all others get defaults.
+##   # 3b) Provided 2 or more named lists, one of which is called "default."
+##   #     "default" is used to control all elements.
+
+##   if (!is.list(control))
+##     stop("In writePackage, argument 'control' must be a list with controls for all
+##     or else a list of named lists with controls for each object")
+##   if (length(control) > 0 && !is.list(control[[1]])) control <- list(control)
+
+##   # shareControl is a boolean flag indicating if all objects will take the same
+##   # control variable. If so, it'll be stored in the object globalControl for now
+##   sharedControl <- FALSE
+##   globalControl <- defaultControl <- get_nOption("packagingOptions")
+##   if (length(control) == 0) { # We're in option 1.
+##     sharedControl <- TRUE
+##   } else if (sum(nchar(names(control)) > 0) < length(control)) { # If any elements are unnamed...
+##     if (length(control) == 1) { # We're in option 2
+##       sharedControl <- TRUE
+##       globalControl <- updateDefaults(defaultControl, control[[1]])
+##     } else { # If no names were provided but control was length >1, that's a problem
+##       stop(paste("More than one control list detected, but not all were named.",
+##                  "Control lists can only be unnamed if exactly one is provided."))
+##     }
+##   }
+
+##   # Build a fully fleshed out control list. The ith element of totalControl is a
+##   # controls compilation options for the ith element of objs.
+##   totalControl <- list()
+
+##   # I retrieve the names of each object. Is there a better way to do this?
+##   objNames <- unlist(lapply(objs, function(x) {
+##     if (isNF(x)) return(NFinternals(x)$uniqueName)
+##     else if (isNCgenerator(x)) return(x$classname)
+##     else stop(paste("In writePackage: only nFunctions and nClass generators are",
+##                     "allowed. Cannot compile object of class ", class(x)))}))
+##   if (length(unique(objNames)) < length(objNames)) stop(paste(
+##     "in writePackage: Duplicate internal object names detected."
+##   ))
+
+##   # If options 1 or 2 were hit, we can just use the globalControl option set we
+##   # already built for every element. If neither, we still do this to set up the
+##   # architecture and think of user specifications as modifying this default
+##   # structure
+##   if (sharedControl) {
+##     for (i in 1:length(objs)) totalControl[[i]] <- globalControl
+##   } else { # Option 3
+
+##     if ("default" %in% names(control)) {
+##       globalControl <- updateDefaults(defaultControl, controls[["default"]])
+##     }
+##     # If no defaults were specified, globalControl is still all defaults
+##     # for (i in 1:length(objs)) totalControl[[i]] <- globalControl
+
+##     if (length(unique(objNames)) < length(objNames)) {
+##       stop("In writePackage: multiple objects with the same name were provided.")
+##     }
+
+##     # Iterate over each specified control list and add it. Throw an error (maybe
+##     # a warning, but this seems like a big enough problem) if the user provided
+##     # an unrecognized name.
+##     for (i in 1:length(control)) {
+##       if (names(control)[[i]] %in% objNames) {
+##         totalControl[[which(objNames == names(control)[[i]])]] <-
+##           updateDefaults(globalControl, control[[i]])
+##       } else {
+##         if (!identical(names(control)[[i]], "default")) {
+##           stop(paste0('In writePackage: Control specified for object named "',
+##                       names(control)[[i]],
+##                       '"\n\t but no object with that name was provided.'))
+##         }
+##       }
+##     }
+##   } # Now we have a control object, totalControl, which contains all control
+##     # options for every element in objs.
+##   # Used to test if this works: return(totalControl)
+
+##   # if(length(objs) > 1)
+##   #   stop("writePackage only supports one object as a first step of development")
+
+##   pkgDir <- file.path(dir, pkgName)
+##   Rdir <- file.path(pkgDir, "R")
+##   srcDir <- file.path(pkgDir, "src")
+##   instDir <- file.path(pkgDir, "inst")
+##   codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
+##   datDir <- file.path(pkgDir, "data")
+
+##   full_interface <- list(); RcppPackets <- list()
+##   for (i in 1:length(objs)) {
+##     if(isNF(objs[[i]])) {
+##       if (!identical(nCompiler:::Rname2CppName(objNames[[i]]), objNames[[i]])) {
+##         warning(paste0("The nFunction name ", objNames[[i]], " isn't valid for ",
+##                        "C++.\n Using the modified name ",
+##                        Rname2CppName(objNames[[i]]), " instead."))
+##       }
+##       nCompile_nFunction(objs[[i]],
+##                             control = list(endStage = "writeCpp",
+##                                            useUniqueNameInCode = TRUE))
+##       RcppPackets[[i]] <- NFinternals(objs[[i]])$RcppPacket
+##       thisRox <- switch(roxygenFlag,
+##                         none = NULL,
+##                         indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+##                         names = if (objNames[[i]] %in% names(roxygen))
+##                           roxygen[[ objNames[i] ]]
+##                         else NULL)
+##       if (!is.null(thisRox)) {
+##         exportIndex <- which(RcppPackets[[i]]$cppContent == "// [[Rcpp::export]]")
+##         RcppPackets[[i]]$cppContent <-
+##           c(RcppPackets[[i]]$cppContent[1:(exportIndex - 1)],
+##             thisRox$header,
+##             RcppPackets[[i]]$cppContent[exportIndex:length(RcppPackets[[i]]$cppContent)])
+##       }
+##     } else if (isNCgenerator(objs[[i]])) {
+##       writtenNC1 <- nCompile_nClass(objs[[i]],
+##                                     control = list(endStage = "writeCpp"))
+##       RcppPackets[[i]] <- NCinternals(objs[[i]])$RcppPacket
+##       if (isTRUE(nClass_full_interface)) {
+##         full_interface[[i]] <- build_compiled_nClass(objs[[i]], quoted = TRUE)
+##       }
+
+##       # I thought maybe I could put methods doc in C++ as follows but I had issues
+##       # thisRox <- switch(roxygenFlag,
+##       #                   none = NULL,
+##       #                   indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+##       #                   names = if (objNames[[i]] %in% names(roxygen))
+##       #                     roxygen[[ objNames[i] ]]
+##       #                   else NULL)
+##       # if (!is.null(thisRox)) {
+##       #   # givenNames <- names(objs[[i]]$public_methods)
+##       #   cppCodeNames <- lapply(objs[[i]]$public_methods,
+##       #                          function(x) if (isNF(x))
+##       #                            NFinternals(x)$cpp_code_name)
+##       #   for (m in 1:length(thisRox$methods)) {
+##       #     thisFnDefIndex <- grep(paste0(cppCodeNames[names(thisRox$methods)[m]], " ("),
+##       #                             RcppPackets[[i]]$cppContent, fixed = TRUE)
+##       #
+##       #     RcppPackets[[i]]$cppContent <-
+##       #       c(RcppPackets[[i]]$cppContent[1:(thisFnDefIndex - 1)],
+##       #         thisRox$methods[[m]],
+##       #         RcppPackets[[i]]$cppContent[(thisFnDefIndex):length(RcppPackets[[i]]$cppContent)])
+##       #   }
+##       # }
+
+##     } else {
+##       stop(paste("In writePackage: only nFunctions and nClass generators are",
+##                  "allowed. Cannot compile object of class ", class(objs[[i]])))
+##     }
+##   }
+
+##   initializePkg <- FALSE
+##   if (dir.exists(pkgDir)) {
+##     if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
+##                                     ". Change 'modify' argument to add to or clear it."))
+##   } else initializePkg <- TRUE
+##   ## The following eval(substitute(...), ...) construction is necessary because
+##   ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
+##   ## directly as needed here from inside a function.
+
+##   if (initializePkg) {
+##     nCompiler_placeholder <<- function() NULL
+##     suppressMessages(
+##       eval(
+##         substitute(
+##           Rcpp.package.skeleton(PN,
+##                path = DIR,
+##                # list = "nCompiler_placeholder",
+##                author = "This package was generated by the nCompiler",
+##                force = FORCE),
+##           list(DIR = dir,
+##                PN = pkgName,
+##                FORCE = modify == "clear")),
+##         envir = .GlobalEnv)
+##     )
+##     if(file.exists(file.path(pkgDir, "Read-and-delete-me")))
+##       file.remove(file.path(pkgDir, "Read-and-delete-me"))
+##     dir.create(instDir)
+##     dir.create(datDir)
+##     dir.create(codeDir, recursive = TRUE)
+##   }
+
+##   Rfilepath <- character(length(objs))
+
+##   # Loop over each object again
+##   for (i in 1:length(objs)) {
+
+##     ## We write the code once for the package's DLL...
+##     nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
+##                                     dir = srcDir)
+##     ## ... and again for other packages that need to
+##     ## compile against this package's source code.
+##     ## Otherwise, C++ source code is not present in an installed package.
+##     ## Compiling against source code is necessary because of
+##     ## heavy use of C++ templates.
+##     nCompiler:::writeCpp_nCompiler(RcppPackets[[i]],
+##                                    dir = codeDir)
+##     if (isNCgenerator(objs[[i]]) && isTRUE(nClass_full_interface)) {
+##       ## Write the nClass full interface to the package's R directory
+##       generator_name <- objs[[i]]$classname
+##       Rfile <- paste0(generator_name, '.R')
+##       Rfilepath[i] <- file.path(Rdir, Rfile)
+##       con <- file(Rfilepath[i], open = 'w')
+##       deparsed_full_interface <- deparse(full_interface[[i]])
+##       deparsed_full_interface[1] <- paste0(
+##         generator_name, ' <- ', deparsed_full_interface[1]
+##       )
+##       exportTag <- if (totalControl[[i]]$export) "#' @export\n" else NULL
+##       # Retrieve roxygen entry
+##       thisRox <- switch(roxygenFlag,
+##                         none = NULL,
+##                         indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+##                         names = if (objNames[[i]] %in% names(roxygen))
+##                                   roxygen[[ objNames[i] ]]
+##                                 else NULL
+##                         )
+
+##       if (!is.null(thisRox)) {
+##         # Find the spot where each documented method is defined
+##         for (m in 1:length(thisRox$methods)) {
+##           thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
+##                            deparsed_full_interface, fixed = TRUE)
+##           targetStr <- deparsed_full_interface[thisDefn]
+##           deparsed_full_interface[thisDefn] <-
+##             gsub(pattern = names(thisRox$methods)[m],
+##                  replacement = paste0(
+##                    "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
+##                  ),
+##                  x = deparsed_full_interface[thisDefn],
+##                  fixed = TRUE)
+##         }
+##       }
+
+##       deparsed_full_interface <- c(
+##         '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
+##         if (is.list(thisRox)) thisRox[["header"]] else thisRox,
+##         exportTag,
+##         deparsed_full_interface,
+##         paste0(generator_name, '$parent_env <- new.env()'),
+##         paste0(generator_name, '$.newCobjFun <- NULL')
+##       )
+##       writeLines(deparsed_full_interface, con)
+##       close(con)
+##     }
+##   }
+
+##   # Write out data
+##   if (length(memberData) > 0) {
+##     datEnv <- as.environment(memberData)
+##     for (i in 1:length(ls(datEnv))) {
+##       save(list = ls(datEnv)[i], envir = datEnv,
+##            file = file.path(datDir, paste0(ls(datEnv)[i], ".RData")))
+##     }
+##   }
+
+##   # Write .onLoad
+##   nClass_names <- unlist(lapply(objs, function(x)
+##     if(isNCgenerator(x)) x$classname else NULL
+##     ))
+##   if(length(nClass_names)) {
+##     onLoad_lines <- c(".onLoad <- function(libName, pkgName) {\n",
+##                       paste0(" nCompiler::setup_nClass_environments_from_package(c(", paste0("\"",nClass_names,"\"", collapse = ", "),  "))\n"),
+##                       "NULL}\n")
+##     writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
+##   }
+
+##   DESCfile <- file.path(pkgDir, "DESCRIPTION")
+##   NAMEfile <- file.path(pkgDir, "NAMESPACE")
+##   if (initializePkg) {
+##     DESCRIPTION <- read.dcf(DESCfile)
+##     ## TO-DO: Make choice of what to include be smart about what is really needed.
+##     ## A nFunction might only need:
+##     ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
+##     ## A nClass might need:
+##     DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD", "RcppParallel", "nCompiler", "Rcereal", sep = ",")
+##     # DESCRIPTION$Encoding <- "UTF-8"
+##       ## It is conceivable that nCompLocal will need to be added to this at some point.
+##       ## If so, it will need to be installed in R's main library, not some local location.
+##     # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
+##     write.dcf(DESCRIPTION, DESCfile)
+
+##     NAMESPACE <- c(paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
+##                    "importFrom(Rcpp, evalCpp)",
+##                    "export(nComp_serialize_)",
+##                    "export(nComp_deserialize_)",
+##                    "export(call_method)",
+##                    "export(get_value)",
+##                    "export(set_value)"
+##                    )
+##   } else {
+##     NAMESPACE <- readLines(NAMEfile)
+##   }
+
+##   for (i in 1:length(objs)) {
+##     # if (totalControl[[i]]$export && isNCgenerator(objs[[i]]))
+##     if (totalControl[[i]]$export) {
+##       if (isNF(objs[[i]]) || nClass_full_interface) {
+##         NAMESPACE <- c(NAMESPACE, paste0("export(", objNames[i], ")"))
+##       }
+##       if (isNCgenerator(objs[[i]]))
+##           NAMESPACE <- c(NAMESPACE, paste0("export(new_", objNames[i], ")"))
+##     }
+##   }
+##   NAMESPACE <- unique(NAMESPACE)
+##   writeLines(NAMESPACE, con = NAMEfile)
+
+##   if (!initializePkg) {
+##     compiledObjs <- list.files(srcDir, pattern = "o$")
+##     # message("Deleting ", compiledObjs)
+##     unlink(compiledObjs)
+##   }
+##   compileAttributes(pkgdir = pkgDir)
+
+##   invisible(NULL)
+## }
 
 #' @name buildPackage
 #' @title Build and install packages written by writePackage
@@ -585,30 +587,60 @@ buildPackage <- function(pkgName,
 #' @seealso For other nCompiler packaging tools, see \code{\link{writePackage}}
 #'   and \code{\link{buildPackage}}. For more info on deleting a directory see
 #'   \code{\link[base]{unlink}}.
-erasePackage <- function(pkgName, dir,
+erasePackage <- function(pkgName, dir = '.',
+                         lib,
                          nCompilerOnly = TRUE,
                          unload = TRUE,
-                         uninstall = FALSE
+                         unregister = FALSE,
+                         uninstall = FALSE,
+                         quiet = FALSE,
+                         error = TRUE
                          ) {
+  if(unload && unregister) {
+    if(error)
+      stop("At most one of unload and unregister can be TRUE.")
+    else unregister <- FALSE
+  }
   pkgDir <- file.path(dir, pkgName)
-  if (!dir.exists(pkgDir)) 
-    stop(paste0("Directory does not exist at the specified path: ", pkgDir))
-  if (!file.exists(file.path(pkgDir, "DESCRIPTION")))
-    stop("Target is not a package (no DESCRIPTION found).")
-  
-  if (nCompilerOnly) {
+  do_erase <- TRUE
+  if (!dir.exists(pkgDir)) {
+    do_erase <- FALSE
+    if(error) stop(paste0("Directory does not exist at the specified path: ", pkgDir))
+  }
+  if (!file.exists(file.path(pkgDir, "DESCRIPTION"))) {
+    do_erase <- FALSE
+    if(error) stop("Target is not a package (no DESCRIPTION found).")
+  }
+  if (nCompilerOnly && do_erase) {
     desc <- read.dcf(file.path(pkgDir, "DESCRIPTION"))
     if (!(desc[,"Author"] == "This package was generated by the nCompiler")) {
-      stop("This package was not auto-generated by nCompiler.")
+      do_erase <- FALSE
+      if(error) stop("This package was not auto-generated by nCompiler.")
     }
   }
-  
-  if (unload)
-    detach(paste0("package:", pkgName), unload = TRUE, character.only=TRUE)
-  if(uninstall)
-    remove.packages(pkgName)
 
-  unlink(pkgDir, recursive = TRUE)
+  try_unload_unreg <- TRUE
+  if(!error) try_unload_unreg <- any(grepl(pkgName, searchpaths()))
+
+  if(try_unload_unreg) {
+    if (unload)
+      pkgload::unload(pkgName, quiet = quiet)
+    #    detach(paste0("package:", pkgName), unload = TRUE, character.only=TRUE)
+    if(unregister) { # unregister function does not have a quiet argument
+      pkgload::unregister(pkgName)
+    }
+  }
+  if(uninstall) {
+    if(missing(lib)) {
+      is_installed <- any(grepl(pkgNamed, installed.packages()))
+      if(is_installed) devtools::uninstall(pkgName, quiet = quiet)
+    } else {
+      is_installed <- any(grepl(pkgNamed, installed.packages(lib.loc = lib)))
+      if(is_installed) withr::with_libpaths(lib, devtools::uninstall(pkgName, quiet = quiet))
+      #remove.packages(pkgName)
+    }
+  }
+  if(do_erase) unlink(pkgDir, recursive = TRUE)
   invisible(NULL)
 }
 
