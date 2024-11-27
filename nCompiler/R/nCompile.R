@@ -275,7 +275,7 @@ nCompile <- function(...,
   names(origList)[boolNoName] <- dotsDeparses[boolNoName] # This puts default names from deparsing ... entries into list
   units <- do.call('c', origList)
 
-  inputNamesInfo <- list(names = names(origList), boolNameProvided = !boolNoName)
+  inputNamesInfo <- list(names = names(units), boolNameProvided = !boolNoName)
 
   # (1b) Unpack interfaces argument from various formats.
   # Remember interface is only needed for nClass compilation units
@@ -308,10 +308,12 @@ nCompile <- function(...,
   # returned name for the nClass generator
   returnNames <- exportNames <- vector("character", length(units))
   for(i in seq_along(units)) {
+    add_new_ <- FALSE
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       compileInfo <- NFinternals(units[[i]])$compileInfo
     } else {
       compileInfo <- NCinternals(units[[i]])$compileInfo
+      if(interfaces[[i]]=="full") add_new_ <- TRUE
     }
     # If a name was provided directly in the ... list
     # OR if no exportName was provided in the nClass call's compileInfo,
@@ -325,7 +327,7 @@ nCompile <- function(...,
     returnNames[i] <- exportNames[i]
     # If a full interface will be returned, make the exportName
     # distinct from the returnName by prefixing with "new_"
-    if(interfaces[[i]]=="full") # this could happen by setting just above or by choice of provided compileInfo$exportName
+    if(add_new_) # this could happen by setting just above or by choice of provided compileInfo$exportName
       exportNames[i] <- paste0("new_", exportNames[i])
   }
 
@@ -400,9 +402,9 @@ nCompile <- function(...,
       ans_
     })
     if(inherits(ans, "try-error")) {
-      stop("It looks like the package code was generated without stopping,",
-           "but there was an error installing or loading it.",
-           "If you want to inspect the package code,",
+      stop("It looks like the package code was generated without stopping,\n",
+           "but there was an error installing or loading it.\n",
+           "If you want to inspect the package code, ",
            "it is in ", pkgDir, ".")
     }
     if(length(ans)==1)
@@ -439,10 +441,17 @@ writePackage <- function(...,
   require(Rcpp)
   pkgDir <- file.path(dir, pkgName)
   modify <- match.arg(modify, c("no", "add", "clear"))
-  if (dir.exists(pkgDir)) {
-    if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
-                                    ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
-                                    " (to erase it before writing). Use erasePackage to erase it as a separate step."))
+  initializePkg <- FALSE
+  if(modify == "clear") { # Always initialize
+    initializePkg <- TRUE
+  } else {
+      if (dir.exists(pkgDir)) {
+        if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
+                                        ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
+                                        " (to erase it before writing). Use erasePackage to erase it as a separate step."))
+      } else {
+        initializePkg <- TRUE # Initialize is modify != "clear" but no package exists yet
+      }
   }
   if(grepl("_", pkgName))
     stop("Package names are not allowed to have underscore characters.")
@@ -504,7 +513,7 @@ writePackage <- function(...,
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
   full_interface <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
 #
-  if (modify=="clear")
+  if (initializePkg)
     WP_initializePkg(pkgName, dir, pkgDir, instDir, datDir, codeDir, modify)
 #
   # Rfilepath <- character(length(units))
@@ -520,7 +529,7 @@ writePackage <- function(...,
   WP_writeMemberData(memberData, datDir)
   WP_write_dotOnLoad(exportNames, unitTypes, Rdir)
   WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, returnNames,
-                                 modify=="clear", pkgDir, pkgName)
+                                 initializePkg, pkgDir, pkgName)
   ## if (!initializePkg) {
   ##   compiledObjs <- list.files(srcDir, pattern = "o$")
   ##   # message("Deleting ", compiledObjs)
@@ -613,7 +622,7 @@ nCompile_finish_nonpackage <- function(units,
     if(unitTypes[i] == "nF") {
       ans[[i]] <- compiledFuns[[iRes]]
     } else if(unitTypes[i] == "nCgen") {
-      interfaceType <- interfaces[[ ans_names[i] ]]
+      interfaceType <- interfaces[[ i ]] # note it should be ordered (but names are from units)
       if(is.null(interfaceType))
         interfaceType <- "full"
       if(interfaceType == "full")

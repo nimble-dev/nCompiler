@@ -7,6 +7,27 @@ I am not putting broken tests in place, except where a file is marked NOTWORKING
 Tests that need future attention:
 ---------------------------------
 
+see tests_that_need_to_be_fixed.
+
+Some to-do notes:
+- The scheme of passing the environment when calling a method in order to do R-style
+  argument matching/ordering and handle ref/refBlock is not set up for nFunction.
+- We also need tests of argument matching/ordering.
+- to_full_interface is not set up via packaging
+- TBB scheme needs a full cycle of attention. It is far out of date.
+- predefined nClasses need attention in relation to the new #include scheme.
+-  nOptim's problem is use of a predefined nClass
+- No attempt at CppAD test updating was made because that is still under construction.
+- test-math has not been attempted because that will take a while.
+- The tensorOperations tests need various attention on the C++ site.
+  I think some of this is due to the upgrade to C++17.
+- Serialization testing is for mechanics but needs testing of core types and also membership networks.
+- stacktrace system could use the exportName for greater interpretability
+- test-indexing error-trapping tests are disabled and need attetion
+- There is a note in test-nClass_interface that they don't work via test_package.
+- nDeparse of for loops needs to be fixed.
+
+
 ======================================
 Tests that do not need to be retained:
 -------------------------------------

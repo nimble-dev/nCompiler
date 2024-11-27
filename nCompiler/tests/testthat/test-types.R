@@ -1,5 +1,3 @@
-context("Testing nCompiler types.")
-
 test_that("numericVector(5)",
 {
   ## as if `a = numericVector(5)` declared in function argument

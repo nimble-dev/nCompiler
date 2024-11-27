@@ -1,0 +1,590 @@
+message("to_full_interface does not work via packaging.")
+
+# Notes:
+# Three pathways:
+# A. nCompile(package =FALSE)
+# B. nCompile(package = TRUE)
+# C. writePackage
+#
+# Pathway A will be faster but does not allow work to be saved.
+# Pathway B allows work to be saved with all package details managed internally.
+# Pathway C allows development of one's own package, requiring some attention to package details.
+#
+# For B, the returned functions or list of functions should match those of A but be obtained via `::`.
+#  This will allow repeated re-compiling without needing to unload DLLs.
+#  It will also require some tracking of assigned names when saving. That could get messy.
+# For C, one needs control of the exported R names, perhaps to be called compiledName and defaulting to name.
+# Return object of nCompile(package = TRUE) needs attention.
+
+test_that("nCompile direct, package, and writePackage work", {
+  add.Scalars_name <- nFunction(
+    name = 'Cadd.scalars',
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+
+  add.Scalars_name_eName <- nFunction(
+    name = 'Cadd.scalars',
+    compileInfo = list(exportName = "foo2"),
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+
+  add.Scalars <- nFunction(
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+
+  add.Scalars_eName <- nFunction(
+    compileInfo = list(exportName = "foo1"),
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+
+  test <- nCompile(add.Scalars, package = FALSE, returnList = TRUE)
+  expect_equal(test$add.Scalars(2, 3), 5)
+  test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE)
+  expect_equal(test$add.Scalars(2, 3), 5)
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(add.Scalars, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  expect_equal(testpackage::add.Scalars(2, 3), 5)
+  devtools::unload("testpackage")
+
+  test <- nCompile(add.Scalars_name, package = FALSE, returnList = TRUE)
+  expect_equal(test$add.Scalars_name(2, 3), 5)
+  test <- nCompile(add.Scalars_name, package = TRUE, returnList = TRUE)
+  expect_equal(test$add.Scalars_name(2, 3), 5)
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(add.Scalars_name, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  expect_equal(testpackage::add.Scalars_name(2, 3), 5)
+  devtools::unload("testpackage")
+
+  test <- nCompile(add.Scalars_eName, package = FALSE, returnList = TRUE)
+  expect_equal(test$foo1(2, 3), 5)
+  test <- nCompile(add.Scalars_eName, package = TRUE, returnList = TRUE)
+  expect_equal(test$foo1(2, 3), 5)
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(add.Scalars_eName, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  expect_equal(testpackage::foo1(2, 3), 5)
+  devtools::unload("testpackage")
+
+  test <- nCompile(add.Scalars_name_eName, package = FALSE, returnList = TRUE)
+  expect_equal(test$foo2(2, 3), 5)
+  test <- nCompile(add.Scalars_name_eName, package = TRUE, returnList = TRUE)
+  expect_equal(test$foo2(2, 3), 5)
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(add.Scalars_name_eName, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  expect_equal(testpackage::foo2(2, 3), 5)
+  devtools::unload("testpackage")
+})
+
+test_that("nCompile works for nClass with classname and/or exportName and either interface", {
+  nc_name <- nClass(
+    classname = "nc.1",
+    Cpublic = list(
+      v.1 = 'numericVector',
+      go.1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v.1)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+
+  nc <- nClass(
+    Cpublic = list(
+      v.1 = 'numericVector',
+      go.1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v.1)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+
+  nc_name_eName <- nClass(
+    classname = "nc.1",
+    compileInfo = list(exportName = "exnc2"),
+    Cpublic = list(
+      v.1 = 'numericVector',
+      go.1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v.1)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+
+  nc_eName <- nClass(
+    compileInfo = list(exportName = "exnc1"),
+    Cpublic = list(
+      v.1 = 'numericVector',
+      go.1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v.1)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+
+  test_obj <- function(obj) {
+    if(nCompiler:::is.loadedObjectEnv(obj)) {
+      value(obj, "v.1") <- 1:3
+      expect_equal(value(obj, "v.1"), 1:3)
+      expect_identical(method(obj, "go.1")(10), 10 * (1:3))
+    } else {
+      obj$v.1 <- 1:3
+      expect_equal(obj$v.1, 1:3)
+      expect_identical(obj$go.1(10), 10 * (1:3))
+    }
+  }
+
+###### plain version of nc
+  ## generic & direct
+  test <- nCompile(nc, package=FALSE, interfaces = "generic", returnList = TRUE)
+  obj <- test$nc(); test_obj(obj)
+  objf <- to_full_interface(obj); test_obj(objf)
+  ## full & direct
+  test <- nCompile(nc, package=FALSE, interfaces = "full", returnList = TRUE)
+  obj <- test$nc$new(); test_obj(obj)
+
+  ## generic & package
+  test <- nCompile(nc, package=TRUE, interfaces = "generic", returnList = TRUE)
+  obj <- test$nc(); test_obj(obj)
+                                        # objf <- to_full_interface(obj); test_obj(objf)
+  ## full & package
+  test <- nCompile(nc, package=TRUE, interfaces = "full", returnList = TRUE)
+  obj <- test$nc$new(); test_obj(obj)
+
+  ## generic & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc, interfaces = "generic", pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::nc(); test_obj(obj)
+  devtools::unload("testpackage")
+
+  ## full & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::nc$new(); test_obj(obj)
+  devtools::unload("testpackage")
+
+
+###### name  version of nc
+  ## generic & direct
+  test <- nCompile(nc_name, package=FALSE, interfaces = "generic", returnList = TRUE)
+  obj <- test$nc_name(); test_obj(obj)
+  objf <- to_full_interface(obj); test_obj(objf)
+  ## full & direct
+  test <- nCompile(nc_name, package=FALSE, interfaces = "full", returnList = TRUE)
+  obj <- test$nc_name$new(); test_obj(obj)
+
+  ## generic & package
+  test <- nCompile(nc_name, package=TRUE, interfaces = "generic", returnList = TRUE)
+  obj <- test$nc_name(); test_obj(obj)
+                                        # objf <- to_full_interface(obj); test_obj(objf)
+  ## full & package
+  test <- nCompile(nc_name, package=TRUE, interfaces = "full", returnList = TRUE)
+  obj <- test$nc_name$new(); test_obj(obj)
+
+  ## generic & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_name, interfaces = "generic", pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::nc_name(); test_obj(obj)
+  devtools::unload("testpackage")
+
+  ## full & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_name, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::nc_name$new(); test_obj(obj)
+  devtools::unload("testpackage")
+
+
+
+
+###### eName version of nc
+  ## generic & direct
+  test <- nCompile(nc_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
+  obj <- test$exnc1(); test_obj(obj)
+  objf <- to_full_interface(obj); test_obj(objf)
+  ## full & direct
+  test <- nCompile(nc_eName, package=FALSE, interfaces = "full", returnList = TRUE)
+  obj <- test$exnc1$new(); test_obj(obj)
+
+  ## generic & package
+  test <- nCompile(nc_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
+  obj <- test$exnc1(); test_obj(obj)
+                                        # objf <- to_full_interface(obj); test_obj(objf)
+  ## full & package
+  test <- nCompile(nc_eName, package=TRUE, interfaces = "full", returnList = TRUE)
+  obj <- test$exnc1$new(); test_obj(obj)
+
+  ## generic & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_eName, interfaces = "generic", pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::exnc1(); test_obj(obj)
+  devtools::unload("testpackage")
+
+  ## full & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_eName, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::exnc1$new(); test_obj(obj)
+  devtools::unload("testpackage")
+
+
+
+
+###### name and eName version of nc
+  ## generic & direct
+  test <- nCompile(nc_name_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
+  obj <- test$exnc2(); test_obj(obj)
+  objf <- to_full_interface(obj); test_obj(objf)
+  ## full & direct
+  test <- nCompile(nc_name_eName, package=FALSE, interfaces = "full", returnList = TRUE)
+  obj <- test$exnc2$new(); test_obj(obj)
+
+  ## generic & package
+  test <- nCompile(nc_name_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
+  obj <- test$exnc2(); test_obj(obj)
+                                        # objf <- to_full_interface(obj); test_obj(objf)
+  ## full & package
+  test <- nCompile(nc_name_eName, package=TRUE, interfaces = "full", returnList = TRUE)
+  obj <- test$exnc2$new(); test_obj(obj)
+
+  ## generic & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_name_eName, interfaces = "generic", pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::exnc2(); test_obj(obj)
+  devtools::unload("testpackage")
+
+  ## full & writePackage
+  dir <- file.path(tempdir(), "test_nComp_testpackage2")
+  dir.create(dir, showWarnings=FALSE)
+  test <- writePackage(nc_name_eName, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib2")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::exnc2$new(); test_obj(obj)
+  devtools::unload("testpackage")
+})
+
+test_that("Compile one nFunction via nCompile, returning a list (and testing external R name invalid for C++).",
+{ 
+  add.Scalars <- nFunction(
+    name = 'Cadd.scalars',
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+  test <- nCompile(add.Scalars, package = FALSE, returnList = TRUE)
+  #test <- nCompile2(add.Scalars, returnList = TRUE)
+  expect_equal(test$add.Scalars(2, 3), 5)
+  test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE)
+  expect_equal(test$add.Scalars(2, 3), 5)
+}
+)
+
+test_that("Compile one nFunction via nCompile, not returning a list (and testing internal name invalid for C++).",
+{ 
+  addScalars <- nFunction(
+    name = "add.Scalars",
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+  test <- nCompile(addScalars, returnList = FALSE)
+  expect_equal(test(2, 3), 5)
+})
+
+test_that("Compile two nFunctions via nCompile, returning a list.",
+{ 
+  addScalars <- nFunction(
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+  multScalars <- nFunction(
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x * y
+      return(ans)
+    }
+  )
+  test <- nCompile(addScalars, multScalars)
+  expect_equal(test$addScalars(2, 3), 5)
+  expect_equal(test$multScalars(2, 3), 6)
+}
+)
+
+test_that("Compile two nFunctions via nCompile provided as a list, returning a list.",
+{ 
+  addScalars <- nFunction(
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x + y
+      return(ans)
+    }
+  )
+  multScalars <- nFunction(
+    fun = function(x = double(0),
+                   y = double(0)) {
+      returnType(double(0))
+      ans <- x * y
+      return(ans)
+    }
+  )
+  test <- nCompile(list(f1 = addScalars, f2 = multScalars))
+  expect_equal(test$f1(2, 3), 5)
+  expect_equal(test$f2(2, 3), 6)
+})
+
+test_that("Compile one nClass via nCompile provided as a list, returning not as list (and checking R to C++ conversions of class, method, and member names).",
+{
+  # Some other variants are in the "...various ways..." test below
+  nc <- nClass(
+    classname = "nc.1",
+    Cpublic = list(
+      v.1 = 'numericVector',
+      go.1 = nFunction(
+        fun = function(c = 'numericScalar') {
+          return(c * v.1)
+        },
+        returnType = 'numericVector'
+      )
+    )
+  )
+  Cnc <- nCompile(list(nc = nc))
+#  Cnc <- nCompile2(list(nc = nc))
+  Cnc1 <- Cnc$new()
+  Cnc1$v.1 <- 1:3
+  expect_equal(Cnc1$go.1(2), 2*(1:3))
+})
+
+test_that("nCompile naming and interface choices work in various ways",
+{
+  nc1 <- nClass(
+    classname = "nc1_",
+    Cpublic = list(
+      x = 'numericScalar'
+    )
+  )
+  
+  nc2 <- nClass(
+    Cpublic = list(
+      y = 'numericScalar'
+    )
+  )
+  
+  nc3 <- nClass(
+    Cpublic = list(
+      z = 'numericScalar'
+    )
+  )
+
+  # Basic use
+  #nOptions(showCompilerOutput = TRUE)
+  comp <- nCompile(nc1, nc2)
+  expect_identical(names(comp), c("nc1", "nc2"))
+  expect_true(inherits(comp$nc1$new(), "nClass"))
+  expect_true(inherits(comp$nc2$new(), "nClass"))
+ 
+  # One named element in the ..., and generic interface for ALL
+  comp <- nCompile(nc1x = nc1, nc2,
+                   interfaces = "generic")
+  expect_identical(names(comp), c("nc1x", "nc2"))
+  expect_true(class(comp$nc1())=="loadedObjectEnv")
+  expect_true(class(comp$nc2())=="loadedObjectEnv")
+
+  # One named element in the ..., and different interface choices
+  comp <- nCompile(nc1x = nc1, nc2,
+                   interfaces = c(nc1x = "full", nc2 = "generic"))
+  expect_identical(names(comp), c("nc1x", "nc2"))
+  expect_true(inherits(comp$nc1x$new(), "CnClass"))
+  expect_true(class(comp$nc2())=="loadedObjectEnv")
+
+  # Call with singleton does not return a list
+  comp <- nCompile(nc1)
+  expect_true(inherits(comp$new(), "CnClass"))
+
+  # Option to return a list with a singleton
+  comp <- nCompile(nc1, returnList = TRUE)
+  expect_true(inherits(comp$nc1$new(), "CnClass"))
+
+  # Provide compilation units as a named list
+  comp <- nCompile(list(nc1 = nc1, nc2 = nc2), interfaces = "generic")
+  expect_identical(names(comp), c("nc1", "nc2"))
+  expect_true(class(comp$nc1())=="loadedObjectEnv")
+  expect_true(class(comp$nc2())=="loadedObjectEnv")
+
+  # Error if a list is not completely named
+  expect_error(comp <- nCompile(list(nc1 = nc1, nc2))) ## expect error due to only partial naming in list
+
+  # Mix of named list and individual unit, both in ...
+  comp <- nCompile(list(nc1 = nc1, nc3 = nc3), nc2, interfaces = "generic")
+  expect_identical(names(comp), c("nc1", "nc3", "nc2"))
+  expect_true(class(comp$nc1())=="loadedObjectEnv")
+  expect_true(class(comp$nc2())=="loadedObjectEnv")
+  expect_true(class(comp$nc3())=="loadedObjectEnv")
+  
+  # Move on to nFunctions  
+  nfA <- nFunction(
+    name = "nfA_",
+    fun = function() {
+      return(2)
+      returnType('integerScalar')
+    })
+  
+  nfB <- nFunction(
+    fun = function() {
+      return(nfA())
+      returnType('integerScalar')
+    })
+  
+  nfC <- nFunction(
+    fun = function() {
+      return(nfB())
+      returnType('integerScalar')
+    })
+
+  # Basic use
+  #debug(nCompile)
+  comp <- nCompile(nfB, nfA)
+  expect_identical(names(comp), c("nfB", "nfA"))
+  expect_true(is.function(comp$nfB))
+  expect_true(is.function(comp$nfA))
+  expect_equal(comp$nfB(), 2)
+  # Singleton
+  comp <- nCompile(nfA)
+  expect_true(is.function(comp))
+
+  # Singleton returned as list
+  comp <- nCompile(nfA, returnList = TRUE)
+  expect_identical(names(comp), c("nfA"))
+  expect_true(is.function(comp$nfA))
+
+  # One item named, the other not, in ...
+  comp <- nCompile(f2 = nfB, nfA)
+  expect_identical(names(comp), c("f2", "nfA"))
+  expect_true(is.function(comp$f2))
+  expect_true(is.function(comp$nfA))
+
+  # Error from incompletely named list
+  expect_error(comp <- nCompile(list(f2 = nfB, nfA))) # expected error due to incompletely named list 
+
+  # Fully named list
+  comp <- nCompile(list(f2 = nfB, f1 = nfA)) 
+  expect_identical(names(comp), c("f2", "f1"))
+  expect_true(is.function(comp$f2))
+  expect_true(is.function(comp$f1))
+
+  # Mix of list and individual item, both in ...
+  comp <- nCompile(list(f2 = nfB, f3 = nfC), nfA) 
+  expect_identical(names(comp), c("f2", "f3", "nfA"))
+  expect_true(is.function(comp$f2))
+  expect_true(is.function(comp$f3))
+  expect_true(is.function(comp$nfA))
+
+  # Mix of nFunction and nClass
+  comp <- nCompile(nfA, nc1)
+  expect_identical(names(comp), c("nfA", "nc1"))
+  expect_true(is.function(comp$nfA))
+  expect_true(inherits(comp$nc1$new(), "nClass"))
+})

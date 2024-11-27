@@ -366,3 +366,24 @@ asDense <- function(x) {
 nMul <- function(x, y) {
   x %*% y
 }
+
+#' Wrapper for solve
+#'
+#' @export
+nSolve <- function(a, b) {
+  solve(a,b)
+}
+
+#' Wrapper for forwardsolve
+#'
+#' @export
+nForwardsolve <- function(l, x) {
+  forwardsolve(l,x)
+}
+
+#' Wrapper for backsolve
+#'
+#' @export
+nBacksolve <- function(r, x) {
+  backsolve(r,x)
+}
