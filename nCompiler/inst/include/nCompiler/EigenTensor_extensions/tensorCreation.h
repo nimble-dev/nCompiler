@@ -14,11 +14,16 @@ struct create_tensor<ScalarTypeOut, NumDimensionsOut, DerivedIn, true, Dim...> {
   typedef typename TensorOut::Index IndexType;
 
   static TensorOut createTensor(const DerivedIn& value,  Dim... dim) {
-    TensorOut ans(dim...);
+    // We must static_cast here to avoid this error:
+    // error: type 'double' cannot be narrowed to 'long' in initializer list [-Wc++11-narrowing]
+    // Without the static_cast here, then for the case nDim>2, the constructor for
+    // DSizes at line 340 of Tensor/TensorDimensions.h (as of this writing) will
+    // force a cast from the parameter pack (which is only used after the first two
+    // dimesions) and a "narrowing" cast is not allowed there.
+    TensorOut ans(static_cast<IndexType>(dim)...);
     ans.setConstant(value);
     return(ans);
   }
-
 };
 
 // ScalarValue = true and Dim is Eigen::Tensor<int, 1>

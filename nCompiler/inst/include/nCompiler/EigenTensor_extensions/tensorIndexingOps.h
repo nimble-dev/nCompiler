@@ -140,9 +140,15 @@ namespace Eigen {
         IsAligned = false,
         PacketAccess = TensorEvaluator<ArgType, Device>::PacketAccess,
         Layout = TensorEvaluator<ArgType, Device>::Layout,
+        BlockAccess = false,
+        PreferBlockAccess = TensorEvaluator<ArgType, Device>::PreferBlockAccess,
         CoordAccess = false,  // to be implemented
         RawAccess = false
       };
+
+      //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
+      typedef internal::TensorBlockNotImplemented TensorBlock;
+      //===--------------------------------------------------------------------===//
 
       EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorEvaluator(const XprType& op,
                                                             const Device& device)

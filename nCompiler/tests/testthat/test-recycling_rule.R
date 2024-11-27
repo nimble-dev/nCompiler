@@ -1,4 +1,3 @@
-context("Testing of recycling rule for distribution functions in nCompiler code")
 
 test_that('Basics of recycling rule work',
 {
@@ -10,17 +9,17 @@ test_that('Basics of recycling rule work',
       return(ans)
     }
   )
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- rnorm(4)
   y <- rnorm(4)
   mean <- rnorm(10)
   sd <- 1L:7L
   expect_equal(
     nfC(x, y, mean, sd, FALSE),
-    as.array(dnorm(x + y, exp(mean), sd))
+    dnorm(x + y, exp(mean), sd)
   )
   expect_equal(
     nfC(x, y, mean, sd, TRUE),
-    as.array(dnorm(x + y, exp(mean), sd, log = TRUE))
+    dnorm(x + y, exp(mean), sd, log = TRUE)
   )
 })

@@ -10,10 +10,12 @@ nClassBaseClass_init_impl <- function(cppDef) {
                     }
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
-                        "#define NCOMPILER_USES_EIGEN")
+                        "#define NCOMPILER_USES_EIGEN",
+                        "#define NCOMPILER_USES_TBB")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
-                        "#define NCOMPILER_USES_EIGEN")
+                        "#define NCOMPILER_USES_EIGEN",
+                        "#define NCOMPILER_USES_TBB")
 
   cppDef$Hincludes <- c(cppDef$Hincludes,
                       "<Rinternals.h>")#,
@@ -91,6 +93,8 @@ cpp_nClassBaseClass <- R6::R6Class(
                          fromModel = fromModel)
       if(length(name)==0)
         name <<- Compiler$name
+      if(length(self$compileInfo$exportName)==0)
+        self$compileInfo$exportName <- self$name
       built <<- FALSE
       loaded <<- FALSE
       Cwritten <<- FALSE

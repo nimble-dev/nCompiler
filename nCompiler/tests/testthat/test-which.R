@@ -1,5 +1,3 @@
-context('Testing which operator')
-
 test_that("Basic which usage works", {
   nc <- nClass(
     Cpublic = list(

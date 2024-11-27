@@ -70,6 +70,7 @@ nClass <- function(classname,
                    Cpublic = list(),
                    enableDerivs = character(),
                    enableSaving = get_nOption("enableSaving"),
+                   compileInfo = list(),
                    predefined = FALSE,
                    env = parent.frame()) {
   if(missing(classname))
@@ -79,6 +80,7 @@ nClass <- function(classname,
                                     isOnlyC = length(Rpublic) == 0,
                                     enableDerivs = enableDerivs,
                                     enableSaving = enableSaving,
+                                    compileInfo = compileInfo,
                                     predefined = predefined)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance

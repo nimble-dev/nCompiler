@@ -1,0 +1,134 @@
+June 2024 status summary of tests
+=================================
+
+NF_CompilerClass: works
+  - internal steps of NF_CompilerClass
+
+NF_derivs:
+
+RcppTypes: FAIL 10 | PASS 24
+  - use of Rcpp's types as nimble inputs
+  - An error occurred in compiler stage doImplementation:
+    argument is of length zero
+    This occurred while: handling eigenize for new_x.
+
+Rcpp_nCompilerPacket: works
+  - Very short test of Rcpp_nCompilerPacket
+
+StridedTensorMap: FAIL 1 | PASS 8
+  - STM8(x) not equal to array(x[5, 1:3, 2]).
+  - Attributes: < target is NULL, current is list >
+
+TBB: FAIL 2 | PASS 1
+  - <subscriptOutOfBoundsError/error/condition>
+  - Error in `code$args[[1]]`: subscript out of bounds
+
+aliasChecks: FAIL 0 | PASS 7
+  - MESSY: turns on a debug() and showCompilerOutput=TRUE
+
+argumentPassing: FAIL 0 | PASS 18
+  - MESSY: turns on a debug()
+  - Is it complete from updated work on this?
+
+as_wrap_Rcpp: FAIL 0 | PASS 1
+  - Is it updated from recent work?
+
+callingBetweenNFs: FAIL 2 | PASS 2
+
+compileErrorTrapping: FAIL 0 | PASS 1
+
+compilerStages: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
+   - no real test clauses???
+
+compilerStage-setToEigen: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 25 ]
+
+concatenate: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
+
+cppLiteral: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 7 ]
+   - ans$z not equal to as.array(c(5, 6, 7)).
+   - Attributes: < target is NULL, current is list >
+
+cppVariables: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
+
+cpp_nClassClass: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 2 ]
+
+eigenShapeFlex:[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
+   - updated?
+
+hellotest: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
+
+indexing: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 42 ]
+  - MESSY: showCompilerOutput = TRUE
+
+indexing-cpp:[ FAIL 1 | WARN 1 | SKIP 0 | PASS 0 ]
+  - couldn't find file
+
+labelAbstractTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 25 ]
+  - rename test?
+
+math:
+
+nClass_interface: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
+`check` not equal to array(c(2.3, 3.4, 4.5)).
+Attributes: < target is NULL, current is list >
+vector set and get from a full interface
+
+nClass_uncompiled: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 8 ]
+
+nCompile: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 47 ]
+  # Note: These should all be tested via packaging.
+
+nCompile_nClass: [ FAIL 17 | WARN 0 | SKIP 0 | PASS 0 ]
+  # These may be deprecated as we don't need nCompile_nClass in its previous form.
+
+nCompile_nFunction: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
+  # These may be deprecated as we don't need nCompile_nFunction in its previous form.
+
+nFunction_uncompiled: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]
+
+nOptim: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
+
+nParse_nDeparse: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 26 ]
+  - KNOWN PROBLEM: Deparsing for loops is not right
+
+packaging: [ FAIL 8 | WARN 6 | SKIP 0 | PASS 23 ]
+  - MESSY: turns on compilerOutput
+
+predefined: [ FAIL 4 | WARN 0 | SKIP 0 | PASS 16 ]
+  - MESSY: turns on compilerOutput
+
+recycling_rule:
+
+rep: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 14 ]
+
+repClass:
+
+seq: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 5 ]
+
+seqClass:
+
+serialization:
+   - renovating Sept 2024 while updating features
+
+setInputOutputTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
+   - rename?
+
+setWhich: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
+
+substituteMangledArgumentNames: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
+
+tensorCreation
+
+tensorOperations_accessors
+
+tensorOperations_linear_algebra:
+
+tensorOperations_reshaping
+
+tensorOperations_sparse:
+
+tensorOperations_sparse_multiplication:
+
+types:
+
+which:

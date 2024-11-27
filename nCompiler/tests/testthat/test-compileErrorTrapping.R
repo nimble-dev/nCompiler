@@ -1,4 +1,4 @@
-context("Testing NFtry error handling. (An error for object 'a' not found is expected.)")
+message("test-compileErrorTrapping works but has only the narrowest use case.")
 test_that("nCompiler's error handler works",
 {
     doSomething <- function(x) {

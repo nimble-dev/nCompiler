@@ -1,4 +1,3 @@
-context('Testing rep operator')
 
 test_that("Basic rep usage works", {
   nc <- nClass(

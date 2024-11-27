@@ -80,9 +80,9 @@ compile_normalizeCalls <- function(code,
     }
     # There is also the nFunctionRef to think about. That is a bit more of a type however, not a call.
     if(!is.null(opInfo)) {
-      match_def <- opInfo[["match_def"]]
-      if(!is.null(match_def)) {
-        matched_code <- exprClass_put_args_in_order(match_def, code)
+      matchDef <- opInfo[["matchDef"]]
+      if(!is.null(matchDef)) {
+        matched_code <- exprClass_put_args_in_order(matchDef, code)
         code <- replaceArgInCaller(code, matched_code)
       }
       handlingInfo <- opInfo[["normalizeCalls"]]

@@ -1,5 +1,6 @@
-context(paste0("Testing nimble parsing to exprClass objects by nimbleCode ",
-               "and deparsing by nimDeparse"))
+# Deparsing for loops needs to be fixed.
+# The argument matching and preprocessing of compile time args
+# needs tests.
 
 test_exprClass <- function(Rcode,
                            verbose = FALSE) {

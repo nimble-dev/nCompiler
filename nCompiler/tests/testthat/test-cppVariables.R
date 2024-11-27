@@ -1,5 +1,4 @@
-context("Testing cppVariable classes")
-## More tests should be filled in here.
+message("test-cppVariable has only one case and so needs more coverage.")
 
 test_that("cppVariable classes work", 
 {

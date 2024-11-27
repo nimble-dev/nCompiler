@@ -7,7 +7,8 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
                     }
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
-                        "#define NCOMPILER_USES_EIGEN")
+                        "#define NCOMPILER_USES_EIGEN",
+                        "#define NCOMPILER_USES_TBB")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN")
@@ -216,7 +217,8 @@ cpp_nFunction_buildFunction <- function(cppDef,
   cppDef$returnType <-
     NF_Compiler$returnSymbol$genCppVar()
   if(!cppDef$classMethod && !NF_Compiler$isAD)
-    cppDef$commentsAbove <- paste0('// [[Rcpp::export]]')
+    if(isTRUE(cppDef$export))
+      cppDef$commentsAbove <- paste0('// [[Rcpp::export(name = "',cppDef$compileInfo$exportName,'")]]')
   if(NF_Compiler$isAD)
     cppDef$CPPincludes <- c(
       cppDef$CPPincludes,

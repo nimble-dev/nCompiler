@@ -54,7 +54,7 @@ using namespace Rcpp;
 
 
 #ifdef NCOMPILER_USES_TBB
-#include "nCompiler_TBB.h"
+#include <nCompiler/parallel/nCompiler_TBB.h>
 #endif
 
 #include <Rmath.h>

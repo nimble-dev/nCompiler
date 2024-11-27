@@ -25,6 +25,7 @@ cppDefinitionClass <- R6::R6Class(
     externalCppDefs = list(),
     Hincludes = list(),
     CPPincludes = list(),
+    compileInfo = list(), # This can be used generically for details about each derived class that are deemed too picayune for a separate member variable
     initialize = function(...) {
       dotsList <- list(...)
       for(v in names(dotsList))
@@ -173,7 +174,7 @@ buildSEXPgenerator_impl <- function(self) {
                                                       symbolTable = symbolTableClass$new(),
                                                       skipBrackets = TRUE),
                          returnType = cppSEXP(),
-                         commentsAbove = '// [[Rcpp::export]]'
+                         commentsAbove = paste0('// [[Rcpp::export(name = "', self$compileInfo$exportName ,'")]]')
                          )
   invisible(NULL)
 }
@@ -204,7 +205,8 @@ build_set_nClass_env_impl <- function(self) {
                                                       symbolTable = symbolTableClass$new(),
                                                       skipBrackets = TRUE),
                          returnType = cppVoid(),
-                         commentsAbove = '// [[Rcpp::export]]'
+                         commentsAbove = paste0('// [[Rcpp::export(name = "set_CnClass_env_',
+                                                self$compileInfo$exportName ,'")]]')
     )
   invisible(NULL)
 }
@@ -584,6 +586,7 @@ cppFunctionClass <- R6::R6Class(
                 classMethod = FALSE,
                 initializerList = NULL,
                 commentsAbove = character(),
+                export = TRUE,
                 initialize = function(...) {
                   self$name <- character()
                   cppFunctionClass_init_impl(self)

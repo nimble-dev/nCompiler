@@ -1,4 +1,4 @@
-context("Testing nFunction uncompiled setup")
+# works
 
 test_that("simple pass by value",
 {

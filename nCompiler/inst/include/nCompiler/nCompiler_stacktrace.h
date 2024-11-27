@@ -1,6 +1,11 @@
 #ifndef NCOMPILER_STACKTRACE
 #define NCOMPILER_STACKTRACE
 
+#include <utility>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
 // build a crude stack trace of nFunctions.  each level of the trace captures
 // the function name in [StringPair].first and the step being executed in
 // [StringPair].second.  The step may be updated several times within a single

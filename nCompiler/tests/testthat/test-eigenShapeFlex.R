@@ -1,5 +1,4 @@
-context("Testing flex_ system for C++ assignments")
-
+message("test-eigenShapeFlex of flex_() assignment system works but has only one case. More coverage is needed.")
 test_that("flex_ system works for mean()",
           {
             #set_nOption("use_flexible_assignment", TRUE)

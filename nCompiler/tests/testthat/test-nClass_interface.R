@@ -1,6 +1,4 @@
-# not working
 # (These work when run directly, but not when run through test_package().)
-context("nClass interface")
 
 test_that(
   "Basic and full interfaces work",
@@ -21,7 +19,8 @@ test_that(
           returnType = 'numericScalar')
       )
     )
-    ans <- nCompile_nClass(nc1, interface = "generic")
+#    ans <- nCompile_nClass(nc1, interface = "generic")
+    ans <- nCompile(nc1, interfaces = "generic")
     obj <- ans()
     value(obj, 'Cv') <- 2.3
     check <- value(obj, 'Cv')
@@ -67,7 +66,8 @@ test_that(
           returnType = 'numericScalar')
       )
     )
-    ans <- nCompile_nClass(nc1, interface = "full")
+#    ans <- nCompile_nClass(nc1, interface = "full")
+    ans <- nCompile(nc1, interfaces = "full")
     expect_true(isCompiledNCgenerator(ans))
     obj <- ans$new()
     expect_true(inherits(obj, "nClass"))
@@ -77,7 +77,7 @@ test_that(
     
     obj$Ca <- c(2.3, 3.4, 4.5)
     check <- obj$Ca
-    expect_equal(check, array(c(2.3, 3.4, 4.5)), info = "vector set and get from a full interface")
+    expect_equal(check, c(2.3, 3.4, 4.5), info = "vector set and get from a full interface")
     
     check <- obj$Cfoo(3.4)
     expect_equal(check, 4.4, info = "method from a full interface")

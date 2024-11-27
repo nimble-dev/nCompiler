@@ -6,6 +6,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
   public = list(
     name = NULL,
     origName = NULL,
+    compileInfo = NULL,
     NFinternals = NULL,
     stageCompleted = 'start',
     nameSubList = NULL,
@@ -25,7 +26,8 @@ NFvirtual_CompilerClass <- R6::R6Class(
     initialize = function(f = NULL,
                           ## funName,
                           const = FALSE,
-                          useUniqueNameInCpp = FALSE) {
+                          useUniqueNameInCpp = FALSE,
+                          compileInfo = NULL) {
       auxEnv <<- new.env() # We can't put this above as auxEnv = new.env() because then
       # all objects would end up with the same auxEnv. See help(R6Class)
       const <<- const
@@ -45,6 +47,11 @@ NFvirtual_CompilerClass <- R6::R6Class(
         origRcode <<- NFinternals$code
         newRcode <<- NFinternals$code
         isAD <<- NFinternals$isAD
+        if(is.null(compileInfo))
+          self$compileInfo <- NFinternals$compileInfo
+        else self$compileInfo <- compileInfo
+        if(length(compileInfo$exportName) == 0)
+          compileInfo$exportName <<- name
       }
     },
     showCpp = function() {
@@ -98,7 +105,8 @@ NF_CompilerClass <- R6::R6Class(
     },
     createCppInternal = function() {
       cppDef <<- cpp_nFunctionClass$new(
-        name = self$name
+        name = self$name,
+        compileInfo = self$compileInfo
       )
       ## It would be nice if self were not stored in cppDef
       ## but for now it is.

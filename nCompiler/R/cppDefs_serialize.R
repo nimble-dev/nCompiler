@@ -2,16 +2,19 @@
 
 global_serialization_cppDef <-
   cppMacroCallClass$new(
-    Hpreamble = c(nCompiler_plugin()$includes,
-                  "#define NCOMPILER_USES_CEREAL"),
-    CPPpreamble = c(nCompiler_plugin()$includes,
-                    "#define NCOMPILER_USES_CEREAL"),
+    Hpreamble = c(#nCompiler_plugin()$includes,
+      "#define NCOMPILER_USES_CEREAL",
+      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
+    CPPpreamble = c(#nCompiler_plugin()$includes,
+      "#define NCOMPILER_USES_CEREAL",
+      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
     ## Hincludes = c("<Rinternals.h>",
     ##           nCompilerIncludeFile("nCompiler_class_interface.h"),
     ##           nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
     ##           nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
-
-
+    Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
+    CPPincludes = c(nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+                    nCompilerIncludeFile("nClass_cereal/post_Rcpp/serialization_mgr.h")),
     CPPusings = c("using namespace Rcpp;",
                   "// [[Rcpp::plugins(nCompiler_plugin)]]",
                   "// [[Rcpp::depends(nCompiler)]]",
@@ -115,23 +118,24 @@ addSerialization_impl <- function(self) { #},
   symbolTable = symbolTableClass$new(),
   skipBrackets = TRUE
 )
-, returnType = nCompiler:::cppVoid()
+, returnType = cppVoid()
 )
   self$memberCppDefs[["_SERIALIZE_"]] <- serialize_method
 
   ##
-  make_deserialized_return_SEXP_method <- nCompiler:::cppFunctionClass$new(
+  inner_code <- substitute(cppLiteral(MSG),
+                           list(MSG = paste0(
+                                  "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
+                                )))
+  make_deserialized_return_SEXP_method <- cppFunctionClass$new(
     name = "make_deserialized_return_SEXP"
-  , args = nCompiler:::symbolTableClass$new()
-   , code = nCompiler:::cppCodeBlockClass$new(
-     code = nCompiler:::nParse(nCompiler:::cppLiteral(
-       paste0(
-         "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
-       ))),
-     symbolTable = nCompiler:::symbolTableClass$new(),
+  , args = symbolTableClass$new()
+   , code = cppCodeBlockClass$new(
+     code = nParse(inner_code),
+     symbolTable = symbolTableClass$new(),
      skipBrackets = TRUE
    )
-   , returnType = nCompiler:::cppSEXP()
+   , returnType = cppSEXP()
   )
   self$memberCppDefs[["make_deserialized_return_SEXP"]] <- make_deserialized_return_SEXP_method
   

@@ -55,9 +55,11 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
       result$includes = "#define NCOMPILER_HANDLE_EIGEN_ERRORS"
     }
     if(isTRUE(get_nOption('compilerOptions')$cppStacktrace)) {
-      # add include directives to add stack basic traces 
-      result$includes = paste0(result$includes, 
-                               '#include <nCompiler/nCompiler_stacktrace.h>')
+      # add include directives to add stack basic traces
+      # This could be integrated more with the rest of the include
+      # system, but it is fairly stand-alone and works here for now.
+      result$includes = c(result$includes,
+                          '#include <nCompiler/nCompiler_stacktrace.h>')
     }
     result
   }

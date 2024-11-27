@@ -1,4 +1,4 @@
-context("tensorOperations: reshaping for 'vector OP row-matrix'")
+# tensorOperations: reshaping for 'vector OP row-matrix'
 
 #
 # test error trapping and generated C++ code that implements nCompiler's support 

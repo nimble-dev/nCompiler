@@ -768,7 +768,7 @@ inLabelAbstractTypesEnv(
       code_type <- "integer"
     } else if(length(code$args) == 1 && ('by' %in% names(code$args))) {
 #      code$type <- symbolBasic$new(nDim = 1, type = 'double')
-      code_type <- "integer"
+      code_type <- "double"
     } else {
       fromProvided <- 'from' %in% names(code$args)
       toProvided <- 'to' %in% names(code$args)
@@ -1163,12 +1163,20 @@ inLabelAbstractTypesEnv(
         'cppLiteral has argument length > 2.'
       ),
       call. = FALSE)
-    if (length(code$args) == 2) {
-      ## Add types that the user specified in their literal C++ code to symTab
-      type_list <- lapply(code$args[[2]]$args, `[[`, 'name')
-      symbols <- argTypeList2symbolTable(type_list)$getSymbols()
-      for (sym in symbols) symTab$addSymbol(sym)
+    if(!is.null(code$aux$compileArgs)) {
+      types <- code$aux$compileArgs$types
+      if(!is.null(types)) {
+        if(!is.list(types)) types <- eval(types)
+        symbols <- argTypeList2symbolTable(types)$getSymbols()
+        for (sym in symbols) symTab$addSymbol(sym)
+      }
     }
+    ## if (length(code$args) == 2) {
+    ##   ## Add types that the user specified in their literal C++ code to symTab
+    ##   type_list <- lapply(code$args[[2]]$args, `[[`, 'name')
+    ##   symbols <- argTypeList2symbolTable(type_list)$getSymbols()
+    ##   for (sym in symbols) symTab$addSymbol(sym)
+    ## }
     invisible(NULL)
   }
 )

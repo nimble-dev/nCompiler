@@ -1,4 +1,5 @@
-context("tensorCreation")
+
+message("Need to add a test of creating a tensor initialized from a refBlock (StridedTensorMap) or TensorMap.")
 
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
@@ -49,8 +50,8 @@ test_that("data initialization working: nNumeric, nInteger, nLogical", {
   nc_obj <- ncc$new()
   expect_equivalent(nc_obj$nf1(), nc$public_methods$nf1())
   expect_equivalent(
-    nc_obj$nf2(1:4, 3:7, c(TRUE, TRUE, FALSE, TRUE)),
-    nc$public_methods$nf2(1:4, 3:7, c(TRUE, TRUE, FALSE, TRUE))
+    nc_obj$nf2(1:4, 3:6, c(TRUE, TRUE, FALSE, TRUE)),
+    nc$public_methods$nf2(1:4, 3:6, c(TRUE, TRUE, FALSE, TRUE))
   )
   expect_equivalent(nc_obj$nf3(), nc$public_methods$nf3())
 })

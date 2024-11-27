@@ -1,51 +1,51 @@
-generateTypesText_oneCase <- function(caseDef,
-                                      endStage = 'labelAbstractTypes',
-                                      showArgs = list(showType = TRUE)) {
-  if(is.null(caseDef$fun)) {
-    warning(paste0("There is an empty case."))
-    return(NULL)
-  }
-  nf <- nFunction(fun = caseDef$fun)
-  NFC <- nCompile_nFunction(
-    nf,
-    control = list(
-      endStage = endStage
-    )
-  )
-  if(NFgetStageID(endStage) < NFgetStageID('makeRcppPacket'))
-    return(
-      capture.output(do.call(NFC$code$print, showArgs))
-      )
-  if(endStage == 'makeRcppPacket') {
-    return(capture.output(
-      writeCpp_nCompiler(NFinternals(NFC)$RcppPacket, con = stdout())
-    ))
-  }
-}
+## generateTypesText_oneCase <- function(caseDef,
+##                                       endStage = 'labelAbstractTypes',
+##                                       showArgs = list(showType = TRUE)) {
+##   if(is.null(caseDef$fun)) {
+##     warning(paste0("There is an empty case."))
+##     return(NULL)
+##   }
+##   nf <- nFunction(fun = caseDef$fun)
+##   NFC <- nCompile_nFunction(
+##     nf,
+##     control = list(
+##       endStage = endStage
+##     )
+##   )
+##   if(NFgetStageID(endStage) < NFgetStageID('makeRcppPacket'))
+##     return(
+##       capture.output(do.call(NFC$code$print, showArgs))
+##       )
+##   if(endStage == 'makeRcppPacket') {
+##     return(capture.output(
+##       writeCpp_nCompiler(NFinternals(NFC)$RcppPacket, con = stdout())
+##     ))
+##   }
+## }
 
-writeTypesText_manyCases <- function(cases, 
-                                     dir,
-                                     ...) {
-  if(!missing(dir)) 
-    dir.create(dir, showWarnings = FALSE)
-  else
-    fileName = stdout()
-  for(i in seq_along(cases)) {
-    thisName <- names(cases)[i]
-    if(!missing(dir))
-      fileName <- file.path(dir, Rname2CppName(thisName))
-    thisOutput <- try(generateTypesText_oneCase(cases[[i]],
-                                                ...))
-    if(inherits(thisOutput, 'try-error'))
-      writeLines(paste0("Error in case ", thisName, "."))
-    writeLines(c(paste0("Case: ", thisName),
-                 '-----',
-                 thisOutput,
-                 '\n'),
-               con = fileName)
-  }
-  invisible(NULL)
-}
+## writeTypesText_manyCases <- function(cases,
+##                                      dir,
+##                                      ...) {
+##   if(!missing(dir))
+##     dir.create(dir, showWarnings = FALSE)
+##   else
+##     fileName = stdout()
+##   for(i in seq_along(cases)) {
+##     thisName <- names(cases)[i]
+##     if(!missing(dir))
+##       fileName <- file.path(dir, Rname2CppName(thisName))
+##     thisOutput <- try(generateTypesText_oneCase(cases[[i]],
+##                                                 ...))
+##     if(inherits(thisOutput, 'try-error'))
+##       writeLines(paste0("Error in case ", thisName, "."))
+##     writeLines(c(paste0("Case: ", thisName),
+##                  '-----',
+##                  thisOutput,
+##                  '\n'),
+##                con = fileName)
+##   }
+##   invisible(NULL)
+## }
 
 compareFilesUsingDiff <- function(trialFile, 
                                   correctFile,

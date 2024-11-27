@@ -1,6 +1,3 @@
-# NOT WORKING
-
-context("Testing seq and colon operators")
 
 test_that("Basic colon usage works", {
   nc <- nClass(
@@ -171,7 +168,7 @@ test_that("Basic seq usage works", {
         function(x = numericScalar) {
           ans <- seq(by = x)
           return(ans)
-          returnType(integerVector)
+          returnType(numericVector)
         }
       ),
       ## seq(from, by)
@@ -439,7 +436,7 @@ test_that("Basic seq usage works", {
   expect_equivalent(nc_obj$seq_fd_td_bd(1, -1, -.1), seq(1, -1, -.1))
   expect_equivalent(nc_obj$seq_fd_td_bd(1.1, -1.3, -.1), seq(1.1, -1.3, -.1))
   expect_equivalent(nc_obj$seq_fd_td_bd(1, 10, 1), seq(1, 10, 1))
-#  expect_equivalent(nc_obj$seq_fd_td_bd(1, 10, -1), seq(1, 10, -1)) # Correctly generates error
+  expect_error(nc_obj$seq_fd_td_bd(1, 10, -1)) # Correctly generates error
   expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, 1), seq(1, 1, 1))
   expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, .1), seq(1, 1, .1))
   expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, 0), seq(1, 1, 0))
@@ -456,7 +453,7 @@ test_that("Basic seq usage works", {
   expect_equivalent(nc_obj$seq_fd_bd(1, 1), seq(from = 1, by = 1))
   expect_equivalent(nc_obj$seq_fd_bd(0, .1), seq(from = 0, by = .1))
   expect_equivalent(nc_obj$seq_fd_bd(2, -.1), seq(from = 2, by = -.1))
-#  expect_equivalent(nc_obj$seq_fd_bd(2, 0), seq(from = 2, by = 0)) # Correctly gives error msg
+  expect_error(nc_obj$seq_fd_bd(2, 0)) # Correctly gives error msg
   expect_equivalent(nc_obj$seq_fd_bd(1.5, -.1), seq(from = 1.5, by = -.1))
   expect_equivalent(nc_obj$seq_fd_bd(1,0), seq(from = 1, by = 0))
   expect_equivalent(nc_obj$seq_fd_bd(2, -.4), seq(from = 2, by = -.4))
@@ -480,17 +477,17 @@ test_that("Basic seq usage works", {
   expect_equivalent(nc_obj$seq_td_ld(1, 10), seq(to = 1, length.out = 10))
   expect_equivalent(nc_obj$seq_td_ld(5, 1), seq(to = 5, length.out = 1))
   expect_equivalent(nc_obj$seq_td_ld(5, 0), seq(to = 5, length.out = 0))
-  #  expect_equivalent(nc_obj$seq_td_ld(5, -1), seq(to = 5, length.out = -1)) # Correctly gives error msg
+  expect_error(nc_obj$seq_td_ld(5, -1)) # Correctly gives error msg
   expect_identical(nc_obj$seq_ti_ld(5, 3), seq(to = 5L, length.out = 3))
   expect_identical(nc_obj$seq_td_li(5, 3), seq(to = 5, length.out = 3L))
   expect_identical(nc_obj$seq_ti_li(5, 3), seq(to = 5L, length.out = 3L))
 
   expect_equivalent(nc_obj$seq_td_bd(3, 1), seq(to = 3, by = 1))
   expect_equivalent(nc_obj$seq_td_bd(3, .1), seq(to = 3, by = .1))
-  #expect_equivalent(nc_obj$seq_td_bd(3, -.1), seq(to = 3, by = -.1)) # Correctly gives error msg
-#  expect_equivalent(nc_obj$seq_td_bd(-1.5, .1), seq(to = -1.5, by = .1)) # Correctly gives error msg
+  expect_error(nc_obj$seq_td_bd(3, -.1)) # Correctly gives error msg
+  expect_error(nc_obj$seq_td_bd(-1.5, .1))  # Correctly gives error msg
   expect_equivalent(nc_obj$seq_td_bd(-1.5, -.1), seq(to = -1.5, by = -.1))
-#  expect_equivalent(nc_obj$seq_td_bd(-1.5, 0), seq(to = -1.5, by = 0)) # Correctly gives error msg
+  expect_error(nc_obj$seq_td_bd(-1.5, 0)) # Correctly gives error msg
   expect_identical(nc_obj$seq_ti_bd(3L, 1), seq(to = 3L, by = 1))
   expect_identical(nc_obj$seq_td_bi(3, 1L), seq(to = 3, by = 1L))
   expect_identical(nc_obj$seq_ti_bi(3L, 1L), seq(to = 3L, by = 1L))
@@ -501,7 +498,7 @@ test_that("Basic seq usage works", {
   expect_equivalent(nc_obj$seq_bd_ld(-3, 5), seq(by = -3, length.out = 5))
   expect_equivalent(nc_obj$seq_bd_ld(-3, 1), seq(by = -3, length.out = 1))
   expect_equivalent(nc_obj$seq_bd_ld(-3, 0), seq(by = -3, length.out = 0))
-#  expect_equivalent(nc_obj$seq_bd_ld(-3, -1), seq(by = -3, length.out = -1)) # Correctly gives error msg
+  expect_error(nc_obj$seq_bd_ld(-3, -1)) # Correctly gives error msg
   expect_identical(nc_obj$seq_bi_ld(3L, 5), seq(by = 3L, length.out = 5))
   expect_identical(nc_obj$seq_bd_li(3, 5L), seq(by = 3, length.out = 5L))
   expect_identical(nc_obj$seq_bi_li(3L, 5L), seq(by = 3L, length.out = 5L))

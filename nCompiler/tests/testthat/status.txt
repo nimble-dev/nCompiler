@@ -1,134 +1,55 @@
-June 2024 status summary of tests
+Nov 2024
+I am moving old tests from v1tests up to testthat one by one with checking and fixing or updating.
+Often I am putting a message()d note at the top about status.
+I am not putting broken tests in place, except where a file is marked NOTWORKING.
+
 =================================
+Tests that need future attention:
+---------------------------------
 
-NF_CompilerClass: works
-  - internal steps of NF_CompilerClass
+see tests_that_need_to_be_fixed.
 
-NF_derivs:
+Some to-do notes:
+- The scheme of passing the environment when calling a method in order to do R-style
+  argument matching/ordering and handle ref/refBlock is not set up for nFunction.
+- We also need tests of argument matching/ordering.
+- to_full_interface is not set up via packaging
+- TBB scheme needs a full cycle of attention. It is far out of date.
+- predefined nClasses need attention in relation to the new #include scheme.
+-  nOptim's problem is use of a predefined nClass
+- No attempt at CppAD test updating was made because that is still under construction.
+- test-math has not been attempted because that will take a while.
+- The tensorOperations tests need various attention on the C++ site.
+  I think some of this is due to the upgrade to C++17.
+- Serialization testing is for mechanics but needs testing of core types and also membership networks.
+- stacktrace system could use the exportName for greater interpretability
+- test-indexing error-trapping tests are disabled and need attetion
+- There is a note in test-nClass_interface that they don't work via test_package.
+- nDeparse of for loops needs to be fixed.
 
-RcppTypes: FAIL 10 | PASS 24
-  - use of Rcpp's types as nimble inputs
-  - An error occurred in compiler stage doImplementation:
-    argument is of length zero
-    This occurred while: handling eigenize for new_x.
 
-Rcpp_nCompilerPacket: works
-  - Very short test of Rcpp_nCompilerPacket
+======================================
+Tests that do not need to be retained:
+-------------------------------------
+test-compilerStages -- lacks clear tests and is weird and old
 
-StridedTensorMap: FAIL 1 | PASS 8
-  - STM8(x) not equal to array(x[5, 1:3, 2]).
-  - Attributes: < target is NULL, current is list >
+test-compilerStages-setToEigen -- ditto
 
-TBB: FAIL 2 | PASS 1
-  - <subscriptOutOfBoundsError/error/condition>
-  - Error in `code$args[[1]]`: subscript out of bounds
+test-cpp_nFunctionClass -- has one narrow use case of the inner class that is so out of date that it breaks. Now we can consider that full pipeline tests of compilation test the class. Or we can add narrower unit tests later based on stable class features.
 
-aliasChecks: FAIL 0 | PASS 7
-  - MESSY: turns on a debug() and showCompilerOutput=TRUE
+test-header_mgmt -- This is a relatively recent file created when I reorganized header management. However, I think as a test file it may be superfluous. Can refer to the file in v1tests.
 
-argumentPassing: FAIL 0 | PASS 18
-  - MESSY: turns on a debug()
-  - Is it complete from updated work on this?
+test-labelAbstractTypes -- in same group as test-compilerStages-setToEigen, maybe deprecate.
+   (should have been called test-compilerStages-labelAbstractTypes)
 
-as_wrap_Rcpp: FAIL 0 | PASS 1
-  - Is it updated from recent work?
+test-math -- DEFERRED BECAUSE IT IS SO BIG. DEF IMP.
 
-callingBetweenNFs: FAIL 2 | PASS 2
+test-nCompile_nClass -- I think this should be deprecated with nCompile becoming the single pathway
 
-compileErrorTrapping: FAIL 0 | PASS 1
+test-nCompile_nFunction -- ditto
 
-compilerStages: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
-   - no real test clauses???
+test-normalizeCalls -- not sure if this should stand as its own test. It was a development working file.
 
-compilerStage-setToEigen: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 25 ]
+test-setInputOutputTpes -- again this is a compiler stage and not sure should test separately.
 
-concatenate: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
-
-cppLiteral: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 7 ]
-   - ans$z not equal to as.array(c(5, 6, 7)).
-   - Attributes: < target is NULL, current is list >
-
-cppVariables: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
-
-cpp_nClassClass: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 2 ]
-
-eigenShapeFlex:[ FAIL 0 | WARN 0 | SKIP 0 | PASS 2 ]
-   - updated?
-
-hellotest: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 1 ]
-
-indexing: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 42 ]
-  - MESSY: showCompilerOutput = TRUE
-
-indexing-cpp:[ FAIL 1 | WARN 1 | SKIP 0 | PASS 0 ]
-  - couldn't find file
-
-labelAbstractTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 25 ]
-  - rename test?
-
-math:
-
-nClass_interface: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
-`check` not equal to array(c(2.3, 3.4, 4.5)).
-Attributes: < target is NULL, current is list >
-vector set and get from a full interface
-
-nClass_uncompiled: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 8 ]
-
-nCompile: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 47 ]
-  # Note: These should all be tested via packaging.
-
-nCompile_nClass: [ FAIL 17 | WARN 0 | SKIP 0 | PASS 0 ]
-  # These may be deprecated as we don't need nCompile_nClass in its previous form.
-
-nCompile_nFunction: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
-  # These may be deprecated as we don't need nCompile_nFunction in its previous form.
-
-nFunction_uncompiled: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 9 ]
-
-nOptim: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
-
-nParse_nDeparse: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 26 ]
-  - KNOWN PROBLEM: Deparsing for loops is not right
-
-packaging: [ FAIL 8 | WARN 6 | SKIP 0 | PASS 23 ]
-  - MESSY: turns on compilerOutput
-
-predefined: [ FAIL 4 | WARN 0 | SKIP 0 | PASS 16 ]
-  - MESSY: turns on compilerOutput
-
-recycling_rule:
-
-rep: [ FAIL 0 | WARN 0 | SKIP 0 | PASS 14 ]
-
-repClass:
-
-seq: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 5 ]
-
-seqClass:
-
-serialization:
-   - renovating Sept 2024 while updating features
-
-setInputOutputTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
-   - rename?
-
-setWhich: [ FAIL 1 | WARN 0 | SKIP 0 | PASS 0 ]
-
-substituteMangledArgumentNames: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 0 ]
-
-tensorCreation
-
-tensorOperations_accessors
-
-tensorOperations_linear_algebra:
-
-tensorOperations_reshaping
-
-tensorOperations_sparse:
-
-tensorOperations_sparse_multiplication:
-
-types:
-
-which:
+test-substituteMangledArgumentNames -- ditto

@@ -9,9 +9,11 @@ NCvirtual_CompilerClass <- R6::R6Class(
   , NFcompilers = list() ## list of NF_CompilerClass objects for methods
   , symbolTable = NULL
   , cppDef = NULL
-  , name = character(),
+  , name = character()
+  , compileInfo = list(),
     initialize = function(NC = NULL,
-                          className = NULL) {
+                          className = NULL,
+                          compileInfo = NULL) {
       if(!isNCgenerator(NC)) {
         if(isNC(NC))
           stop(paste0("nClass object was provided to NCvirtual_CompilerClass. ",
@@ -27,6 +29,13 @@ NCvirtual_CompilerClass <- R6::R6Class(
         name <<- myNCinternals$cpp_classname
       } else {
         name <<- className
+      }
+      if(is.null(compileInfo))
+        self$compileInfo <- myNCinternals$compileInfo
+      else
+        self$compileInfo <- compileInfo
+      if(length(compileInfo$exportName)==0) {
+        self$compileInfo$exportName <- paste0("new_", self$name)
       }
       # name <<- name  #???
       ## In the past we've a system that makes every name unique by
@@ -67,9 +76,12 @@ NC_CompilerClass <- R6::R6Class(
   portable = FALSE,
   public = list(
     neededTypes = list(),
-    initialize = function(NC = NULL, className = NULL) {
+    initialize = function(NC = NULL,
+                          className = NULL,
+                          compileInfo = NULL) {
       super$initialize(NC = NC,
-                       className = className)
+                       className = className,
+                       compileInfo = compileInfo)
     },
     createCpp = function(control = list(),
                          sourceObj, #this will be the same as NC, so seems redundant and should be considered for removal/cleanup
@@ -82,7 +94,8 @@ NC_CompilerClass <- R6::R6Class(
               sourceObj)
       cppDef <<- cpp_nClassClass$new(
         Compiler = self,
-        name = self$name
+        name = self$name,
+        compileInfo = self$compileInfo
       )
       cppDef$buildAll(interfaceCalls = interfaceCalls)
       invisible(NULL)

@@ -213,9 +213,10 @@ typeDeclarationList <- list(
   RcppRawVector = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::RawVector", ...)
   },
-  RcppNamed = function(...) {
-    symbolRcppType$new(RcppType = "Rcpp::Named", ...)
-  },
+  ## This is not a primary type. It is used within Rcpp vectors etc.
+  ## RcppNamed = function(...) {
+  ##   symbolRcppType$new(RcppType = "Rcpp::Named", ...)
+  ## },
   RcppDataFrame = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::DataFrame")
   },

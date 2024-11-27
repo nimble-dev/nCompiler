@@ -1,24 +1,31 @@
 # Test that Rcpp types work in nFunctions
 
+# Status: All tests pass.
+# RcppDateVector and RcppDatetimeVector can be passed as arguments
+# and used but not created as via nCompiler code-generation
+# because they lack default constructors.
+
 test_that("RcppNumericVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppNumericVector",
                    y = 'RcppNumericVector') {
       cppLiteral(
         'ans = x + y;
- return ans;',
+         return ans;',
         types = list(ans = "RcppNumericVector()")
       )
       returnType("RcppNumericVector()")
     }
     #,types = list(y = 'RcppNumericVector')
   )
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- c(1, 2)
   y <- c(100, 200)
   ans <- nfC(x, y)
   expect_equal(ans, x+y)
 })
+
+# prototype in place a function to evaluate compile-time args
 
 test_that("RcppNumericMatrix works in nFunctions", {
   nfmx <- nFunction(
@@ -36,7 +43,6 @@ test_that("RcppNumericMatrix works in nFunctions", {
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
 })
-
 
 test_that("RcppIntegerVector works in nFunctions", {
   nf <- nFunction(
@@ -74,7 +80,6 @@ test_that("RcppIntegerMatrix works in nFunctions", {
   expect_equal(ans, y[2,])
 })
 
-
 test_that("RcppLogicalVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppLogicalVector",
@@ -110,7 +115,6 @@ test_that("RcppLogicalMatrix works in nFunctions", {
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
 })
-
 
 test_that("RcppComplexVector works in nFunctions", {
   nf <- nFunction(
@@ -176,7 +180,6 @@ test_that("RcppCharacterMatrix works in nFunctions", {
   expect_equal(ans, y[2,])
 })
 
-
 test_that("RcppDateVector works in nFunctions", {
   nf <- nFunction(
     fun = function(x = "RcppDateVector") {
@@ -226,23 +229,21 @@ test_that("RcppRawVector works in nFunctions", {
   expect_equal(x, ans)
 })
 
-## RcppNames seems like it doesn't work, but I don't really get how we
-## should expect to be able to use it.
-# test_that("RcppNames works", {
-#   nf <- nFunction(
-#     fun = function(x = "RcppNamed") {
-#       cppLiteral(
-# 'return x;',
-#         types = list()
-#       )
-#       returnType("RcppNamed()")
-#     })
-#   nfC <- nCompile_nFunction(nf)
-#   x <- c("One" = 1)
-#   ans <- nfC(x)
-#   expect_equal(x, ans)
-# })
-
+## Rcpp::Named is not a primary type for passing.
+## test_that("RcppNamed works", {
+##   nf <- nFunction(
+##     fun = function(x = "RcppNamed") {
+##       cppLiteral(
+## 'return x;',
+##         types = list()
+##       )
+##       returnType("RcppNamed()")
+##     })
+##   nfC <- nCompile_nFunction(nf)
+##   x <- c("One" = 1)
+##   ans <- nfC(x)
+##   expect_equal(x, ans)
+## })
 
 test_that("RcppS4 works in nFunctions", {
   nfs4 <- nFunction(
@@ -262,7 +263,6 @@ test_that("RcppS4 works in nFunctions", {
   
   expect_true(nfs4C(t1))
 })
-
 
 test_that("RcppFunction works", {
   nffn <- nFunction(
@@ -320,6 +320,7 @@ test_that("RcppEigenMatrixXd works in nFunctions", {
   ans <- nfmxEigenC(y)
   expect_equal(ans, t(y))
 })
+
 test_that("RcppEigenMatrixXi works in nFunctions", {
   nfmxEigen <- nFunction(
     fun = function(x = "RcppEigenMatrixXi") {
@@ -370,7 +371,6 @@ test_that("RcppEigenVectorXd works", {
   expect_equal(ans, y %*% x)
 })
 
-
 test_that("RcppEigenVectorXi works in nFunctions", {
   nfEigen <- nFunction(
     fun = function(x = "RcppEigenVectorXi",
@@ -389,7 +389,6 @@ test_that("RcppEigenVectorXi works in nFunctions", {
   expect_equal(ans, y %*% x)
 })
 
-
 test_that("RcppEigenVectorXcd works in nFunctions", {
   nfEigen <- nFunction(
     fun = function(x = "RcppEigenVectorXcd",
@@ -407,7 +406,6 @@ test_that("RcppEigenVectorXcd works in nFunctions", {
   ans <- nfEigenC(x, y)
   expect_equal(ans, y %*% x)
 })
-
 
 # Test that Rcpp types work as public fields in nClasses
 test_that("RcppNumericVector works in nClasses", {
@@ -454,7 +452,6 @@ test_that("RcppNumericMatrix works in nClasses", {
   expect_equal(my_nc$x, test_x2)
 })
 
-
 test_that("RcppIntegerVector works in nClasses", {
   nc <- nClass(
     classname = "test_RcppIntegerVector",
@@ -499,7 +496,6 @@ test_that("RcppIntegerMatrix works in nClasses", {
   expect_equal(my_nc$x, test_x2)
 })
 
-
 test_that("RcppCharacterVector works in nClasses", {
   nc <- nClass(
     classname = "test_RcppCharacterVector",
@@ -543,7 +539,6 @@ test_that("RcppCharacterMatrix works in nClasses", {
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
 })
-
 
 test_that("RcppComplexVector works in nClasses", {
   nc <- nClass(
@@ -633,30 +628,31 @@ test_that("RcppLogicalMatrix works in nClasses", {
   expect_equal(my_nc$x, test_x2)
 })
 
-# TODO: Why do the following tests not work?
-# test_that("RcppDateVector works in nClasses", {
-#   nc <- nClass(
-#     classname = "test_RcppDateVector",
-#     Cpublic = list(
-#       # x = "RcppDateVector",
-#       set_x = nFunction(fun = function(new_x = "RcppDateVector") {
-#         x <- new_x
-#         return(0)
-#       }, returnType = "integerScalar"
-#       )
-#     )
-#   )
-#   ncC <- nCompile(nc)
-#   my_nc <- ncC$new()
-#   test_x1 <- as.Date(c("2020-01-28", "2020-01-29", "2020-01-30", "2020-01-31"))
-#   my_nc$set_x(test_x1)
-#   expect_equal(my_nc$x, test_x1)
-#   test_x2 <- as.Date(c("2019-01-28", "2019-01-29", "2019-01-30", "2019-01-31"))
-#   my_nc$x <- test_x2
-#   expect_equal(my_nc$x, test_x2)
-# })
-# 
-# 
+## # TODO: Why do the following tests not work?
+## It looks like an Rcpp::DateVector requires an argument for construction.
+## So it looks like we can accept the argument and use it but not create a new
+## object on our own via nCompiler. Could be done with cppLiteral.
+## test_that("RcppDateVector works in nClasses", {
+##   nc <- nClass(
+##     classname = "test_RcppDateVector",
+##     Cpublic = list(
+##       # x = "RcppDateVector",
+##       set_x = nFunction(fun = function(new_x = "RcppDateVector") {
+##         x <- new_x
+##         return(0)
+##       }, returnType = "integerScalar"
+##       )
+##     )
+##   )
+##   ncC <- nCompile(nc)
+##   my_nc <- ncC$new()
+##   test_x1 <- as.Date(c("2020-01-28", "2020-01-29", "2020-01-30", "2020-01-31"))
+##   my_nc$set_x(test_x1)
+##   expect_equal(my_nc$x, test_x1)
+##   test_x2 <- as.Date(c("2019-01-28", "2019-01-29", "2019-01-30", "2019-01-31"))
+##   my_nc$x <- test_x2
+##   expect_equal(my_nc$x, test_x2)
+## })
 # test_that("RcppDatetimeVector works in nClasses", {
 #   nc <- nClass(
 #     classname = "test_RcppDatetimeVector",
@@ -682,24 +678,24 @@ test_that("RcppLogicalMatrix works in nClasses", {
 # })
 # 
 # 
-# test_that("RcppDataFrame works in nClasses", {
-#   nc <- nClass(
-#     classname = "test_RcppDataFrame",
-#     Cpublic = list(
-#       x = "RcppDataFrame",
-#       set_x = nFunction(fun = function(new_x = "RcppDataFrame") {
-#         x <- new_x
-#         return(0)
-#       }, returnType = "integerScalar"
-#       )
-#     )
-#   )
-#   ncC <- nCompile(nc)
-#   my_nc <- ncC$new()
-#   test_x1 <- data.frame(x = 1:10, y = 100:110)
-#   my_nc$set_x(test_x1)
-#   expect_equal(my_nc$x, test_x1)
-#   test_x2 <- data.frame(a = 1:100, b = 101:200)
-#   my_nc$x <- test_x2
-#   expect_equal(my_nc$x, test_x2)
-# })
+test_that("RcppDataFrame works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppDataFrame",
+    Cpublic = list(
+      x = "RcppDataFrame",
+      set_x = nFunction(fun = function(new_x = "RcppDataFrame") {
+        x <- new_x
+        return(0)
+      }, returnType = "integerScalar"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  test_x1 <- data.frame(x = 1:10, y = 101:110)
+  my_nc$set_x(test_x1)
+  expect_equal(my_nc$x, test_x1)
+  test_x2 <- data.frame(a = 1:100, b = 101:200)
+  my_nc$x <- test_x2
+  expect_equal(my_nc$x, test_x2)
+})

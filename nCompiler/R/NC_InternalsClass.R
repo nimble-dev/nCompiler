@@ -8,6 +8,7 @@ NC_InternalsClass <- R6::R6Class(
     fieldNames = character(),
     classname = character(),
     cpp_classname = character(),
+    compileInfo = list(),
     RcppPacket = NULL,
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
     enableDerivs = NULL,
@@ -18,7 +19,9 @@ NC_InternalsClass <- R6::R6Class(
                           isOnlyC = FALSE,
                           enableDerivs = NULL,
                           enableSaving = get_nOption("enableSaving"),
+                          compileInfo = list(),
                           predefined = FALSE) {
+      self$compileInfo <- compileInfo
       self$classname <- classname
       self$cpp_classname <- Rname2CppName(classname)
       self$isOnlyC = isOnlyC
