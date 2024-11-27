@@ -3,8 +3,13 @@ I am moving old tests from v1tests up to testthat one by one with checking and f
 Often I am putting a message()d note at the top about status.
 I am not putting broken tests in place, except where a file is marked NOTWORKING.
 
-Tests that do not need to be retained:
+=================================
+Tests that need future attention:
+---------------------------------
 
+======================================
+Tests that do not need to be retained:
+-------------------------------------
 test-compilerStages -- lacks clear tests and is weird and old
 
 test-compilerStages-setToEigen -- ditto

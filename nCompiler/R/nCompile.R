@@ -405,6 +405,8 @@ nCompile <- function(...,
            "If you want to inspect the package code,",
            "it is in ", pkgDir, ".")
     }
+    if(length(ans)==1)
+      if(!returnList) return(ans[[1]])
     return(ans)
   } else {
     # We will not use packaging mechanism
@@ -436,17 +438,17 @@ writePackage <- function(...,
                          roxygen = list()) {
   require(Rcpp)
   pkgDir <- file.path(dir, pkgName)
+  modify <- match.arg(modify, c("no", "add", "clear"))
+  if (dir.exists(pkgDir)) {
+    if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
+                                    ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
+                                    " (to erase it before writing). Use erasePackage to erase it as a separate step."))
+  }
+  if(grepl("_", pkgName))
+    stop("Package names are not allowed to have underscore characters.")
+
   content <- control$prepared_content
   if(is.null(content)) { # this means we are being called directly, not from nCompile
-    modify <- match.arg(modify, c("no", "add", "clear"))
-    initializePkg <- FALSE
-    if (dir.exists(pkgDir)) {
-      if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
-                                      ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
-                                      " (to erase it before writing). Use erasePackage to erase it as a separate step."))
-    } else initializePkg <- TRUE
-    if(grepl("_", pkgName))
-      stop("Package names are not allowed to have underscore characters.")
     # We call nCompile with control$.writePackage containing arguments needed for
     #  nCompile to recurse back to writePackage with control$prepared_content filled in.
     res <- nCompile(...,
@@ -467,8 +469,6 @@ writePackage <- function(...,
     # note that nCompile may be called by the user with package=TRUE, which will then
     # also call writePackage with control$prepared_content
     return(res)
-  } else {
-    initializePkg <- TRUE
   }
   units <- content$units
   unitTypes <- content$unitTypes
@@ -504,7 +504,7 @@ writePackage <- function(...,
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
   full_interface <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
 #
-  if (initializePkg)
+  if (modify=="clear")
     WP_initializePkg(pkgName, dir, pkgDir, instDir, datDir, codeDir, modify)
 #
   # Rfilepath <- character(length(units))
@@ -520,12 +520,12 @@ writePackage <- function(...,
   WP_writeMemberData(memberData, datDir)
   WP_write_dotOnLoad(exportNames, unitTypes, Rdir)
   WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, returnNames,
-                                 initializePkg, pkgDir, pkgName)
-  if (!initializePkg) {
-    compiledObjs <- list.files(srcDir, pattern = "o$")
-    # message("Deleting ", compiledObjs)
-    unlink(compiledObjs)
-  }
+                                 modify=="clear", pkgDir, pkgName)
+  ## if (!initializePkg) {
+  ##   compiledObjs <- list.files(srcDir, pattern = "o$")
+  ##   # message("Deleting ", compiledObjs)
+  ##   unlink(compiledObjs)
+  ## }
   compileAttributes(pkgdir = pkgDir)
   invisible(NULL)
 }
@@ -697,6 +697,7 @@ WP_initializePkg <- function(pkgName,
   ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
   ## directly as needed here from inside a function.
   dir.create(dir, showWarnings=FALSE, recursive=TRUE)
+  erasePackage(pkgName, dir = dir, quiet = TRUE, error = FALSE)
   suppressMessages(
     eval(
       substitute(

@@ -13,6 +13,9 @@ message("Diag testing (in accessors) might lack the case of diag(matrix)")
 
 # Also maybe split these into several files by name.
 
+# Although the filename is about "accessors", this looks like entirely diag.
+# These need attention.
+
 #
 # generate test data
 #

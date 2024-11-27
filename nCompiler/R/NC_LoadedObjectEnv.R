@@ -127,8 +127,6 @@ setup_nClass_environments <- function(compiledFuns,
 setup_nClass_environments_from_package <- function(nClass_names,
                                                    pkgName) {
   # nClass_names will really be exportNames
-  cat("HERE\n")
-  browser()
   if(missing(pkgName)) pkgName <- evalq(packageName(), envir=parent.frame())
   packageEnv <- getNamespace(pkgName)
   DLLenv <- make_DLLenv() # This is the spot to change the parent.env of the DLLenv if necessary (currently it will be the nCompiler namespace)

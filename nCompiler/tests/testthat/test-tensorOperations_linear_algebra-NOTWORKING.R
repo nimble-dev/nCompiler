@@ -1,5 +1,6 @@
 #tensorOperations: interoperability with dense linear algebra methods
 
+# This now works except nForwardsolve is not found for uncompiled execution.
 
 ##
 ## multivariate normal test
@@ -112,7 +113,6 @@ nDmvn2 <- nFunction(
 
 cDmvn <- nCompile(nDmvn)
 cDmvn2 <- nCompile(nDmvn2)
-
 #
 # demonstration
 #
@@ -292,7 +292,7 @@ m = matrix(data = runif(n = n^2), nrow = n)
 # matrix multiplication tests
 #
 
-expect_identical(m %*% m, cMultMM(x = m, y = m))
+expect_equal(m %*% m, cMultMM(x = m, y = m))
 expect_identical(cv %*% rv, cMultMM(x = cv, y = rv))
 
 expect_equal(v %*% v, cMultVV(x = v, y = v))

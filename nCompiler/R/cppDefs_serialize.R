@@ -2,16 +2,19 @@
 
 global_serialization_cppDef <-
   cppMacroCallClass$new(
-    Hpreamble = c(nCompiler_plugin()$includes,
-                  "#define NCOMPILER_USES_CEREAL"),
-    CPPpreamble = c(nCompiler_plugin()$includes,
-                    "#define NCOMPILER_USES_CEREAL"),
+    Hpreamble = c(#nCompiler_plugin()$includes,
+      "#define NCOMPILER_USES_CEREAL",
+      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
+    CPPpreamble = c(#nCompiler_plugin()$includes,
+      "#define NCOMPILER_USES_CEREAL",
+      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
     ## Hincludes = c("<Rinternals.h>",
     ##           nCompilerIncludeFile("nCompiler_class_interface.h"),
     ##           nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
     ##           nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
-
-
+    Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
+    CPPincludes = c(nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+                    nCompilerIncludeFile("nClass_cereal/post_Rcpp/serialization_mgr.h")),
     CPPusings = c("using namespace Rcpp;",
                   "// [[Rcpp::plugins(nCompiler_plugin)]]",
                   "// [[Rcpp::depends(nCompiler)]]",

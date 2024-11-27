@@ -620,7 +620,7 @@ erasePackage <- function(pkgName, dir = '.',
   }
 
   try_unload_unreg <- TRUE
-  if(!error) try_unload_unreg <- any(grepl(pkgName, searchpaths()))
+  if(!error) try_unload_unreg <- isNamespaceLoaded(pkgName) #any(grepl(pkgName, searchpaths()))
 
   if(try_unload_unreg) {
     if (unload)

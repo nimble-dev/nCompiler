@@ -89,15 +89,21 @@ nUnserialize <- function(obj, pkgName, lib = NULL) {
   else {
     if(!is.character(pkgName) || (length(pkgName)>1))
       stop("pkgName must be an environment or one character string.")
-    pkgString <- pkgName
-    if(!substr(pkgString, 1, 8) == "package:")
-      pkgString <- paste0("package:", pkgName)
-    if(is.na(match(pkgString, search()))) {
-      load_ok <- require(pkgName, lib.loc = lib)
+    if(!isNamespaceLoaded(pkgName)) {
+      load_ok <- requireNamespace(pkgName, quietly=TRUE)
       if(!load_ok)
-        stop("Package ", pkgName, " was not already loaded and couldn't be found and loaded.")
+        stop("Namespace ", pkgName, " was not already loaded and couldn't be found and loaded.")
     }
-    DLLenv <- as.environment(pkgString)
+    DLLenv <- getNamespace(pkgName)
+    ## pkgString <- pkgName
+    ## if(!substr(pkgString, 1, 8) == "package:")
+    ##   pkgString <- paste0("package:", pkgName)
+    ## if(is.na(match(pkgString, search()))) {
+    ##   load_ok <- require(pkgName, lib.loc = lib)
+    ##   if(!load_ok)
+    ##     stop("Package ", pkgName, " was not already loaded and couldn't be found and loaded.")
+    ## }
+    ## DLLenv <- as.environment(pkgString)
   }
   unser_fn <- DLLenv$nComp_deserialize_
   if(!is.function(unser_fn))
