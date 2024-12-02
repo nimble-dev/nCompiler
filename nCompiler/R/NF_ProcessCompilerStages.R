@@ -109,6 +109,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                                            sourceObj = NULL, ## This will be a derived nClass object if the nFunction is an nClass method 
                                            debug = FALSE) {
   nameSubList <- NFcompiler$nameSubList
+  NFcompiler$auxEnv[['uses_nList']] <- FALSE
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
   NFcompiler$auxEnv[['needed_nClasses']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()

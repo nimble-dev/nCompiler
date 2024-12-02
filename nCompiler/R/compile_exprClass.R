@@ -308,15 +308,27 @@ setArg <- function(expr, ID, value, add = FALSE) {
   invisible(value)
 }
 
-removeArg <- function(expr, ID) {
+removeArg <- function(expr, ID, allow_missing = FALSE) {
   origNumArgs <- length(expr$args)
-  if(ID > origNumArgs)
-    stop(exprClassProcessingErrorMsg(
-      expr,
-      paste0(
-        "Attempted to remove an argument with ID = ", ID, " but that is too large. ",
-        "There are only ", origNumArgs, " arguments.")),
-      call. = FALSE)
+  if(is.character(ID)) {
+    numID <- which(ID == names(expr$args))
+    if(length(numID)!=1) {
+      if(!allow_missing) {
+        stop(paste0("Problem in removeArg for ID=",ID,". That arg name was not found."))
+      } else return(invisible(NULL))
+    }
+    ID <- numID
+  }
+  if(ID > origNumArgs) {
+    if(!allow_missing) {
+      stop(exprClassProcessingErrorMsg(
+        expr,
+        paste0(
+          "Attempted to remove an argument with ID = ", ID, " but that is too large. ",
+          "There are only ", origNumArgs, " arguments.")),
+        call. = FALSE)
+    } else return(invisible(NULL))
+  }
   value <- expr$args[[ID]]
   argsToShift <- origNumArgs - ID
   if(argsToShift) {

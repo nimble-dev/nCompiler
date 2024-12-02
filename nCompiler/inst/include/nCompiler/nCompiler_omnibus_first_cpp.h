@@ -69,6 +69,11 @@ using namespace Rcpp;
 
 #ifdef NCOMPILER_USES_NCLASS_INTERFACE
 #include <nCompiler/nClass_interface/nClass_interface_post_Rcpp.h>
+#include <nCompiler/nClass_interface_Rcpp_extensions/nClass_interface_Rcpp_extensions_post_Rcpp.h>
+#endif
+
+#ifdef NCOMPILER_USES_NLIST
+#include <nCompiler/nList/nList_post_Rcpp.h>
 #endif
 
 // Main Rinternals include

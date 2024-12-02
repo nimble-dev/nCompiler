@@ -12,6 +12,18 @@ returnTypeCodes <- list(
   promoteToDoubleOrAD = 6L,
   promoteNoLogical = 7L)
 
+returnTypeString2Code <- function(returnTypeString) {
+  if(is.character(returnTypeString))
+    do.call('switch', c(list("double"), nCompiler:::returnTypeCodes))
+  else
+    returnTypeString
+}
+
+returnTypeCode2String <- function(returnTypeCode) {
+  if(is.numeric(returnTypeCode)) names(returnTypeCodes)[returnTypeCode]
+  else returnTypeCode
+}
+
 operatorDefEnv <- new.env()
 ##Utility for assigning multiples
 assignOperatorDef <- function(ops, def) {
@@ -34,6 +46,18 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
   if (is.null(opInfo[[field]]) || is.null(subfield)) return(opInfo[[field]])
   return(opInfo[[field]][[subfield]])
 }
+
+assignOperatorDef(
+  'nList',
+  list(
+    matchDef = function(type, length) {},
+    compileArgs = c("type"),
+    labelAbstractTypes = list(
+      handler = 'nList'),
+    cppOutput = list(
+      handler = 'nList')
+  )
+)
 
 assignOperatorDef(
   'nFunctionRef',
@@ -233,6 +257,16 @@ assignOperatorDef(
       handler = 'Bracket'), ## converts `[` to `index[`
     cppOutput = list(
       handler = 'IndexingBracket') ## needed for generated code such as for AD.
+  )
+)
+
+assignOperatorDef(
+  c('[['),
+  list(
+    labelAbstractTypes = list(
+      handler = 'DoubleBracket'),
+    cppOutput = list(
+      handler = 'IndexingBracket') # generates to single bracket for C++
   )
 )
 
@@ -500,6 +534,8 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$logical),
     eigenImpl = list(
       handler = 'Reduction',
+      noPromotion = TRUE,
+      castLogical = TRUE,
       removeForScalar = TRUE,
       method = TRUE
     ),
@@ -575,7 +611,7 @@ updateOperatorDef('logfact', 'eigenImpl', 'nameReplacement', 'lfactorial')
 
 ## binaryMidLogicalOperatorsComparison
 assignOperatorDef(
-  c('==','!=','<=','>=','<','>','&','|'),
+  c('==','!=','<=','>=','<','>'),
   list(
     labelAbstractTypes = list(
       handler = 'BinaryCwiseLogical',
@@ -586,6 +622,20 @@ assignOperatorDef(
       handler = 'MidOperator')
   )
 )
+
+assignOperatorDef(
+  c('&','|'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'BinaryCwiseLogical',
+      returnTypeCode = returnTypeCodes$logical),
+    eigenImpl = list(
+      handler = 'cWiseBinaryLogicalAndOr'),
+    cppOutput = list(
+      handler = 'MidOperator')
+  )
+)
+
 updateOperatorDef('<=', 'eigenImpl', 'swapOp', '>=')
 updateOperatorDef('>=', 'eigenImpl', 'swapOp', '<=')
 updateOperatorDef('<', 'eigenImpl', 'swapOp', '>')
