@@ -261,7 +261,11 @@ typeDeclarationList <- list(
                            type = "double") {
     nSparseType(scalarType = type, nDim = 1)
   },
-  
+  nList = function(type) {
+    browser()
+    elementSym <- argType2symbol(type)
+    symbolNlist$new(elementSym = elementSym)
+  },
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
     if(inherits(x, 'symbolBasic'))

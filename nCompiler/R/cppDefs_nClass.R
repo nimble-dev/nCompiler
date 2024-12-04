@@ -11,11 +11,13 @@ nClassBaseClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB")
+                        "#define NCOMPILER_USES_TBB",
+                        "#define NCOMPILER_USES_NLIST")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB")
+                        "#define NCOMPILER_USES_TBB",
+                        "#define NCOMPILER_USES_NLIST")
 
   cppDef$Hincludes <- c(cppDef$Hincludes,
                       "<Rinternals.h>")#,

@@ -216,86 +216,102 @@ inEigenizeEnv(
   }
 )
 
-inEigenizeEnv(
-  # We need a way to check for easy-to-catch aliasing risks
-  # Aliasing risks refer to situations like
-  # x[2:5] <- x[1:4]
-  # In eigen, this will replace x[2] <- x[1]
-  # then x[3] <- x[2] , but the RHS will be the just-replaced
-  # value of x[2].  If we catch an alias risk,
-  # we will add .eval() on the end of the RHS Eigen expression
-  # This forces evaluation of the RHS into separate memory
-  # before copying into LHS elements.
-  #
-  # We could have situations like A$B$x[1:4].
-  # We define an EigenVarInfo object as a list of two elements:
-  # First element would be c("A", "B", "x")
-  # Second element would be TRUE to indicate there is a '[' involved
-  getVarInfoForAliasChecking <- function(LHS) {
-    # How intricate will we go in matching objects for alias risk?
-    LHSvarName <- NULL
-    hasBracket <- FALSE
-    if(LHS$isName) {
-      return(list(LHS$name, hasBracket))
-    } else if(LHS$name == '[') {
-      nested <- getVarInfoForAliasChecking(LHS$args[[1]])
-      return(list(nested[[1]], TRUE))
-    } else if(LHS$name %in% c('->member')) { # Expand to handle nDiag and other possible LHS operators
-      nested <- getVarInfoForAliasChecking(LHS$args[[1]])
-      return(list(c(nested[[1]], LHS$args[[2]]$name), FALSE ))
-    }
-    NULL
-  }
-)
+## Alias-checking system needs a complete revamp.
+## This rough draft just won't do. It's too simple for:
+## - arguments passed in by reference
+## - nLists
+## - LHS operators like diag()
+## We may ideally want a combination of compile-time determination (where possible)
+##  and a system for run-time determination.
 
-inEigenizeEnv(
-  checkRHSaliasing <- function(code, LHSvarInfo, insidePermutingFxn = FALSE) {
-    if(code$isLiteral) return(FALSE)
-    thisIsAvar <- code$isName
-    if(!thisIsAvar) {
-      thisIsAvar <- code$name == "[" || code$name == "$"
-    }
-    if(thisIsAvar) {
-      RHSvarInfo <- getVarInfoForAliasChecking(code)
-      aliasing <- identical(LHSvarInfo[[1]], RHSvarInfo[[1]])
-      if(aliasing) {
-        if(!insidePermutingFxn) {
-          aliasing <- isTRUE(LHSvarInfo[[2]]) || isTRUE(RHSvarInfo[[2]]) # future can check if indexing is the same, x[2:5] <- x[2:5] + 1
-        }
-      }
-      if(aliasing) return(TRUE)
-    }
-    if(code$isCall) { # must be true at this point
-      skip <- code$name %in% c("nFunction", "chainedCall",
-                               "nMul", "nDiag", "nDiagonal",
-                               "nSvd", "nChol", "nEigen",
-                               "nSolve", "nForwardSolve", "nBacksolve")
-      # operators that force evaluation anyway, so no need to recurse
-      # These should really be identified by an entry within their operatorDefEnv entries
-      if(!skip) {
-        iArgs <- seq_along(code$args)
-        if(code$name == '[') iArgs <- iArgs[iArgs != 1] # recurse into '[' index args only, for say x[2:5] <- y[ x ]
-        permutingFxn <- insidePermutingFxn || code$name %in% c("t", "asRow") # possibly add others
-        for(i in iArgs) {
-          if(checkRHSaliasing(code$args[[i]], LHSvarInfo, permutingFxn)) return(TRUE)
-        }
-      }
-    }
-    FALSE
-  }
-)
+## inEigenizeEnv(
+##   # We need a way to check for easy-to-catch aliasing risks
+##   # Aliasing risks refer to situations like
+##   # x[2:5] <- x[1:4]
+##   # In eigen, this will replace x[2] <- x[1]
+##   # then x[3] <- x[2] , but the RHS will be the just-replaced
+##   # value of x[2].  If we catch an alias risk,
+##   # we will add .eval() on the end of the RHS Eigen expression
+##   # This forces evaluation of the RHS into separate memory
+##   # before copying into LHS elements.
+##   #
+##   # We could have situations like A$B$x[1:4].
+##   # We define an EigenVarInfo object as a list of two elements:
+##   # First element would be c("A", "B", "x")
+##   # Second element would be TRUE to indicate there is a '[' involved
+##   getVarInfoForAliasChecking <- function(LHS) {
+##     # How intricate will we go in matching objects for alias risk?
+##     LHSvarName <- NULL
+##     hasBracket <- FALSE
+##     if(LHS$isName) {
+##       return(list(LHS$name, hasBracket))
+##     } else if(LHS$name == '[') {
+##       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
+##       return(list(nested[[1]], TRUE))
+##     } else if(LHS$name %in% c('->member')) { # Expand to handle nDiag and other possible LHS operators
+##       nested <- getVarInfoForAliasChecking(LHS$args[[1]])
+##       return(list(c(nested[[1]], LHS$args[[2]]$name), FALSE ))
+##     }
+##     NULL
+##   }
+## )
+
+## inEigenizeEnv(
+##   checkRHSaliasing <- function(code, LHSvarInfo, insidePermutingFxn = FALSE) {
+##     if(code$isLiteral) return(FALSE)
+##     thisIsAvar <- code$isName
+##     if(!thisIsAvar) {
+##       thisIsAvar <- code$name == "[" || code$name == "$"
+##     }
+##     if(thisIsAvar) {
+##       RHSvarInfo <- getVarInfoForAliasChecking(code)
+##       aliasing <- identical(LHSvarInfo[[1]], RHSvarInfo[[1]])
+##       if(aliasing) {
+##         if(!insidePermutingFxn) {
+##           aliasing <- isTRUE(LHSvarInfo[[2]]) || isTRUE(RHSvarInfo[[2]]) # future can check if indexing is the same, x[2:5] <- x[2:5] + 1
+##         }
+##       }
+##       if(aliasing) return(TRUE)
+##     }
+##     if(code$isCall) { # must be true at this point
+##       skip <- code$name %in% c("nFunction", "chainedCall",
+##                                "nMul", "nDiag", "nDiagonal",
+##                                "nSvd", "nChol", "nEigen",
+##                                "nSolve", "nForwardSolve", "nBacksolve")
+##       # operators that force evaluation anyway, so no need to recurse
+##       # These should really be identified by an entry within their operatorDefEnv entries
+##       if(!skip) {
+##         iArgs <- seq_along(code$args)
+##         if(code$name == '[') iArgs <- iArgs[iArgs != 1] # recurse into '[' index args only, for say x[2:5] <- y[ x ]
+##         permutingFxn <- insidePermutingFxn || code$name %in% c("t", "asRow") # possibly add others
+##         for(i in iArgs) {
+##           if(checkRHSaliasing(code$args[[i]], LHSvarInfo, permutingFxn)) return(TRUE)
+##         }
+##       }
+##     }
+##     FALSE
+##   }
+## )
 
 inEigenizeEnv(
   Assign_Before <- function(code, symTab, auxEnv, workEnv,
                            handlingInfo) {
     LHS <- code$args[[1]]
-    LHSvarInfo <- getVarInfoForAliasChecking(LHS)
-    if(is.null(LHSvarInfo))
-      stop("Problem determining LHS variable name for ", nDeparse(code))
-    aliasRisk <- checkRHSaliasing(code$args[[2]], LHSvarInfo)
+    ## See not on need for new alias checking system
+    ##    LHSvarInfo <- getVarInfoForAliasChecking(LHS)
+    ## if(is.null(LHSvarInfo))
+    ##  stop("Problem determining LHS variable name for ", nDeparse(code))
+    ## aliasRisk <- checkRHSaliasing(code$args[[2]], LHSvarInfo)
+    ##
+    ## Default for now to always assuming alias risk!
+    aliasRisk <- TRUE
     workEnv$aliasRisk <- aliasRisk
     # If the LHS has no indexing, use nEval_
-    if(!isTRUE(LHSvarInfo[[2]])) workEnv$need_nEval <- TRUE
+    ##
+    ## We have a template nEval_ needed when the LHS is the entire object.
+    ## See note in C++ code for nEval_.
+    if(LHS$name != "[") workEnv$need_nEval <- TRUE
+    ##    if(!isTRUE(LHSvarInfo[[2]])) workEnv$need_nEval <- TRUE
     invisible(NULL)
   }
 )
@@ -317,13 +333,18 @@ inEigenizeEnv(
     ##   insertExprClassLayer(code, 1, 'flex_')
     ## }
     if(isTRUE(workEnv$aliasRisk)) {
-      if(isTRUE(workEnv$need_nEval)) {
-        insertExprClassLayer(code, 2, 'nEval_')
-        code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
-      } else {
-        insertExprClassLayer(code, 2, 'eval')
-        code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
-        eigenizeEnv$maybe_convertToMethod(code$args[[2]], handlingInfo = list(), force = TRUE)
+      use_eval <- TRUE
+      if(!inherits(code$args[[2]]$type, 'symbolBasic')) use_eval <- FALSE
+      else if(code$args[[2]]$type$nDim == 0) use_eval <- FALSE
+      if(use_eval) {
+        if(isTRUE(workEnv$need_nEval)) {
+          insertExprClassLayer(code, 2, 'nEval_')
+          code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
+        } else {
+          insertExprClassLayer(code, 2, 'eval')
+          code$args[[2]]$type <- code$args[[2]]$args[[1]]$type
+          eigenizeEnv$maybe_convertToMethod(code$args[[2]], handlingInfo = list(), force = TRUE)
+        }
       }
     }
     workEnv$aliasRisk <- NULL
@@ -517,13 +538,24 @@ inEigenizeEnv(
 inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
+    if (isTRUE(handlingInfo$castLogical)) {
+      ## There is some bizarre behavior for eigen's x.any() method.
+      ## If x is non-bool, then naturally we want to cast to bool, resulting in
+      ## x.cast<bool>().any()
+      ## However, if x is bool, then x.any() DOES NOT WORK! It always returns FALSE.
+      ## We work around that by casting to int: x.cast<int>().any(), which works.
+      if(code$args[[1]]$type$type != "logical")
+        eigenCast(code, 1, "logical")
+      else
+        eigenCast(code, 1, "integer")
+    }
     if(code$args[[1]]$type$nDim == 0) {
       if(isTRUE(handlingInfo$removeForScalar)) #used for mean(scalar) = scalar and similar cases.
-        removeExprClassLayer(code)
+        code <- removeExprClassLayer(code)
       else if(!is.null(handlingInfo$replaceForScalar)) {## used for length(scalar)=1
-        setArg(code, 1, exprClass$new(isLiteral = TRUE, isName = FALSE, isCall=FALSE, isAssign=FALSE,
-                                      name = handlingInfo$replaceForScalar))
-        removeExprClassLayer(code)
+        setArg(code, 1, literalIntegerExpr(1)) #exprClass$new(isLiteral = TRUE, isName = FALSE, isCall=FALSE, isAssign=FALSE,
+                                      #name = handlingInfo$replaceForScalar))
+        code <- removeExprClassLayer(code)
       }
     } else
       maybe_convertToMethod(code, handlingInfo) # used for mean(vector) = vector.mean() if method=TRUE
@@ -617,10 +649,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  cWiseBinaryLogical <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## key difference for logical case:
-    ## promote args to match each other, not logical return type
-    promoteArgTypes(code)
+  cWiseBinaryLogicalAfterHandlingTypes <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     maybeSwapBinaryArgs(code, handlingInfo)
     d1 <- code$args[[1]]$type$nDim
     d2 <- code$args[[2]]$type$nDim
@@ -646,6 +675,27 @@ inEigenizeEnv(
       }
     }
     invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  cWiseBinaryLogical <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## key difference for logical case:
+    ## promote args to match each other, not logical return type
+    promoteArgTypes(code)
+    cWiseBinaryLogicalAfterHandlingTypes(code, symTab, auxEnv, workEnv, handlingInfo)
+  }
+)
+
+inEigenizeEnv(
+  cWiseBinaryLogicalAndOr <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## key difference for logical case:
+    ## promote args to match each other, not logical return type
+    a1type <- code$args[[1]]$type$type
+    a2type <- code$args[[2]]$type$type
+    if(a1type != "logical") eigenCast(code, 1, "logical")
+    if(a2type != "logical") eigenCast(code, 2, "logical")
+    cWiseBinaryLogicalAfterHandlingTypes(code, symTab, auxEnv, workEnv, handlingInfo)
   }
 )
 
@@ -1238,8 +1288,8 @@ inEigenizeEnv(
       
       # create 1-row matrix for "nDiag(x, ncol)"
       if(!('nrow' %in% argNames)) {
-        rowValue <- exprClass$new(isLiteral = TRUE, isName = FALSE, 
-                                  isCall = FALSE, isAssign = FALSE, name = 1)
+        rowValue <- literalIntegerExpr(1) #exprClass$new(isLiteral = TRUE, isName = FALSE,
+#                                  isCall = FALSE, isAssign = FALSE, name = 1)
         insertArg(expr = code, ID = 1, value = rowValue, name = 'nrow')
         argNames <- names(code$args)
       }

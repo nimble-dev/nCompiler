@@ -8,10 +8,18 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB")
+                        "#define NCOMPILER_USES_TBB",
+                        "#define NCOMPILER_USES_NLIST")
+  ## handler nList in labelAbstractTypes does record in auxEnv if an
+  ## explicit call to nList() was uses. That is the beginning of a smarter
+  ## system for determining what #include (via #define) components are
+  ## really needed. But I punted on further extension for now and
+  ## simply tacked NLIST onto the universal set of includes for now.
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
-                        "#define NCOMPILER_USES_EIGEN")
+                          "#define NCOMPILER_USES_EIGEN",
+                          "#define NCOMPILER_USES_TBB",
+                          "#define NCOMPILER_USES_NLIST")
   cppDef$Hincludes <- c(cppDef$Hincludes,
                         nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
   ## cppDef$CPPincludes <- c(cppDef$CPPincludes,
@@ -127,11 +135,16 @@ cpp_nFunctionClass <- R6::R6Class(
 cpp_include_aux_content <- function(self,
                                     NF_Compiler) {
   ## Available aux content:
+  if(isTRUE(NF_Compiler$auxEnv$uses_nList)) {
+    self$Hpreamble <- c(self$Hpreamble, "#define NCOMPILER_USES_NLIST")
+    self$CPPpreamble <- c(self$CPPpreamble, "#define NCOMPILER_USES_NLIST")
+  }
   ## initializerList for a constructor
-  if(is.null(NF_Compiler$NFinternals$aux)) return(invisible(NULL))
-  if(!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
-    self$initializerList <- 
-      NF_Compiler$NFinternals$aux$initializerList_exprClasses
+  if(!is.null(NF_Compiler$NFinternals$aux)) {
+    if(!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
+      self$initializerList <-
+        NF_Compiler$NFinternals$aux$initializerList_exprClasses
+    }
   }
 }
 

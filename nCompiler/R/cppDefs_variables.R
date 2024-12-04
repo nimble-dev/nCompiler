@@ -172,6 +172,13 @@ cppTemplateDeclaration <- function(templateNames,
                       ...)
 }
 
+cppNlist <- function(name = character(),
+                     elementVar) {
+  cppVarFullClass$new(name = name,
+                      baseType = "nList",
+                      templateArgs = list(elementVar))
+}
+
 cppEigenTensorRef <- function(name = character(),
                               nDim,
                               scalarType) {

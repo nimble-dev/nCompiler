@@ -228,37 +228,70 @@ symbolNCgenerator <- R6::R6Class(
     })
 )
 
-symbolList <- R6::R6Class(
-  classname = "symbolList",
+symbolNlist <- R6::R6Class(
+  classname = "symbolNlist",
   inherit = symbolBase,
   portable = TRUE,
   public = list(
-    size = NULL,
-    initialize = function(..., size = NA) {
-      super$initialize(...)
-      self$type = 'list'
-      self$size <- size
+    elementSym = NULL,
+    initialize = function(name=NULL, elementSym = NULL,
+                          isArg = FALSE) {
+      self$name <- name
+      self$elementSym <- elementSym
+      self$isArg <- isArg
+      self$type <- "nList"
       self
     },
     shortPrint = function() {
-      'List'
+      'nList'
     },
     print = function() {
-      if(is.null(self$size)) {
-        writeLines(
-          paste0(self$name, ': ', self$type, ' size = (uninitialized),')
-        )
-      } else {
-        writeLines(
-          paste0(self$name, ': ', self$type, ' size = ', self$size)
-        )
-      }
+      writeLines(
+        paste0(self$name, ': ', self$type, '(',
+               if(!is.null(self$elementSym)) self$elementSym$shortPrint() else "unknown!"
+              ,')')
+      )
     },
     genCppVar = function() {
-      return(cppRcppList(name = self$name))
+      return(cppNlist(name = self$name,
+                      elementVar = self$elementSym$genCppVar()))
     }
   )
 )
+
+
+## I think this was and old idea
+## symbolList <- R6::R6Class(
+##   classname = "symbolList",
+##   inherit = symbolBase,
+##   portable = TRUE,
+##   public = list(
+##     size = NULL,
+##     initialize = function(..., size = NA) {
+##       super$initialize(...)
+##       self$type = 'list'
+##       self$size <- size
+##       self
+##     },
+##     shortPrint = function() {
+##       'List'
+##     },
+##     print = function() {
+##       if(is.null(self$size)) {
+##         writeLines(
+##           paste0(self$name, ': ', self$type, ' size = (uninitialized),')
+##         )
+##       } else {
+##         writeLines(
+##           paste0(self$name, ': ', self$type, ' size = ', self$size)
+##         )
+##       }
+##     },
+##     genCppVar = function() {
+##       return(cppRcppList(name = self$name))
+##     }
+##   )
+## )
 
 symbolRcppType<- R6::R6Class(
   classname = "symbolRcppType",

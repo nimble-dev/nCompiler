@@ -22,18 +22,18 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived get"<<std::endl;
 #endif
-      return Rcpp::wrap(reinterpret_cast<const T*>(intBasePtr)->*ptr);
+      return Rcpp::wrap(dynamic_cast<const T*>(intBasePtr)->*ptr);
     }
     void set(genericInterfaceBaseC *intBasePtr, SEXP Svalue) {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived set"<<std::endl;
 #endif
-      //      reinterpret_cast<T*>(intBasePtr)->*ptr = Rcpp::as<P>(Svalue);
+      //      dynamic_cast<T*>(intBasePtr)->*ptr = Rcpp::as<P>(Svalue);
       // Originally we defined an Rcpp::Exporter specialization as needed,
       // which is called via as<>.  However, we gain more flexibility in
       // argument passing by defining new Rcpp::traits::input_parameter specializations.
       // As a result, it is simpler her to create a new P object via this pathway.
-      reinterpret_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Svalue));
+      dynamic_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Svalue));
     }
   };
 
@@ -124,10 +124,10 @@ class genericInterfaceC : public genericInterfaceBaseC {
     return Sans;
   }
 
-  template<typename P, typename ...ARGS>
+  template<typename P, bool use_const=false, typename ...ARGS>
     class method_class : public method_base {
   public:
-    typedef P (T::*ptrtype)(ARGS...);
+    using ptrtype = typename std::conditional<use_const, P (T::*)(ARGS...) const, P (T::*)(ARGS...)>::type;
     ptrtype ptr;
   method_class(ptrtype ptr) : ptr(ptr) {};
 
@@ -140,7 +140,7 @@ class genericInterfaceC : public genericInterfaceBaseC {
         return R_NilValue;
       }
       return Rcpp::wrap(
-                        expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs)
+                        expand_call_method_narg<P, T>::template call<ptrtype, ARGS...>(dynamic_cast<T*>(intBasePtr), ptr, Sargs)
                         );
     }
   };
@@ -148,8 +148,8 @@ class genericInterfaceC : public genericInterfaceBaseC {
   /* Partial specialization on void return type avoids Rcpp::wrap<void>, which doesn't work. */
   /* There might be a slightly more compact way to refactor just the Rcpp::wrap step, but */
   /* this is a quick and simple solution:*/
-  template<typename ...ARGS>
-    class method_class<void, ARGS...> : public method_base {
+  template<bool use_const, typename ...ARGS>
+    class method_class<void, use_const, ARGS...> : public method_base {
   public:
     typedef void (T::*ptrtype)(ARGS...);
     ptrtype ptr;
@@ -163,7 +163,7 @@ class genericInterfaceC : public genericInterfaceBaseC {
         std::cout<<"Incorrect number of arguments"<<std::endl;
         return R_NilValue;
       }
-      expand_call_method_narg<void, T>::template call<ptrtype, ARGS...>(reinterpret_cast<T*>(intBasePtr), ptr, Sargs);
+      expand_call_method_narg<void, T>::template call<ptrtype, ARGS...>(dynamic_cast<T*>(intBasePtr), ptr, Sargs);
       return R_NilValue;
     }
   };
@@ -172,6 +172,7 @@ class genericInterfaceC : public genericInterfaceBaseC {
 //  typedef std::pair<std::string, std::shared_ptr<method_base> > name_method_pair;
 
   static name2method_type name2method;
+  // name_method_pair for non-const method
   template<typename P,  typename ...ARGS>
     static name_method_pair method(std::string name,
                                    P (T::*fun)(ARGS... args),
@@ -181,7 +182,20 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #endif
     return
       name_method_pair(name,
-                       method_info(std::shared_ptr<method_base>(new method_class<P, ARGS...>(fun)), args_)
+                       method_info(std::shared_ptr<method_base>(new method_class<P, false, ARGS...>(fun)), args_)
+                       );
+  }
+  // overload name_method_pair for const method
+  template<typename P,  typename ...ARGS>
+    static name_method_pair method(std::string name,
+                                   P (T::*fun)(ARGS... args) const,
+                                   const args& args_) {
+#ifdef SHOW_METHODS
+    std::cout<<"adding (const) method "<<name<<std::endl;
+#endif
+    return
+      name_method_pair(name,
+                       method_info(std::shared_ptr<method_base>(new method_class<P, true, ARGS...>(fun)), args_)
                        );
   }
 #ifdef NCOMPILER_USES_CEREAL

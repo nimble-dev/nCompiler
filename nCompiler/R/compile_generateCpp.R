@@ -145,6 +145,17 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  nList <- function(code, symTab) {
+    elementSym <- code$type$elementSym
+    paste0("nList<", elementSym$genCppVar()$generate(), ">(",
+      paste0(unlist(lapply(code$args,
+                           compile_generateCpp,
+                           symTab,
+                           asArg = TRUE)), collapse=","), ")")
+  }
+)
+
+inGenCppEnv(
   Generic_nClass_method_ref <- function(code, symTab) {
     paste0('nCompiler::nBind(&', compile_generateCpp(code$args[[2]]), '::', 
            compile_generateCpp(code$args[[1]]), ', this)')

@@ -197,6 +197,27 @@ inLabelAbstractTypesEnv(
     }
 )
 
+inLabelAbstractTypesEnv(
+  nList <- function(code, symTab, auxEnv, handlingInfo) {
+    sym <- argType2symbol(code$aux$compileArgs$type)
+    code$type <- symbolNlist$new(elementSym = sym)
+    removeArg(code, "type", allow_missing=TRUE)
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo)
+    auxEnv$uses_nList <- TRUE
+    if(length(inserts) == 0) NULL else inserts
+  }
+)
+
+inLabelAbstractTypesEnv(
+  DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
+    browser()
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- code$args[[1]]$type$elementSym$clone()
+    if(length(inserts) == 0) NULL else inserts
+  }
+)
+
 ## DollarSign
 ## Recurse on LHS.  Expect nClass.
 ## Look-up RHS. Expect a member or method.

@@ -26,7 +26,8 @@ namespace Rcpp {
       typedef typename Eigen::Tensor<T, nDim>::Index Index;
       typedef typename Eigen::array<Index, nDim> IndexArray;
       Exporter(SEXP Sx) : indexArray(SEXP_indices_2_IndexArray<Index, nDim>(Sx)) {
-        std::cout<<"In Exporter for Eigen::Tensor.  Check where this happens because we thought it might be cruft."<<std::endl;
+        // This case is used in the Exporter for an nList< Eigen::Tensor<T, nDim> >.
+        //
         // This whole system seems to impose an extra copy.
         // That is because we're being dispatched from ::Rcpp::traits::r_type_generic_tag
         // We may need to work around that but will try not to need to.

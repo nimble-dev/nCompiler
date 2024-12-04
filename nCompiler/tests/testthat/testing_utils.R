@@ -214,7 +214,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       ## make sure generated class / function names are the same every time
       return(
         test_gold_file(
-          nCompile_nClass(nC, control = control), test_name, ...)
+          nCompile(nC, control = control), test_name, ...)
       )
     } else if (compile_all_funs) {
       ## useful for debugging an nClass compilation failure
@@ -222,7 +222,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
       for (i in seq_along(nFuns)) {
         if (verbose)
           cat(paste('### Compiling function for test of:', nFun_names[i], '###\n'))
-        nCompile_nFunction(nFuns[[i]], control = control)
+        nCompile(nFuns[[i]], control = control)
       }
     }
     if (is.function(test_fun))
@@ -320,37 +320,32 @@ return_type_string <- function(op, argTypes) {
     if (!isTRUE(recycling_rule_op)) return(argTypes[1])
   else returnTypeCode <- 1
 
-  scalarTypeString <- switch(
-    returnTypeCode,
-    'numeric', # 1
-    'integer', # 2
-    'logical'  # 3
-  )
+  scalarTypeString <- nCompiler:::returnTypeCode2String(returnTypeCode)
+
+  ## scalarTypeString <- switch(
+  ##   returnTypeCode,
+  ##   'numeric', # 1
+  ##   'integer', # 2
+  ##   'logical'  # 3
+  ## )
 
   args <- lapply(
     argTypes, function(argType)
       nCompiler:::argType2symbol(argType)
   )
 
-  if (is.null(scalarTypeString)) ## returnTypeCode is 4 or 5
-    scalarTypeString <-
-      if (length(argTypes) == 1)
-        if (returnTypeCode == 5 && args[[1]]$type == 'logical') 'integer'
-        else args[[1]]$type
-      else if (length(argTypes) == 2) {
-         aot <- nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type,
-                                            returnTypeCode)
-      if (returnTypeCode == 5 && aot == 'logical') 'integer'
-      else aot
-  } else {
-    stop(
-      paste0(
-        'Testing does not currently know how to handle ops with more than 2',
-        ' args and returnTypeCode not equal to 1, 2, or 3.',
-        call. = FALSE
-      )
-    )
-  }
+  scalarTypeString <-
+    if (length(argTypes) == 1) nCompiler:::arithmeticOutputType(args[[1]]$type,
+                                                                returnTypeCode = returnTypeCode)
+    else if(length(argTypes) == 2) nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type,
+                                                                    returnTypeCode = returnTypeCode)
+    else stop(
+           paste0(
+             'Testing does not currently know how to handle ops with more than 2',
+             ' args and returnTypeCode not equal to 1, 2, or 3.',
+             call. = FALSE
+           )
+         )
 
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'

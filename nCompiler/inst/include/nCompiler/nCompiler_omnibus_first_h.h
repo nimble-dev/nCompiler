@@ -70,6 +70,10 @@
 #include <nCompiler/nClass_interface/nClass_interface_pre_Rcpp.h>
 #endif
 
+#ifdef NCOMPILER_USES_NLIST
+#include <nCompiler/nList/nList_pre_Rcpp.h>
+#endif
+
 // Main RCPP include
 // #include <Rcpp.h>
  // We will want to remove using namespace statements.
