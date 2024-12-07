@@ -57,13 +57,68 @@ build_compiled_nClass <- function(NCgenerator,
                                   newCobjFun,
                                   env = parent.frame(),
                                   quoted = FALSE) {
+  # One might wonder if we can have an R6 class created here to
+  # interface with a compiled C++ class be established with
+  # a class hierarchy that mirrors that (if any) of the C++ class.
+  # The answer is no, because only one class in the hierarchy in C++
+  #  can inherit from genericInterfaceC, so there can be no
+  #  hierarchies of interfaces.
+  # Some of what is done here has to imitate R6, but it is fairly natural
+  #  so seems reasonable. All inherited methods are pulled down to
+  #  the current class except for those overloaded in the current class.
+  #  All inherited member variables are pulled down, with no
+  #  possibility of the same member variable being distinct at different
+  #  levels of a class hierarchy.
   NCI <- NCinternals(NCgenerator)
+  # Make C interface methods
   CmethodNames <- NCI$methodNames
-  RmethodNames <- setdiff(names(NCgenerator$public_methods), 
+  recurse_make_Cmethods <- function(NCgenerator, CmethodNames,
+                                    derivedNames = character()) {
+    interfaceMethods <-  mapply(buildMethod_for_compiled_nClass,
+                                NCgenerator$public_methods[CmethodNames],
+                                CmethodNames)
+    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+      derivedNames <- c(derivedNames, CmethodNames)
+      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseCmethodNames <- NCinternals(baseNCgen)$methodNames
+      baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
+      if(length(baseCmethodNames)) {
+        baseInterfaceMethods <- recurse_make_Cmethods(baseNCgen,
+                                                      baseCmethodNames,
+                                                      derivedNames)
+        interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
+      }
+    }
+    interfaceMethods
+  }
+  CinterfaceMethods <- recurse_make_Cmethods(NCgenerator, CmethodNames)
+  # Make R interface methods
+  RmethodNames <- setdiff(names(NCgenerator$public_methods),
                           c(CmethodNames, 'clone'))
-  CinterfaceMethods <- mapply(buildMethod_for_compiled_nClass,
-                              NCgenerator$public_methods[CmethodNames],
-                              CmethodNames)
+  recurse_make_Rmethods <- function(NCgenerator, RmethodNames,
+                                    derivedNames = character()) {
+    interfaceMethods <- NCgenerator$public_methods[RmethodNames]
+    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+      derivedNames <- c(derivedNames, RmethodNames)
+      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseCmethodNames <- NCinternals(baseNCgen)$methodNames
+      baseRmethodNames <- setdiff(names(baseNCgen$public_methods),
+                                  c(baseCmethodNames, 'clone'))
+      baseRmethodNames <- setdiff(baseRmethodNames, derivedNames)
+      if(length(baseRmethodNames)) {
+        baseInterfaceMethods <- recurse_make_Rmethods(baseNCgen,
+                                                      baseRmethodNames,
+                                                      derivedNames)
+        interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
+      }
+    }
+    interfaceMethods
+  }
+  RinterfaceMethods <- recurse_make_Rmethods(NCgenerator, RmethodNames)
+
+  #  CinterfaceMethods <- mapply(buildMethod_for_compiled_nClass,
+#                              NCgenerator$public_methods[CmethodNames],
+#                              CmethodNames)
   ## enableDerivs <- unlist(NCinternals(NCgenerator)$enableDerivs)
   ## if (length(enableDerivs > 0)) {
   ##   ## add *_derivs_ method for methods in enableDerivs
@@ -73,16 +128,69 @@ build_compiled_nClass <- function(NCgenerator,
   ##   names(derivsMethods) <- paste0(enableDerivs, '_derivs_')
   ##   CinterfaceMethods <- c(CinterfaceMethods, derivsMethods)
   ## }
-  CfieldNames <- NCI$fieldNames
-  RfieldNames <- setdiff(names(NCgenerator$public_fields),
-                         CfieldNames)
-  activeBindingResults <- buildActiveBinding_for_compiled_nClass(NCI)
-  activeBindings <- activeBindingResults$activeBindings
-  internal_fields <- activeBindingResults$newFields
+  ## CfieldNames <- NCI$fieldNames
+  ## RfieldNames <- setdiff(names(NCgenerator$public_fields),
+  ##                        CfieldNames)
+  ## activeBindingResults <- buildActiveBinding_for_compiled_nClass(NCI)
+  ## activeBindings <- activeBindingResults$activeBindings
+  ## internal_fields <- activeBindingResults$newFields
   ## activeBindings <- lapply(CfieldNames,
   ##                          buildActiveBinding_for_compiled_nClass,
   ##                          NCI$symbolTable)
-  names(activeBindings) = CfieldNames
+  #names(activeBindings) = CfieldNames
+
+  recurse_make_activeBindings <- function(NCgenerator, CfieldNames,
+                                          derivedNames = character()) {
+    NCint <- NCinternals(NCgenerator)
+    activeBindingResults <-
+      buildActiveBinding_for_compiled_nClass(NCint, CfieldNames)
+    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+      derivedNames <- c(derivedNames, CfieldNames)
+      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
+      baseCfieldNames <- setdiff(baseCfieldNames, derivedNames)
+      if(length(baseCfieldNames)) {
+        baseActiveBindingResults <-
+          recurse_make_activeBindings(baseNCgen,
+                                      baseCfieldNames,
+                                      derivedNames)
+        activeBindingResults$activeBindings <-
+          c(activeBindingResults$activeBindings, baseActiveBindingResults$activeBindings)
+        activeBindingResults$internal_fields <-
+          c(activeBindingResults$internal_fields, baseActiveBindingResults$internal_fields)
+      }
+    }
+    activeBindingResults
+  }
+  CfieldNames <- NCI$fieldNames
+  activeBindingResults <- recurse_make_activeBindings(NCgenerator, CfieldNames)
+  activeBindings <- activeBindingResults$activeBindings
+  internal_fields <- activeBindingResults$newFields
+
+  recurse_make_Rfields <- function(NCgenerator, RfieldNames,
+                                    derivedNames = character()) {
+    interfaceFields <- NCgenerator$public_fields[RfieldNames]
+    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+      derivedNames <- c(derivedNames, RfieldNames)
+      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
+      baseRfieldNames <- setdiff(names(baseNCgen$public_fields),
+                                  c(baseCfieldNames, 'clone'))
+      baseRfieldNames <- setdiff(baseRfieldNames, derivedNames)
+      if(length(baseRfieldNames)) {
+        baseInterfaceFields <- recurse_make_Rfields(baseNCgen,
+                                                      baseRfieldNames,
+                                                    derivedNames)
+        interfaceFields <- c(interfaceFields, baseInterfaceFields)
+      }
+    }
+    interfaceFields
+  }
+  RfieldNames <- setdiff(names(NCgenerator$public_fields),
+                         CfieldNames)
+  RinterfaceFields <- recurse_make_Rfields(NCgenerator, RfieldNames)
+
+
   classname <- paste0(NCgenerator$classname, '_compiled')
 
   ans <- substitute(
@@ -118,10 +226,11 @@ build_compiled_nClass <- function(NCgenerator,
                      #parse(text = paste0('new_', NCgenerator$classname),
                      #         keep.source = FALSE)[[1]],
       RPUBLIC = parse(text = deparse(
-        NCgenerator$public_methods[RmethodNames]
+        RinterfaceMethods #NCgenerator$public_methods[RmethodNames]
       ), keep.source = FALSE)[[1]],
       RFIELDS = parse(text = deparse(
-        c(NCgenerator$public_fields[RfieldNames], internal_fields)
+#        c(NCgenerator$public_fields[RfieldNames], internal_fields)
+        c(RinterfaceFields, internal_fields)
       ), keep.source = FALSE)[[1]],
       CINTERFACE = parse(text = deparse(
         CinterfaceMethods
@@ -166,8 +275,8 @@ build_compiled_nClass <- function(NCgenerator,
   ans
 }
 
-buildActiveBinding_for_compiled_nClass <- function(NCI) {
-  fieldNames <- NCI$fieldNames
+buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
+  #fieldNames <- NCI$fieldNames
   symTab <- NCI$symbolTable
   activeBindings <- list()
   newFields <- list()
@@ -222,7 +331,7 @@ buildActiveBinding_for_compiled_nClass <- function(NCI) {
 
 buildMethod_for_compiled_nClass <- function(fun, name) {
   if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  if(!NFinternals(fun)$callFromR) {
+  if(!NFinternals(fun)$compileInfo$callFromR) {
     ans <- function(...) {}
     environment(ans) <- new.env()
     body(ans) <- substitute(

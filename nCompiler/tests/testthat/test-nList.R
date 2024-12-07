@@ -13,13 +13,13 @@ foo <- nFunction(
   returnType = "nList('numericScalar')" # How do alternate modes of saying this go through?
 )
 
-set_nOption("startDebugStage", "labelAbstractTypes", "compilerOptions")
-set_nOption("endDebugStage", "labelAbstractTypes", "compilerOptions")
-nOptions(pause_after_writing_files=TRUE)
+#set_nOption("startDebugStage", "labelAbstractTypes", "compilerOptions")
+#set_nOption("endDebugStage", "labelAbstractTypes", "compilerOptions")
+# nOptions(pause_after_writing_files=TRUE)
 cfoo <- nCompile(foo)
 
-set_nOption("startDebugStage", "end", "compilerOptions")
-set_nOption("endDebugStage", "end", "compilerOptions")
+#set_nOption("startDebugStage", "end", "compilerOptions")
+#set_nOption("endDebugStage", "end", "compilerOptions")
 
 foo <- nFunction(
   function() {
@@ -31,13 +31,13 @@ foo <- nFunction(
   returnType = "nList('numericVector')" # How do alternate modes of saying this go through?
 )
 
-set_nOption("startDebugStage", "labelAbstractTypes", "compilerOptions")
-set_nOption("endDebugStage", "labelAbstractTypes", "compilerOptions")
-nOptions(pause_after_writing_files=TRUE)
+#set_nOption("startDebugStage", "labelAbstractTypes", "compilerOptions")
+#set_nOption("endDebugStage", "labelAbstractTypes", "compilerOptions")
+# nOptions(pause_after_writing_files=TRUE)
 cfoo <- nCompile(foo)
 
-set_nOption("startDebugStage", "end", "compilerOptions")
-set_nOption("endDebugStage", "end", "compilerOptions")
+#set_nOption("startDebugStage", "end", "compilerOptions")
+#set_nOption("endDebugStage", "end", "compilerOptions")
 
 # STOPPED HERE
 # NEED TO GET #define FLAG GENERATED
@@ -50,7 +50,7 @@ nc <- nClass(
     foo = nFunction(function(x = "nList('numericScalar')") {return(x); returnType("nList('numericScalar')")})
   )
 )
-nOptions(pause_after_writing_files = TRUE)
+#nOptions(pause_after_writing_files = TRUE)
 Cnc <- nCompile(nc)
 obj <- Cnc$new()
 obj$list_vec <- list(1:3, 2:5, 3:10)

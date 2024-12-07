@@ -262,7 +262,6 @@ typeDeclarationList <- list(
     nSparseType(scalarType = type, nDim = 1)
   },
   nList = function(type) {
-    browser()
     elementSym <- argType2symbol(type)
     symbolNlist$new(elementSym = elementSym)
   },

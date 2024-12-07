@@ -1,12 +1,15 @@
 nFunctionIDMaker <- labelFunctionCreator('NFID')
 
-NFvirtual_CompilerClass <- R6::R6Class(
-  classname = 'NFvirtual_CompilerClass',
+NF_CompilerClass <- R6::R6Class(
+  'NF_CompilerClass',
   portable = FALSE,
   public = list(
+    cppDef = NULL,
     name = NULL,
     origName = NULL,
     compileInfo = NULL,
+    # compileInfo should contain: isVirtual, isAbstract, isConst
+    #  callFromR, and depends. (C_fun will be removed by here even if provided.)
     NFinternals = NULL,
     stageCompleted = 'start',
     nameSubList = NULL,
@@ -17,7 +20,7 @@ NFvirtual_CompilerClass <- R6::R6Class(
     code = NULL,
     auxEnv = NULL,
     ##... to here
-    const = NULL,
+    ## const = NULL,
     isAD = FALSE,
 #    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
 #    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
@@ -25,34 +28,37 @@ NFvirtual_CompilerClass <- R6::R6Class(
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
                           ## funName,
-                          const = FALSE,
+                          # const = FALSE,
                           useUniqueNameInCpp = FALSE,
                           compileInfo = NULL) {
-      auxEnv <<- new.env() # We can't put this above as auxEnv = new.env() because then
+      self$auxEnv <- new.env()
+      # We can't put this in publc list as "auxEnv = new.env()" because then
       # all objects would end up with the same auxEnv. See help(R6Class)
-      const <<- const
+      self$compileInfo <- compileInfo # may be replaced below
       if(!is.null(f)) {
         isNFinternals <- inherits(f, 'NF_InternalsClass')
         if(!(isNF(f) || isNFinternals)) {
           stop('Attempt to compile something is neither an nFunction nor an object of class NF_InternalsClass')
         }
         if(isNFinternals) {
-          NFinternals <<- f
+          self$NFinternals <- f
         } else {
-          NFinternals <<- NFinternals(f)
+          self$NFinternals <- NFinternals(f)
         }
-        origName <<- NFinternals$uniqueName
-        if (useUniqueNameInCpp) name <<- NFinternals$uniqueName
-        else name <<- NFinternals$cpp_code_name
-        origRcode <<- NFinternals$code
-        newRcode <<- NFinternals$code
-        isAD <<- NFinternals$isAD
+        self$origName <- NFinternals$uniqueName
+        if (useUniqueNameInCpp) self$name <- NFinternals$uniqueName
+        else self$name <- NFinternals$cpp_code_name
+        self$origRcode <- NFinternals$code
+        self$newRcode <- NFinternals$code
+        self$isAD <- NFinternals$isAD
         if(is.null(compileInfo))
           self$compileInfo <- NFinternals$compileInfo
-        else self$compileInfo <- compileInfo
-        if(length(compileInfo$exportName) == 0)
-          compileInfo$exportName <<- name
       }
+      if(length(compileInfo$exportName) == 0)
+        self$compileInfo$exportName <- name
+      # possibly swap const and compileInfo$isConst, keeping the latter only
+      ##self$const <- const || isTRUE(compileInfo$isConst)
+      ##self$compileInfo$isConst <- NULL
     },
     showCpp = function() {
       writeCode(
@@ -75,21 +81,12 @@ NFvirtual_CompilerClass <- R6::R6Class(
 
       returnSymbol <<- NFinternals$returnSym$clone(deep = TRUE)
     },
-    process = function(...) {
-      if(is.null(symbolTable)) {
-        setupSymbolTable()
-      }
-    }
-  )
-)
-
-NF_CompilerClass <- R6::R6Class(
-  'NF_CompilerClass',
-  inherit = NFvirtual_CompilerClass,
-  portable = FALSE,
-  public = list(
-    cppDef = NULL,
     ##Rwrapper = NULL,
+    ## process = function(...) {
+    ##   if(is.null(symbolTable)) {
+    ##     setupSymbolTable()
+    ##   }
+    ## },
     createCpp = function(control = list(),
                          sourceObj = NULL) {
       ## Do all steps to create C++ (and R wrapper).
@@ -122,6 +119,12 @@ NF_CompilerClass <- R6::R6Class(
                        initialTypeInferenceOnly = FALSE) { ## deprecated?
       ## Do all steps of manipulating the abstract syntax tree
       ## to the point where it is ready to be used for C++ generation.
+
+      ## I got confused in refactoring whether this is needed here.
+      ## if(is.null(symbolTable)) {
+      ##   setupSymbolTable()
+      ## }
+
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control

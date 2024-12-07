@@ -191,7 +191,7 @@ get_nCompile_types <- function(units) {
   ans <- character(length(units))
   for(i in seq_along(units)) {
     if(isNF(units[[i]])) {
-      ans[i] <- if(NFinternals(units[[i]])$callFromR)
+      ans[i] <- if(NFinternals(units[[i]])$compileInfo$callFromR)
                   'nF' else 'nF_noExport'
     } else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
     else if(isNC(units[[i]])) 
@@ -206,7 +206,7 @@ get_nCompile_types <- function(units) {
 createCppDefsInfo <- function(units,
                               unitTypes,
                               control,
-                              exportNames) {
+                              compileInfos) {
   if(is.null(names(units))) names(units) <- rep('', length(units))
   if(length(units) == 0) stop('No objects for compilation provided')
   unitResults <- vector("list", length(units))
@@ -214,9 +214,8 @@ createCppDefsInfo <- function(units,
   cpp_names <- character(length(units))
   # RcppPacket_list <- vector(length = length(units), mode = "list")
   for(i in seq_along(units)) {
+    compileInfo <- compileInfos[[i]]
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
-      compileInfo <- NFinternals(units[[i]])$compileInfo
-      compileInfo$exportName <- exportNames[i]
       unitResults[[i]] <- nCompile_nFunction(units[[i]],
                                              stopAfterCppDef = TRUE,
                                              env = env,
@@ -225,8 +224,6 @@ createCppDefsInfo <- function(units,
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
 #      RcppPacket_list[[i]] <- NFinternals(unitResults[[i]])$RcppPacket
     } else if(unitTypes[i] == "nCgen") {
-      compileInfo <- NCinternals(units[[i]])$compileInfo
-      compileInfo$exportName <- exportNames[i]
       unitResults[[i]] <- nCompile_nClass(units[[i]],
                                           stopAfterCppDef = TRUE,
                                           env = env,
@@ -257,7 +254,7 @@ nCompile <- function(...,
                      env = parent.frame(),
                      control = list(),
                      unitControls = list(),
-                     interfaces = "full",
+                     interfaces = list(),
                      package = FALSE,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   #(1) Put together inputs from ...
@@ -279,6 +276,10 @@ nCompile <- function(...,
 
   # (1b) Unpack interfaces argument from various formats.
   # Remember interface is only needed for nClass compilation units
+  # If a single value ("full", "generic", or "none") is provided via
+  # the interfaces argument, it will over-ride nClass-specific values
+  #  from compileInfos. If a named vector of list is provided,
+  #  they will over-ride on a one-by-one bases.
   if(!is.list(interfaces)) {
     if(is.character(interfaces)) {
       if(length(interfaces) == 1) {
@@ -307,12 +308,18 @@ nCompile <- function(...,
   # Then exportName is the new-object function and that needs to be different from the
   # returned name for the nClass generator
   returnNames <- exportNames <- vector("character", length(units))
+  compileInfos <- structure(vector("list", length(units)),
+                            names = names(units))
   for(i in seq_along(units)) {
     add_new_ <- FALSE
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       compileInfo <- NFinternals(units[[i]])$compileInfo
     } else {
       compileInfo <- NCinternals(units[[i]])$compileInfo
+      if(interfaces[[i]] == "")
+        interfaces[[i]] <- compileInfo$interface
+      if(!(interfaces[[i]] %in% c("full", "generic", "none")))
+        stop("Could not determine a valid interface value ('full', 'generic', or 'none') for ", names(units)[i])
       if(interfaces[[i]]=="full") add_new_ <- TRUE
     }
     # If a name was provided directly in the ... list
@@ -329,13 +336,18 @@ nCompile <- function(...,
     # distinct from the returnName by prefixing with "new_"
     if(add_new_) # this could happen by setting just above or by choice of provided compileInfo$exportName
       exportNames[i] <- paste0("new_", exportNames[i])
+
+    # In some cases this is the first addition of an exportName to a compileInfo
+    compileInfo$exportName <- exportNames[i]
+    compileInfo$interface <- interfaces[[i]]
+    compileInfos[[i]] <- compileInfo
   }
 
   # if package = TRUE, call package steps either with units or original ... (above)
   # after packing up control list (e.g. from interfaces)
 
   # (2) Create cppDefs
-  cppDefs_info <- createCppDefsInfo(units, unitTypes, control, exportNames)
+  cppDefs_info <- createCppDefsInfo(units, unitTypes, control, compileInfos)
   cppDefs <- cppDefs_info$cppDefs
   cpp_names <- cppDefs_info$cpp_names
 
@@ -418,14 +430,15 @@ nCompile <- function(...,
                                  cppDefs = cppDefs,
                                  unitTypes = unitTypes,
                                  cpp_names = cpp_names,
-                                 exportNames = exportNames,
+                            #     exportNames = exportNames,
                                  returnNames = returnNames,
-                                 interfaces = interfaces,
+                            #     interfaces = interfaces,
                                  RcppPacket_list = RcppPacket_list,
                                  dir = dir,
                                  cacheDir = cacheDir,
                                  env = env,
-                                 returnList = returnList))
+                                 returnList = returnList,
+                                 compileInfos = compileInfos))
   }
 }
 
@@ -543,14 +556,15 @@ nCompile_finish_nonpackage <- function(units,
                                        cppDefs = cppDefs,
                                        unitTypes,
                                        cpp_names,
-                                       exportNames,
+                                  #     exportNames,
                                        returnNames,
-                                       interfaces,
+                                  #     interfaces,
                                        RcppPacket_list,
                                        dir,
                                        cacheDir,
                                        env,
-                                       returnList) {
+                                       returnList,
+                                       compileInfos) {
   cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
   resultEnv <- new.env()
   compiledFuns <- cpp_nCompiler(RcppPacket_list,
@@ -563,20 +577,24 @@ nCompile_finish_nonpackage <- function(units,
   unit_is_nClass <- unitTypes=="nCgen"
   num_nClasses <- sum(unit_is_nClass)
   R6interfaces <- vector(mode="list", length = length(units) ) # will remain null for nFunctions
- # exportNames <- unlist(lapply(cppDefs, function(x) x$compileInfo$exportName))
+  # exportNames <- unlist(lapply(compileInfos, function(x) x$compileInfo$exportName))
+  expect_nC_interface <- unit_is_nClass &
+    unlist(lapply(compileInfos,
+           function(x) isTRUE(x$interface %in% c("full", "generic"))))
+  exportNames <- unlist(lapply(compileInfos, function(x) x$exportName))
   if(num_nClasses > 0) {
     for(i in seq_along(units)) {
-      if(unit_is_nClass[i]) {
+      if(expect_nC_interface[i]) {
         nClass_name <- names(units)[i]
         iRes <- which( exportNames[i] == names(compiledFuns))
         if(length(iRes) != 1) {
-          warning(paste0("Building R6 inteface classes: Name matching of results had a problem for ", nClass_name, "."))
+          warning(paste0("Building R6 interface classes: Name matching of results had a problem for ", nClass_name, "."))
         } else {
           R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
                                                          compiledFuns[[iRes]],
                                                          env = resultEnv))
           if(inherits(R6interfaces[[i]], "try-error")) {
-            warning(paste0("There was a problem building a full nClass interface. for ", nClass_name, "."))
+            warning(paste0("There was a problem building a full nClass interface for ", nClass_name, "."))
             R6interfaces[[i]] <- NULL
           }
         }
@@ -587,9 +605,10 @@ nCompile_finish_nonpackage <- function(units,
 
   if(any(unitTypes == "nCgen")) {
     newDLLenv <- make_DLLenv()
+    nC_names <- exportNames[expect_nC_interface]
     compiledFuns <- setup_nClass_environments(compiledFuns,
                                               newDLLenv,
-                                              nC_names = exportNames[unitTypes=="nCgen"],
+                                              nC_names = nC_names,
                                               R6interfaces = R6interfaces,
                                               returnList = TRUE)
   }
@@ -601,16 +620,15 @@ nCompile_finish_nonpackage <- function(units,
   ## We want to return with names(ans) changed to
   ## names(units), in the order corresponding to cpp_names, but skipping non-exported nF's.
   unit_is_nF_noExport <- unitTypes=="nF_noExport"
-  num_named_results <- length(units) - sum(unit_is_nF_noExport)
   ans <- vector(mode="list", length = length(units))
   ans_names <- character(length = length(units))
   for(i in seq_along(units)) {
+    iRes <- -1 # will not get used. in cases where it is not replaced next, it is not used.
     if(unitTypes[i] == "nF") {
       iRes <- which(exportNames[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
     } else if(unitTypes[i] == "nCgen") {
-      iRes <- which( exportNames[i] == names(compiledFuns))
-    } else if(unitTypes[i] == "nF_noExport") {
-      iRes <- -1 # will not get used
+      if(expect_nC_interface[i])
+        iRes <- which( exportNames[i] == names(compiledFuns))
     }
     if(length(iRes) != 1) {
       warning(paste0("Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
@@ -622,15 +640,17 @@ nCompile_finish_nonpackage <- function(units,
     if(unitTypes[i] == "nF") {
       ans[[i]] <- compiledFuns[[iRes]]
     } else if(unitTypes[i] == "nCgen") {
-      interfaceType <- interfaces[[ i ]] # note it should be ordered (but names are from units)
+      interfaceType <- compileInfos[[i]]$interface
       if(is.null(interfaceType))
         interfaceType <- "full"
       if(interfaceType == "full")
         ans[[i]] <- R6interfaces[[returnNames[i] ]]
-      else
+      else if(interfaceType == "generic")
         ans[[i]] <- compiledFuns[[iRes]]
     }
-    # ans[[i]] will be left NULL for nF_noExport. This is good as the result will always align with input and be fully named.
+    # ans[[i]] will be left NULL for nF_noExport or nClass with interface "none".
+    # This is good as the result will always align with
+    # input and be fully named.
   }
   names(ans) <- ans_names
 

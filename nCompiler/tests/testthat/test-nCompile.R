@@ -1,5 +1,7 @@
 message("to_full_interface does not work via packaging.")
 
+message("add tests for 'none' interface")
+
 # Notes:
 # Three pathways:
 # A. nCompile(package =FALSE)
@@ -70,7 +72,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::add.Scalars(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name, package = FALSE, returnList = TRUE)
   expect_equal(test$add.Scalars_name(2, 3), 5)
@@ -85,7 +87,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::add.Scalars_name(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_eName, package = FALSE, returnList = TRUE)
   expect_equal(test$foo1(2, 3), 5)
@@ -100,7 +102,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::foo1(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name_eName, package = FALSE, returnList = TRUE)
   expect_equal(test$foo2(2, 3), 5)
@@ -115,7 +117,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::foo2(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 })
 
 test_that("nCompile works for nClass with classname and/or exportName and either interface", {
@@ -210,7 +212,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc(); test_obj(obj)
-  devtools::unload("testpackage")
+  rm(obj); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -222,8 +224,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
+  rm(obj); gc(); pkgload::unload("testpackage")
 
 ###### name  version of nc
   ## generic & direct
@@ -252,7 +253,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc_name(); test_obj(obj)
-  devtools::unload("testpackage")
+  rm(obj); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -264,9 +265,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc_name$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
-
+  rm(obj); gc(); pkgload::unload("testpackage")
 
 
 ###### eName version of nc
@@ -296,7 +295,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc1(); test_obj(obj)
-  devtools::unload("testpackage")
+  rm(obj); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -308,10 +307,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc1$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
-
-
+  rm(obj); gc(); pkgload::unload("testpackage")
 
 ###### name and eName version of nc
   ## generic & direct
@@ -340,7 +336,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc2(); test_obj(obj)
-  devtools::unload("testpackage")
+  rm(obj); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -352,7 +348,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc2$new(); test_obj(obj)
-  devtools::unload("testpackage")
+  rm(obj); gc(); pkgload::unload("testpackage")
 })
 
 test_that("Compile one nFunction via nCompile, returning a list (and testing external R name invalid for C++).",

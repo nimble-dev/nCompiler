@@ -11,10 +11,10 @@ class genericInterfaceC : public genericInterfaceBaseC {
 #endif
   }
   // interface to a member of type P in class T
-  template<typename P>
+  template<typename P, typename T2>
     class accessor_class : public accessor_base {
   public:
-   typedef P T::*ptrtype;
+   typedef P T2::*ptrtype;
     ptrtype ptr;
  accessor_class(ptrtype ptr) : ptr(ptr) {};
 
@@ -47,15 +47,15 @@ class genericInterfaceC : public genericInterfaceBaseC {
   static name2access_type name2access;
 
   // Enter a new (name, member ptr) pair to static maps.
-  template<typename P>
-    static name_access_pair field(std::string name, P T::*ptr) {
+  template<typename P, typename T2>
+    static name_access_pair field(std::string name, P T2::*ptr) {
 #ifdef SHOW_FIELDS
     std::cout<<"adding "<<name<<std::endl;
 #endif
     name2index[name] = name_count++;
     return name_access_pair(
                             name,
-                            std::shared_ptr<accessor_base>(new accessor_class<P>(ptr))
+                            std::shared_ptr<accessor_base>(new accessor_class<P, T2>(ptr))
                             );
       }
 
@@ -124,10 +124,10 @@ class genericInterfaceC : public genericInterfaceBaseC {
     return Sans;
   }
 
-  template<typename P, bool use_const=false, typename ...ARGS>
+  template<typename P, typename T2, bool use_const=false, typename ...ARGS>
     class method_class : public method_base {
   public:
-    using ptrtype = typename std::conditional<use_const, P (T::*)(ARGS...) const, P (T::*)(ARGS...)>::type;
+    using ptrtype = typename std::conditional<use_const, P (T2::*)(ARGS...) const, P (T2::*)(ARGS...)>::type;
     ptrtype ptr;
   method_class(ptrtype ptr) : ptr(ptr) {};
 
@@ -148,10 +148,10 @@ class genericInterfaceC : public genericInterfaceBaseC {
   /* Partial specialization on void return type avoids Rcpp::wrap<void>, which doesn't work. */
   /* There might be a slightly more compact way to refactor just the Rcpp::wrap step, but */
   /* this is a quick and simple solution:*/
-  template<bool use_const, typename ...ARGS>
-    class method_class<void, use_const, ARGS...> : public method_base {
+  template<bool use_const, typename T2, typename ...ARGS>
+    class method_class<void, T2, use_const, ARGS...> : public method_base {
   public:
-    typedef void (T::*ptrtype)(ARGS...);
+    typedef void (T2::*ptrtype)(ARGS...);
     ptrtype ptr;
   method_class(ptrtype ptr) : ptr(ptr) {};
 
@@ -173,29 +173,44 @@ class genericInterfaceC : public genericInterfaceBaseC {
 
   static name2method_type name2method;
   // name_method_pair for non-const method
-  template<typename P,  typename ...ARGS>
+//   template<typename P,  typename ...ARGS>
+//     static name_method_pair method(std::string name,
+//                                    P (T::*fun)(ARGS... args),
+//                                    const args& args_) {
+// #ifdef SHOW_METHODS
+//     std::cout<<"adding method "<<name<<std::endl;
+// #endif
+//     return
+//       name_method_pair(name,
+//                        method_info(std::shared_ptr<method_base>(new method_class<P, T, false, ARGS...>(fun)), args_)
+//                        );
+//   }
+
+  template<typename P, typename T2, typename ...ARGS>
     static name_method_pair method(std::string name,
-                                   P (T::*fun)(ARGS... args),
+                                   P (T2::*fun)(ARGS... args),
                                    const args& args_) {
 #ifdef SHOW_METHODS
     std::cout<<"adding method "<<name<<std::endl;
 #endif
     return
       name_method_pair(name,
-                       method_info(std::shared_ptr<method_base>(new method_class<P, false, ARGS...>(fun)), args_)
+                       method_info(std::shared_ptr<method_base>(new method_class<P, T2, false, ARGS...>(fun)), args_)
                        );
   }
+
+
   // overload name_method_pair for const method
-  template<typename P,  typename ...ARGS>
+  template<typename P, typename T2, typename ...ARGS>
     static name_method_pair method(std::string name,
-                                   P (T::*fun)(ARGS... args) const,
+                                   P (T2::*fun)(ARGS... args) const,
                                    const args& args_) {
 #ifdef SHOW_METHODS
     std::cout<<"adding (const) method "<<name<<std::endl;
 #endif
     return
       name_method_pair(name,
-                       method_info(std::shared_ptr<method_base>(new method_class<P, true, ARGS...>(fun)), args_)
+                       method_info(std::shared_ptr<method_base>(new method_class<P, T2, true, ARGS...>(fun)), args_)
                        );
   }
 #ifdef NCOMPILER_USES_CEREAL

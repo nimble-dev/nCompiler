@@ -234,14 +234,14 @@ build_set_nClass_env_impl <- function(self) {
 
 add_obj_hooks_impl <- function(self) {
   name <- self$name
-  self$addInheritance(paste0("loadedObjectHookC<",
+  self$addInheritance(paste0("public loadedObjectHookC<",
                              name,
                              ">"))
 }
 
 addGenericInterface_impl <- function(self) {
   name <- self$name
-  self$addInheritance(paste0("genericInterfaceC<",
+  self$addInheritance(paste0("public genericInterfaceC<",
                              name,
                              ">"))
 #  self$Hincludes <- c(self$Hincludes,
@@ -251,25 +251,36 @@ addGenericInterface_impl <- function(self) {
   self$CPPpreamble <- c(self$CPPpreamble,
                       "#define NCOMPILER_USES_NCLASS_INTERFACE")
 
-  methodNames <- names(self$memberCppDefs)
-  includeBool <- methodNames %in% self$functionNamesForInterface
-  if(sum(includeBool) > 0) {
-    # construct arg info sections like
-    # args({{'x', ref}, {'y', copy}})
-    cppArgInfos <- structure(character(length(methodNames)), names = methodNames)
+  cppArgInfos <- character()
+  outputMethodClassNames <- character()
+  outputMethodNames <- character()
+  outputCppMethodNames <- character()
+  iOut <- 1
+  fieldClassNames <- character()
+  fieldNames <- character()
+  cpp_fieldNames <- character()
+  done <- FALSE
+  current_NCgen <- self$Compiler$NCgenerator
+  while(!done) {
+    NCint <- NCinternals(current_NCgen)
+    NCcompInfo <- NCint$compileInfo
+    interfaceMembers <- NCcompInfo$interfaceMembers
+    useIM <- !is.null(interfaceMembers)
+    methodNames <- NCint$methodNames
     for(mName in methodNames) {
-      args <- self$memberCppDefs[[mName]]$args
-      argNames <-
-        if(inherits(args, 'symbolTableClass')) {
-          names(args$getSymbols())
-        } else {
-          character()
-        }
+      if(mName %in% names(cppArgInfos)) next
+      if(useIM && !(mName %in% interfaceMembers)) next
+      NFint <- NFinternals(current_NCgen$public_methods[[mName]])
+      NFcompInfo <- NFint$compileInfo
+      if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
+      argNames <- NFint$argSymTab$getSymbolNames() # we do not want cpp names here.
+      refArgs <- NFint$refArgs
+      blockRefArgs <- NFint$blockRefArgs
       if(length(argNames)) {
-        post_cpp <- self$memberCppDefs[[mName]]$get_post_cpp_compiler()[[1]]
         passingTypes <-
-          ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
-          ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
+          ifelse(refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
+                 ifelse(blockRefArgs[argNames] |> lapply(isTRUE) |> unlist(),
+                        "refBlock", "copy"))
         step1 <- paste0('\"',argNames,'\"')
         step2 <- paste(step1, passingTypes, sep=',')
         step3 <- paste0('{arg(', step2, ')}', collapse = ',')
@@ -277,38 +288,109 @@ addGenericInterface_impl <- function(self) {
         step3 <- '{}'
       }
       step4 <- paste0('args({', step3, '})')
-      cppArgInfos[mName] <- step4
+      cppArgInfos[iOut] <- step4
+      outputMethodNames[iOut] <- mName
+      outputCppMethodNames[iOut] <- NFint$cpp_code_name
+      outputMethodClassNames[iOut] <- NCint$cpp_classname
+      iOut <- iOut + 1
     }
-
-    cppMethodNames <- lapply(self$memberCppDefs, function(x) x$name)
+    # I am belaboring what could be done with unique or setdiff to be more
+    # sure that order is preserved aligning fieldNames and cpp_fieldNames
+    new_fieldNames <- NCint$symbolTable$getSymbolNames()
+    new_fieldNames <- new_fieldNames[!(new_fieldNames %in% fieldNames)]
+    fieldNames <- c(fieldNames, new_fieldNames)
+    new_cpp_fieldNames <- NCint$cppSymbolNames
+    new_cpp_fieldNames <- new_cpp_fieldNames[!(new_cpp_fieldNames %in% cpp_fieldNames)]
+    cpp_fieldNames <- c(cpp_fieldNames, new_cpp_fieldNames)
+    fieldClassNames <- c(fieldClassNames,
+                         rep(NCint$cpp_classname, length(new_cpp_fieldNames)))
+    #
+    current_NCgen <- current_NCgen$parent_env$.inherit_obj
+    done <- is.null(current_NCgen)
+  }
+  if(iOut > 1) {
     methodsContent <- paste0("method(\"",
-                             methodNames[includeBool],
+                             outputMethodNames,
                              "\", &",
-                             name,
+                             outputMethodClassNames,
                              "::",
-                             cppMethodNames[includeBool],
+                             outputCppMethodNames,
                              ", ",
-                             cppArgInfos[includeBool],
+                             cppArgInfos,
                              ")", collapse = ",\n")
     methodsContent <- paste0("NCOMPILER_METHODS(\n", methodsContent, "\n)")
   } else
     methodsContent <- "NCOMPILER_METHODS()"
-  fieldNames <- self$symbolTable$getSymbolNames()
-  fieldNames <- fieldNames[fieldNames %in% self$variableNamesForInterface]
-  cpp_fieldNames <- unlist(
-    lapply(fieldNames,
-           function(x) self$symbolTable$getSymbol(x)$generateUse()))
+
   if(length(fieldNames) > 0) {
     fieldsContent <- paste0("field(\"",
                             fieldNames,
                             "\", &",
-                            name,
+                            fieldClassNames,
                             "::",
                             cpp_fieldNames,
                             ")", collapse = ",\n")
     fieldsContent <- paste0("NCOMPILER_FIELDS(\n", fieldsContent, "\n)")
   } else
     fieldsContent <- "NCOMPILER_FIELDS()"
+
+  ## methodNames <- names(self$memberCppDefs)
+  ## includeBool <- methodNames %in% self$functionNamesForInterface
+  ## if(sum(includeBool) > 0) {
+  ##   # construct arg info sections like
+  ##   # args({{'x', ref}, {'y', copy}})
+  ##   cppArgInfos <- structure(character(length(methodNames)), names = methodNames)
+  ##   for(mName in methodNames) {
+  ##     args <- self$memberCppDefs[[mName]]$args
+  ##     argNames <-
+  ##       if(inherits(args, 'symbolTableClass')) {
+  ##         names(args$getSymbols())
+  ##       } else {
+  ##         character()
+  ##       }
+  ##     if(length(argNames)) {
+  ##       post_cpp <- self$memberCppDefs[[mName]]$get_post_cpp_compiler()[[1]]
+  ##       passingTypes <-
+  ##         ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
+  ##         ifelse(post_cpp$blockRefArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
+  ##       step1 <- paste0('\"',argNames,'\"')
+  ##       step2 <- paste(step1, passingTypes, sep=',')
+  ##       step3 <- paste0('{arg(', step2, ')}', collapse = ',')
+  ##     } else {
+  ##       step3 <- '{}'
+  ##     }
+  ##     step4 <- paste0('args({', step3, '})')
+  ##     cppArgInfos[mName] <- step4
+  ##   }
+  ##   cppMethodNames <- lapply(self$memberCppDefs, function(x) x$name)
+  ##   methodsContent <- paste0("method(\"",
+  ##                            methodNames[includeBool],
+  ##                            "\", &",
+  ##                            name,
+  ##                            "::",
+  ##                            cppMethodNames[includeBool],
+  ##                            ", ",
+  ##                            cppArgInfos[includeBool],
+  ##                            ")", collapse = ",\n")
+  ##   methodsContent <- paste0("NCOMPILER_METHODS(\n", methodsContent, "\n)")
+  ## } else
+  ##   methodsContent <- "NCOMPILER_METHODS()"
+  ## fieldNames <- self$symbolTable$getSymbolNames()
+  ## fieldNames <- fieldNames[fieldNames %in% self$variableNamesForInterface]
+  ## cpp_fieldNames <- unlist(
+  ##   lapply(fieldNames,
+  ##          function(x) self$symbolTable$getSymbol(x)$generateUse()))
+  ## if(length(fieldNames) > 0) {
+  ##   fieldsContent <- paste0("field(\"",
+  ##                           fieldNames,
+  ##                           "\", &",
+  ##                           name,
+  ##                           "::",
+  ##                           cpp_fieldNames,
+  ##                           ")", collapse = ",\n")
+  ##   fieldsContent <- paste0("NCOMPILER_FIELDS(\n", fieldsContent, "\n)")
+  ## } else
+  ##   fieldsContent <- "NCOMPILER_FIELDS()"
   macroCallContent <- paste0("NCOMPILER_INTERFACE(\n",
                              paste(name,
                                    fieldsContent,
@@ -350,8 +432,8 @@ cppClassClass <- R6::R6Class(
     useGenerator = TRUE,    # toggles whether to include a SEXPgeneratorFun.
     # SEXPgeneratorDef = NULL, # put this in internalCppDefs
     # set_nClass_envDef = NULL, # ditto
-    functionNamesForInterface = character(),
-    variableNamesForInterface = character(),
+    # functionNamesForInterface = character(),
+    # variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
     # globalObjectsDefs = list(),
     
@@ -453,9 +535,11 @@ cppClassClass <- R6::R6Class(
     build_set_nClass_env = function() {
       build_set_nClass_env_impl(self)
     },
-    addGenericInterface = function(interfaceCalls = TRUE) {
-      addGenericInterface_impl(self)
-      add_obj_hooks_impl(self)
+    addGenericInterface = function(interfaceCalls = TRUE, interface = TRUE) {
+      if(interface) {
+        addGenericInterface_impl(self)
+        add_obj_hooks_impl(self)
+      }
       # The only case that would omit interface calls is generated predefined code.
       if(interfaceCalls)
         self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
@@ -594,6 +678,14 @@ cppFunctionClass <- R6::R6Class(
                   for(v in names(dotsList))
                     self[[v]] <- dotsList[[v]]
                   super$initialize()
+                  if(!is.null(self$compileInfo$virtual))
+                    self$virtual <- self$compileInfo$virtual
+                  if(!is.null(self$compileInfo$abstract))
+                    self$abstract <- self$compileInfo$abstract
+                  if(!is.null(self$compileInfo$const))
+                    self$const <- self$compileInfo$const
+                  if(!is.null(self$compileInfo$callFromR))
+                    self$export <- self$compileInfo$callFromR
                 },
                 generate = function(declaration = FALSE,
                                     scopes = character(),
@@ -725,7 +817,7 @@ generateClassHeader <- function(ns, inheritance) {
   inheritancePart <-
     if(length(inheritance) > 0) {
       paste(':',
-            paste('public',
+            paste(# 'public', # do this case-by-case instead of here
                   unlist(inheritance),
                   collapse = ', ')
             )

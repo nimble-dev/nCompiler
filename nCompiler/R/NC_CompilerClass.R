@@ -1,8 +1,8 @@
 nClassIDMaker <- labelFunctionCreator('NCID')
 ## These classes handle compilation of a nClass from its generator
 
-NCvirtual_CompilerClass <- R6::R6Class(
-  classname = "NCvirtual_CompilerClass",
+NC_CompilerClass <- R6::R6Class(
+  classname = "NC_CompilerClass",
   portable = FALSE,
   public = list(
     NCgenerator = NULL
@@ -10,7 +10,8 @@ NCvirtual_CompilerClass <- R6::R6Class(
   , symbolTable = NULL
   , cppDef = NULL
   , name = character()
-  , compileInfo = list(),
+  , compileInfo = list()
+  , neededTypes = list(),
     initialize = function(NC = NULL,
                           className = NULL,
                           compileInfo = NULL) {
@@ -41,9 +42,9 @@ NCvirtual_CompilerClass <- R6::R6Class(
       ## In the past we've a system that makes every name unique by
       ## pasting on a unique ID.  We need that to not happen for
       ## predefined classes.  For now I am turning off the behavior
-      ## altogether.  If we determine that we need it again for 
+      ## altogether.  If we determine that we need it again for
       ## non-predefined classes, we can toggle it as needed.
-      # name <<- paste(name, 
+      # name <<- paste(name,
       #                nClassIDMaker(),
       #                sep = "_")
 
@@ -66,22 +67,6 @@ NCvirtual_CompilerClass <- R6::R6Class(
       for(i in seq_along(NFcompilers)) {
         NFcompilers[[i]]$createCpp(sourceObj = sourceObj)
       }
-    }
-  )
-)
-
-NC_CompilerClass <- R6::R6Class(
-  classname = "NC_CompilerClass",
-  inherit = NCvirtual_CompilerClass,
-  portable = FALSE,
-  public = list(
-    neededTypes = list(),
-    initialize = function(NC = NULL,
-                          className = NULL,
-                          compileInfo = NULL) {
-      super$initialize(NC = NC,
-                       className = className,
-                       compileInfo = compileInfo)
     },
     createCpp = function(control = list(),
                          sourceObj, #this will be the same as NC, so seems redundant and should be considered for removal/cleanup
@@ -97,6 +82,9 @@ NC_CompilerClass <- R6::R6Class(
         name = self$name,
         compileInfo = self$compileInfo
       )
+      # note interfaceCalls controls including set_value, get_value, call_method
+      # that is distinct from inheriting from base classes for interfacing,
+      # managed by compileInfo$interface == "none"
       cppDef$buildAll(interfaceCalls = interfaceCalls)
       invisible(NULL)
     },
