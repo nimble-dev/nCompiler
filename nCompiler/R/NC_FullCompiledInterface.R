@@ -352,7 +352,7 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ## We used to make the third argument like list(arg1, arg2, arg3)
   ## Now we just provide the environment() and from C++ look up the
   ## inputs for arg1, arg2, and arg3.  This allows us to capture
-  ## them in lazy-evaluation (promise) form and impement ref and
+  ## them in lazy-evaluation (promise) form and implement ref and
   ## blockRef behavior. This is similar to what rlang's quosures do.
   ##  listcode <- quote(list())
   ##  for(i in seq_along(argNames))

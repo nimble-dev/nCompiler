@@ -213,6 +213,11 @@ SEXP process_call_args(const genericInterfaceBaseC::args::argVectorT &argVector,
         };
       case genericInterfaceBaseC::refBlock:
         {
+          // A blockRef has identical needs at this step to a ref:
+          // capture the input expression and its environment.
+          // We keep the separate labels in case they are helpful in the future.
+          // Later they are handled differently by invoking different as<> and wrap<>
+          // cases.
           std::cout<<"handling blockRef"<<std::endl;
           RinnerArgs[iReq] = Rcpp::List::create(PRCODE(promisesProvided[this_iP]),
                                                 PRENV(promisesProvided[this_iP]));

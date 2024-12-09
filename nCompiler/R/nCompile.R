@@ -574,9 +574,15 @@ nCompile_finish_nonpackage <- function(units,
                                 env = resultEnv,
                                 packetList = TRUE,
                                 returnList = TRUE)
-  unit_is_nClass <- unitTypes=="nCgen"
-  num_nClasses <- sum(unit_is_nClass)
+  # unit_is_nClass <- unitTypes=="nCgen"
+  # num_nClasses <- sum(unit_is_nClass)
+  if(!(length(units)==length(compileInfos)))
+    stop("Problem while post-processing nCompile results.")
   R6interfaces <- vector(mode="list", length = length(units) ) # will remain null for nFunctions
+  exportNames <- unlist(lapply(compileInfos, function(x) x$compileInfo$exportName))
+  expect_nC_interface <- rep(FALSE, length(units))
+
+  <<<<<<< HEAD
   # exportNames <- unlist(lapply(compileInfos, function(x) x$compileInfo$exportName))
   expect_nC_interface <- unit_is_nClass &
     unlist(lapply(compileInfos,
@@ -590,6 +596,17 @@ nCompile_finish_nonpackage <- function(units,
         if(length(iRes) != 1) {
           warning(paste0("Building R6 interface classes: Name matching of results had a problem for ", nClass_name, "."))
         } else {
+=======
+ # exportNames <- unlist(lapply(cppDefs, function(x) x$compileInfo$exportName))
+ # if(num_nClasses > 0) {
+    for(i in seq_along(units)) {
+      iRes <- which( exportNames[i] == names(compiledFuns))
+      if(length(iRes) != 1) {
+        warning(paste0("Post-processing in nCompile: Name matching of results had a problem for ", exportNames[i], "."))
+      } else {
+        if(unitTypes[i] == "nCgen") { #unit_is_nClass[i]) {
+          nClass_name <- names(units)[i]
+>>>>>>> update-argPassing
           R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
                                                          compiledFuns[[iRes]],
                                                          env = resultEnv))
@@ -597,10 +614,16 @@ nCompile_finish_nonpackage <- function(units,
             warning(paste0("There was a problem building a full nClass interface for ", nClass_name, "."))
             R6interfaces[[i]] <- NULL
           }
+        } else if(unitTypes[i]=="nF") {
+          refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
+          blockRefArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$blockRefArgs # ditto
+          compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
+                                                       refArgs = refArgs,
+                                                       blockRefArgs = blockRefArgs)
         }
       }
     }
-  }
+ # }
   names(R6interfaces) <- returnNames
 
   if(any(unitTypes == "nCgen")) {
