@@ -44,6 +44,8 @@ cppDefinitionClass <- R6::R6Class(
     getExternalDefs = function() {return(c(do.call("c", lapply(internalCppDefs, function(x) x$getExternalDefs()) ),
                                            externalCppDefs,
                                            do.call("c", lapply(externalCppDefs, function(x) x$getExternalDefs()) ) ) )},
+    ## get_post_cpp_compiler is not currently used anywhere.
+    ## We keep it in place as a concept in case it is helpful in the future.
     get_post_cpp_compiler = function() NULL)
 )
 
@@ -269,7 +271,7 @@ addGenericInterface_impl <- function(self) {
         post_cpp <- self$memberCppDefs[[mName]]$get_post_cpp_compiler()[[1]]
         passingTypes <-
           ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "ref",
-          ifelse(post_cpp$refArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
+          ifelse(post_cpp$blockRefArgs[argNames] |> lapply(isTRUE) |> unlist(), "refBlock", "copy"))
         step1 <- paste0('\"',argNames,'\"')
         step2 <- paste(step1, passingTypes, sep=',')
         step3 <- paste0('{arg(', step2, ')}', collapse = ',')
