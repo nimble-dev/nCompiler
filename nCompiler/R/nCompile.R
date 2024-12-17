@@ -270,6 +270,7 @@ nCompile <- function(...,
   }
   dotsDeparses[origIsList] <- ''
   names(origList)[boolNoName] <- dotsDeparses[boolNoName] # This puts default names from deparsing ... entries into list
+  # for `nCompile(A = foo, foo2))`, names(units) will be c("A", "foo2")
   units <- do.call('c', origList)
 
   inputNamesInfo <- list(names = names(units), boolNameProvided = !boolNoName)
@@ -304,9 +305,13 @@ nCompile <- function(...,
 
   unitTypes <- get_nCompile_types(units)
   # set up exportNames and returnNames
-  # The only case where these will be different will be an nClass with full interface.
+  # exportNames will be from names(units) if named in the call or there is no exportName in the NF or NC compileInfo
+  # Otherwise (i.e. no name provided in call and there is an exportName in the object def), use the exportName in the object def (compileInfo)
+  #
+  # The only case where exportNames and returnNames will be different will be an nClass with full interface.
   # Then exportName is the new-object function and that needs to be different from the
-  # returned name for the nClass generator
+  # returned name for the nClass generator.
+  # e.g. for nc1, exportName will be new_nc1 but returnName will be nc1.
   returnNames <- exportNames <- vector("character", length(units))
   compileInfos <- structure(vector("list", length(units)),
                             names = names(units))
@@ -524,8 +529,9 @@ writePackage <- function(...,
 #
   WP_check_unit_types(units, unitTypes)
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
-  full_interface <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
-#
+  full_interfaces <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
+  methodFns <- WP_build_methodFns(units, unitTypes, interfaces)
+  #
   if (initializePkg)
     WP_initializePkg(pkgName, dir, pkgDir, instDir, datDir, codeDir, modify)
 #
@@ -538,9 +544,9 @@ writePackage <- function(...,
   ## generation of R interface functions.
   WP_writeCpp(RcppPacket_list, srcDir, codeDir)
   WP_writeRinterfaces(units, unitTypes, interfaces, returnNames,
-                      Rdir, full_interface, roxygen, roxygenFlag)
+                      Rdir, full_interfaces, methodFns, roxygen, roxygenFlag)
   WP_writeMemberData(memberData, datDir)
-  WP_write_dotOnLoad(exportNames, unitTypes, Rdir)
+  WP_write_dotOnLoad(exportNames, returnNames, unitTypes, interfaces, Rdir)
   WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, returnNames,
                                  initializePkg, pkgDir, pkgName)
   ## if (!initializePkg) {
@@ -579,25 +585,9 @@ nCompile_finish_nonpackage <- function(units,
   if(!(length(units)==length(compileInfos)))
     stop("Problem while post-processing nCompile results.")
   R6interfaces <- vector(mode="list", length = length(units) ) # will remain null for nFunctions
-  exportNames <- unlist(lapply(compileInfos, function(x) x$compileInfo$exportName))
-  expect_nC_interface <- rep(FALSE, length(units))
-
-  <<<<<<< HEAD
-  # exportNames <- unlist(lapply(compileInfos, function(x) x$compileInfo$exportName))
-  expect_nC_interface <- unit_is_nClass &
-    unlist(lapply(compileInfos,
-           function(x) isTRUE(x$interface %in% c("full", "generic"))))
+  methodFns <- vector(mode="list", length = length(units) ) # ditto
   exportNames <- unlist(lapply(compileInfos, function(x) x$exportName))
-  if(num_nClasses > 0) {
-    for(i in seq_along(units)) {
-      if(expect_nC_interface[i]) {
-        nClass_name <- names(units)[i]
-        iRes <- which( exportNames[i] == names(compiledFuns))
-        if(length(iRes) != 1) {
-          warning(paste0("Building R6 interface classes: Name matching of results had a problem for ", nClass_name, "."))
-        } else {
-=======
- # exportNames <- unlist(lapply(cppDefs, function(x) x$compileInfo$exportName))
+  expect_nC_interface <- rep(FALSE, length(units))
  # if(num_nClasses > 0) {
     for(i in seq_along(units)) {
       iRes <- which( exportNames[i] == names(compiledFuns))
@@ -605,14 +595,21 @@ nCompile_finish_nonpackage <- function(units,
         warning(paste0("Post-processing in nCompile: Name matching of results had a problem for ", exportNames[i], "."))
       } else {
         if(unitTypes[i] == "nCgen") { #unit_is_nClass[i]) {
-          nClass_name <- names(units)[i]
->>>>>>> update-argPassing
-          R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
-                                                         compiledFuns[[iRes]],
-                                                         env = resultEnv))
-          if(inherits(R6interfaces[[i]], "try-error")) {
-            warning(paste0("There was a problem building a full nClass interface for ", nClass_name, "."))
-            R6interfaces[[i]] <- NULL
+          expect_nC_interface[i] <- isTRUE(compileInfos[[i]]$interface %in% c("full", "generic"))
+          #nClass_name <- names(units)[i]
+          if(expect_nC_interface[i]) {
+            R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
+                                                           compiledFuns[[iRes]],
+                                                           env = resultEnv))
+            if(inherits(R6interfaces[[i]], "try-error")) {
+              warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
+              R6interfaces[[i]] <- NULL
+            }
+            methodFns[[i]] <- try(build_generic_fns_for_compiled_nClass(units[[i]]))
+            if(inherits(methodFns[[i]], "try-error")) {
+              warning(paste0("There was a problem building functions for generic nClass interface for ", exportNames[i], "."))
+              methodFns[[i]] <- NULL
+            }
           }
         } else if(unitTypes[i]=="nF") {
           refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
@@ -625,14 +622,15 @@ nCompile_finish_nonpackage <- function(units,
     }
  # }
   names(R6interfaces) <- returnNames
+#  names(R6interfaces) <- exportNames # used for next step, then set to returnNames
 
   if(any(unitTypes == "nCgen")) {
     newDLLenv <- make_DLLenv()
-    nC_names <- exportNames[expect_nC_interface]
     compiledFuns <- setup_nClass_environments(compiledFuns,
                                               newDLLenv,
-                                              nC_names = nC_names,
-                                              R6interfaces = R6interfaces,
+                                              exportNames = exportNames[expect_nC_interface],
+                                              R6interfaces = R6interfaces[expect_nC_interface],
+                                              methodFns = methodFns[expect_nC_interface],
                                               returnList = TRUE)
   }
 
@@ -724,17 +722,29 @@ WP_add_roxygen_fxns_to_cppDefs <- function(cppDefs,
 }
 
 WP_build_full_interfaces <- function(units, unitTypes, interfaces, exportNames) {
-  full_interface <- vector("list", length = length(units))
+  full_interfaces <- vector("list", length = length(units))
   for(i in seq_along(units)) {
     if(unitTypes[i]=="nCgen") {
-      if(isTRUE(interfaces[[i]]=="full")) {
-        full_interface[[i]] <- build_compiled_nClass(NCgenerator = units[[i]],
+      if(isTRUE(interfaces[[i]]%in%c("full", "generic"))) {
+        full_interfaces[[i]] <- build_compiled_nClass(NCgenerator = units[[i]],
                                                      newCobjFun = exportNames[i],
                                                      quoted = TRUE)
       }
     }
   }
-  full_interface
+  full_interfaces
+}
+
+WP_build_methodFns <- function(units, unitTypes, interfaces) {
+  methodFns <- vector("list", length = length(units))
+  for(i in seq_along(units)) {
+    if(unitTypes[i]=="nCgen") {
+      if(isTRUE(interfaces[[i]] %in% c("full", "generic"))) {
+        methodFns[[i]] <- build_generic_fns_for_compiled_nClass(units[[i]])
+      }
+    }
+  }
+  methodFns
 }
 
 WP_initializePkg <- function(pkgName,
@@ -786,50 +796,65 @@ WP_writeCpp <- function(RcppPacket_list, srcDir, codeDir) {
 }
 
 WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames,
-                                Rdir, full_interface, roxygen, roxygenFlag) {
+                                Rdir, full_interfaces, methodFns, roxygen, roxygenFlag) {
   Rfilepath <- vector("character", length(units))
   for (i in seq_along(units)) {
-    if ((unitTypes[i]=='nCgen') && isTRUE(interfaces[[i]]=="full")) {
+    if ((unitTypes[i]=='nCgen') && isTRUE(interfaces[[i]]!="none")) {
       ## Write the nClass full interface to the package's R directory
-      generator_name <- returnNames[i] # note this may differ from the name in input list
-      Rfile <- paste0(generator_name, '.R')
+      if(interfaces[[i]] == "full")
+        generator_name <- returnNames[i] # note this may differ from the name in input list
+      else
+        generator_name <- paste0(".", returnNames[i], "_R6interface")
+      Rfile <- paste0(returnNames[i], '.R')
       Rfilepath[i] <- file.path(Rdir, Rfile)
       con <- file(Rfilepath[i], open = 'w')
-      deparsed_full_interface <- deparse(full_interface[[i]])
-      deparsed_full_interface[1] <- paste0(
-        generator_name, ' <- ', deparsed_full_interface[1]
-      )
-      exportTag <- "#' @export\n" #if (totalControl[[i]]$export) "#' @export\n" else NULL
-      # Retrieve roxygen entry
-      thisRox <- switch(roxygenFlag,
-                        none = NULL,
-                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                        names = roxygen[[ names(units)[i] ]]
-                        )
-      if (!is.null(thisRox)) {
-        # Find the spot where each documented method is defined
-        for (m in 1:length(thisRox$methods)) {
-          thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
-                           deparsed_full_interface, fixed = TRUE)
-          targetStr <- deparsed_full_interface[thisDefn]
-          deparsed_full_interface[thisDefn] <-
-            gsub(pattern = names(thisRox$methods)[m],
-                 replacement = paste0(
-                   "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
-                 ),
-                 x = deparsed_full_interface[thisDefn],
-                 fixed = TRUE)
+      if(is.null(full_interfaces[[i]])) { # likely a problem, but we'll try to proceed
+        warning("In writePackage: R6 interface code for ", returnNames[i], " missing.")
+        deparsed_full_interface <- "NULL"
+      } else {
+        deparsed_full_interface <- deparse(full_interfaces[[i]])
+        deparsed_full_interface[1] <- paste0(
+          generator_name, ' <- ', deparsed_full_interface[1]
+        )
+        exportTag <- "#' @export\n" #if (totalControl[[i]]$export) "#' @export\n" else NULL
+        # Retrieve roxygen entry
+        thisRox <- switch(roxygenFlag,
+                          none = NULL,
+                          indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
+                          names = roxygen[[ names(units)[i] ]]
+                          )
+        if (!is.null(thisRox)) {
+          # Find the spot where each documented method is defined
+          for (m in 1:length(thisRox$methods)) {
+            thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
+                             deparsed_full_interface, fixed = TRUE)
+            targetStr <- deparsed_full_interface[thisDefn]
+            deparsed_full_interface[thisDefn] <-
+              gsub(pattern = names(thisRox$methods)[m],
+                   replacement = paste0(
+                     "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
+                   ),
+                   x = deparsed_full_interface[thisDefn],
+                   fixed = TRUE)
+          }
         }
+        deparsed_full_interface <- c(
+          '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
+          if (is.list(thisRox)) thisRox[["header"]] else thisRox,
+          exportTag,
+          deparsed_full_interface,
+          paste0(generator_name, '$parent_env <- new.env()'),
+          paste0(generator_name, '$.newCobjFun <- NULL')
+        )
       }
-      deparsed_full_interface <- c(
-        '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
-        if (is.list(thisRox)) thisRox[["header"]] else thisRox,
-        exportTag,
-        deparsed_full_interface,
-        paste0(generator_name, '$parent_env <- new.env()'),
-        paste0(generator_name, '$.newCobjFun <- NULL')
-      )
       writeLines(deparsed_full_interface, con)
+      ##
+      methodFns_name <- paste0(".", returnNames[i], "_methodFns")
+      deparsed_methodFns <- deparse(methodFns[[i]])
+      deparsed_methodFns[1] <- paste0(
+        methodFns_name, ' <- ', deparsed_methodFns[1]
+      )
+      writeLines(deparsed_methodFns, con)
       close(con)
     }
   }
@@ -847,18 +872,32 @@ WP_writeMemberData <- function(memberData, datDir) {
   }
 }
 
-WP_write_dotOnLoad <- function(exportNames, unitTypes, Rdir) {
-  nClass_names <- exportNames[unitTypes=="nCgen"]
+WP_write_dotOnLoad <- function(exportNames, returnNames, unitTypes, interfaces, Rdir) {
+  expect_nC_interface <- unitTypes == "nCgen" & interfaces %in% c("full", "generic")
+  if(!any(expect_nC_interface)) return()
+  exportNames <- exportNames[expect_nC_interface]
+  returnNames <- returnNames[expect_nC_interface]
+  interfaces <- interfaces[expect_nC_interface]
   #  nClass_names <- unlist(lapply(objs, function(x)
   #    if(isNCgenerator(x)) x$classname else NULL
   #    ))
-  if(length(nClass_names)) {
-    onLoad_lines <- c(".onLoad <- function(libName, pkgName) {\n",
-                      paste0(" nCompiler::setup_nClass_environments_from_package(c(",
-                             paste0("\"",nClass_names,"\"", collapse = ", "),  "))\n"),
-                      "NULL}\n")
-    writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
+  R6interfaceNames <- ifelse(interfaces == "full",
+                             returnNames,
+                             ifelse(interfaces == "generic",
+                                    paste0(".",returnNames,"_R6interface"),
+                                    NULL))
+  methodFnsNames <- paste0(".", returnNames, "_methodFns")
+  paste0cq <- function(names) {
+    paste0("c(", paste0("\"",names,"\"", collapse = ", "), ")")
   }
+  onLoad_lines <- c(".onLoad <- function(libName, pkgName) {\n",
+                    paste0(" nCompiler::setup_nClass_environments_from_package(\n",
+                           "  nClass_exportNames = ", paste0cq(exportNames), ",\n",
+                           "  interfaceTypes = ", paste0cq(interfaces), ",\n",
+                           "  R6interfaces = list(", paste0(R6interfaceNames, collapse=","), "),\n",
+                           "  methodFns = list(", paste0(methodFnsNames, collapse=","), "))\n"),
+                    "NULL}\n")
+  writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
 }
 
 WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, returnNames,
@@ -871,8 +910,8 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, returnN
     ## A nFunction might only need:
     ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
     ## A nClass might need:
-    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppEigenAD",
-                                         "RcppParallel", "nCompiler", "Rcereal", sep = ",")
+    DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "nCompiler", "RcppEigen",
+                                         "RcppEigenAD", "RcppParallel", "Rcereal", sep = ",")
     # DESCRIPTION$Encoding <- "UTF-8"
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.
@@ -913,5 +952,4 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, returnN
   ## }
   NAMESPACE <- unique(NAMESPACE) # double checking
   writeLines(NAMESPACE, con = NAMEfile)
-
 }

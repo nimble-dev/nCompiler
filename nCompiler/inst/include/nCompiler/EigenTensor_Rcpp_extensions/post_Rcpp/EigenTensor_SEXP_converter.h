@@ -1,6 +1,8 @@
 #ifndef TENSOR_SEXP_CONVERTER_H_
 #define TENSOR_SEXP_CONVERTER_H_
 
+/* Non-template functions here are static to avoid multiple symbols error from C++ during nCompile via packaging */
+
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "SEXP_2_EigenTensor.h"
 #include "SEXP_indices_2_IndexArray.h"
@@ -97,7 +99,7 @@ private:
   EigenTensorType xCopy;
 };
 
-SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
+static SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
   // Input should be a name (`A`) or a bracket expression (`[`(A, <indices>), parsed from A[<indices>].
   // add checks and flexibility for integer vs double
   //
@@ -138,18 +140,18 @@ SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
   return Robj;
 }
 
-SEXP STMinput_2_expr(SEXP Sx) {
+static SEXP STMinput_2_expr(SEXP Sx) {
   // add checks
   return VECTOR_ELT(Sx, 0);
 }
 
-SEXP STMinput_2_env(SEXP Sx) {
+static SEXP STMinput_2_env(SEXP Sx) {
   // add checks
   return VECTOR_ELT(Sx, 1);
 }
 
 // From nimble
-int SEXP_2_int(SEXP Sn, int i, int offset ) {
+static int SEXP_2_int(SEXP Sn, int i, int offset ) {
   if(!(Rf_isNumeric(Sn) || Rf_isLogical(Sn))) PRINTF("Error: SEXP_2_int called for SEXP that is not numeric or logical\n");
   if(LENGTH(Sn) <= i) PRINTF("Error: SEXP_2_int called for element %i% >= length of %i.\n", i, LENGTH(Sn));
   if(Rf_isInteger(Sn) || Rf_isLogical(Sn)) {
@@ -169,7 +171,7 @@ int SEXP_2_int(SEXP Sn, int i, int offset ) {
   return(0);
 }
 
-int SEXP_eval_to_single_int(SEXP Sx, SEXP Senv) {
+static int SEXP_eval_to_single_int(SEXP Sx, SEXP Senv) {
   int ans;
   if(Rf_isSymbol(Sx)) {
     ans = SEXP_2_int(PROTECT(Rf_eval(Sx, Senv)), 0, -1);

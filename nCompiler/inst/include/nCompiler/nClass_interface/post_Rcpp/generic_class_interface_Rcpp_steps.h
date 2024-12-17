@@ -116,12 +116,14 @@ class genericInterfaceC : public genericInterfaceBaseC {
       std::cout<<"Problem: \""<<name<<"\" is not a method in this nClass."<<std::endl;
       return R_NilValue;
     }
-    if(TYPEOF(Sargs) != ENVSXP)
-      Rcpp::stop("nCompiler call_method should pass the calling environment.\n");
-    SEXP SinnerArgs = PROTECT(process_call_args(method->second.my_args.argVector, Sargs));
-    SEXP Sans = PROTECT(method->second.method_ptr->call(this, SinnerArgs));
-    UNPROTECT(2);
-    return Sans;
+ //   if(TYPEOF(Sargs) != ENVSXP)
+ //     Rcpp::stop("nCompiler call_method should pass the calling environment.\n");
+ //   SEXP SinnerArgs = PROTECT(process_call_args(method->second.my_args.argVector, Sargs));
+ //   SEXP Sans = PROTECT(method->second.method_ptr->call(this, SinnerArgs));
+ //   UNPROTECT(2);
+    SEXP Sans = PROTECT(method->second.method_ptr->call(this, Sargs));
+    UNPROTECT(1);
+return Sans;
   }
 
   template<typename P, typename T2, bool use_const=false, typename ...ARGS>

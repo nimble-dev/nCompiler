@@ -12,6 +12,8 @@ message("More test coverage of argument passing cases is needed. See comments.")
 # need cases of >1D as well as scalar
 # need cases of blockRef
 message("doing scalar = vector + scalar does not error out if the vector in length>1.")
+message("blockRef error trapping can be more involved -- using dims.")
+message("blockRef cannot cross between scalar types")
 
 # compiled and uncompiled 1D by copy
 test_that("pass 1D by copy works (compiled & uncompiled)", {
@@ -40,20 +42,56 @@ test_ref <- function(copy_fun, ref_fun, x) {
 
 # compiled and uncompiled 1D by ref
 test_that("pass 1D by ref works and error-traps (compiled & uncompiled)", {
-  message("This test has four trapped errors.")
+  message("This test has many trapped errors.")
   foo <- nFunction(
-    function(x = numericVector()) {
-      x <- x[1:2] + 10
+    function(x = numericVector(), xRef = numericVector(), xBlockRef = numericVector()) {
+      xRef <- x[1:2] + 10
+      x <- xRef + 100
+      xBlockRef <- xRef + 1000
       return(x)
     },
+    refArgs = 'xRef',
+    blockRefArgs = 'xBlockRef',
     returnType = 'numericVector'
   )
+  test_foo <- function(fn) {
+    x <- as.numeric(1:3)
+    xRef <- as.numeric(11:13)
+    xBlockRef <- as.numeric(21:23)
+    expect_error(fn(x, 11:13, xBlockRef))
+    expect_error(fn(x, xRef, 11:13))
+    expect_error(fn(x, xRef[1:3], blockRef))
+    y <- fn(x, xRef, xBlockRef[2:3])
+    expect_equal(y, x[1:2] + 10 + 100)
+    expect_equal(xRef, x[1:2] + 10)
+    expect_equal(xBlockRef, c(21, 1:2 + 10 + 1000))
+  }
+
+  cfoo <- nCompile(foo)
+  test_foo(foo)
+  test_foo(cfoo)
+
+  ## TO-DO:
+  ## Get ref handling into package code
+  ## Why is Tensor not found for RcppExports?
+  cfoo <- nCompile(foo, package=TRUE)
+
+
+
   foo2 <- nFunction(
     function(x = numericVector()) {
       x <- x[1:2] + 10
       return(x)
     },
     refArgs = 'x',
+    returnType = 'numericVector'
+  )
+  foo3 <- nFunction(
+    function(x = numericVector()) {
+      x <- x[1:2] + 10
+      return(x)
+    },
+    blockRefArgs = 'x',
     returnType = 'numericVector'
   )
   x <- 1:3
@@ -64,6 +102,7 @@ test_that("pass 1D by ref works and error-traps (compiled & uncompiled)", {
   expect_error(cfoo$foo2(1:3))
   expect_error(cfoo$foo2(x[1:3]))
   test_ref(cfoo$foo, cfoo$foo2, 1:3)
+  test_ref(cfoo$foo, cfoo$foo2, 1:3) # call second time to use byte-compiled version
 })
 
 # compiled and uncompiled 1D by ref
@@ -78,6 +117,12 @@ test_that("pass 1D by ref works and error-traps via nClass method (compiled & un
         },
         returnType = 'numericVector'
       )))
+  debug(nCompiler:::WP_write_dotOnLoad)
+  writePackage(nc1, pkgName = "TESTPACKAGE", dir = tempdir(), modify = "clear")
+  pkgPath <- file.path(tempdir(), "TESTPACKAGE")
+  devtools::install(pkgPath, upgrade = FALSE)
+  debug(nCompiler:::nCompile_finish_nonpackage)
+  test <- nCompile(nc1)
   nc2 <- nClass(
     Cpublic = list(
       foo2 = nFunction(
@@ -88,6 +133,7 @@ test_that("pass 1D by ref works and error-traps via nClass method (compiled & un
         refArgs = 'x',
         returnType = 'numericVector'
       )))
+  test2 <- nCompile(nc2)
   obj1 <- nc1$new()
   obj2 <- nc2$new()
   x <- 1:3
@@ -98,10 +144,9 @@ test_that("pass 1D by ref works and error-traps via nClass method (compiled & un
   Cobj1 <- comp$nc1$new()
   Cobj2 <- comp$nc2$new()
 
-  cfoo <- nCompile(foo, foo2)
-  expect_error(cfoo$foo2(1:3))
-  expect_error(cfoo$foo2(x[1:3]))
-  test_ref(cfoo$foo, cfoo$foo2, 1:3)
+  expect_error(Cobj2$foo2(1:3))
+  expect_error(Cobj2$foo2(x[1:3]))
+  test_ref(Cobj1$foo, Cobj2$foo2, x)
 })
 
 

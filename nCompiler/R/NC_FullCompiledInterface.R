@@ -341,7 +341,7 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
     return(ans)
   }
 
-  # argNames <- names(formals(fun))
+  argNames <- names(formals(fun))
   ans <- fun
   environment(ans) <- new.env()
   ## The internet says that R6 methods are assigned their environments
@@ -354,14 +354,97 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ## inputs for arg1, arg2, and arg3.  This allows us to capture
   ## them in lazy-evaluation (promise) form and implement ref and
   ## blockRef behavior. This is similar to what rlang's quosures do.
-  ##  listcode <- quote(list())
-  ##  for(i in seq_along(argNames))
-  ##    listcode[[i+1]] <- as.name(argNames[i])
-  body(ans) <- substitute(
-    private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
-    list(NAME = name)
+  ##
+  ## Then for a time we experimented with passing the environment()
+  ## instead of the arguments and using the environment to look up
+  ## the arguments. This allowing managing ref and blockRef from the C++
+  ## but also required that we imitate R's match.def-type behavior.
+  ## The other big motivations for it was the generic interface call_method version
+  ## that only has ... as input, so there isn't anything to match on.
+  ## That worked until we realized we could get byte code versions of promises.
+  ## Then we decided it was not very wise to imitate R's behavior.
+  ## So now we go back to passing a list and modifying as needed for ref and blockRef.
+  ## And now for the generic ... case, we
+  ## place a method-specific function in the CnClass_env.##
+  ##
+  listcode <- quote(list())
+  for(i in seq_along(argNames))
+    listcode[[i+1]] <- as.name(argNames[i])
+  body_ans <- substitute(
+    private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE),
+    list(NAME = name,
+         LISTCODE = listcode)
   )
+  refArgs <- NFinternals(fun)$refArgs
+  blockRefArgs <- NFinternals(fun)$blockRefArgs
+  body(ans) <- passByReferenceIntoC(body_ans, refArgs, blockRefArgs)
+  ## body(ans) <- substitute(
+  ##   private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
+  ##   list(NAME = name)
+  ## )
   ans
+}
+
+build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
+  NCI <- NCinternals(NCgenerator)
+  # Make C interface methods
+  CmethodNames <- NCI$methodNames
+  recurse_make_Cmethods <- function(NCgenerator, CmethodNames,
+                                    derivedNames = character()) {
+    interfaceFns <-  mapply(build_generic_fn_for_compiled_nClass_method,
+                                NCgenerator$public_methods[CmethodNames],
+                                CmethodNames)
+    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+      derivedNames <- c(derivedNames, CmethodNames)
+      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseCmethodNames <- NCinternals(baseNCgen)$methodNames
+      baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
+      if(length(baseCmethodNames)) {
+        baseInterfaceFns <- recurse_make_Cmethods(baseNCgen,
+                                                      baseCmethodNames,
+                                                      derivedNames)
+        interfaceFns <- c(interfaceFns, baseInterfaceFns)
+      }
+    }
+    interfaceFns
+  }
+  CinterfaceFns <- recurse_make_Cmethods(NCgenerator, CmethodNames)
+  CinterfaceFns
+}
+
+build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
+  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
+  if(!NFinternals(fun)$compileInfo$callFromR) {
+    ans <- function(...) {}
+    environment(ans) <- new.env()
+    body(ans) <- substitute(
+      stop("method ", NAME, " cannot be called directly from R."),
+      list(NAME = name)
+    )
+    return(ans)
+  }
+
+  argNames <- names(formals(fun))
+  ans <- fun
+  environment(ans) <- new.env() # will be reset later to the CnClass_env
+  listcode <- quote(list())
+  for(i in seq_along(argNames))
+    listcode[[i+1]] <- as.name(argNames[i])
+  body_ans <- substitute(
+    call_method(nCompiler:::getExtptr(CppObj_), NAME, LISTCODE),
+    list(NAME = name,
+         LISTCODE = listcode)
+  )
+  formals(ans) <- c(formals(function(CppObj_){}), formals(fun))
+  refArgs <- NFinternals(fun)$refArgs
+  blockRefArgs <- NFinternals(fun)$blockRefArgs
+  body(ans) <- passByReferenceIntoC(body_ans, refArgs, blockRefArgs)
+  ## body(ans) <- substitute(
+  ##   private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, environment()),
+  ##   list(NAME = name)
+  ## )
+  ans
+
 }
 
 ## buildMethod_derivs_for_compiled_nClass <- function(fun, name) {
