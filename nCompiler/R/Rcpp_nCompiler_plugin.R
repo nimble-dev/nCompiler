@@ -13,11 +13,13 @@ inlineCxxPlugin_env <- new.env()
 inlineCxxPlugin <- function(...) {
   uses_eigen <- !isFALSE(inlineCxxPlugin_env$uses_eigen)
   uses_nClass_interface <- !isFALSE(inlineCxxPlugin_env$uses_nClass_interface)
+  uses_nList <- !isFALSE(inlineCxxPlugin_env$uses_nList)
   uses_cereal <- !isFALSE(inlineCxxPlugin_env$uses_cereal)
   uses_TBB <- FALSE # !isFALSE(inlineCxxPlugin_env$uses_TBB) # including here causes error due to #defining FALSE
   include.before <- character()
   if(uses_eigen) include.before <- paste0(include.before, "#define NCOMPILER_USES_EIGEN\n")
   if(uses_nClass_interface) include.before <- paste0(include.before, "#define NCOMPILER_USES_NCLASS_INTERFACE\n")
+  if(uses_nList) include.before <- paste0(include.before, "#define NCOMPILER_USES_NLIST\n")
   if(uses_cereal) include.before <- paste0(include.before, "#define NCOMPILER_USES_CEREAL\n")
   if(uses_TBB) include.before <- paste0(include.before, "#define NCOMPILER_USES_TBB\n")
   include.before <- paste0(include.before, "#include <nCompiler/nCompiler_omnibus_first_cpp.h>")

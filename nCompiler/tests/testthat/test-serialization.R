@@ -5,6 +5,9 @@ message("There will be a problem with serialization and pre-defined nClasses.\n"
         "I think all serialization code needs to be #ifdef protected so that in\n",
         "future compilations it will be dynamically included or not.")
 
+message('We need serialization tests of object networks.')
+message('Serialization does not fully work in non-package mode, when it will still be needed for object copying.')
+
 # These tests contain basics via four modes of compilation:
 # nCompile(package=TRUE) or writePackage following by devtools::install and
 # full interface or generic interface
@@ -111,7 +114,7 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   withr::with_libpaths(lib,
   {
     devtools::install(file.path(tempdir(), "nc1Package"), quiet=TRUE,
-                      upgrade = "never", quick=TRUE, force=TRUE)
+                      upgrade = "never", quick=TRUE)
     loadNamespace("nc1Package")
   }
   )
