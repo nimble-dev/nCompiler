@@ -80,13 +80,49 @@ nFunction <- function(fun,
                       refArgs = character(),
                       blockRefArgs = character(),
                       returnType = NULL,
-                      enableDerivs = list(),
-                      check = get_nOption('check_nFunction'),
-                      returnCallable = TRUE,
+                      enableDerivs = FALSE,
+#                      check = get_nOption('check_nFunction'),
+                      # returnCallable = TRUE,
+                      control = list(),
                       compileInfo = list(),
                       where = parent.frame(),
                       ...
                       ) {
+  # Supported (Default value) elements of compileInfo
+  # C_fun (NULL) : alternative to fun to use for compilation pathway
+  # callFromR (TRUE): TRUE if compiled version should
+  #   be interfaced via a function from R. (ignored if enableDerivs$isAD is TRUE)
+  # virtual (FALSE)
+  # abstract (FALSE)
+  # const (FALSE)
+  # depends (list()) : Values for Rcpp::depends, to use another package
+  compileInfo <- updateDefaults(
+    list(C_fun = NULL,
+         callFromR = TRUE,
+         virtual=FALSE, abstract=FALSE, const=FALSE,
+        depends = list()),
+    compileInfo
+  )
+  # Supported (Default value) elements of control:
+  # returnInternals (FALSE): TRUE if only the NF_InternalsClass
+  #   object (and NOT an R function) should be returned from
+  #   this call to nFunction.
+  # check (get_nOption('check_nFunction'))
+  # changeKeywords (is.null(compileInfo$C_fun)) : if a C_fun is provided, don't touch the fun
+  # updateArgPassing (TRUE): whether to automatically use ref and blockRef
+  #   in the R function.
+  control <- updateDefaults(
+    list(returnInternals=FALSE, check=get_nOption('check_nFunction'),
+         changeKeywords = is.null(compileInfo$C_fun),
+         updateArgPassing = TRUE),
+    control
+  )
+  # Supported elements or values of enableDerivs:
+  # isAD
+  # ignore
+  # ADfun: should become AD_nFun
+  ###
+
   if(missing(name))
     name <- nFunctionLabelMaker()
   ## Create internals that will be used for compilation.
@@ -97,15 +133,17 @@ nFunction <- function(fun,
                                      blockRefArgs = blockRefArgs,
                                      returnType = returnType,
                                      enableDerivs = enableDerivs,
+#                                     check = check,
+#                                     C_fun = C_fun,
+                                     control = control,
                                      compileInfo = compileInfo,
-                                     check = check,
                                      where = where)
   ## Return a callable function.
   ## This will be modified:
   ## 1. to provide pass-by-reference behavior
   ## as requested for any arguments.
   ## 2. with any returnType() statement removed.
-  if(returnCallable) {
+  if(!isTRUE(control$returnInternals)) {
     modifiedFun <- internals$getFunction()
     nFunctionClass(modifiedFun, internals = internals)
   }

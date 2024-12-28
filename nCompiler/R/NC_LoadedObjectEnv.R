@@ -110,13 +110,18 @@ get_CnCenv <- function(obj) {
 # NB: The returnList argument may be defunct. I think all uses end up with lists.
 setup_nClass_environments <- function(compiledFuns,
                                       newDLLenv,
-                                      nC_names = character(),
+                                      exportNames = character(),
                                       R6interfaces,
+                                      methodFns,
                                       returnList = FALSE) {
   if(missing(newDLLenv)) newDLLenv <- make_DLLenv()
   compiledFuns <- setup_DLLenv(compiledFuns, newDLLenv, returnList = FALSE)
-  for(nC_name in nC_names) {
-    compiledFuns <- setup_CnClass_env(nC_name, compiledFuns, R6interfaces, newDLLenv)
+  for(i in seq_along(exportNames)) {
+    compiledFuns <- setup_CnClass_env(compiledFuns,
+                                      newDLLenv,
+                                      exportNames[i],
+                                      R6interfaces[[i]],
+                                      methodFns[[i]])
   }
   if(is.list(compiledFuns)) compiledFuns
   else if(returnList) list(compiledFuns)
@@ -124,17 +129,26 @@ setup_nClass_environments <- function(compiledFuns,
 }
 
 #' @export
-setup_nClass_environments_from_package <- function(nClass_names,
+setup_nClass_environments_from_package <- function(nClass_exportNames,
+                                                   interfaceTypes,
+                                                   R6interfaces,
+                                                   methodFns,
                                                    pkgName) {
-  # nClass_names will really be exportNames
+                                        # nClass_names will really be exportNames
+  message("setup_nClass_environments_from_package should support interface 'none' cases.")
   if(missing(pkgName)) pkgName <- evalq(packageName(), envir=parent.frame())
   packageEnv <- getNamespace(pkgName)
   DLLenv <- make_DLLenv() # This is the spot to change the parent.env of the DLLenv if necessary (currently it will be the nCompiler namespace)
-  reqdFuns <- c(nClass_names, #paste0("new_", nClass_names),
-                paste0("set_CnClass_env_", nClass_names),
-                "call_method",
-                "get_value",
-                "set_value")
+  reqdFuns <- character()
+  if(any(interfaceTypes!="none"))
+    reqdFuns <- c(reqdFuns,
+                  "call_method",
+                  "get_value",
+                  "set_value")
+  for(i in seq_along(interfaceTypes)) {
+    if(interfaceTypes[i] != "none")
+      reqdFuns <- c(reqdFuns, nClass_exportNames[i], paste0("set_CnClass_env_", nClass_exportNames[i]) )
+  }
   optFuns <- c("new_serialization_mgr",
                "nComp_serialize_",
                "nComp_deserialize_")
@@ -153,16 +167,18 @@ setup_nClass_environments_from_package <- function(nClass_names,
   # TO-DO: Case when R6interfaces are set up
   setup_nClass_environments(compiledFuns,
                             DLLenv,
-                            nC_names = nClass_names,
-                            R6interfaces = list(),
+                            exportNames = nClass_exportNames,
+                            R6interfaces,
+                            methodFns,
                             returnList = TRUE)
 }
 
-setup_CnClass_env <- function(nC_name,
-                              compiledFuns,
-                              R6interfaces,
-                              DLLenv) {
-  set_nClass_env_name <- paste0("set_CnClass_env_", nC_name)
+setup_CnClass_env <- function(compiledFuns,
+                              DLLenv,
+                              exportName,
+                              R6interface,
+                              methodFns) {
+  set_nClass_env_name <- paste0("set_CnClass_env_", exportName)
   fun_names <- c(set_nClass_env_name)
   
   CnClass_env <- new.env(parent = DLLenv)
@@ -173,7 +189,11 @@ setup_CnClass_env <- function(nC_name,
   if(exists(set_nClass_env_name, envir = CnClass_env, inherits=FALSE)) {
     CnClass_env[[set_nClass_env_name]](CnClass_env)
   }
-  CnClass_env$.R6interface <- R6interfaces[[nC_name]]
+  CnClass_env$.R6interface <- R6interface
+  for(i in seq_along(methodFns)) {
+    CnClass_env[[names(methodFns)[i]]] <- methodFns[[i]]
+    environment( CnClass_env[[names(methodFns)[i]]] ) <- CnClass_env
+  }
   compiledFuns
 }
 

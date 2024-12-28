@@ -67,7 +67,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'NFCALL_',
+  'NFCALL_', # This is used for non-method nFunctions in normalizeCalls and for any (including method) nFunctions after normalizeCalls
   list(
     labelAbstractTypes = list(
       handler = 'nFunction_or_method_call'),
@@ -79,14 +79,14 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'NCMETHOD_',
+  'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
   list(
-    labelAbstractTypes = list(
-      handler = 'nFunction_or_method_call'),
+    ## labelAbstractTypes = list(
+    ##   handler = 'nFunction_or_method_call'),
     normalizeCalls = list(
-      handler = 'nFunction_or_method_call'),
-    cppOutput = list(
-      handler = 'Generic_nFunction')
+      handler = 'nFunction_or_method_call')#, # becomes NFCALL_
+    ## cppOutput = list(
+    ##   handler = 'Generic_nFunction')
   )
 )
 

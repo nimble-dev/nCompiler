@@ -1,8 +1,8 @@
 nCompilerUserNamespace <- as.environment(list(sessionSpecificDll = NULL)) 
 # new.env() here fails with: Error in as.environment(pos) : using 'as.environment(NULL)' is defunct when testing package loading during INSTALL
 
-updateDefaults <- function(defaults, controls) {
-  defaults[names(controls)] <- controls
+updateDefaults <- function(defaults, control) {
+  defaults[names(control)] <- control
   defaults
 }
 

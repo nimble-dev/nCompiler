@@ -8,9 +8,9 @@ NF_InternalsClass <- R6::R6Class(
     arguments = NULL,
     refArgs = NULL,
     blockRefArgs = NULL,
-    argSymTab = list(),
+    argSymTab = NULL,
     returnSym = NULL,
-    compileInfo = NULL,
+    control = list(),
     where = NULL,
     isMethod = FALSE,
     uniqueName = character(),
@@ -22,12 +22,13 @@ NF_InternalsClass <- R6::R6Class(
     aux = NULL, ## Used for constructor initializers.
     # needed_nFunctions = list(), ## formerly neededRCfuns
     ADcontent = NULL,
-    callFromR = TRUE,
     isAD = FALSE,
+    compileInfo = list(),
+    R_fun = NULL, #used only if compileInfo$C_fun is provided.
     ## Next two "includes" were only needed for making external calls:
     ## If needed, these will be populated by nCompilerExternalCall.
     ## It remains to be seen if they are needed in new system.
-    externalHincludes = list(), 
+    externalHincludes = list(),
     externalCPPincludes = list(),
     initialize = function(fun, ## formerly method
                           name,
@@ -36,17 +37,25 @@ NF_InternalsClass <- R6::R6Class(
                           blockRefArgs = list(),
                           returnType = NULL,
                           enableDerivs = FALSE,
+                          control = list(),
                           compileInfo = list(),
-                          check = FALSE,
                           ## methodNames, ## used only for nf_checkDSLcode
-                          setupVarNames = NULL,
+                          ## setupVarNames = NULL, ## Ditto
                           where = parent.frame()
                           ) {
       ## uniqueName is only needed if this is not a method of a nClass.
       if(!missing(name))
-        uniqueName <<- name
-      arguments <<- as.list(formals(fun))
-      self$compileInfo <<- compileInfo
+        self$uniqueName <- name
+      if(is.null(compileInfo$C_fun)) {
+        fun_to_use <- fun
+      } else {
+        self$R_fun <- fun
+        fun_to_use <- compileInfo$C_fun
+      }
+      self$arguments <- as.list(formals(fun_to_use))
+      self$control <- control
+      self$compileInfo <- compileInfo
+      self$compileInfo$C_fun <- NULL # Do not retain this because it ends up in code and arguments
       self$where <- where
       if(is.character(refArgs)) {
         refArgs <- structure(as.list(rep(TRUE, length(refArgs))),
@@ -58,19 +67,21 @@ NF_InternalsClass <- R6::R6Class(
                                   names = blockRefArgs)
       }
       self$blockRefArgs <- blockRefArgs
-      argSymTab <<- argTypeList2symbolTable(argTypeList = arguments,
-                                            isArg = rep(TRUE, length(arguments)),
-                                            isRef = refArgs,
-                                            isBlockRef = blockRefArgs,
-                                            explicitTypeList = argTypes,
-                                            evalEnv = where)
-
+      self$argSymTab <- argTypeList2symbolTable(
+        argTypeList = arguments,
+        isArg = rep(TRUE, length(arguments)),
+        isRef = refArgs,
+        isBlockRef = blockRefArgs,
+        explicitTypeList = argTypes,
+        evalEnv = where)
       ## nf_changeKeywords changes all nCompiler keywords,
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
-      code <<- nf_changeKeywords(body(fun)) 
+      self$code <- body(fun_to_use)
+      if(isTRUE(control$changeKeywords))
+        self$code <- nf_changeKeywords(self$code)
       if(code[[1]] != '{')
-        code <<- substitute({CODE}, list(CODE=code))
+        self$code <- substitute({CODE}, list(CODE=code))
       ## check all code except.nCompiler package nFunctions
       ##            if(check && "package.nCompiler" %in% search()) 
       ##                nf_checkDSLcode(code, methodNames, setupVarNames)
@@ -80,7 +91,7 @@ NF_InternalsClass <- R6::R6Class(
       ##  Either a named "value" or a ... is in all types.
 
       ## not used until much later
-      template <<- Rarguments_2_functionTemplate(arguments) ## generateTemplate()
+      self$template <- Rarguments_2_function(arguments, body = quote({})) ## generateTemplate()
       returnTypeInfo <- nf_extractReturnType(code)
       returnTypeDecl <- returnTypeInfo$returnType
       if(is.null(returnTypeDecl)) {
@@ -93,65 +104,73 @@ NF_InternalsClass <- R6::R6Class(
           stop(paste0("Return type was declared in code and by returnType argument.\n",
                       "Use one or the other.  Providing both is not allowed.\n"),
                call. = FALSE)
-        code <<- returnTypeInfo$code ## with returnType() line stripped
+        self$code <- returnTypeInfo$code ## with returnType() line stripped
       }
-      returnSym <<- argType2symbol(returnTypeDecl,
-                                   origName = "returnType")
+      self$returnSym <- argType2symbol(returnTypeDecl,
+                                       origName = "returnType")
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
       ## what this one's cpp function name will be:
-      cpp_code_name <<- paste(Rname2CppName(name),
-                              nFunctionIDMaker(),
-                              sep = "_")
+      self$cpp_code_name <- paste(Rname2CppName(name),
+                                  nFunctionIDMaker(),
+                                  sep = "_")
       ## Unpack enableDerivs into AD
+      self$isAD <- FALSE
       if(!(isFALSE(enableDerivs) || is.null(enableDerivs))) {
         if(isTRUE(enableDerivs)) enableDerivs <- list()
-        if(!is.list(enableDerivs)) stop("enableDerivs must be NULL, FALSE, TRUE, or a list.")
-        isAD <<- FALSE
+        if(!is.list(enableDerivs))
+          stop("enableDerivs must be NULL, FALSE, TRUE, or a list.")
         if(isTRUE(enableDerivs$isAD)) {
-          isAD <<- TRUE
-          callFromR <<- FALSE
+          self$isAD <- TRUE
+          self$callFromR <- FALSE
         } else {
-          ADcontent <<- list()
-          ADcontent$ADfun <<- enableDerivs$ADfun
-          ADcontent$ignore <<- enableDerivs$ignore
+          self$ADcontent <- list()
+          self$ADcontent$ADfun <- enableDerivs$ADfun
+          self$ADcontent$ignore <- enableDerivs$ignore
           # to-do: process types. make and AD__() function that returns ADfun from an nFunctionClass
-          ADcontent$cpp_code_name <<- paste0(cpp_code_name,"_AD__")
+          self$ADcontent$cpp_code_name <- paste0(cpp_code_name,"_AD__")
         }
       }
     },
     getFunction = function() {
-      functionAsList <- list(as.name('function'))
-      functionAsList[2] <- list(NULL)
-      if(!is.null(args)) functionAsList[[2]] <- as.pairlist(arguments)
-      boolRefArg <- unlist(lapply(argSymTab$symbols,
-                                  function(x) x$isRef))
-      refArgs <- names(argSymTab$symbols)[boolRefArg]
-      boolBlockRefArg <- unlist(lapply(argSymTab$symbols,
-                                       function(x) x$isBlockRef))
-      blockRefArgs <- names(argSymTab$symbols)[boolBlockRefArg]
-      callableCode <- if(length(refArgs) > 0 | length(blockRefArgs > 0))
-                        passByReference(code,
-                                        refArgs,
-                                        blockRefArgs)
-      else
-        code
-      functionAsList[[3]] <- callableCode
-      ans <- eval(
-        parse(text=deparse(as.call(functionAsList)),
-              keep.source = FALSE)[[1]])
+      #functionAsList <- list(as.name('function'))
+      #functionAsList[2] <- list(NULL)
+      callableCode <- if(!is.null(self$R_fun)) body(self$R_fun)
+                     else self$code
+      #if(!is.null(arguments)) functionAsList[[2]] <- as.pairlist(arguments)
+      #callableCode <- code_to_use
+      if(isTRUE(control$updateArgPassing)) {
+        boolRefArg <- unlist(lapply(argSymTab$symbols,
+                                    function(x) x$isRef))
+        refArgs <- names(argSymTab$symbols)[boolRefArg]
+        boolBlockRefArg <- unlist(lapply(argSymTab$symbols,
+                                         function(x) x$isBlockRef))
+        blockRefArgs <- names(argSymTab$symbols)[boolBlockRefArg]
+        if(length(refArgs) > 0 | length(blockRefArgs) > 0)
+          callableCode <- passByReference(callableCode,
+                                          refArgs,
+                                          blockRefArgs)
+      }
+#      functionAsList[[3]] <- callableCode
+#      ans <- eval(
+#        parse(text=deparse(as.call(functionAsList)),
+#              keep.source = FALSE)[[1]])
+      ans <- Rarguments_2_function(arguments, callableCode)
       environment(ans) <- where
       ans
     }
   )
 )
 
-Rarguments_2_functionTemplate <- function(Rarguments) {
+Rarguments_2_function <- function(Rarguments, body = quote({})) {
   functionAsList <- list(as.name('function'))
   functionAsList[2] <- list(NULL)
-  if(!is.null(args)) functionAsList[[2]] <- as.pairlist(Rarguments)
-  functionAsList[[3]] <- quote({})
-  eval(as.call(functionAsList))
+  if(!is.null(Rarguments)) functionAsList[[2]] <- as.pairlist(Rarguments)
+  functionAsList[[3]] <- body
+  # eval(as.call(functionAsList))
+  eval(
+    parse(text=deparse(as.call(functionAsList)),
+          keep.source = FALSE)[[1]])
 }
 
 nf_extractReturnType <- function(code) {

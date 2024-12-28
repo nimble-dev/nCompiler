@@ -230,7 +230,8 @@ auto nSeqTo(const Scalar_ &End) -> Eigen::SeqOp<int> {
   return Eigen::SeqOp<int>(Start, End, By, LengthOut);
 }
 
-Eigen::SeqOp<double> nSeqLen(const double& Start, const double& End,
+/* static to avoid multiple symbols error from C++ during nCompile via packaging */
+static Eigen::SeqOp<double> nSeqLen(const double& Start, const double& End,
                              const double& LengthOut_ ) {
 // seq(from, to, length.out) calculate a by value
 // Type issues: We never want length passed in as an integer because the casting will

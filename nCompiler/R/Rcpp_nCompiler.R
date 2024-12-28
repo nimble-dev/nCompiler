@@ -239,6 +239,7 @@ cpp_nCompiler <- function(Rcpp_packet,
   if(write) {
     if(packetList) {
       writeCpp_nCompiler_combine(Rcpp_packet,
+                                 dir = dir,
                                  cppfile = cppfile)
     } else {
       writeCpp_nCompiler(Rcpp_packet,
@@ -362,10 +363,10 @@ compileCpp_nCompiler <- function(Rcpp_packet,
                                   env = env,
                                   ...)
 
-  if(packetList)
-    post_cpp_compiler <- do.call('c', lapply(Rcpp_packet, `[[`, 'post_cpp_compiler'))
-  else
-    post_cpp_compiler <- Rcpp_packet$post_cpp_compiler
+  ## if(packetList)
+  ##   post_cpp_compiler <- do.call('c', lapply(Rcpp_packet, `[[`, 'post_cpp_compiler'))
+  ## else
+  ##   post_cpp_compiler <- Rcpp_packet$post_cpp_compiler
   ## Next lines copy/imitate Rcpp::cppFunction,
   ## for now without error checking until we see
   ## final uses.
@@ -374,24 +375,24 @@ compileCpp_nCompiler <- function(Rcpp_packet,
   if(numFunctions == 1 & !returnList) {
     fname <- exported$functions[[1]]
     ans <- get(fname, env)
-    this_post <- post_cpp_compiler[[fname]]
-    if(!is.null(this_post))
-      ans <- passByReferenceIntoC(ans,
-                                  refArgs = this_post[['refArgs']],
-                                  blockRefArgs = this_post[['blockRefArgs']])
+    ## this_post <- post_cpp_compiler[[fname]]
+    ## if(!is.null(this_post))
+    ##   ans <- passByReferenceIntoC(ans,
+    ##                               refArgs = this_post[['refArgs']],
+    ##                               blockRefArgs = this_post[['blockRefArgs']])
     return(ans)
   }
   ans <- structure(
     lapply(exported$functions,
            function(x) get(x, env)),
     names = exported$functions)
-  for(fname in names(ans)) {
-    this_post <- post_cpp_compiler[[fname]]
-    if(!is.null(this_post)) {
-      ans[[fname]] <- passByReferenceIntoC(ans[[fname]],
-                                           refArgs = this_post[['refArgs']],
-                                           blockRefArgs = this_post[['blockRefArgs']])
-    }
-  }
+  ## for(fname in names(ans)) {
+  ##   this_post <- post_cpp_compiler[[fname]]
+  ##   if(!is.null(this_post)) {
+  ##     ans[[fname]] <- passByReferenceIntoC(ans[[fname]],
+  ##                                          refArgs = this_post[['refArgs']],
+  ##                                          blockRefArgs = this_post[['blockRefArgs']])
+  ##   }
+  ## }
   return(ans)
 }

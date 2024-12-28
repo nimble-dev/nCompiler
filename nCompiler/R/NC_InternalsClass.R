@@ -4,23 +4,38 @@ NC_InternalsClass <- R6::R6Class(
   portable = FALSE,
   public = list(
     symbolTable = NULL,
+    cppSymbolNames = NULL,
     methodNames = character(),
+    allMethodNames = character(), # including inherited methods
     fieldNames = character(),
+    allFieldNames = character(), # including inherited methods
     classname = character(),
     cpp_classname = character(),
     compileInfo = list(),
+    # compileInfo will include interface ("full", "generic", or "none"),
+    # interfaceMembers, exportName, and depends
+    depends = list(),
     RcppPacket = NULL,
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
     enableDerivs = NULL,
     enableSaving = NULL,
     predefined = FALSE,
+    inheritNCinternals = NULL,
     initialize = function(classname,
                           Cpublic,
                           isOnlyC = FALSE,
                           enableDerivs = NULL,
                           enableSaving = get_nOption("enableSaving"),
+                          inherit = NULL,
                           compileInfo = list(),
                           predefined = FALSE) {
+      if(!is.null(inherit)) {
+        self$inheritNCinternals <- NCinternals(inherit)
+        message("add check that base class has interface 'none'")
+        if(is.null(compileInfo$inherit$base))
+          compileInfo$inherit$base <- paste("public",
+                                            inheritNCinternals$cpp_classname)
+      }
       self$compileInfo <- compileInfo
       self$classname <- classname
       self$cpp_classname <- Rname2CppName(classname)
@@ -40,9 +55,17 @@ NC_InternalsClass <- R6::R6Class(
                  call. = FALSE)
           }
         }
-        symbolTable <<- argTypeList2symbolTable(Cpublic[!isMethod])
-        methodNames <<- names(Cpublic)[isMethod]
-        fieldNames <<- names(Cpublic)[!isMethod]
+        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod])
+        self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
+        self$methodNames <- names(Cpublic)[isMethod]
+        self$allMethodNames <- methodNames
+        self$fieldNames <- names(Cpublic)[!isMethod]
+        self$allFieldNames <- fieldNames
+        if(!is.null(inherit)) {
+          self$symbolTable$setParentST(inheritNCinternals$symbolTable)
+          self$allMethodNames <- c(self$allMethodNames, inheritNCinternals$allMethodNames)
+          self$allFieldNames <- c(self$allFieldNames, inheritNCinternals$allFieldNames)
+        }
       }
       if(!is.null(enableDerivs)) {
         if(!is.list(enableDerivs))

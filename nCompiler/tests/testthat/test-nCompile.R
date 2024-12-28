@@ -1,4 +1,5 @@
-message("to_full_interface does not work via packaging.")
+message("add tests for multiple units via packaging")
+message("add tests for 'none' interface")
 
 # Notes:
 # Three pathways:
@@ -16,7 +17,100 @@ message("to_full_interface does not work via packaging.")
 # For C, one needs control of the exported R names, perhaps to be called compiledName and defaulting to name.
 # Return object of nCompile(package = TRUE) needs attention.
 
-test_that("nCompile direct, package, and writePackage work", {
+test_that("nCompile direct, package, and writePackage work with Eigen::Tensors", {
+  add_vectors <- nFunction(
+    fun = function(x = double(1),
+                   y = double(1)) {
+      returnType(double(1))
+      ans <- x + y
+      return(ans)
+    }
+  )
+  x1 <- 1:3
+  x2 <- 11:13
+  expect_equal(x1 + x2, add_vectors(x1, x2))
+  c1 <- nCompile(add_vectors)
+  expect_equal(x1 + x2, c1(x1, x2))
+  c2 <- nCompile(add_vectors, package = TRUE)
+  expect_equal(x1 + x2, c2(x1, x2))
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  test <- writePackage(add_vectors, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  expect_equal(x1+x2, testpackage::add_vectors(x1, x2))
+  pkgload::unload("testpackage")
+})
+
+
+test_that("nCompile direct, package, and writePackage work with nClass interfaces", {
+  nc <- nClass(
+    Cpublic = list(
+      add_vectors = nFunction(
+        fun = function(x = double(1),
+                       y = double(1)) {
+          returnType(double(1))
+          ans <- x + y
+          return(ans)
+        }
+      )
+    )
+  )
+  x1 <- 1:3
+  x2 <- 11:13
+  nc1 <- nc$new()
+  expect_equal(x1 + x2, nc1$add_vectors(x1, x2))
+  c1 <- nCompile(nc)
+  obj <- c1$new()
+  expect_equal(x1 + x2, obj$add_vectors(x1, x2))
+  CppObj <- obj$private$CppObj
+  expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
+  rm(CppObj, obj); gc();
+
+  c2 <- nCompile(nc, package = TRUE)
+  obj <- c2$new()
+  expect_equal(x1 + x2, obj$add_vectors(x1, x2))
+  CppObj <- obj$private$CppObj
+  expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
+  rm(CppObj, obj); gc();
+
+  c3 <- nCompile(nc, package = TRUE, interfaces = "generic")
+  CppObj <- c3()
+  expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
+  obj <- to_full_interface(CppObj)
+  expect_equal(x1 + x2, obj$add_vectors(x1, x2))
+  rm(CppObj, obj); gc();
+
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  test <- writePackage(nc, pkgName = "testpackage", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  obj <- testpackage::nc$new()
+  expect_equal(x1 + x2, obj$add_vectors(x1, x2))
+  CppObj <- obj$private$CppObj
+  expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
+  rm(CppObj, obj); gc(); pkgload::unload("testpackage")
+
+  dir <- file.path(tempdir(), "test_nComp_testpackage")
+  test <- writePackage(nc, pkgName = "testpackage", interfaces = "generic", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib")
+  dir.create(lib, showWarnings=FALSE)
+  withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
+                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  CppObj <- testpackage::nc()
+  expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
+  obj <- to_full_interface(CppObj)
+  expect_equal(x1 + x2, obj$add_vectors(x1, x2))
+  rm(CppObj, obj); gc(); pkgload::unload("testpackage")
+})
+
+test_that("nCompile direct, package, and writePackage work with various name management", {
   add.Scalars_name <- nFunction(
     name = 'Cadd.scalars',
     fun = function(x = double(0),
@@ -70,7 +164,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::add.Scalars(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name, package = FALSE, returnList = TRUE)
   expect_equal(test$add.Scalars_name(2, 3), 5)
@@ -85,7 +179,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::add.Scalars_name(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_eName, package = FALSE, returnList = TRUE)
   expect_equal(test$foo1(2, 3), 5)
@@ -100,7 +194,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::foo1(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name_eName, package = FALSE, returnList = TRUE)
   expect_equal(test$foo2(2, 3), 5)
@@ -115,7 +209,7 @@ test_that("nCompile direct, package, and writePackage work", {
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   expect_equal(testpackage::foo2(2, 3), 5)
-  devtools::unload("testpackage")
+  pkgload::unload("testpackage")
 })
 
 test_that("nCompile works for nClass with classname and/or exportName and either interface", {
@@ -188,17 +282,23 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   test <- nCompile(nc, package=FALSE, interfaces = "generic", returnList = TRUE)
   obj <- test$nc(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
   ## full & direct
   test <- nCompile(nc, package=FALSE, interfaces = "full", returnList = TRUE)
   obj <- test$nc$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & package
   test <- nCompile(nc, package=TRUE, interfaces = "generic", returnList = TRUE)
   obj <- test$nc(); test_obj(obj)
-                                        # objf <- to_full_interface(obj); test_obj(objf)
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
   ## full & package
   test <- nCompile(nc, package=TRUE, interfaces = "full", returnList = TRUE)
   obj <- test$nc$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -210,7 +310,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc(); test_obj(obj)
-  devtools::unload("testpackage")
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -222,25 +323,32 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
 ###### name  version of nc
   ## generic & direct
   test <- nCompile(nc_name, package=FALSE, interfaces = "generic", returnList = TRUE)
   obj <- test$nc_name(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & direct
   test <- nCompile(nc_name, package=FALSE, interfaces = "full", returnList = TRUE)
   obj <- test$nc_name$new(); test_obj(obj)
+  rm(obj, objC); gc()
 
   ## generic & package
   test <- nCompile(nc_name, package=TRUE, interfaces = "generic", returnList = TRUE)
   obj <- test$nc_name(); test_obj(obj)
-                                        # objf <- to_full_interface(obj); test_obj(objf)
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & package
   test <- nCompile(nc_name, package=TRUE, interfaces = "full", returnList = TRUE)
   obj <- test$nc_name$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -252,7 +360,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc_name(); test_obj(obj)
-  devtools::unload("testpackage")
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -264,9 +373,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::nc_name$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
-
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc(); pkgload::unload("testpackage")
 
 
 ###### eName version of nc
@@ -274,17 +382,25 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   test <- nCompile(nc_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
   obj <- test$exnc1(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & direct
   test <- nCompile(nc_eName, package=FALSE, interfaces = "full", returnList = TRUE)
   obj <- test$exnc1$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & package
   test <- nCompile(nc_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
   obj <- test$exnc1(); test_obj(obj)
-                                        # objf <- to_full_interface(obj); test_obj(objf)
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & package
   test <- nCompile(nc_eName, package=TRUE, interfaces = "full", returnList = TRUE)
   obj <- test$exnc1$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -296,7 +412,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc1(); test_obj(obj)
-  devtools::unload("testpackage")
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -308,27 +425,33 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc1$new(); test_obj(obj)
-  devtools::unload("testpackage")
-
-
-
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc(); pkgload::unload("testpackage")
 
 ###### name and eName version of nc
   ## generic & direct
   test <- nCompile(nc_name_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
   obj <- test$exnc2(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & direct
   test <- nCompile(nc_name_eName, package=FALSE, interfaces = "full", returnList = TRUE)
   obj <- test$exnc2$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & package
   test <- nCompile(nc_name_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
   obj <- test$exnc2(); test_obj(obj)
-                                        # objf <- to_full_interface(obj); test_obj(objf)
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc()
+
   ## full & package
   test <- nCompile(nc_name_eName, package=TRUE, interfaces = "full", returnList = TRUE)
   obj <- test$exnc2$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc()
 
   ## generic & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -340,7 +463,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc2(); test_obj(obj)
-  devtools::unload("testpackage")
+  objf <- to_full_interface(obj); test_obj(objf)
+  rm(obj, objf); gc(); pkgload::unload("testpackage")
 
   ## full & writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage2")
@@ -352,7 +476,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
   obj <- testpackage::exnc2$new(); test_obj(obj)
-  devtools::unload("testpackage")
+  objC <- obj$private$CppObj; test_obj(objC)
+  rm(obj, objC); gc(); pkgload::unload("testpackage")
 })
 
 test_that("Compile one nFunction via nCompile, returning a list (and testing external R name invalid for C++).",

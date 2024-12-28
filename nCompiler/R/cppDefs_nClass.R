@@ -109,11 +109,13 @@ cpp_nClassBaseClass <- R6::R6Class(
         ##genNeededTypes(debugCpp = debugCpp, fromModel = fromModel)
       cpp_include_needed_nClasses(self, Compiler$symbolTable)
       symbolTable <<- symbolTable2cppSymbolTable(Compiler$symbolTable)
-      variableNamesForInterface <<- symbolTable$getSymbolNames()
+#      variableNamesForInterface <<- symbolTable$getSymbolNames()
     },
     buildAll = function(where = where) {
-      buildSEXPgenerator()
-      build_set_nClass_env()
+      if(!identical(self$compileInfo$interface, "none")) {
+        buildSEXPgenerator()
+        build_set_nClass_env()
+      }
     }
     ## Following could turn out to be useful but was carried over from nimble and perhaps not needed.
     ## , makeCppNames = function() {
@@ -154,6 +156,7 @@ cpp_nClassClass <- R6::R6Class(
                        debugCpp,
                        fromModel,
                        ...)
+      process_inheritance(Compiler)
       if(!missing(Compiler))
         process_NC_Compiler(Compiler,
                             debugCpp = debugCpp,
@@ -169,6 +172,11 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
     },
+    process_inheritance = function(Compiler) {
+      for(oneInheritance in Compiler$compileInfo$inherit) {
+        self$addInheritance(oneInheritance)
+      }
+    },
     process_NC_Compiler = function(Compiler, debugCpp = FALSE, fromModel = FALSE) {
       buildFunctionDefs()
       for(i in seq_along(memberCppDefs)) {
@@ -177,12 +185,15 @@ cpp_nClassClass <- R6::R6Class(
       buildParallelClassDefs()
     },
     buildFunctionDefs = function() {
+      message("To-do: Care needed to filter interfaced methods by exportMembers names.")
       for(i in seq_along(Compiler$NFcompilers)) {
         RCname <- names(Compiler$NFcompilers)[i]
-        memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE)
-        memberCppDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
-        if(Compiler$NFcompilers[[RCname]]$NFinternals$callFromR)
-          self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
+        thisNFcomp <- Compiler$NFcompilers[[RCname]]
+        memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE,
+                                                           compileInfo = thisNFcomp$compileInfo)
+        memberCppDefs[[RCname]]$buildFunction(thisNFcomp)
+        ## if(Compiler$NFcompilers[[RCname]]$NFinternals$compileInfo$callFromR)
+        ##   self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
       }
     },
     buildParallelClassDefs = function() {
@@ -341,7 +352,15 @@ cpp_nClassClass <- R6::R6Class(
         addSerialization()
       if(isTRUE(get_nOption('enableDerivs')))
         addADclassContent()
-      addGenericInterface(interfaceCalls = interfaceCalls)
+      #interfaceCalls controls whether to include get_values, set_value, call_method
+      #self$compileInfo$interface controls whether to inherit from base classes for interfacing
+      #It would be wierd to do the former without the latter,
+      # so unless/until we get a case where that behavior is needed
+      # we will prevent it.
+      interface_needed <- !identical(self$compileInfo$interface, "none")
+      interfaceCalls <- interfaceCalls && interface_needed
+      addGenericInterface(interfaceCalls = interfaceCalls,
+                          interface = interface_needed)
     }
   )
 )

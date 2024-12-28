@@ -211,7 +211,6 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
-    browser()
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     code$type <- code$args[[1]]$type$elementSym$clone()
     if(length(inserts) == 0) NULL else inserts

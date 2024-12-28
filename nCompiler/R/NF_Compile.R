@@ -61,7 +61,6 @@ nCompile_nFunction <- function(NF,
                                       useUniqueNameInCpp = 
                                         controlFull$useUniqueNameInCode,
                                       compileInfo = compileInfo)
-                                      ## , funName = funName)
   NF_Compiler$createCpp(control = controlFull)
   if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
                               controlFull)) {

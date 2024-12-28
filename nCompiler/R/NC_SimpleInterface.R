@@ -4,20 +4,20 @@
 
 #' @export
 method <- function(obj, name) {
-  DLLenv <- nCompiler:::get_DLLenv(obj)
-  extptr <- nCompiler:::getExtptr(obj)
+  CnCenv <- nCompiler:::get_CnCenv(obj)
+  force(name)
   function(...) {
-    DLLenv$call_method(extptr, name, environment())
-    # We switched from list(...) to environment() with the switch to having
-    # the C++ generic interface look up ... from the calling environment()
-    # in order to implement ref and blockRef behavior.
-    #
-    # We also switched to having each DLL hold its own R interface fxns
+    CnCenv[[name]](obj, ...)
   }
+  ## DLLenv <- nCompiler:::get_DLLenv(obj)
+  ## extptr <- nCompiler:::getExtptr(obj)
   ## function(...) {
-  ##   if(is.null(getExtptr(obj)))
-  ##     stop("obj does not point to a C++ object.")
-  ##   nCompiler:::call_method(getExtptr(obj), name, environment())
+  ##   DLLenv$call_method(extptr, name, environment())
+  ##   # We switched from list(...) to environment() with the switch to having
+  ##   # the C++ generic interface look up ... from the calling environment()
+  ##   # in order to implement ref and blockRef behavior.
+  ##   #
+  ##   # We also switched to having each DLL hold its own R interface fxns
   ## }
 }
 

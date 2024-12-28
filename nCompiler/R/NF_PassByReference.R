@@ -104,6 +104,7 @@ createBlockRef <- function(innerName,
     if(outerCode[[1]] != '[')
       stop("A block reference argument must be passed as a variable name, e.g. `x`, or an indexed block of a variable, e.g. `x[1:4, 2:3]` or `x[1:4, ]`.")
   }
+  outerLen <- eval(substitute(length(OC), list(OC = outerCode)), envir=env)
   outer_dummy_assign_code <- substitute(L <- R,
                                         list(L = outerCode,
                                              R = as.name(dummyName)))
@@ -112,6 +113,8 @@ createBlockRef <- function(innerName,
       if(missing(v))
         eval(outerCode, env)
       else {
+        if(outerLen != length(v))
+          stop("blockRef assignment must match in length.")
         assign(dummyName, v, env)
         on.exit(rm(list = dummyName, envir = env))
         eval(outer_dummy_assign_code, env)

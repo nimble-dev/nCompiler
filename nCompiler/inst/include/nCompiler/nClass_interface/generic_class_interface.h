@@ -92,9 +92,9 @@ class genericInterfaceBaseC {
   };
 };
 
-// A forward declaration.
-SEXP process_call_args(const genericInterfaceBaseC::args::argVectorT &argVector,
-                       SEXP Sargs);
+// A forward declaration. (This is being disabled and a new approach is being used.)
+//SEXP process_call_args(const genericInterfaceBaseC::args::argVectorT &argVector,
+//                       SEXP Sargs);
 
 // Base class for accessing a single member from a nimble class,
 // converted to SEXP.

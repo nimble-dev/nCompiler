@@ -29,10 +29,10 @@ nSerialize <- function(obj) {
         if(!is.function(new_smgr_fn)) stop("nCompiler serialization manager not found.")
         ser_mgr <<- new_smgr_fn()
         # add_extptr will be used on subsequent calls to refhook for an externalptr
-        add_extptr <<- function(...)
-          DLLenv$call_method(ser_mgr$extptr, "add_extptr", environment())
-        find_extptr <<- function(...)
-          DLLenv$call_method(ser_mgr$extptr, "find_extptr", environment())
+        add_extptr <<- function(extptr)
+          DLLenv$call_method(ser_mgr$extptr, "add_extptr", list(extptr))
+        find_extptr <<- function(ref_obj)
+          DLLenv$call_method(ser_mgr$extptr, "find_extptr", list(ref_obj))
       }
       if(is.null(packageName)) {
         packageName <<- DLLpackageName(ref_obj)
@@ -62,7 +62,7 @@ nSerialize <- function(obj) {
     if(!is.function(ser_fn)) stop("nCompiler serialization function not found")
     CPPside <- ser_fn(nCompiler:::getExtptr(ser_mgr))
     # 2b. Clear the serialization_mgr of its pointers (underlying objects are still fine)
-    (\() DLLenv$call_method(ser_mgr$extptr, "clear", environment()))()
+    (\() DLLenv$call_method(ser_mgr$extptr, "clear", list()))()
   }
   # 3. We need one serialization result, so now serialized the two pieces together.
   combined <- serialize(list(Rside=Rside, CPPside=CPPside, packageName = packageName),
@@ -112,7 +112,7 @@ nUnserialize <- function(obj, pkgName, lib = NULL) {
     # 2. If there was anything on the C++ side, make a serialization_mgr
     ser_mgr <- unser_fn(combined$CPPside)
     # get_extptr will be used in refhook, when called by R's serialize()
-    get_extptr <- \(...) DLLenv$call_method(ser_mgr$extptr, "get_extptr", environment())
+    get_extptr <- \(i) DLLenv$call_method(ser_mgr$extptr, "get_extptr", list(i))
 
     refhook <- function(deref_obj) {
       # This will be called with a character string of an integer ID created
@@ -127,7 +127,7 @@ nUnserialize <- function(obj, pkgName, lib = NULL) {
     result <- unserialize(combined$Rside, refhook = refhook)
     # 4. Clear the serialization_mgr (objects just created will persist because)
     #    They are now pointed to from externalptr's in R.
-    (\() DLLenv$call_method(ser_mgr$extptr, "clear", environment()))()
+    (\() DLLenv$call_method(ser_mgr$extptr, "clear", list()))()
     # 5. Remove the serialization_mgr, so it will be finalized next time R's gc() is called.
     rm(ser_mgr)
   } else {
