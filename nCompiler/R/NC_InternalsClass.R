@@ -31,6 +31,7 @@ NC_InternalsClass <- R6::R6Class(
                           predefined = FALSE) {
       if(!is.null(inherit)) {
         self$inheritNCinternals <- NCinternals(inherit)
+        message("add check that base class has interface 'none'")
         if(is.null(compileInfo$inherit$base))
           compileInfo$inherit$base <- paste("public",
                                             inheritNCinternals$cpp_classname)

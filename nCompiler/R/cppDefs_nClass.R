@@ -188,8 +188,10 @@ cpp_nClassClass <- R6::R6Class(
       message("To-do: Care needed to filter interfaced methods by exportMembers names.")
       for(i in seq_along(Compiler$NFcompilers)) {
         RCname <- names(Compiler$NFcompilers)[i]
-        memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE)
-        memberCppDefs[[RCname]]$buildFunction(Compiler$NFcompilers[[RCname]])
+        thisNFcomp <- Compiler$NFcompilers[[RCname]]
+        memberCppDefs[[RCname]] <<- cpp_nFunctionClass$new(classMethod = TRUE,
+                                                           compileInfo = thisNFcomp$compileInfo)
+        memberCppDefs[[RCname]]$buildFunction(thisNFcomp)
         ## if(Compiler$NFcompilers[[RCname]]$NFinternals$compileInfo$callFromR)
         ##   self$functionNamesForInterface <<- c(self$functionNamesForInterface, RCname)
       }

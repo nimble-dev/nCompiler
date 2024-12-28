@@ -239,6 +239,7 @@ cpp_nCompiler <- function(Rcpp_packet,
   if(write) {
     if(packetList) {
       writeCpp_nCompiler_combine(Rcpp_packet,
+                                 dir = dir,
                                  cppfile = cppfile)
     } else {
       writeCpp_nCompiler(Rcpp_packet,
