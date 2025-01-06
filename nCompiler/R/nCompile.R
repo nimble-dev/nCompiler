@@ -555,7 +555,63 @@ writePackage <- function(...,
   ##   unlink(compiledObjs)
   ## }
   compileAttributes(pkgdir = pkgDir)
+  update_compileAttributes_for_argPassing(Rdir,
+                                          units, unitTypes, returnNames)
   invisible(NULL)
+}
+
+update_compileAttributes_for_argPassing <- function(Rdir,
+                                                    units, unitTypes, returnNames) {
+  if(!any(unitTypes == "nF")) return();
+  RcppExports_file <- file.path(Rdir, "RcppExports.R")
+  parsed_RcppExports <- parse(RcppExports_file)
+  lines_RcppExports <- readLines(RcppExports_file)
+  nLines <- length(lines_RcppExports)
+  names_RcppExports <- lapply(parsed_RcppExports,
+                              function(x) {
+                                if(x[[1]] == "<-") as.character(x[[2]]) else NULL
+                              })
+  any_updates <- FALSE
+  for(iUnit in seq_along(units)) {
+    if(unitTypes[iUnit] == "nF") {
+      refArgs <- NFinternals(units[[iUnit]])$refArgs
+      blockRefArgs <- NFinternals(units[[iUnit]])$blockRefArgs
+      if(any(unlist(refArgs)) || any(unlist(blockRefArgs))) {
+        iExpr <- which(names_RcppExports == returnNames[iUnit])
+        this_name <- returnNames[iUnit]
+        if(length(iExpr)!=1) stop("Problem updating arg passing handling for ", this_name)
+        local_env <- new.env()
+        eval(parsed_RcppExports[[iExpr]], envir = local_env)
+        updatedExpr <-  passByReferenceIntoC(local_env[[ this_name ]],
+                                             refArgs = refArgs,
+                                             blockRefArgs = blockRefArgs)
+        updatedText <- deparse(updatedExpr)
+        updatedText[1] <- paste0(this_name, " <- ", updatedText[1])
+        replace_begin_linenum <- grep(paste0("^",this_name, " <- function\\("), lines_RcppExports)
+        replace_end_linenum <- replace_begin_linenum
+        if(replace_begin_linenum < nLines) {
+          replace_end_linenum <- grep("^}$", lines_RcppExports[(replace_begin_linenum+1):nLines])[1] + replace_begin_linenum
+        }
+        lines_before <- character()
+        if(replace_begin_linenum > 1)
+          lines_before <- lines_RcppExports[1:(replace_begin_linenum-1)]
+        lines_after <- character()
+        if(replace_end_linenum < nLines)
+          lines_after <- lines_RcppExports[(replace_end_linenum+1):nLines]
+        lines_RcppExports <- c(lines_before, updatedText, lines_after)
+        nLines <- length(lines_RcppExports)
+        any_updates <- TRUE
+      }
+    }
+  }
+  if(any_updates) {
+    comment_linenums <- grep("^# Gen", lines_RcppExports)
+    updated_lines <- c(lines_RcppExports[comment_linenums],
+                       "# Modified by nCompiler to handle ref or blockRef argument passing",
+                       lines_RcppExports[-comment_linenums])
+    writeLines(updated_lines, con = RcppExports_file)
+  }
+  any_updates
 }
 
 nCompile_finish_nonpackage <- function(units,
@@ -591,34 +647,42 @@ nCompile_finish_nonpackage <- function(units,
  # if(num_nClasses > 0) {
     for(i in seq_along(units)) {
       iRes <- which( exportNames[i] == names(compiledFuns))
-      if(length(iRes) != 1) {
-        warning(paste0("Post-processing in nCompile: Name matching of results had a problem for ", exportNames[i], "."))
-      } else {
+      ## if(length(iRes) != 1) {
+      ##   warning(paste0("Post-processing in nCompile: Name matching of results had a problem for ", exportNames[i], "."))
+      ## } else {
         if(unitTypes[i] == "nCgen") { #unit_is_nClass[i]) {
           expect_nC_interface[i] <- isTRUE(compileInfos[[i]]$interface %in% c("full", "generic"))
           #nClass_name <- names(units)[i]
           if(expect_nC_interface[i]) {
-            R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
-                                                           compiledFuns[[iRes]],
-                                                           env = resultEnv))
-            if(inherits(R6interfaces[[i]], "try-error")) {
-              warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
-              R6interfaces[[i]] <- NULL
-            }
-            methodFns[[i]] <- try(build_generic_fns_for_compiled_nClass(units[[i]]))
-            if(inherits(methodFns[[i]], "try-error")) {
-              warning(paste0("There was a problem building functions for generic nClass interface for ", exportNames[i], "."))
-              methodFns[[i]] <- NULL
+            if(length(iRes) != 1) {
+              warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nClass ", exportNames[i], "."))
+            } else {
+              R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
+                                                             compiledFuns[[iRes]],
+                                                             env = resultEnv))
+              if(inherits(R6interfaces[[i]], "try-error")) {
+                warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
+                R6interfaces[[i]] <- NULL
+              }
+              methodFns[[i]] <- try(build_generic_fns_for_compiled_nClass(units[[i]]))
+              if(inherits(methodFns[[i]], "try-error")) {
+                warning(paste0("There was a problem building functions for generic nClass interface for ", exportNames[i], "."))
+                methodFns[[i]] <- NULL
+              }
             }
           }
         } else if(unitTypes[i]=="nF") {
-          refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
-          blockRefArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$blockRefArgs # ditto
-          compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
-                                                       refArgs = refArgs,
-                                                       blockRefArgs = blockRefArgs)
+            if(length(iRes) != 1) {
+              warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nFunction ", exportNames[i], "."))
+            } else {
+              refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
+              blockRefArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$blockRefArgs # ditto
+              compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
+                                                           refArgs = refArgs,
+                                                           blockRefArgs = blockRefArgs)
+          }
         }
-      }
+      ##}
     }
  # }
   names(R6interfaces) <- returnNames

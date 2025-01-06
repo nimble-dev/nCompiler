@@ -82,12 +82,12 @@ build_compiled_nClass <- function(NCgenerator,
       baseNCgen <- NCgenerator$parent_env$.inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
-      if(length(baseCmethodNames)) {
-        baseInterfaceMethods <- recurse_make_Cmethods(baseNCgen,
-                                                      baseCmethodNames,
-                                                      derivedNames)
-        interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
-      }
+      # Note: baseCmethodNames could be empty but we still need to
+      # recurse in case there are more classes in the hierarchy.
+      baseInterfaceMethods <- recurse_make_Cmethods(baseNCgen,
+                                                    baseCmethodNames,
+                                                    derivedNames)
+      interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
     }
     interfaceMethods
   }
@@ -105,12 +105,10 @@ build_compiled_nClass <- function(NCgenerator,
       baseRmethodNames <- setdiff(names(baseNCgen$public_methods),
                                   c(baseCmethodNames, 'clone'))
       baseRmethodNames <- setdiff(baseRmethodNames, derivedNames)
-      if(length(baseRmethodNames)) {
-        baseInterfaceMethods <- recurse_make_Rmethods(baseNCgen,
-                                                      baseRmethodNames,
-                                                      derivedNames)
-        interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
-      }
+      baseInterfaceMethods <- recurse_make_Rmethods(baseNCgen,
+                                                    baseRmethodNames,
+                                                    derivedNames)
+      interfaceMethods <- c(interfaceMethods, baseInterfaceMethods)
     }
     interfaceMethods
   }
@@ -149,16 +147,14 @@ build_compiled_nClass <- function(NCgenerator,
       baseNCgen <- NCgenerator$parent_env$.inherit_obj
       baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
       baseCfieldNames <- setdiff(baseCfieldNames, derivedNames)
-      if(length(baseCfieldNames)) {
-        baseActiveBindingResults <-
-          recurse_make_activeBindings(baseNCgen,
-                                      baseCfieldNames,
-                                      derivedNames)
-        activeBindingResults$activeBindings <-
-          c(activeBindingResults$activeBindings, baseActiveBindingResults$activeBindings)
-        activeBindingResults$internal_fields <-
-          c(activeBindingResults$internal_fields, baseActiveBindingResults$internal_fields)
-      }
+      baseActiveBindingResults <-
+        recurse_make_activeBindings(baseNCgen,
+                                    baseCfieldNames,
+                                    derivedNames)
+      activeBindingResults$activeBindings <-
+        c(activeBindingResults$activeBindings, baseActiveBindingResults$activeBindings)
+      activeBindingResults$internal_fields <-
+        c(activeBindingResults$internal_fields, baseActiveBindingResults$internal_fields)
     }
     activeBindingResults
   }
@@ -177,12 +173,10 @@ build_compiled_nClass <- function(NCgenerator,
       baseRfieldNames <- setdiff(names(baseNCgen$public_fields),
                                   c(baseCfieldNames, 'clone'))
       baseRfieldNames <- setdiff(baseRfieldNames, derivedNames)
-      if(length(baseRfieldNames)) {
-        baseInterfaceFields <- recurse_make_Rfields(baseNCgen,
-                                                      baseRfieldNames,
-                                                    derivedNames)
-        interfaceFields <- c(interfaceFields, baseInterfaceFields)
-      }
+      baseInterfaceFields <- recurse_make_Rfields(baseNCgen,
+                                                  baseRfieldNames,
+                                                  derivedNames)
+      interfaceFields <- c(interfaceFields, baseInterfaceFields)
     }
     interfaceFields
   }
@@ -399,12 +393,10 @@ build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
       baseNCgen <- NCgenerator$parent_env$.inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
-      if(length(baseCmethodNames)) {
-        baseInterfaceFns <- recurse_make_Cmethods(baseNCgen,
-                                                      baseCmethodNames,
-                                                      derivedNames)
-        interfaceFns <- c(interfaceFns, baseInterfaceFns)
-      }
+      baseInterfaceFns <- recurse_make_Cmethods(baseNCgen,
+                                                baseCmethodNames,
+                                                derivedNames)
+      interfaceFns <- c(interfaceFns, baseInterfaceFns)
     }
     interfaceFns
   }
@@ -435,7 +427,11 @@ build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
     list(NAME = name,
          LISTCODE = listcode)
   )
-  formals(ans) <- c(formals(function(CppObj_){}), formals(fun))
+  # The generic method() will give a copy of the function a new closure
+  # and put CppObj_ in it.
+  # We used to instead have method return a function that call the generic
+  # function, but this did not work for ref and blockRef argument passing.
+  formals(ans) <- formals(fun) #c(formals(function(CppObj_){}), formals(fun))
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
   body(ans) <- passByReferenceIntoC(body_ans, refArgs, blockRefArgs)

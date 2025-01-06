@@ -4,22 +4,20 @@
 //#include "EigenTensor_Rcpp_extensions_forward_declarations.h"
 //#include <nCompiler/EigenTensor_Rcpp_extensions/EigenTensor_Rcpp_extensions_post_Rcpp.h>
 
-// These should maybe be in a post_Rcpp directory.
+// These are going in a post_Rcpp directory.
 // However, any of them could be pre_Rcpp. They could be either.
-#include "StridedTensorMap.h" // This is pre_Rcpp
-#include "StridedTensorMapInfo.h"
-#include "typedefs.h"
-#include "setWhich.h"
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/typedefs.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/setWhich.h>
 //#include "repClass.h"
 //#include "seqClass.h"
-#include "recyclingRule.h"
-#include "tensorCreation.h"
-#include "tensorFlex.h"
-#include "tensorOperations.h"
-#include "tensorIndexingOps.h"
-#include "tensorUtils.h"
-#include "tensor_seq_op.h"
-#include "tensor_rep_op.h"
-#include "tensor_cat_op.h"
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/recyclingRule.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensorCreation.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensorFlex.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensorOperations.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensorIndexingOps.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensorUtils.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensor_seq_op.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensor_rep_op.h>
+#include <nCompiler/EigenTensor_extensions/post_Rcpp/tensor_cat_op.h>
 
 //#endif

@@ -10,8 +10,8 @@ global_R_interface_cppDef <-
                       CPPpreamble = "#define NCOMPILER_USES_NCLASS_INTERFACE",
                       cppContent = paste0(
                         "inline genericInterfaceBaseC *get_genericInterfaceBaseC(SEXP Xptr) {\n",
-                        "  return reinterpret_cast<genericInterfaceBaseC*>\n",
-                        "    (reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr))->get_ptr());\n",
+                        "  return static_cast<genericInterfaceBaseC*>\n",
+                        "    (static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr))->get_ptr());\n",
                         "}\n\n",
 
                         "// This is completely generic, good for all derived classes\n",

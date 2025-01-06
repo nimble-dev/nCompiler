@@ -28,7 +28,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
  public:
   std::shared_ptr<T> sp_;
   void *get_ptr() const {
-    return static_cast<void*>(sp_.get());
+    return static_cast<void*>(dynamic_cast<genericInterfaceBaseC*>(sp_.get()));
   }
   shared_ptr_holder_base* make_shared_ptr_holder() {
     std::cout<<"making new shared_ptr_holder_base"<<std::endl;
@@ -61,7 +61,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
 
 inline void finalize_shared_ptr_holder(SEXP Xptr) {
   std::cout<<"Entering finalize_shared_ptr_holder"<<std::endl;
-  shared_ptr_holder_base *sph = reinterpret_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr));
+  shared_ptr_holder_base *sph = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr));
   if(sph) delete sph;
 }
 
@@ -71,7 +71,11 @@ template<typename T>
 SEXP new_nCompiler_object (  )  {
   shared_ptr_holder<T> *sph = new shared_ptr_holder<T>(new T);
   SEXP Sans;
-  Sans = PROTECT(R_MakeExternalPtr(sph, R_NilValue, R_NilValue));
+  // The dynamic_cast to shared_ptr_holder_base is because that is what we will cast back to
+  // when a void* (externalptr) is passed back in from R elsewhere.
+  // The static_cast to void* should happen implicitly anyway but we write it for clarity.
+  Sans = PROTECT(R_MakeExternalPtr(static_cast<void*>(dynamic_cast<shared_ptr_holder_base*>(sph)),
+                                   R_NilValue, R_NilValue));
   R_RegisterCFinalizerEx(Sans, finalize_shared_ptr_holder, static_cast<Rboolean>(1));
   UNPROTECT(1);
   return(Sans);
@@ -83,7 +87,8 @@ template<typename T>
 SEXP return_nCompiler_object(std::shared_ptr<T> &sp_other ) {
   shared_ptr_holder<T> *sph = new shared_ptr_holder<T>(sp_other);
   SEXP Sans;
-  Sans = PROTECT(R_MakeExternalPtr(sph, R_NilValue, R_NilValue));
+  Sans = PROTECT(R_MakeExternalPtr(static_cast<void*>(dynamic_cast<shared_ptr_holder_base*>(sph)),
+                                   R_NilValue, R_NilValue));
   R_RegisterCFinalizerEx(Sans, finalize_shared_ptr_holder, static_cast<Rboolean>(1));
   UNPROTECT(1);
   return(Sans);  
@@ -94,7 +99,7 @@ SEXP shared_ptr_holder<T>::return_this_nCompiler_object() {
     return return_nCompiler_object<T>(sp_);
   }
 
-// support syntax like this: nClass_chained_builder<nc1>()(x, y)
+// support syntax like this: nClass_builder<nc1>()(x, y)
 template<class NCLASS>
 class nClass_builder {
  public:

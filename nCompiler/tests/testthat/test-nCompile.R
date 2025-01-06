@@ -1,5 +1,6 @@
 message("add tests for multiple units via packaging")
 message("add tests for 'none' interface")
+message("add test for control$changeKeywords")
 
 # Notes:
 # Three pathways:
@@ -336,6 +337,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   ## full & direct
   test <- nCompile(nc_name, package=FALSE, interfaces = "full", returnList = TRUE)
   obj <- test$nc_name$new(); test_obj(obj)
+  objC <- obj$private$CppObj; test_obj(objC)
   rm(obj, objC); gc()
 
   ## generic & package

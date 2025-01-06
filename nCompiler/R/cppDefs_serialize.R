@@ -86,7 +86,8 @@ addSerialization_impl <- function(self) { #},
                        "#define NCOMPILER_USES_CEREAL")
 
   ## construct the central call to archive:
-  namesToArchive <- self$symbolTable$getSymbolNames()
+  ## namesToArchive <- self$symbolTable$getSymbolNames()
+  namesToArchive <- NCinternals(self$Compiler$NCgenerator)$cppSymbolNames
   codeText <- paste0(
     "archive(\ncereal::base_class<genericInterfaceC<",self$name,"> >(this),\n",
     paste0("CEREAL_NVP(", namesToArchive, ")", collapse = ",\n"),

@@ -1,3 +1,4 @@
+## flex_(logical_scalar) = ... does not seem to work.
 message("test-eigenShapeFlex of flex_() assignment system works but has only one case. More coverage is needed.")
 test_that("flex_ system works for mean()",
           {
