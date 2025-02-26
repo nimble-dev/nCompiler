@@ -31,6 +31,8 @@
 
 library(nCompiler)
 library(testthat)
+#nOptions(showCompilerOutput=TRUE)
+#nOptions(showCompilerOutput=FALSE)
 
 test_that("#includes work when one nFunction calls another", {
   f1 <- nFunction(
@@ -111,5 +113,12 @@ test_that("#includes work when an nFunction creates an nClass internally (only)"
   comp1 <- nCompile(nc1, f1)
   expect_equal(comp1$f1(3), 5)
 
-    comp1 <- nCompile(f1, nc1)
+  comp1 <- nCompile(f1, nc1)
   expect_equal(comp1$f1(3), 5)
+
+  comp1 <- nCompile(nc1, f1, package = TRUE)
+  expect_equal(comp1$f1(3), 5)
+
+  comp1 <- nCompile(f1, nc1, package = TRUE)
+  expect_equal(comp1$f1(3), 5)
+})

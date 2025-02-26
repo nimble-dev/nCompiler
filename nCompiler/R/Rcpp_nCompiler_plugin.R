@@ -22,7 +22,7 @@ inlineCxxPlugin <- function(...) {
   if(uses_nList) include.before <- paste0(include.before, "#define NCOMPILER_USES_NLIST\n")
   if(uses_cereal) include.before <- paste0(include.before, "#define NCOMPILER_USES_CEREAL\n")
   if(uses_TBB) include.before <- paste0(include.before, "#define NCOMPILER_USES_TBB\n")
-  include.before <- paste0(include.before, "#include <nCompiler/nCompiler_omnibus_first_cpp.h>")
+  include.before <- paste0(include.before, "#include <nCompiler/nCompiler_omnibus.h>")
   ans <- Rcpp::Rcpp.plugin.maker(include.before=include.before)()
   ans
 }

@@ -1,7 +1,7 @@
 #define NCOMPILER_USES_EIGEN
 #define NCOMPILER_USES_NCLASS_INTERFACE
 
-#include <nCompiler/nCompiler_omnibus_first_cpp.h>
+#include <nCompiler/nCompiler_omnibus.h>
 
 #include <Rmath.h>
 #include <math.h>

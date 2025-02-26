@@ -9,7 +9,8 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "#define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST")
+                        "#define NCOMPILER_USES_NLIST",
+                        "#define USES_NCOMPILER")
   ## handler nList in labelAbstractTypes does record in auxEnv if an
   ## explicit call to nList() was uses. That is the beginning of a smarter
   ## system for determining what #include (via #define) components are
@@ -19,9 +20,10 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
                           "#define NCOMPILER_USES_TBB",
-                          "#define NCOMPILER_USES_NLIST")
-  cppDef$Hincludes <- c(cppDef$Hincludes,
-                        nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
+                          "#define NCOMPILER_USES_NLIST",
+                          "#define USES_NCOMPILER")
+  cppDef$Hincludes <- c(cppDef$Hincludes)#,
+  ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
   ## cppDef$CPPincludes <- c(cppDef$CPPincludes,
   ##                       nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
   ## cppDef$Hincludes <- c(cppDef$Hincludes,
@@ -140,8 +142,12 @@ cpp_include_aux_content <- function(self,
                                     NF_Compiler) {
   ## Available aux content:
   if(isTRUE(NF_Compiler$auxEnv$uses_nList)) {
-    self$Hpreamble <- c(self$Hpreamble, "#define NCOMPILER_USES_NLIST")
-    self$CPPpreamble <- c(self$CPPpreamble, "#define NCOMPILER_USES_NLIST")
+    self$Hpreamble <- c(self$Hpreamble,
+                        "#define NCOMPILER_USES_NLIST",
+                        "#define USES_NCOMPILER")
+    self$CPPpreamble <- c(self$CPPpreamble,
+                          "#define NCOMPILER_USES_NLIST",
+                          "#define USES_NCOMPILER")
   }
   ## initializerList for a constructor
   if(!is.null(NF_Compiler$NFinternals$aux)) {

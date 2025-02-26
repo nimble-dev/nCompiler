@@ -35,6 +35,8 @@ NC_InternalsClass <- R6::R6Class(
         if(is.null(compileInfo$inherit$base))
           compileInfo$inherit$base <- paste("public",
                                             inheritNCinternals$cpp_classname)
+        if(is.null(compileInfo$inherit$h_file))
+          compileInfo$inherit$h_file   <- paste0(make_cpp_filename(inheritNCinternals$cpp_classname),'.h')
       }
       self$compileInfo <- compileInfo
       self$classname <- classname

@@ -13,7 +13,7 @@ test_that("flex_ system works for mean()",
             
             x <- rnorm(10)
             expect_equal(meanX(x), mean(x), info = "uncompiled meanX works")
-            CmeanX <- nCompile_nFunction(meanX)
+            CmeanX <- nCompile(meanX)
             expect_equal(CmeanX(x), meanX(x), info = "uncompiled meanX works")
           }
 )

@@ -23,7 +23,7 @@
 //#ifndef NCOMPILER_OMNIBUS_FIRST_CPP_
 // #define NCOMPILER_OMNIBUS_FIRST_CPP_
 
-#include "nCompiler_omnibus_first_h.h" // should always be redundant, but it is here to be clear
+#include "nCompiler_omnibus_pre_Rcpp.h" // should always be redundant, but it is here to be clear
 
 // We shall see if these two "first" files (_h and _cpp) are really needed or can be consolidated.
 

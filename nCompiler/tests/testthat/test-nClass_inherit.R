@@ -225,11 +225,13 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
 
     rm(objB, CobjB)
     gc()
-  })
+  }
 
 })
 
 ##############
+
+debug(nCompile)
 
 ncBase <- nClass(
   classname = "ncBase",
@@ -260,9 +262,10 @@ ncDer <- nClass(
   Cpublic = list(x3 = 'numericScalar')
 )
 
-debug(nCompiler:::build_compiled_nClass)
+comp <- nCompile(ncBase, ncMid, ncDer) # order still matters. base class .h files are not managed for #include
 
-comp <- nCompile(ncBase, ncMid, ncDer)
+# comp <- nCompile(ncMid, ncBase, ncDer) #breaks
+
 
 # It looks like the C++ interface code was set up correctly
 # but the interface tools on the R side are not there.

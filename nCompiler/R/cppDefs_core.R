@@ -157,9 +157,11 @@ buildSEXPgenerator_impl <- function(self) {
                       # , nCompilerIncludeFile("nCompiler_class_factory.h")
 #                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
   self$Hpreamble <- c(self$Hpreamble,
-                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
   self$CPPpreamble <- c(self$CPPpreamble,
-                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+                        "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                         "#define USES_NCOMPILER")
   returnLine <- paste0("return CREATE_NEW_NCOMP_OBJECT(",self$name,");")
   allCodeList <-
     list(
@@ -188,7 +190,8 @@ build_set_nClass_env_impl <- function(self) {
   #  self$Hincludes <- c(self$Hincludes
   #                      , nCompilerIncludeFile("nCompiler_loadedObjectsHook.h") )
   self$Hpreamble <- c(self$Hpreamble,
-                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
   setterLine <- paste0("SET_CNCLASS_ENV(",self$name,", env);")
   allCodeList <-
     list(
@@ -249,9 +252,11 @@ addGenericInterface_impl <- function(self) {
 #  self$Hincludes <- c(self$Hincludes,
 #                      nCompilerIncludeFile("nCompiler_class_interface.h"))
   self$Hpreamble <- c(self$Hpreamble,
-                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
   self$CPPpreamble <- c(self$CPPpreamble,
-                      "#define NCOMPILER_USES_NCLASS_INTERFACE")
+                        "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                        "#define USES_NCOMPILER")
 
   cppArgInfos <- character()
   outputMethodClassNames <- character()
@@ -405,8 +410,8 @@ addGenericInterface_impl <- function(self) {
 }
 
 cppClassClass_init_impl <- function(cppDef) {
-  cppDef$Hincludes <- c(cppDef$Hincludes, '<Rinternals.h>',
-                        nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
+  cppDef$Hincludes <- c(cppDef$Hincludes, '<Rinternals.h>') #,
+#                        nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
 #                        nCompilerIncludeFile("nCompiler_core.h"))
   cppDef$CPPincludes <- c(cppDef$CPPincludes, '<iostream>')
 }
@@ -647,8 +652,8 @@ cppCodeBlockClass <- R6::R6Class(
 cppFunctionClass_init_impl <- function(cppDef) {
   cppDef$CPPincludes <- as.list(
     c(cppDef$CPPincludes,
-      '<iostream>',
-      nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
+      '<iostream>')#,
+#      nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
     #                      nCompilerIncludeFile("nCompiler_core.h"))
   )
 }

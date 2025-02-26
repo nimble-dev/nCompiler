@@ -38,7 +38,7 @@ test_that("RcppNumericMatrix works in nFunctions", {
       returnType("RcppNumericVector()")
     }
   )
-  nfmxC <- nCompile_nFunction(nfmx)
+  nfmxC <- nCompile(nfmx)
   y <- matrix(c(10, 20, 30, 40), nrow = 2)
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
@@ -56,7 +56,7 @@ test_that("RcppIntegerVector works in nFunctions", {
       returnType("RcppIntegerVector()")
     }
   )
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- c(1, 2)
   y <- c(100, 200)
   ans <- nfC(x, y)
@@ -74,7 +74,7 @@ test_that("RcppIntegerMatrix works in nFunctions", {
       returnType("RcppIntegerVector()")
     }
   )
-  nfmxC <- nCompile_nFunction(nfmx)
+  nfmxC <- nCompile(nfmx)
   y <- matrix(c(10, 20, 30, 40), nrow = 2)
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
@@ -91,7 +91,7 @@ return x.sort();',
       )
       returnType("RcppLogicalVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- c(FALSE, TRUE, FALSE, FALSE, FALSE)
   y <- TRUE
   ans <- nfC(x, y)
@@ -110,7 +110,7 @@ test_that("RcppLogicalMatrix works in nFunctions", {
       returnType("RcppLogicalVector()")
     }
   )
-  nfmxC <- nCompile_nFunction(nfmx)
+  nfmxC <- nCompile(nfmx)
   y <- matrix(c(TRUE, TRUE, TRUE, FALSE), nrow = 2)
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
@@ -125,7 +125,7 @@ test_that("RcppComplexVector works in nFunctions", {
       )
       returnType("RcppComplexVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- c(1 + 2i, 2 + 1i, -1 - 1i, 8 - 5i, 1)
   ans <- nfC(x)
   expect_equal(sort(x), ans)
@@ -142,7 +142,7 @@ test_that("RcppComplexMatrix works in nFunctions", {
       returnType("RcppComplexVector()")
     }
   )
-  nfmxC <- nCompile_nFunction(nfmx)
+  nfmxC <- nCompile(nfmx)
   y <- matrix(c(2i + 22, 3i, 2i+4, 9), nrow = 2)
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
@@ -157,7 +157,7 @@ test_that("RcppCharacterVector works in nFunctions", {
       )
       returnType("RcppCharacterVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- c("Hi", "Test", "Foo1", "Foo2")
   ans <- nfC(x)
   expect_equal(sort(x), ans)
@@ -174,7 +174,7 @@ test_that("RcppCharacterMatrix works in nFunctions", {
       returnType("RcppCharacterVector()")
     }
   )
-  nfmxC <- nCompile_nFunction(nfmx)
+  nfmxC <- nCompile(nfmx)
   y <- matrix(c("Hello", "Hi", "Foo1", "Foo2"), nrow = 2)
   ans <- nfmxC(y, 2)
   expect_equal(ans, y[2,])
@@ -189,7 +189,7 @@ test_that("RcppDateVector works in nFunctions", {
       )
       returnType("RcppDateVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- as.Date(c("1996-06-23", "1977-05-25", "1999-05-19", "2001-01-01"))
   ans <- nfC(x)
   expect_equal(sort(x), ans)
@@ -204,7 +204,7 @@ test_that("RcppDatetimeVector works in nFunctions", {
       )
       returnType("RcppDatetimeVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- as.POSIXct("2020-07-07 10:25:06 PDT")
   x <- c(x, x - 1000000, x + 1000000)
   correct <- sort(x)
@@ -223,7 +223,7 @@ test_that("RcppRawVector works in nFunctions", {
       )
       returnType("RcppRawVector()")
     })
-  nfC <- nCompile_nFunction(nf)
+  nfC <- nCompile(nf)
   x <- as.raw(c(10, 11, 22, 0))
   ans <- nfC(x)
   expect_equal(x, ans)
@@ -255,7 +255,7 @@ test_that("RcppS4 works in nFunctions", {
       returnType("logicalScalar")
     }
   )
-  nfs4C <- nCompile_nFunction(nfs4)
+  nfs4C <- nCompile(nfs4)
   
   # Taken from ?setClass
   track <- setClass("track", slots = c(x="numeric", y="numeric"))
@@ -274,7 +274,7 @@ test_that("RcppFunction works", {
       )
       returnType("RcppNumericVector")
     })
-  nffnC <- nCompile_nFunction(nffn)
+  nffnC <- nCompile(nffn)
 
   set.seed(505)
   result1 <- nffnC(rnorm, 10)
@@ -299,7 +299,7 @@ return x;',
       returnType("RcppDataFrame()")
     }
   )
-  nfdfC <- nCompile_nFunction(nfdf)
+  nfdfC <- nCompile(nfdf)
   y <- data.frame(v = c(1:10), sq = c(1:10)^2)
   ans <- nfdfC(y, c(101:110))
   expect_equal(ans, cbind(new = c(101:110), y))
@@ -315,7 +315,7 @@ test_that("RcppEigenMatrixXd works in nFunctions", {
       returnType("RcppEigenMatrixXd()")
     }
   )
-  nfmxEigenC <- nCompile_nFunction(nfmxEigen)
+  nfmxEigenC <- nCompile(nfmxEigen)
   y <- matrix(c(0.1, 0.2, 0.5, 0.1, 10, 11), nrow = 2)
   ans <- nfmxEigenC(y)
   expect_equal(ans, t(y))
@@ -331,7 +331,7 @@ test_that("RcppEigenMatrixXi works in nFunctions", {
       returnType("RcppEigenMatrixXi()")
     }
   )
-  nfmxEigenC <- nCompile_nFunction(nfmxEigen)
+  nfmxEigenC <- nCompile(nfmxEigen)
   y <- matrix(c(11, 12, -10, 300, 10, 2), nrow = 2)
   ans <- nfmxEigenC(y)
   expect_equal(ans, t(y))
@@ -347,7 +347,7 @@ test_that("RcppEigenMatrixXcd works in nFunctions", {
       returnType("RcppEigenMatrixXcd()")
     }
   )
-  nfmxEigenC <- nCompile_nFunction(nfmxEigen)
+  nfmxEigenC <- nCompile(nfmxEigen)
   y <- matrix(c(2i, 0.3i+1, -5i+2, 0, 0, 100i+0.2), nrow = 2)
   ans <- nfmxEigenC(y)
   expect_equal(ans, t(y))
@@ -364,7 +364,7 @@ test_that("RcppEigenVectorXd works", {
       returnType("RcppEigenMatrixXd()")
     }
   )
-  nfEigenC <- nCompile_nFunction(nfEigen)
+  nfEigenC <- nCompile(nfEigen)
   x <- c(0.1, 0.2, 0.5)
   y <- matrix(c(0.4, 0.3, 0.2, 0.1, 0, 0.5), nrow = 2, ncol = 3)
   ans <- nfEigenC(x, y)
@@ -382,7 +382,7 @@ test_that("RcppEigenVectorXi works in nFunctions", {
       returnType("RcppEigenMatrixXi()")
     }
   )
-  nfEigenC <- nCompile_nFunction(nfEigen)
+  nfEigenC <- nCompile(nfEigen)
   x <- c(1, 2, 5)
   y <- matrix(c(4, 3, 2, 1, 0, 5), nrow = 2, ncol = 3)
   ans <- nfEigenC(x, y)
@@ -400,7 +400,7 @@ test_that("RcppEigenVectorXcd works in nFunctions", {
       returnType("RcppEigenMatrixXcd()")
     }
   )
-  nfEigenC <- nCompile_nFunction(nfEigen)
+  nfEigenC <- nCompile(nfEigen)
   x <- c(1i, 2i, 5 + 2i)
   y <- matrix(c(4i+1, 0.3i, 0.2 + 1i, 10i + 10, 0+1i, 5), nrow = 2, ncol = 3)
   ans <- nfEigenC(x, y)
