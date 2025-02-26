@@ -7,6 +7,7 @@ message("There will be a problem with serialization and pre-defined nClasses.\n"
 
 message('We need serialization tests of object networks.')
 message('Serialization does not fully work in non-package mode, when it will still be needed for object copying.')
+message('Need to tetst interactions between serialization and nClass inheritance.')
 
 # These tests contain basics via four modes of compilation:
 # nCompile(package=TRUE) or writePackage following by devtools::install and
@@ -74,7 +75,7 @@ test_that("in_new_R_session works",
                  outdir = file.path(tempdir(), "test_output"))
 )
 
-test_that("Basic serialization works (packaged, generic, multiple, new session)",
+test_that("Basic serialization works (via writePackage, with generic interface, for multiple objects, in current or new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -83,8 +84,8 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
       Rfoo = function(x) x+1
     ),
     Cpublic = list(
-      Cv = 'numericScalar',
-      Cx = 'integerScalar',
+      C.v = 'numericScalar',
+      C.x = 'integerScalar',
       Cfoo = nFunction(
         fun = function(x) {
           return(x+1)
@@ -124,10 +125,10 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   obj <- nc1Package::nc1()
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   expect_equal(method(obj, "Cfoo")(1.2), 2.2)
-  value(obj, "Cv") <- 1.23
-  expect_equal(value(obj, "Cv"), 1.23)
-  value(obj, "Cx") <- 3
-  expect_equal(value(obj, "Cx"), 3L)
+  value(obj, "C.v") <- 1.23
+  expect_equal(value(obj, "C.v"), 1.23)
+  value(obj, "C.x") <- 3
+  expect_equal(value(obj, "C.x"), 3L)
 
   # serialize it
   serialized_obj <- nSerialize(obj)
@@ -137,25 +138,25 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   # test the restored objected
   expect_true(nCompiler:::is.loadedObjectEnv(restored_obj))
   expect_equal(method(restored_obj, "Cfoo")(1.2), 2.2)
-  expect_equal(value(restored_obj, "Cv"), 1.23)
-  value(restored_obj, "Cv") <- 2.34
-  expect_equal(value(restored_obj, "Cv"), 2.34)
-  expect_equal(value(restored_obj, "Cx"), 3L)
+  expect_equal(value(restored_obj, "C.v"), 1.23)
+  value(restored_obj, "C.v") <- 2.34
+  expect_equal(value(restored_obj, "C.v"), 2.34)
+  expect_equal(value(restored_obj, "C.x"), 3L)
   # done
 
   # serialize and deserialize 3 objects
   obj2 <- nc1Package::nc1()
-  value(obj2, "Cv") <- -8.5
-  value(obj2, "Cx") <- -100
+  value(obj2, "C.v") <- -8.5
+  value(obj2, "C.x") <- -100
   obj3 <- nc1Package::nc1()
-  value(obj3, "Cx") <- 2134
+  value(obj3, "C.x") <- 2134
   serialized_objlist <- nSerialize(list(obj, obj2, obj3))
   restored_objlist <- nUnserialize(serialized_objlist, "nc1Package") # alt mode of providing package
   # test the restored objects
-  expect_equal(value(restored_objlist[[1]], "Cv"), 1.23)
-  expect_equal(value(restored_objlist[[2]], "Cv"), -8.5)
-  expect_equal(value(restored_objlist[[2]], "Cx"), -100)
-  expect_equal(value(restored_objlist[[3]], "Cx"), 2134)
+  expect_equal(value(restored_objlist[[1]], "C.v"), 1.23)
+  expect_equal(value(restored_objlist[[2]], "C.v"), -8.5)
+  expect_equal(value(restored_objlist[[2]], "C.x"), -100)
+  expect_equal(value(restored_objlist[[3]], "C.x"), 2134)
   # done
 
   outdir <- file.path(tempdir(), "nComp_serialize_working_test")
@@ -164,10 +165,10 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
     serialized_objlist <- transfer$serialized_objlist
     restored_objlist <- nUnserialize(serialized_objlist)
     test_that("restored objects work", {
-      expect_equal(value(restored_objlist[[1]], "Cv"), 1.23)
-      expect_equal(value(restored_objlist[[2]], "Cv"), -8.5)
-      expect_equal(value(restored_objlist[[2]], "Cx"), -100)
-      expect_equal(value(restored_objlist[[3]], "Cx"), 2134)
+      expect_equal(value(restored_objlist[[1]], "C.v"), 1.23)
+      expect_equal(value(restored_objlist[[2]], "C.v"), -8.5)
+      expect_equal(value(restored_objlist[[2]], "C.x"), -100)
+      expect_equal(value(restored_objlist[[3]], "C.x"), 2134)
     })
   },
   transfer = list(serialized_objlist = serialized_objlist),
@@ -177,7 +178,7 @@ test_that("Basic serialization works (packaged, generic, multiple, new session)"
   )
 })
 
-test_that("Basic serialization works (nCompile, generic, multiple, new session)",
+test_that("Basic serialization works (via nCompile(package=TRUE), with generic interface, for single and multiple objects, in current or new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -247,6 +248,7 @@ test_that("Basic serialization works (nCompile, generic, multiple, new session)"
 
   outdir <- file.path(tempdir(), "nComp_serialize_working_test3")
   # test in a new R session
+  lib <- file.path(tempdir(), "templib")
   in_new_R_session({
     serialized_objlist <- transfer$serialized_objlist
     restored_objlist <- nUnserialize(serialized_objlist)
@@ -264,7 +266,7 @@ test_that("Basic serialization works (nCompile, generic, multiple, new session)"
   )
 })
 
-test_that("Basic serialization works (packaged, full, multiple, new session)",
+test_that("Basic serialization works (via writePackage, with full interface, for single or multiple objects, in current or new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -367,7 +369,7 @@ test_that("Basic serialization works (packaged, full, multiple, new session)",
   )
 })
 
-test_that("Basic serialization works (nCompile, full, multiple, new session)",
+test_that("Basic serialization works (via nCompile(package=TRUE), with full interface, for single or multiple objects, in current or new session)",
 {
   nc1 <- nClass(
     classname = "nc1",
@@ -437,6 +439,7 @@ test_that("Basic serialization works (nCompile, full, multiple, new session)",
 
   outdir <- file.path(tempdir(), "nComp_serialize_working_test4")
   # test in a new R session
+  lib <- file.path(tempdir(), "templib")
   in_new_R_session({
     serialized_objlist <- transfer$serialized_objlist
     restored_objlist <- nUnserialize(serialized_objlist)

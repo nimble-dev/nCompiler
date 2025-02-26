@@ -12,6 +12,8 @@
 #include<nCompiler/nClass_cereal/archives.h>
 #endif
 #include<nCompiler/nClass_interface/expand_call_method.h>
+#include<nCompiler/EigenTensor_Rcpp_extensions/ETaccessor.h>
+
 // We must be able to assume that any Rcpp extension
 // forward declarations have been made by now.
 //#include<nCompiler/shared_ptr_as_wrap.h>
@@ -100,6 +102,8 @@ class genericInterfaceBaseC {
 // converted to SEXP.
 //
 // Derived classes have pointers to members of derived interface classes.
+// class ETaccessorBase;
+
 class accessor_base {
  public:
   // return the member from the interface object, converted to SEXP.
@@ -111,6 +115,9 @@ class accessor_base {
   virtual void set(genericInterfaceBaseC *, SEXP Svalue) {
     std::cout<<"Error: you should be in set for a derived accessor class"<<std::endl;
   };
+  virtual std::unique_ptr<ETaccessorBase> ETaccess(genericInterfaceBaseC *) {
+    std::cout<<"Error: you should be in access for a derived accessor class"<<std::endl;
+  }
   virtual ~accessor_base(){}
 };
 

@@ -4,16 +4,21 @@ global_serialization_cppDef <-
   cppMacroCallClass$new(
     Hpreamble = c(#nCompiler_plugin()$includes,
       "#define NCOMPILER_USES_CEREAL",
-      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
+      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+      "#define USES_NCOMPILER"),
     CPPpreamble = c(#nCompiler_plugin()$includes,
       "#define NCOMPILER_USES_CEREAL",
-      "#define NCOMPILER_USES_NCLASS_INTERFACE"),
+      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+      "#define USES_NCOMPILER"),
     ## Hincludes = c("<Rinternals.h>",
     ##           nCompilerIncludeFile("nCompiler_class_interface.h"),
     ##           nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
     ##           nCompilerIncludeFile("nCompiler_serialization_mgr.h")),
-    Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
-    CPPincludes = c(nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+    ## Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
+    #
+    # This is done here because it must be done once and only once to avoid
+    # duplicate symbols when compiling as a package.
+    CPPincludes = c(#nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
                     nCompilerIncludeFile("nClass_cereal/post_Rcpp/serialization_mgr.h")),
     CPPusings = c("using namespace Rcpp;",
                   "// [[Rcpp::plugins(nCompiler_plugin)]]",
@@ -81,12 +86,15 @@ addSerialization_impl <- function(self) { #},
   ##           CEREAL_NVP(y));
   ## }
   self$Hpreamble = c(self$Hpreamble,
-                     "#define NCOMPILER_USES_CEREAL")
+                     "#define NCOMPILER_USES_CEREAL",
+                     "#define USES_NCOMPILER")
   self$CPPpreamble = c(self$CPPpreamble,
-                       "#define NCOMPILER_USES_CEREAL")
+                       "#define NCOMPILER_USES_CEREAL",
+                       "#define USES_NCOMPILER")
 
   ## construct the central call to archive:
-  namesToArchive <- self$symbolTable$getSymbolNames()
+  ## namesToArchive <- self$symbolTable$getSymbolNames()
+  namesToArchive <- NCinternals(self$Compiler$NCgenerator)$cppSymbolNames
   codeText <- paste0(
     "archive(\ncereal::base_class<genericInterfaceC<",self$name,"> >(this),\n",
     paste0("CEREAL_NVP(", namesToArchive, ")", collapse = ",\n"),

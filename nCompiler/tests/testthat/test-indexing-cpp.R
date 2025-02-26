@@ -2,7 +2,7 @@
 ## They should be cleaned up into testthat format and compile from the cpp directory.
 
 #library(testthat)
-#library(Rcpp)
+library(Rcpp)
 
 test_that("C++ code for indexing and chipping works", {
   cppfile <- system.file(

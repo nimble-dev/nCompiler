@@ -1,3 +1,4 @@
+## flex_(logical_scalar) = ... does not seem to work.
 message("test-eigenShapeFlex of flex_() assignment system works but has only one case. More coverage is needed.")
 test_that("flex_ system works for mean()",
           {
@@ -12,7 +13,7 @@ test_that("flex_ system works for mean()",
             
             x <- rnorm(10)
             expect_equal(meanX(x), mean(x), info = "uncompiled meanX works")
-            CmeanX <- nCompile_nFunction(meanX)
+            CmeanX <- nCompile(meanX)
             expect_equal(CmeanX(x), meanX(x), info = "uncompiled meanX works")
           }
 )

@@ -170,7 +170,7 @@ Eigen::Tensor<double, 2> ex4p1(Eigen::Tensor<double, 2> x,
                                Eigen::Tensor<double, 2> v) {
   // TRY MACRO VERSION
   // nCompiler::IndexByVec<1>().op(iv2, nCompiler::IndexByVec<0>().op(iv,x)) = v;
-  IVEC_(1, iv2, IVEC_(0, iv, x)) = v;
+  IVEC_(1, iv2, IVEC_(0, iv, x, false), false) = v;
   return x;
 }
 

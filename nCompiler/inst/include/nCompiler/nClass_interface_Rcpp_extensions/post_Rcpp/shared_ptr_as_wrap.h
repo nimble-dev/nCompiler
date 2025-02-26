@@ -51,7 +51,7 @@ namespace Rcpp {
                 ok=true;}}}
         }
         if(!ok) {stop("An argument that should be an nClass object is not valid.");}
-        sp_ = reinterpret_cast<shared_ptr_holder<T>* >(R_ExternalPtrAddr(Xptr))->sp();
+        sp_ = dynamic_cast<shared_ptr_holder<T>* >(static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr)))->sp();
         UNPROTECT(1);
       }
       inline std::shared_ptr< T > get(){

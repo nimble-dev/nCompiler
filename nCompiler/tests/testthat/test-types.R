@@ -174,13 +174,13 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   ## Type incompatible with default
   a <- quote(matrix(1:4, nrow = 2, ncol = 2))
   aExplicit <- quote(numericVector())
-  expect_error(
+  expect_error(suppressWarnings( # this gives a warning and an error, so for testing we suppress the warning
     nCompiler:::argType2symbol(a,
                                name = "a",
                                origName = "orig_a",
                                isArg = TRUE,
                                explicitType = aExplicit)
-  )
+  ))
 })
 
 test_that("nMatrix(type = \"integer\")",

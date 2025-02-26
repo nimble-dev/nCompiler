@@ -1,6 +1,6 @@
 #define NCOMPILER_USES_EIGEN
 
-#include<nCompiler/nCompiler_omnibus_first_cpp.h>
+#include<nCompiler/nCompiler_omnibus.h>
 
 using namespace Rcpp;
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]

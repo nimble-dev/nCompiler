@@ -1,0 +1,6 @@
+#ifndef NCOMPILED_ETACCESSOR_PRE_H_
+#define NCOMPILED_ETACCESSOR_PRE_H_
+
+class ETaccessorBase;
+
+#endif // NCOMPILED_ETACCESSOR_PRE_H_

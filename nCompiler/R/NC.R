@@ -85,7 +85,7 @@ nClass <- function(classname,
   #   If one is named "base", it will replace the inheritance from
   #   an inherit base nClass. Multiple inheritance among nClasses
   #   is not supported (same for R6 classes), so there is no ambiguity.
-  #   If the nClass argument inherit is provided by compileInfo$inherit$base
+  #   If the nClass argument inherit is provided but compileInfo$inherit$base
   #   is not provided, inheritance will be determined from the base nClass.
   #   All inheritance provided by compileInfo$inherit should include any
   #   accessor specifier, typically "public", e.g. "public some_class".

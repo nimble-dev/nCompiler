@@ -5,10 +5,16 @@
 #' @export
 method <- function(obj, name) {
   CnCenv <- nCompiler:::get_CnCenv(obj)
-  force(name)
-  function(...) {
-    CnCenv[[name]](obj, ...)
-  }
+  ans <- CnCenv[[name]]
+  environment(ans) <- new.env(parent = environment(ans))
+  environment(ans)$CppObj_ <- obj
+  ans
+  ## Previous version #1
+  ## force(name)
+  ## function(...) {
+  ##   CnCenv[[name]](obj, ...)
+  ## }
+  ## Previous version #2
   ## DLLenv <- nCompiler:::get_DLLenv(obj)
   ## extptr <- nCompiler:::getExtptr(obj)
   ## function(...) {

@@ -5,5 +5,6 @@
 #include <nCompiler/EigenTensor_Rcpp_extensions/post_Rcpp/SEXP_2_EigenTensor.h>
 #include <nCompiler/EigenTensor_Rcpp_extensions/post_Rcpp/EigenTensor_Rcpp_as_wrap.h>
 #include <nCompiler/EigenTensor_Rcpp_extensions/post_Rcpp/EigenTensor_SEXP_converter.h>
+#include <nCompiler/EigenTensor_Rcpp_extensions/post_Rcpp/ETaccessor_post_Rcpp.h>
 
 //#endif // EIGEN_RCPP_EXTENSIONS_H_

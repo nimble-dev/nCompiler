@@ -1,6 +1,15 @@
 ## This file contains tools for using Rcpp's compilation system to manage
 ## compilation of nCompiler-generated C++.
 
+## Notes on how different compilation workflows use tools here.
+##
+## When calling nCompile with package=FALSE
+##  cppDefsList --> RcppPacket_list --> cpp_nCompiler -->
+##     writeCpp_nCompiler_combine --> writeCpp_nCompiler (once for .h, once for .cpp)
+##
+## When calling nCompile with package=TRUE, or calling writePackage
+## cppDefsList --> RcppPacket_list --> WP_writeCpp --> writeCpp_nCompiler (for each RcppPacket in the list)
+
 ## Rcpp_nCompilerPacket represents information needed from cppDefs in.nCompiler
 ## to generate Rcpp-ready content.
 ## At the moment it is just a list, but we establish the abstraction
@@ -72,14 +81,18 @@ cppDefs_2_RcppPacket <- function(cppDef,
              )
     )
 
-  cppContent <- collate_nCompiler_CppCode(preamble = CPPpreamble,
+  preamble <- unique(c(Hpreamble, CPPpreamble))
+
+  # preamble is now its own return list element so #inclue's can be combind across packets
+
+  cppContent <- collate_nCompiler_CppCode(preamble = "", #CPPpreamble,
                                           includes = CPPincludes,
                                           usings = CPPusings,
                                           code = cppCode,
                                           ifndefName = paste0('__', name, '_CPP')
                                           )
 
-  hContent <- collate_nCompiler_CppCode(preamble = Hpreamble,
+  hContent <- collate_nCompiler_CppCode(preamble = "", #Hpreamble,
                                         includes = Hincludes,
                                         code = hCode,
                                         ifndefName = paste0('__', name, '_H')
@@ -91,6 +104,7 @@ cppDefs_2_RcppPacket <- function(cppDef,
                    function(x) x$get_post_cpp_compiler()))
 
   RcppPacket <- Rcpp_nCompilerPacket(
+    preamble = preamble,
     cppContent = cppContent,
     hContent = hContent,
     filebase = filebase,
@@ -139,12 +153,19 @@ collate_nCompiler_CppCode <- function(preamble = character(),
                           character()
                       }
 
-    c(openifndefOut,
-      preamble,
-      includesOut,
-      usings,
-      code,
-      closeifndefOut)
+  list(opener = openifndefOut,
+       body =
+         c(#preamble
+           includesOut,
+           usings,
+           code,
+           closeifndefOut))
+  ## c(openifndefOut,
+  ##     preamble,
+  ##     includesOut,
+  ##     usings,
+  ##     code,
+  ##     closeifndefOut)
 }
 
 ## We need a way to get ignore.stderr = TRUE and ignore.stdout = TRUE
@@ -270,9 +291,13 @@ writeCpp_nCompiler_combine <- function(RcppPacket_list,
     stop("A cppfile name must be provided for the combined contents of the RcppPackets.")
   dir.create(dir, showWarnings = FALSE)
   cppfilepath <- file.path(dir, cppfile)
+
+  combined_preamble <- RcppPacket_list |> lapply(\(x) x$preamble) |> unlist() |> unique()
+
   con <- file(cppfilepath, open = "w")
   for(RcppPacket in RcppPacket_list) {
     ## write all cpp contents to one file
+    RcppPacket$preamble <- combined_preamble
     writeCpp_nCompiler(RcppPacket,
                        con = con,
                        include_h = FALSE)
@@ -302,6 +327,8 @@ writeCpp_nCompiler <- function(Rcpp_packet,
     header.dir <- dir
   
   makeStandardFiles <- is.null(con)
+  if(is.null(Rcpp_packet$preamble))
+    Rcpp_packet$preamble <- ""
   if(include_cpp) { 
     if(makeStandardFiles) {
       dir.create(dir, showWarnings = FALSE)
@@ -311,7 +338,16 @@ writeCpp_nCompiler <- function(Rcpp_packet,
       con <- file(cppfilepath,
                   open = "w")
     }
-    writeLines(Rcpp_packet$cppContent, con)
+
+    if(is.character(Rcpp_packet$cppContent))
+      Rcpp_packet$cppContent <- list(opener = "",
+                                     body = Rcpp_packet$cppContent)
+    writeLines(Rcpp_packet$cppContent$opener, con)
+    writeLines(Rcpp_packet$preamble, con)
+    writeLines("#ifdef USES_NCOMPILER", con)
+    writeLines("#include <nCompiler/nCompiler_omnibus.h>", con)
+    writeLines("#endif", con)
+    writeLines(Rcpp_packet$cppContent$body, con)
     if(makeStandardFiles)
       close(con)
   } 
@@ -325,7 +361,15 @@ writeCpp_nCompiler <- function(Rcpp_packet,
                             hfile),
                   open = "w")
     }
-    writeLines(Rcpp_packet$hContent, con)
+    if(is.character(Rcpp_packet$hContent))
+      Rcpp_packet$cppContent <- list(opener = "",
+                                     body = Rcpp_packet$hContent)
+    writeLines(Rcpp_packet$hContent$opener, con)
+    writeLines(Rcpp_packet$preamble, con)
+    writeLines("#ifdef USES_NCOMPILER", con)
+    writeLines("#include <nCompiler/nCompiler_omnibus.h>", con)
+    writeLines("#endif", con)
+    writeLines(Rcpp_packet$hContent$body, con)
     if(makeStandardFiles)
       close(con)
   }
