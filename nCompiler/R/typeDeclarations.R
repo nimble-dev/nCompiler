@@ -17,11 +17,13 @@
 ## a = matrix(type = "integer", nrow = 10, ncol, init = FALSE)
 
 #' @export
-nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE, ...) {
+nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE,
+                  interface = TRUE, ...) {
   symbolBasic$new(type = scalarType,
                   nDim = nDim,
                   isRef = isRef,
                   isBlockRef = isBlockRef,
+                  interface = interface,
                   ...)
 }
 
@@ -284,9 +286,20 @@ typeDeclarationList <- list(
                   "argument.  Dimensions from 0-6 are allowed."),
            call. = FALSE)  
     nType(scalarType, nDim)
+  },
+  CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
+    symbolCppVar$new(...)
+  },
+  custom = function(symbol) {
+    symbol
   }
   ## universal handler for creating symbolBasic objects
 )
+
+#' @export
+argType2Cpp <- function(...) {
+  argType2symbol(...)$genCppVar()$generate()
+}
 
 argType2symbol <- function(argType,
                            name = character(),

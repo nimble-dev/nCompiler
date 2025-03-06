@@ -6,16 +6,19 @@ symbolBase <- R6::R6Class(
     type = character(),
     isRef = FALSE,
     isArg = FALSE,
+    interface = TRUE,
     implementation = NULL,
     initialize = function(name = NULL,
                           type = character(),
                           isArg = FALSE,
                           isRef = FALSE,
+                          interface = TRUE,
                           implementation = NULL) {
       self$name <- name
       self$type <- type
       self$isArg <- isArg
       self$isRef <- isRef
+      self$interface <- interface
       self$implementation <- implementation
     },
     shortPrint = function() {
@@ -584,6 +587,28 @@ symbolEigenMap <- R6::R6Class(
                       type = type,
                       strides = strides,
                       eigMatrix = eigMatrix)
+    }
+  )
+)
+
+symbolCppVar <- R6::R6Class(
+  classname = 'symbolCppVar',
+  inherit = symbolBase,
+  public = list(
+    internalCppVar = NULL,
+    initialize = function(..., symbolBaseArgs=list()) {
+      self$internalCppVar <- cppVarFullClass$new(...)
+      if(is.null(symbolBaseArgs$interface))
+        symbolBaseArgs$interface <- FALSE # DEFAULT TO: NO INTERFACE (if it is being provided in a custom way, it probably can't be interfaced)
+      do.call(super$initialize, symbolBaseArgs)
+      self$type <- self$internalCppVar$generate(printName = "")
+    },
+    print = function() {
+      writeLines(self$internalCppVar$generate())
+    },
+    genCppVar = function() {
+      self$internalCppVar$name <- self$name
+      self$internalCppVar # Should it be cloned?
     }
   )
 )

@@ -38,12 +38,7 @@ cppDefs_2_RcppPacket <- function(cppDef,
   Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> unlist(use.names=FALSE)
   CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> unlist(use.names=FALSE)
   CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> unlist(use.names=FALSE)
-
-  ## Hincludes <- cppDef$getHincludes()
-  ## CPPincludes <- cppDef$getCPPincludes()
-  ## Hpreamble <- cppDef$getHpreamble()
-  ## CPPpreamble <- cppDef$getCPPpreamble()
-  ## CPPusings <- cppDef$getCPPusings()
+  compileInfos <- allCppDefs |> lapply(\(x) x$getCompileInfo())
 
   Hincludes <- unique(Hincludes)
   CPPincludes <- unique(CPPincludes)

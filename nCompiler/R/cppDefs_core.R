@@ -32,8 +32,16 @@ cppDefinitionClass <- R6::R6Class(
         self[[v]] <- dotsList[[v]]
       self
     },
-    getHincludes = function() {return(self$Hincludes)},
-    getCPPincludes = function() {return(self$CPPincludes)},
+    getCompileInfo = function() self$compileInfo,
+    getHincludes = function() {
+      ans <- self$Hincludes
+      if(!is.null(self$compileInfo$Hincludes))
+        ans <- c(ans, self$compileInfo$Hincludes)
+      ans
+    },
+    getCPPincludes = function() {
+      return(self$CPPincludes)
+    },
     getHpreamble = function() {return(self$Hpreamble)},
     getCPPpreamble = function() {return(self$CPPpreamble)},
     getCPPusings = function() {return(self$CPPusings)},
@@ -304,9 +312,13 @@ addGenericInterface_impl <- function(self) {
     # I am belaboring what could be done with unique or setdiff to be more
     # sure that order is preserved aligning fieldNames and cpp_fieldNames
     new_fieldNames <- NCint$symbolTable$getSymbolNames()
+    do_interface <- NCint$symbolTable$getSymbols() |>
+      lapply(\(x) isTRUE(x$interface)) |> unlist()
+    new_fieldNames <- new_fieldNames[do_interface]
     new_fieldNames <- new_fieldNames[!(new_fieldNames %in% fieldNames)]
     fieldNames <- c(fieldNames, new_fieldNames)
     new_cpp_fieldNames <- NCint$cppSymbolNames
+    new_cpp_fieldNames <- new_cpp_fieldNames[do_interface]
     new_cpp_fieldNames <- new_cpp_fieldNames[!(new_cpp_fieldNames %in% cpp_fieldNames)]
     cpp_fieldNames <- c(cpp_fieldNames, new_cpp_fieldNames)
     fieldClassNames <- c(fieldClassNames,
@@ -451,7 +463,7 @@ cppClassClass <- R6::R6Class(
       super$initialize(...)
     },
     getHincludes = function() {
-      Hinc <- c(Hincludes,
+      Hinc <- c(super$getHincludes(),
                 if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                   internalCppDefs[["SEXPgenerator"]]$getHincludes(),
                 if(!is.null(internalCppDefs[["set_nClass_env"]]))
