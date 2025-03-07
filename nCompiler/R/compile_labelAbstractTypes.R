@@ -172,6 +172,17 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  type_is <- function(code, symTab, auxEnv, handlingInfo) {
+    type <- eval(code$aux$compileArgs$type, envir = auxEnv$where)
+    sym <- argType2symbol(type)
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo)
+    code$args[["value"]]$type <- sym
+    removeExprClassLayer(code, "value")
+  }
+)
+
 ## chainedCall
 ## nParse converts something like foo(a)(b) to chainedCall(foo(a), b),
 ##     (although there is no support for a function returning a function.)
@@ -1187,7 +1198,7 @@ inLabelAbstractTypesEnv(
       types <- code$aux$compileArgs$types
       if(!is.null(types)) {
         if(!is.list(types)) types <- eval(types)
-        symbols <- argTypeList2symbolTable(types)$getSymbols()
+        symbols <- argTypeList2symbolTable(types, evalEnv=auxEnv$where)$getSymbols()
         for (sym in symbols) symTab$addSymbol(sym)
       }
     }

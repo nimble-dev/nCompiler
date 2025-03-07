@@ -224,6 +224,16 @@ newBracketExpr <- function(args = list()) {
 }
 
 removeExprClassLayer <- function(code, argID = 1) {
+  if (is.character(argID)) {
+    arg_name <- argID
+    argID <- which(names(code$args) == arg_name)
+    if(length(argID)!=1)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0(
+          "Could not find (unique) argument named ", arg_name, " to remove from syntax tree.")),
+        call. = FALSE)
+  }
   setArg(code$caller, code$callerArgID, if(length(code$args) >= argID) code$args[[argID]] else NULL)
 }
 

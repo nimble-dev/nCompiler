@@ -51,3 +51,63 @@ types = list(ans = "RcppList")
   expect_equal(ans$y, 4)
   expect_equal(ans$z, c(5,6,7))
 })
+
+##########
+## Beginning work on a generalized concept
+## of nCpp to replace or extent cppLiteral
+
+test_that("nCpp works with vector of text", {
+  nf <- nFunction(
+    fun = function() {
+      nCpp(c("int x = 0;",
+             "Rprintf(\"hw %i\\n \", x)"))
+    }
+  )
+  nfC <- nCompile(nf)
+  expect_identical(capture.output(nfC())[1], "hw 0")
+})
+
+test_that("nCpp works with evaluation in correct environment", {
+  make_nf <- function() {
+    x_value <- 10
+    nf <- nFunction(
+      fun = function() {
+        nCpp(c("int x = ", x_value, ";",
+               "Rprintf(\"hw %i\\n \", x)"))
+      }
+    )
+  }
+  nf <- make_nf()
+  nfC <- nCompile(nf)
+  expect_identical(capture.output(nfC())[1], "hw 0")
+})
+
+test_that("nCpp works within a line", {
+  make_nf <- function() {
+    nf <- nFunction(
+      fun = function(ivec = nCpp('Eigen::Tensor<int, 1>')) {
+        nCpp("return(ivec);")
+        returnType('integerVector')
+      }
+    )
+  }
+  nf <- make_nf()
+  nfC <- nCompile(nf)
+  expect_identical(nfC(1:3), 1:3)
+})
+
+test_that("types as objects works", {
+  make_nf <- function() {
+    my_type <- nMakeType(integerVector())
+    nf <- nFunction(
+      fun = function(ivec = T(my_type)) {
+        nCpp("x = ivec+1;", types = list(x = quote(T(my_type))))
+        return(x+1L);
+        returnType(T(my_type))
+      }
+    )
+  }
+  nf <- make_nf()
+  nfC <- nCompile(nf)
+  expect_identical(nfC(1:3), 3:5)
+})

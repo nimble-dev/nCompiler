@@ -107,7 +107,8 @@ NF_InternalsClass <- R6::R6Class(
         self$code <- returnTypeInfo$code ## with returnType() line stripped
       }
       self$returnSym <- argType2symbol(returnTypeDecl,
-                                       origName = "returnType")
+                                       origName = "returnType",
+                                       evalEnv = where)
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
       ## what this one's cpp function name will be:

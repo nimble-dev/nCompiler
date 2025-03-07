@@ -57,3 +57,10 @@ simpleTransformationsEnv$replace <-
            call. = FALSE)
     code$name <- repl
   }
+
+simpleTransformationsEnv$Literal <-
+  function(code, symTab, auxEnv, info) {
+    if(!is.null(code$aux$compileArgs$text)) {
+      code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$where)
+    }
+  }

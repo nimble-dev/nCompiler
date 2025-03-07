@@ -290,8 +290,13 @@ typeDeclarationList <- list(
   CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
     symbolCppVar$new(...)
   },
-  custom = function(symbol) {
-    symbol
+  nCpp = function(value, ...) {
+    symbolCppVar$new(baseType = value, ...)
+  },
+  T = function(symbol) {
+    symbol <- substitute(symbol)
+    symbol <- eval(symbol, envir = parent.frame()$evalEnv)
+    symbol$clone(deep=TRUE)
   }
   ## universal handler for creating symbolBasic objects
 )
@@ -299,6 +304,13 @@ typeDeclarationList <- list(
 #' @export
 argType2Cpp <- function(...) {
   argType2symbol(...)$genCppVar()$generate()
+}
+
+#' @export
+nMakeType <- function(type, ...) {
+  evalEnv <- parent.frame()
+  type <- substitute(type)
+  argType2symbol(argType = type, ..., evalEnv = evalEnv)
 }
 
 argType2symbol <- function(argType,
