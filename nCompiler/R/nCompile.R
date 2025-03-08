@@ -354,6 +354,7 @@ nCompile <- function(...,
   # (2) Create cppDefs
   cppDefs_info <- createCppDefsInfo(units, unitTypes, control, compileInfos)
   cppDefs <- cppDefs_info$cppDefs
+  if(isTRUE(control$return_cppDefs)) return(cppDefs)
   cpp_names <- cppDefs_info$cpp_names
 
   # writePackage inserts roxygen here

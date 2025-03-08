@@ -11,13 +11,13 @@ test_that("cppLiteral with list of scalars works", {
         'ans = Rcpp::List::create(
   Rcpp::Named("item1") = a,
   Rcpp::Named("item2") = b
-);',
-types = list(ans = "RcppList")
-)
+  );',
+ types = list(ans = "RcppList")
+ )
       return(ans)
       returnType("RcppList")
     }
-)
+ )
   nfC <- nCompile(nf)
   ans <- nfC(2, FALSE)
   expect_true(is.list(ans))
@@ -79,7 +79,52 @@ test_that("nCpp works with evaluation in correct environment", {
   }
   nf <- make_nf()
   nfC <- nCompile(nf)
-  expect_identical(capture.output(nfC())[1], "hw 0")
+  expect_identical(capture.output(nfC())[1], "hw 10")
+})
+
+## Closure of an R6 methods is replaced with the nClass's parent_env
+## This is how R6 works and so also nClass
+test_that("nCpp works with evaluation in correct environment in nClass", {
+  make_nf <- function() {
+    x_value <- 10 # will be ignored because there will be a new parent env
+    nf <- nFunction(
+      fun = function() {
+        nCpp(c("int x = ", x_value, ";",
+               "Rprintf(\"hw %i\\n \", x)"))
+      }
+    )
+  }
+  nf <- make_nf()
+  myenv <- new.env()
+  myenv$x_value <- 101
+  nc <- nClass(
+    Cpublic = list(nf = nf),
+    env = myenv
+  )
+  ncC <- nCompile(nc)
+  obj <- ncC$new()
+  obj$nf()
+  expect_identical(capture.output(obj$nf())[1], "hw 101")
+})
+
+test_that("nCpp works with evaluation in correct environment", {
+  make_nc <- function() {
+    x_value <- 10
+    nc <- nClass(
+      Cpublic = list(
+        nf = nFunction(
+          fun = function() {
+            nCpp(c("int x = ", x_value, ";",
+                   "Rprintf(\"hw %i\\n \", x)"))
+          }
+        )
+      ))
+    nc
+  }
+  nc <- make_nc()
+  ncC <- nCompile(nc)
+  obj <- ncC$new()
+  expect_identical(capture.output(obj$nf())[1], "hw 10")
 })
 
 test_that("nCpp works within a line", {
@@ -110,4 +155,33 @@ test_that("types as objects works", {
   nf <- make_nf()
   nfC <- nCompile(nf)
   expect_identical(nfC(1:3), 3:5)
+})
+
+test_that("types as objects work with an nClass", {
+  make_nf <- function() {
+    ## It looks like arg and return types use the closure because
+    # they are determined at definition
+    # but nCpp uses the nClass parent_env because it is processed later.
+    my_type <- nMakeType(integerVector()) # to be ignored because method closure is replaced with parent_env
+    nf <- nFunction(
+      fun = function(ivec = T(my_type)) {
+        nCpp("x = ivec.cast<double>()+1.2;", types = list(x = quote(T(my_type))))
+        return(ivec+1L);
+        returnType(T(my_type))
+      }
+    )
+  }
+  nf <- make_nf()
+  myenv <- new.env()
+  myenv$my_type <- nMakeType(numericVector())
+  nc <- nClass(
+    Cpublic = list(
+      v = quote(T(my_type)),
+      nf = nf),
+    env = myenv
+  )
+  ncC <- nCompile(nc)
+  obj <- ncC$new()
+  obj$nf(1:3)
+  expect_identical(obj$nf(1:3), 2:4)
 })

@@ -28,7 +28,8 @@ NC_InternalsClass <- R6::R6Class(
                           enableSaving = get_nOption("enableSaving"),
                           inherit = NULL,
                           compileInfo = list(),
-                          predefined = FALSE) {
+                          predefined = FALSE,
+                          env = parent.frame()) {
       if(!is.null(inherit)) {
         self$inheritNCinternals <- NCinternals(inherit)
         message("add check that base class has interface 'none'")
@@ -55,7 +56,7 @@ NC_InternalsClass <- R6::R6Class(
                  call. = FALSE)
           }
         }
-        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod])
+        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
         self$allMethodNames <- methodNames

@@ -107,7 +107,8 @@ nClass <- function(classname,
                                     inherit = inherit,
                                  #   control = control,
                                     compileInfo = compileInfo,
-                                    predefined = predefined)
+                                    predefined = predefined,
+                                    env = env)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance
   new_env <- new.env(parent = env)

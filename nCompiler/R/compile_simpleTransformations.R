@@ -61,6 +61,6 @@ simpleTransformationsEnv$replace <-
 simpleTransformationsEnv$Literal <-
   function(code, symTab, auxEnv, info) {
     if(!is.null(code$aux$compileArgs$text)) {
-      code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$where)
+      code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$closure)
     }
   }

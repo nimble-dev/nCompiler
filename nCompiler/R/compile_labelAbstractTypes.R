@@ -1198,7 +1198,7 @@ inLabelAbstractTypesEnv(
       types <- code$aux$compileArgs$types
       if(!is.null(types)) {
         if(!is.list(types)) types <- eval(types)
-        symbols <- argTypeList2symbolTable(types, evalEnv=auxEnv$where)$getSymbols()
+        symbols <- argTypeList2symbolTable(types, evalEnv=auxEnv$closure)$getSymbols()
         for (sym in symbols) symTab$addSymbol(sym)
       }
     }
