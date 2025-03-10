@@ -260,5 +260,23 @@ test_that("manual C++ pieces in nFunction work", {
       callFromR = FALSE
     )
   )
+})
 
+test_that("copyFiles field of compileInfo works", {
+  td <- tempdir()
+  workdir <- file.path(td, "nCompiler_copyFiles_test")
+  dir.create(workdir, showWarnings = FALSE)
+  fromFile <- file.path(workdir, "fromFile.txt")
+  random_string <- basename(tempfile())
+  writeLines(random_string, con=fromFile)
+  foo <- nFunction(
+    function(){},
+    compileInfo = list(copyFiles = fromFile)
+  )
+  undebug(nCompile)
+  outdir <- file.path(workdir, "generated_code")
+  Cfoo <- nCompile(foo,
+                   dir = outdir)
+  expect_true(file.exists(file.path(outdir, "fromFile.txt")))
+  expect_identical(readLines(file.path(outdir, "fromFile.txt"),n=1), random_string)
 })

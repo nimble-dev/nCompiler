@@ -40,6 +40,12 @@ cppDefs_2_RcppPacket <- function(cppDef,
   CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> unlist(use.names=FALSE)
   compileInfos <- allCppDefs |> lapply(\(x) x$getCompileInfo())
 
+  ## Fields like copyFiles can be extracted directly from the compileInfos
+  ## because they are never modified by the cppDef internally.
+  ## (Whereas fields like Hincludes etc. may be modified by cppDef.)
+  copyFiles <- compileInfos |> lapply(\(x) x$copyFiles) |> unlist(use.names=FALSE) |> unique()
+
+  ## These unique()s could be moved to the piping workflows above.
   Hincludes <- unique(Hincludes)
   CPPincludes <- unique(CPPincludes)
   Hpreamble <- unique(Hpreamble)
@@ -103,7 +109,8 @@ cppDefs_2_RcppPacket <- function(cppDef,
     cppContent = cppContent,
     hContent = hContent,
     filebase = filebase,
-    post_cpp_compiler = post_cpp_compiler
+    post_cpp_compiler = post_cpp_compiler,
+    copyFiles = copyFiles
   )
   # This sketches the idea that we could store packets in NCinternals and NFinternals.
   # In an earlier procesing flow of nCompile, we did this. Now it would be a bit trickier
@@ -259,7 +266,7 @@ cpp_nCompiler <- function(Rcpp_packet,
                                  cppfile = cppfile)
     } else {
       writeCpp_nCompiler(Rcpp_packet,
-                         dir)
+                         dir = dir)
     }
   }
   if(!compile) {
@@ -294,11 +301,13 @@ writeCpp_nCompiler_combine <- function(RcppPacket_list,
     ## write all cpp contents to one file
     RcppPacket$preamble <- combined_preamble
     writeCpp_nCompiler(RcppPacket,
+                       dir = dir,
                        con = con,
                        include_h = FALSE)
     ## write each h contents to its own file
     writeCpp_nCompiler(RcppPacket,
                        dir = dir,
+                       con = NULL,
                        header.dir = header.dir,
                        include_cpp = FALSE)
   }
@@ -320,7 +329,14 @@ writeCpp_nCompiler <- function(Rcpp_packet,
       warning("Both a header.dir and a con argument were provided.  header.dir will be ignored.")
   } else
     header.dir <- dir
-  
+
+  copyFiles <- Rcpp_packet$copyFiles
+  if(!is.null(copyFiles)) {
+    for(cf in copyFiles) {
+      file.copy(cf, file.path(dir, basename(cf)), overwrite=TRUE)
+    }
+  }
+
   makeStandardFiles <- is.null(con)
   if(is.null(Rcpp_packet$preamble))
     Rcpp_packet$preamble <- ""

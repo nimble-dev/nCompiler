@@ -40,10 +40,23 @@ cppDefinitionClass <- R6::R6Class(
       ans
     },
     getCPPincludes = function() {
-      return(self$CPPincludes)
+      ans <- self$CPPincludes
+      if(!is.null(self$compileInfo$CPPincludes))
+        ans <- c(ans, self$compileInfo$CPPincludes)
+      ans
     },
-    getHpreamble = function() {return(self$Hpreamble)},
-    getCPPpreamble = function() {return(self$CPPpreamble)},
+    getHpreamble = function() {
+      ans <- self$Hpreamble
+      if(!is.null(self$compileInfo$Hpreamble))
+        ans <- c(ans, self$compileInfo$Hpreamble)
+      ans
+    },
+    getCPPpreamble = function() {
+      ans <- self$CPPpreamble
+      if(!is.null(self$compileInfo$CPPpreamble))
+        ans <- c(ans, self$compileInfo$CPPpreamble)
+      ans
+    },
     getCPPusings = function() {return(self$CPPusings)},
     ## return all objects to be included.  This allows adjunct objects
     ## like SEXPinterfaceFuns to be included
