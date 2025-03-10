@@ -57,13 +57,13 @@ cppDefinitionClass <- R6::R6Class(
     get_post_cpp_compiler = function() NULL)
 )
 
-# cppMacroCallClass is the most rudimentary cppDef that can generate content.
+# cppManualClass is the most rudimentary cppDef that can generate content.
 # It extends cppDefinitionClass with character vectors of hContent and cppContent
 # and has a generate method.
 # It was designed for things like preprocessor directives or global macro calls,
 # but it can be used in any case where arbitrary text should be included in C++.
-cppMacroCallClass <- R6::R6Class(
-  'cppMacroCallClass',
+cppManualClass <- R6::R6Class(
+  'cppManualClass',
   portable = FALSE,
   inherit = cppDefinitionClass,
   public = list(
@@ -416,7 +416,7 @@ addGenericInterface_impl <- function(self) {
                                    methodsContent,
                                    sep=",\n"),
                              "\n)")
-  macroCallDef <- cppMacroCallClass$new(cppContent = macroCallContent)
+  macroCallDef <- cppManualClass$new(cppContent = macroCallContent)
   self$internalCppDefs[["macroCall"]] <- macroCallDef
   invisible(NULL)
 }

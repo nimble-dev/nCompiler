@@ -58,7 +58,7 @@ nCompile_nClass <- function(NC,
       system.file(
         file.path("include", "nCompiler", paste0(predefined_filename,".cpp")),
         package = "nCompiler"))
-    cppDef <- cppMacroCallClass$new(
+    cppDef <- cppManualClass$new(
       name =  regular_filename,
       Hpreamble = paste0("#define PREDEFINED_", regular_filename," ", predefined_filename),
       Hincludes = nCompilerIncludeFile(paste0(predefined_filename, ".h")),

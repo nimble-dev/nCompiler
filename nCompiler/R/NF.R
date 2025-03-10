@@ -96,6 +96,11 @@ nFunction <- function(fun,
   # abstract (FALSE)
   # const (FALSE)
   # depends (list()) : Values for Rcpp::depends, to use another package
+  # See cppDefs_core.R: generateFunctionHeader for more supported entries. These include:
+  #   externC, template, static, and manual over-rides for returnType, (prototype, deftype), name,
+  #   scopes, args,
+  #   qualifiers
+  # Also cpp_code_name (see NF_InternalsClass).
   compileInfo <- updateDefaults(
     list(C_fun = NULL,
          callFromR = TRUE,

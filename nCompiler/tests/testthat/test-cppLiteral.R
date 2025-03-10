@@ -176,6 +176,7 @@ test_that("types as objects work with an nClass", {
   myenv$my_type <- nMakeType(numericVector())
   nc <- nClass(
     Cpublic = list(
+      cust = quote(nCpp('double')),
       v = quote(T(my_type)),
       nf = nf),
     env = myenv
@@ -184,4 +185,80 @@ test_that("types as objects work with an nClass", {
   obj <- ncC$new()
   obj$nf(1:3)
   expect_identical(obj$nf(1:3), 2:4)
+})
+
+test_that("manual C++ pieces in nFunction work", {
+  foo <- nFunction(
+    name = "foo",
+    function(x = numericScalar()) { # manually to become vector
+      nCpp("return x[0];")
+      returnType('numericVector') # manually to become scalar
+    },
+    compileInfo = list(
+      prototype = "double foo(Eigen::Tensor<double, 1> y)",
+      deftype = "double foo(Eigen::Tensor<double, 1> x)"
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("^double foo\\(Eigen::Tensor<double, 1> y\\);$", decl))
+  expect_true(grepl("^double foo\\(Eigen::Tensor<double, 1> x\\)", def[2]))
+  #  cfoo <- nCompile(foo) # these should work but we're avoiding full compilation for speed
+  #  expect_identical(cfoo(1:3), 1)
+
+  foo <- nFunction(
+    name = "foo",
+    function(x = integerVector()) { # replace with numericVector
+      nCpp("return x[0];")
+      returnType('integerScalar') # replace with numericScalar
+    },
+    compileInfo = list(
+      name = "myfoo",
+      cpp_code_name = "myfoo2", # not used because name over-rides it
+      scopes = c("s1", "s2"),
+      qualifiers = c("const -> double"),
+      args = "(Eigen::Tensor<double, 1> x, double y)",
+      returnType = "double"
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("double s1::s2::myfoo \\(Eigen::Tensor<double, 1> x, double y\\) const -> double", decl))
+  expect_true(grepl("double s1::s2::myfoo \\(Eigen::Tensor<double, 1> x, double y\\) const -> double", def[2]))
+  ##
+  foo <- nFunction(
+    name = "foo",
+    function() { # replace with numericVector
+      nCpp("return x[0];")
+    },
+    compileInfo = list(
+      cpp_code_name = "myfoo2",
+      args = "(Eigen::Tensor<TYPE, 1> x)",
+      returnType = "double",
+      template = "template<typename TYPE>",
+      callFromR = FALSE
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("template<typename TYPE>", decl[1]))
+  expect_true(grepl("double myfoo2 \\(Eigen::Tensor<TYPE, 1> x\\)", decl[2]))
+  expect_true(grepl("template<typename TYPE>", def[1]))
+  expect_true(grepl("double myfoo2 \\(Eigen::Tensor<TYPE, 1> x\\)", def[2]))
+  ##
+  foo <- nFunction(
+    name = "foo",
+    function() { },
+    compileInfo = list(
+      cpp_code_name = "myfoo2",
+      args = "(Eigen::Tensor<TYPE, 1> x)",
+      returnType = "double",
+      template = "template<typename TYPE>",
+      callFromR = FALSE
+    )
+  )
+
 })
