@@ -52,6 +52,9 @@ NF_InternalsClass <- R6::R6Class(
         self$R_fun <- fun
         fun_to_use <- compileInfo$C_fun
       }
+      if(!is.null(compileInfo$initializers)) {
+        self$aux <- list(initializerList = compileInfo$initializers)
+      }
       self$arguments <- as.list(formals(fun_to_use))
       self$control <- control
       self$compileInfo <- compileInfo

@@ -103,6 +103,11 @@ math_test_params <- make_math_test_params(get_math_ops())
 ##      test_name = 'pmax', test_fun = test_math, suppress_err_msgs = FALSE
 ##    )
 
+## Tests for "any" and "all" generate four warnings each, like:
+## Warning in all(arg1) : coercing argument of type 'double' to logical
+## Warning in any(arg1) : coercing argument of type 'double' to logical
+## But these tests DO PASS.
+
 # Using 1:45 leaves out the pmin and pmax tests, which don't work
 run_test_suite(
   math_test_params[1:45], 'math', test_math, FULL_TESTING,

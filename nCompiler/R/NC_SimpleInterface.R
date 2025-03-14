@@ -4,6 +4,8 @@
 
 #' @export
 method <- function(obj, name) {
+  if(inherits(obj, "CnClass"))
+    obj <- obj$private$CppObj
   CnCenv <- nCompiler:::get_CnCenv(obj)
   ans <- CnCenv[[name]]
   environment(ans) <- new.env(parent = environment(ans))
@@ -29,6 +31,8 @@ method <- function(obj, name) {
 
 #' @export
 value <- function(obj, name) {
+  if(inherits(obj, "CnClass"))
+    obj <- obj$private$CppObj
   DLLenv <- nCompiler:::get_DLLenv(obj)
   extptr <- nCompiler:::getExtptr(obj)
   DLLenv$get_value(extptr, name)
@@ -40,6 +44,8 @@ value <- function(obj, name) {
 
 #' @export
 `value<-` <- function(obj, name, value) {
+  if(inherits(obj, "CnClass"))
+    obj <- obj$private$CppObj
   DLLenv <- nCompiler:::get_DLLenv(obj)
   extptr <- nCompiler:::getExtptr(obj)
   DLLenv$set_value(extptr, name, value)

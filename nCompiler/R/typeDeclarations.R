@@ -173,6 +173,9 @@ typeDeclarationList <- list(
   },
 
   ## Rcpp types
+  RcppEnvironment = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::Environment", ...)
+  },
   RcppList = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::List", ...)
   },

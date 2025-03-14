@@ -364,11 +364,13 @@ nCompile <- function(...,
   # called from writePackage or not
   from_writePackage <- control$.writePackage
   if(!is.null(from_writePackage) || package) {
+    createFromR <- compileInfos |> lapply(\(x) !isFALSE(x$createFromR)) |> unlist()
     control$prepared_content <- list(
       units = units,
       unitTypes = unitTypes,
       cpp_names = cpp_names,
       interfaces = interfaces,
+      createFromR = createFromR,
       cppDefs = cppDefs,
       exportNames = exportNames,
       returnNames = returnNames
@@ -414,8 +416,11 @@ nCompile <- function(...,
         withr::with_libpaths(lib, loadNamespace(temppkgname))
       })
       pkgEnv <- getNamespace(temppkgname)
-      ans_ <- lapply(returnNames, function(x)
-        get(x, envir = pkgEnv, inherits=FALSE))
+      ans_ <- lapply(returnNames, function(x) {
+        if(exists(x, envir = pkgEnv, inherits=FALSE)) #might not exist for interface="none"
+          get(x, envir = pkgEnv, inherits=FALSE)
+        else NULL
+      })
       names(ans_) <- returnNames
       ans_
     })
@@ -502,6 +507,7 @@ writePackage <- function(...,
   unitTypes <- content$unitTypes
   cpp_names <- content$cpp_names
   interfaces <- content$interfaces
+  createFromR <- content$createFromR
   cppDefs <- content$cppDefs
   exportNames <- content$exportNames
   returnNames <- content$returnNames
@@ -547,8 +553,8 @@ writePackage <- function(...,
   WP_writeRinterfaces(units, unitTypes, interfaces, returnNames,
                       Rdir, full_interfaces, methodFns, roxygen, roxygenFlag)
   WP_writeMemberData(memberData, datDir)
-  WP_write_dotOnLoad(exportNames, returnNames, unitTypes, interfaces, Rdir)
-  WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, returnNames,
+  WP_write_dotOnLoad(exportNames, returnNames, unitTypes, interfaces, createFromR, Rdir)
+  WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, createFromR, returnNames,
                                  initializePkg, pkgDir, pkgName)
   ## if (!initializePkg) {
   ##   compiledObjs <- list.files(srcDir, pattern = "o$")
@@ -645,6 +651,8 @@ nCompile_finish_nonpackage <- function(units,
   methodFns <- vector(mode="list", length = length(units) ) # ditto
   exportNames <- unlist(lapply(compileInfos, function(x) x$exportName))
   expect_nC_interface <- rep(FALSE, length(units))
+  expect_createFromR <- rep(FALSE, length(units))
+  interfaceTypes <- compileInfos |> lapply(\(x) if(is.null(x$interface)) NA else x$interface ) |> unlist() # can replace some code below using this
  # if(num_nClasses > 0) {
     for(i in seq_along(units)) {
       iRes <- which( exportNames[i] == names(compiledFuns))
@@ -653,13 +661,17 @@ nCompile_finish_nonpackage <- function(units,
       ## } else {
         if(unitTypes[i] == "nCgen") { #unit_is_nClass[i]) {
           expect_nC_interface[i] <- isTRUE(compileInfos[[i]]$interface %in% c("full", "generic"))
+          expect_createFromR[i] <- !isFALSE(compileInfos[[i]]$createFromR) &&
+            expect_nC_interface[i] ## Currently one can't create objects without interface support
           #nClass_name <- names(units)[i]
           if(expect_nC_interface[i]) {
-            if(length(iRes) != 1) {
+            createFromR_fun <- NULL
+            if((length(iRes) != 1) && expect_createFromR[i]) {
               warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nClass ", exportNames[i], "."))
             } else {
+              if(expect_createFromR[i]) createFromR_fun <- compiledFuns[[iRes]]
               R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
-                                                             compiledFuns[[iRes]],
+                                                             createFromR_fun,
                                                              env = resultEnv))
               if(inherits(R6interfaces[[i]], "try-error")) {
                 warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
@@ -696,6 +708,7 @@ nCompile_finish_nonpackage <- function(units,
                                               exportNames = exportNames[expect_nC_interface],
                                               R6interfaces = R6interfaces[expect_nC_interface],
                                               methodFns = methodFns[expect_nC_interface],
+                                              interfaceTypes = interfaceTypes[expect_nC_interface],
                                               returnList = TRUE)
   }
 
@@ -713,7 +726,7 @@ nCompile_finish_nonpackage <- function(units,
     if(unitTypes[i] == "nF") {
       iRes <- which(exportNames[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
     } else if(unitTypes[i] == "nCgen") {
-      if(expect_nC_interface[i])
+      if(expect_createFromR[i])
         iRes <- which( exportNames[i] == names(compiledFuns))
     }
     if(length(iRes) != 1) {
@@ -729,10 +742,13 @@ nCompile_finish_nonpackage <- function(units,
       interfaceType <- compileInfos[[i]]$interface
       if(is.null(interfaceType))
         interfaceType <- "full"
-      if(interfaceType == "full")
-        ans[[i]] <- R6interfaces[[returnNames[i] ]]
-      else if(interfaceType == "generic")
-        ans[[i]] <- compiledFuns[[iRes]]
+      if(interfaceType == "full") {
+        if(expect_createFromR[i])
+          ans[[i]] <- R6interfaces[[returnNames[i] ]]
+      } else if(interfaceType == "generic") {
+        if(expect_createFromR[i])
+          ans[[i]] <- compiledFuns[[iRes]]
+        }
     }
     # ans[[i]] will be left NULL for nF_noExport or nClass with interface "none".
     # This is good as the result will always align with
@@ -937,12 +953,13 @@ WP_writeMemberData <- function(memberData, datDir) {
   }
 }
 
-WP_write_dotOnLoad <- function(exportNames, returnNames, unitTypes, interfaces, Rdir) {
+WP_write_dotOnLoad <- function(exportNames, returnNames, unitTypes, interfaces, createFromR, Rdir) {
   expect_nC_interface <- unitTypes == "nCgen" & interfaces %in% c("full", "generic")
   if(!any(expect_nC_interface)) return()
   exportNames <- exportNames[expect_nC_interface]
   returnNames <- returnNames[expect_nC_interface]
   interfaces <- interfaces[expect_nC_interface]
+  createFromR <- createFromR[expect_nC_interface]
   #  nClass_names <- unlist(lapply(objs, function(x)
   #    if(isNCgenerator(x)) x$classname else NULL
   #    ))
@@ -950,7 +967,8 @@ WP_write_dotOnLoad <- function(exportNames, returnNames, unitTypes, interfaces, 
                              returnNames,
                              ifelse(interfaces == "generic",
                                     paste0(".",returnNames,"_R6interface"),
-                                    NULL))
+                                    NA))
+  R6interfaceNames <- R6interfaceNames[!is.na(R6interfaceNames)]
   methodFnsNames <- paste0(".", returnNames, "_methodFns")
   paste0cq <- function(names) {
     paste0("c(", paste0("\"",names,"\"", collapse = ", "), ")")
@@ -959,13 +977,14 @@ WP_write_dotOnLoad <- function(exportNames, returnNames, unitTypes, interfaces, 
                     paste0(" nCompiler::setup_nClass_environments_from_package(\n",
                            "  nClass_exportNames = ", paste0cq(exportNames), ",\n",
                            "  interfaceTypes = ", paste0cq(interfaces), ",\n",
+                           "  createFromR = c(", paste0(createFromR, collapse=","), "),\n",
                            "  R6interfaces = list(", paste0(R6interfaceNames, collapse=","), "),\n",
                            "  methodFns = list(", paste0(methodFnsNames, collapse=","), "))\n"),
                     "NULL}\n")
   writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
 }
 
-WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, returnNames,
+WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createFromR, returnNames,
                                            initializePkg, pkgDir, pkgName) {
   DESCfile <- file.path(pkgDir, "DESCRIPTION")
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
@@ -993,10 +1012,12 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, returnN
   } else {
     NAMESPACE <- readLines(NAMEfile)
   }
-  new_exports <- paste0("export(",returnNames,")")
-  needed <- !(new_exports %in% NAMESPACE)
-  NAMESPACE <- c(NAMESPACE, new_exports[needed])
-
+  need_export <- interfaces %in% c("generic", "full") & createFromR
+  if(sum(need_export)) {
+    new_exports <- paste0("export(",returnNames[need_export],")")
+    needed <- !(new_exports %in% NAMESPACE)
+    NAMESPACE <- c(NAMESPACE, new_exports[needed])
+  }
   ## for (i in seq_along(units)) {
   ##   # if (totalControl[[i]]$export && isNCgenerator(objs[[i]]))
   ##   #    if (totalControl[[i]]$export) {

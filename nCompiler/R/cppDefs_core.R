@@ -237,6 +237,33 @@ build_set_nClass_env_impl <- function(self) {
   invisible(NULL)
 }
 
+build_get_nClass_env_impl <- function(self) {
+  self$Hpreamble <- c(self$Hpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
+  setterLine <- paste0("return GET_CNCLASS_ENV(",self$name,");")
+  allCodeList <-
+    list(
+      substitute(cppLiteral(SETTERLINE),
+                 list(SETTERLINE = as.character(setterLine)))
+    )
+
+  allCode <- putCodeLinesInBrackets(allCodeList)
+  allCode <- nParse(allCode)
+  args <- symbolTableClass$new()
+  self$internalCppDefs[["get_nClass_env"]] <-
+    cppFunctionClass$new(name = paste0('get_CnClass_env_',self$name),
+                         args = args,
+                         code = cppCodeBlockClass$new(code = allCode,
+                                                      symbolTable = symbolTableClass$new(),
+                                                      skipBrackets = TRUE),
+                         returnType = cppRcppType(baseType = "Rcpp::Environment"),
+                         commentsAbove = paste0('// [[Rcpp::export(name = "get_CnClass_env_',
+                                                self$compileInfo$exportName ,'")]]')
+    )
+  invisible(NULL)
+}
+
 # make_loadedObjectEnv_cppDef <- function() {
 #   LOEfunDef <-
 #     cppMacroCallClass$new(
@@ -301,6 +328,8 @@ addGenericInterface_impl <- function(self) {
       NFint <- NFinternals(current_NCgen$public_methods[[mName]])
       NFcompInfo <- NFint$compileInfo
       if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
+      if(isTRUE(NFcompInfo$destructor)) next
+      if(isTRUE(NFcompInfo$constructor)) next
       argNames <- NFint$argSymTab$getSymbolNames() # we do not want cpp names here.
       refArgs <- NFint$refArgs
       blockRefArgs <- NFint$blockRefArgs
@@ -468,7 +497,7 @@ cppClassClass <- R6::R6Class(
     # variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
     # globalObjectsDefs = list(),
-    
+
     initialize = function(...) {
       ##useGenerator <<- TRUE
       force(self)
@@ -481,6 +510,8 @@ cppClassClass <- R6::R6Class(
                   internalCppDefs[["SEXPgenerator"]]$getHincludes(),
                 if(!is.null(internalCppDefs[["set_nClass_env"]]))
                   internalCppDefs[["set_nClass_env"]]$getHincludes(),
+                if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                  internalCppDefs[["get_nClass_env"]]$getHincludes(),
                 unlist(lapply(memberCppDefs,
                               function(x)
                                 x$getHincludes()),
@@ -488,11 +519,13 @@ cppClassClass <- R6::R6Class(
       Hinc
     },
     getCPPincludes = function() {
-      CPPinc <- c(CPPincludes,
+      CPPinc <- c(super$getCPPincludes(),
                   if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                     internalCppDefs[["SEXPgenerator"]]$getCPPincludes(),
                   if(!is.null(internalCppDefs[["set_nClass_env"]]))
                     internalCppDefs[["set_nClass_env"]]$getCPPincludes(),
+                  if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                    internalCppDefs[["get_nClass_env"]]$getCPPincludes(),
                   unlist(lapply(memberCppDefs,
                                 function(x)
                                   x$getCPPincludes()),
@@ -505,6 +538,8 @@ cppClassClass <- R6::R6Class(
                            internalCppDefs[["SEXPgenerator"]]$getCPPusings(),
                          if(!is.null(internalCppDefs[["set_nClass_env"]]))
                            internalCppDefs[["set_nClass_env"]]$getCPPusings(),
+                         if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                           internalCppDefs[["get_nClass_env"]]$getCPPusings(),
                          unlist(lapply(memberCppDefs,
                                        function(x)
                                          x$getCPPusings()))
@@ -566,6 +601,7 @@ cppClassClass <- R6::R6Class(
     },
     build_set_nClass_env = function() {
       build_set_nClass_env_impl(self)
+      build_get_nClass_env_impl(self)
     },
     addGenericInterface = function(interfaceCalls = TRUE, interface = TRUE) {
       if(interface) {
@@ -743,12 +779,9 @@ cppFunctionClass <- R6::R6Class(
                   if(declaration) return(paste0(header, ";"))
 
                   initializer_text <- character() # only used for constructors
-                  if(!is.null(compileInfo$initializers))
-                    initializer_text <- paste(compileInfo$initializers, collapse = ", ")
-                  else
-                    if(!is.null(self$initializerList)) {
-                      initializer_text <- generateInitializerList(self$initializerList)
-                    }
+                  if(!is.null(self$initializerList)) {
+                    initializer_text <- generateInitializerList(self$initializerList)
+                  }
 
                   commentsAbove_text <- character()
                   commentsAbove_text <- compileInfo$commentsAbove
@@ -915,8 +948,14 @@ generateFunctionHeader <- function(self,
   returnType_text <- compileInfo$returnType
   if(is.null(returnType_text)) returnType_text <- self$returnType$generate(printName=character())
 
+  ## if(isTRUE(compileInfo$destructor))
+  ##   name_text <- paste0("~", if(length(scopes)) scopes[length(scopes)] else self$name)
+  ## else if(isTRUE(compileInfo$constructor))
+  ##   name_text <- if(length(scopes)) scopes[length(scopes)] else self$name
+  ## else {
   name_text <- compileInfo$name
   if(is.null(name_text)) name_text <- self$name
+##  }
 
   scopes_text <- compileInfo$scopes
   if(is.null(scopes_text)) scopes_text <- scopes
