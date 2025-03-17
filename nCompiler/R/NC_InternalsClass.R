@@ -28,15 +28,14 @@ NC_InternalsClass <- R6::R6Class(
                           enableSaving = get_nOption("enableSaving"),
                           inherit = NULL,
                           compileInfo = list(),
-                          predefined = FALSE) {
+                          predefined = FALSE,
+                          env = parent.frame()) {
       if(!is.null(inherit)) {
         self$inheritNCinternals <- NCinternals(inherit)
         message("add check that base class has interface 'none'")
         if(is.null(compileInfo$inherit$base))
           compileInfo$inherit$base <- paste("public",
                                             inheritNCinternals$cpp_classname)
-        if(is.null(compileInfo$inherit$h_file))
-          compileInfo$inherit$h_file   <- paste0(make_cpp_filename(inheritNCinternals$cpp_classname),'.h')
       }
       self$compileInfo <- compileInfo
       self$classname <- classname
@@ -57,7 +56,7 @@ NC_InternalsClass <- R6::R6Class(
                  call. = FALSE)
           }
         }
-        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod])
+        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
         self$allMethodNames <- methodNames

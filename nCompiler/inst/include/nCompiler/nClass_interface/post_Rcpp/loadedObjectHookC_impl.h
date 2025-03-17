@@ -8,6 +8,7 @@ public:
   ~loadedObjectHookC() {};
   static Rcpp::Environment CnClass_env;
   static void set_CnClass_env(Rcpp::Environment env) {CnClass_env = env;}
+  static Rcpp::Environment get_CnClass_env() {return CnClass_env;}
   static SEXP setup_R_return_object_full(SEXP Xptr) {
     Rcpp::Environment nc("package:nCompiler");
     Rcpp::Function newLOE(nc["new.loadedObjectEnv_full"]);

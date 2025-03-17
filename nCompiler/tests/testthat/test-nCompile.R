@@ -715,3 +715,134 @@ test_that("nCompile naming and interface choices work in various ways",
   expect_true(is.function(comp$nfA))
   expect_true(inherits(comp$nc1$new(), "nClass"))
 })
+
+test_that("copyFiles field of compileInfo works", {
+  td <- tempdir()
+  workdir <- file.path(td, "nCompiler_copyFiles_test")
+  dir.create(workdir, showWarnings = FALSE)
+  fromFile <- file.path(workdir, "fromFile.txt")
+  random_string <- basename(tempfile())
+  writeLines(random_string, con=fromFile)
+  foo <- nFunction(
+    function(){},
+    compileInfo = list(copyFiles = fromFile)
+  )
+  outdir <- file.path(workdir, "generated_code")
+  Cfoo <- nCompile(foo,
+                   dir = outdir)
+  expect_true(file.exists(file.path(outdir, "fromFile.txt")))
+  expect_identical(readLines(file.path(outdir, "fromFile.txt"),n=1), random_string)
+})
+
+test_that("manual C++ pieces in nFunction work", {
+  foo <- nFunction(
+    name = "foo",
+    function(x = numericScalar()) { # manually to become vector
+      nCpp("return x[0];")
+      returnType('numericVector') # manually to become scalar
+    },
+    compileInfo = list(
+      prototype = "double foo(Eigen::Tensor<double, 1> y)",
+      deftype = "double foo(Eigen::Tensor<double, 1> x)"
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("^double foo\\(Eigen::Tensor<double, 1> y\\);$", decl))
+  expect_true(grepl("^double foo\\(Eigen::Tensor<double, 1> x\\)", def[2]))
+  #  cfoo <- nCompile(foo) # these should work but we're avoiding full compilation for speed
+  #  expect_identical(cfoo(1:3), 1)
+
+  foo <- nFunction(
+    name = "foo",
+    function(x = integerVector()) { # replace with numericVector
+      nCpp("return x[0];")
+      returnType('integerScalar') # replace with numericScalar
+    },
+    compileInfo = list(
+      name = "myfoo",
+      cpp_code_name = "myfoo2", # not used because name over-rides it
+      scopes = c("s1", "s2"),
+      qualifiers = c("const -> double"),
+      args = "(Eigen::Tensor<double, 1> x, double y)",
+      returnType = "double"
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("double s1::s2::myfoo \\(Eigen::Tensor<double, 1> x, double y\\) const -> double", decl))
+  expect_true(grepl("double s1::s2::myfoo \\(Eigen::Tensor<double, 1> x, double y\\) const -> double", def[2]))
+  ##
+  foo <- nFunction(
+    name = "foo",
+    function() { # replace with numericVector
+      nCpp("return x[0];")
+    },
+    compileInfo = list(
+      cpp_code_name = "myfoo2",
+      args = "(Eigen::Tensor<TYPE, 1> x)",
+      returnType = "double",
+      template = "template<typename TYPE>",
+      callFromR = FALSE
+    )
+  )
+  cppDefs <- nCompile(foo, control = list(return_cppDefs = TRUE))
+  decl <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=TRUE)))
+  def <- capture.output( writeCode(cppDefs[[1]]$generate(declaration=FALSE)))
+  expect_true(grepl("template<typename TYPE>", decl[1]))
+  expect_true(grepl("double myfoo2 \\(Eigen::Tensor<TYPE, 1> x\\)", decl[2]))
+  expect_true(grepl("template<typename TYPE>", def[1]))
+  expect_true(grepl("double myfoo2 \\(Eigen::Tensor<TYPE, 1> x\\)", def[2]))
+  ##
+  foo <- nFunction(
+    name = "foo",
+    function() { },
+    compileInfo = list(
+      cpp_code_name = "myfoo2",
+      args = "(Eigen::Tensor<TYPE, 1> x)",
+      returnType = "double",
+      template = "template<typename TYPE>",
+      callFromR = FALSE
+    )
+  )
+})
+
+library(nCompiler); library(testthat)
+test_that("nCompile for nClass with compileInfo$createFromR=FALSE works", {
+  nc_inner <- nClass(
+    classname = "nc_inner",
+    Cpublic = list(
+      x = 'numericScalar',
+      get_x = nFunction(function() {return(x)}, returnType = 'numericScalar')
+    ),
+    compileInfo = list(interface = "generic", createFromR = FALSE)
+  )
+  nc_outer <- nClass(
+    classname = "nc_outer",
+    Cpublic = list(
+      my_inner = 'nc_inner',
+      init = nFunction(function() {my_inner = nc_inner$new()}),
+      get_inner = nFunction(function() {return(my_inner)}, returnType = 'nc_inner')
+    )
+  )
+  nOptions(showCompilerOutput=TRUE)
+  #comp <- nCompile(nc_inner, nc_outer)
+  #debug(nCompiler:::nCompile)
+  #debug(nCompiler:::writePackage)
+  #debug(nCompiler:::setup_nClass_environments)
+  debug(nCompiler:::setup_nClass_environments_from_package)
+  comp <- nCompile(nc_inner, nc_outer, package = TRUE)
+  expect_error(comp$nc_inner_new())
+  obj <- comp$nc_outer$new()
+  inner_obj <- obj$my_inner
+  expect_true(is.null(inner_obj))
+  obj$init()
+  inner_obj <- obj$my_inner
+  inner_obj2 <- obj$my_inner
+  inner_obj <- obj$get_inner()
+})
+
+## 1. createFromR = FALSE does not have environments set up etc.
+## 2. createFromR = TRUE (status quo) does not access an inner obj via interface correctly

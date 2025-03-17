@@ -52,6 +52,9 @@ NF_InternalsClass <- R6::R6Class(
         self$R_fun <- fun
         fun_to_use <- compileInfo$C_fun
       }
+      if(!is.null(compileInfo$initializers)) {
+        self$aux <- list(initializerList = compileInfo$initializers)
+      }
       self$arguments <- as.list(formals(fun_to_use))
       self$control <- control
       self$compileInfo <- compileInfo
@@ -107,13 +110,17 @@ NF_InternalsClass <- R6::R6Class(
         self$code <- returnTypeInfo$code ## with returnType() line stripped
       }
       self$returnSym <- argType2symbol(returnTypeDecl,
-                                       origName = "returnType")
+                                       origName = "returnType",
+                                       evalEnv = where)
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
       ## what this one's cpp function name will be:
-      self$cpp_code_name <- paste(Rname2CppName(name),
-                                  nFunctionIDMaker(),
-                                  sep = "_")
+      if(!is.null(compileInfo$cpp_code_name))
+        self$cpp_code_name <- compileInfo$cpp_code_name
+      else
+        self$cpp_code_name <- paste(Rname2CppName(name),
+                                    nFunctionIDMaker(),
+                                    sep = "_")
       ## Unpack enableDerivs into AD
       self$isAD <- FALSE
       if(!(isFALSE(enableDerivs) || is.null(enableDerivs))) {

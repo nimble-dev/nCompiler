@@ -90,6 +90,29 @@ nClass <- function(classname,
   #   All inheritance provided by compileInfo$inherit should include any
   #   accessor specifier, typically "public", e.g. "public some_class".
   #   Similarly, template arguments (include CRTP) should be in the text explicitly.
+  #
+  # constructor(s) and destructor:
+  #
+  # constructors should be nFunctions with compileInfo = list(constructor=TRUE)
+  # constructors can have any name, which will become the class name in C++.
+  # If a constructor has the same name as the class, it will replace the default
+  # constructor (which will otherwise be provided). If said constructor has a
+  # non-empty argument list, then the C++ class will not have a (C++) default constructor.
+  #
+  # A field compileInfo$initializerList can be provided for constructors. It should be a
+  # list of entries that can be parsed by nParse, i.e. either character string code
+  # or code inside quote(). This code will not go through much compilation processing
+  # and will instead be directly output. For code as simple as "x(x_)" (initialization of
+  # a member variable from a constructor argument), it should work fine. Any more complicated
+  # expression can be done using nCpp("some->code()").
+  #
+  # A destructor should be an nFunction with compileInfo = list(destructor=TRUE).
+  # Its name in C++ will be replaced with "~<class name>".
+  #
+  # If an R6 initialize or finalize method is desired, those should be in Rpublic.
+  # Currently it is not supported to have an initialize or finalize that is a directly
+  # compiled method. It is also not supported to create the C++ object for an R6 interface
+  # object by anything but a default constructor.
   compileInfo <- updateDefaults(
     list(exportName = NULL, interface = "full",
          interfaceMembers = NULL,
@@ -99,6 +122,26 @@ nClass <- function(classname,
   )
   if(missing(classname))
     classname <- nClassLabelMaker()
+
+  if('finalize' %in% names(Cpublic)) {
+    if('finalize' %in% names(Rpublic))
+      stop("If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",
+           "If you want a C++ destructor that is not an R finalizer, name it 'destructor'.")
+    if(!isTRUE(NFinternals(Cpublic[['finalize']])$compileInfo$destructor))
+      stop("In nFunction 'finalize', use 'compileInfo = list(destructor=TRUE)'.")
+  } else if('destructor' %in% names(Cpublic)) {
+    if(!isTRUE(NFinternals(Cpublic[['destructor']])$compileInfo$destructor))
+      stop("In nFunction 'destructor', use 'compileInfo = list(destructor=TRUE)'.")
+  }
+  if('initialize' %in% names(Cpublic)) {
+    if('initialize' %in% names(Rpublic))
+      stop("If an initialize method is provided in Rpublic, it can't be provided in Cpublic.",
+           "If you want a C++ constructor that is not an R finalizer, give it a name and set",
+           "compileInfo$constructor=TRUE.")
+    if(!isTRUE(NFinternals(Cpublic[['initialize']])$compileInfo$constructor))
+      stop("In nFunction 'initialize', use 'compileInfo = list(constructor=TRUE)'.")
+  }
+
   internals = NC_InternalsClass$new(classname = classname,
                                     Cpublic = Cpublic,
                                     isOnlyC = length(Rpublic) == 0,
@@ -107,7 +150,8 @@ nClass <- function(classname,
                                     inherit = inherit,
                                  #   control = control,
                                     compileInfo = compileInfo,
-                                    predefined = predefined)
+                                    predefined = predefined,
+                                    env = env)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance
   new_env <- new.env(parent = env)

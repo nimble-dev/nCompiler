@@ -270,3 +270,49 @@ cat("\nSee test-types.R for notes on remaining issues to test.\n")
 ## even in a nimble type declaration.
 ## Need to add expect_error tests.
 ## Need to test case of providing a nType object directly.
+
+test_that("types as objects works", {
+  make_nf <- function() {
+    my_type <- nMakeType(integerVector())
+    nf <- nFunction(
+      fun = function(ivec = T(my_type)) {
+        nCpp("x = ivec+1;", types = list(x = quote(T(my_type))))
+        return(x+1L);
+        returnType(T(my_type))
+      }
+    )
+  }
+  nf <- make_nf()
+  nfC <- nCompile(nf)
+  expect_identical(nfC(1:3), 3:5)
+})
+
+test_that("types as objects work with an nClass", {
+  make_nf <- function() {
+    ## It looks like arg and return types use the closure because
+    # they are determined at definition
+    # but nCpp uses the nClass parent_env because it is processed later.
+    my_type <- nMakeType(integerVector()) # to be ignored because method closure is replaced with parent_env
+    nf <- nFunction(
+      fun = function(ivec = T(my_type)) {
+        nCpp("x = ivec.cast<double>()+1.2;", types = list(x = quote(T(my_type))))
+        return(ivec+1L);
+        returnType(T(my_type))
+      }
+    )
+  }
+  nf <- make_nf()
+  myenv <- new.env()
+  myenv$my_type <- nMakeType(numericVector())
+  nc <- nClass(
+    Cpublic = list(
+      cust = quote(nCpp('double')),
+      v = quote(T(my_type)),
+      nf = nf),
+    env = myenv
+  )
+  ncC <- nCompile(nc)
+  obj <- ncC$new()
+  obj$nf(1:3)
+  expect_identical(obj$nf(1:3), 2:4)
+})

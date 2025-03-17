@@ -74,4 +74,8 @@ return loadedObjectHookC<NCLASS_>::setup_R_return_object(return_nCompiler_object
 #define SET_CNCLASS_ENV(NCLASS_, ENV_) \
 loadedObjectHookC<NCLASS_>::set_CnClass_env(ENV_)
 
+#define GET_CNCLASS_ENV(NCLASS_) \
+loadedObjectHookC<NCLASS_>::get_CnClass_env()
+
+
 #endif

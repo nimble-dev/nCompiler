@@ -17,11 +17,13 @@
 ## a = matrix(type = "integer", nrow = 10, ncol, init = FALSE)
 
 #' @export
-nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE, ...) {
+nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE,
+                  interface = TRUE, ...) {
   symbolBasic$new(type = scalarType,
                   nDim = nDim,
                   isRef = isRef,
                   isBlockRef = isBlockRef,
+                  interface = interface,
                   ...)
 }
 
@@ -171,6 +173,9 @@ typeDeclarationList <- list(
   },
 
   ## Rcpp types
+  RcppEnvironment = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::Environment", ...)
+  },
   RcppList = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::List", ...)
   },
@@ -284,9 +289,32 @@ typeDeclarationList <- list(
                   "argument.  Dimensions from 0-6 are allowed."),
            call. = FALSE)  
     nType(scalarType, nDim)
+  },
+  CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
+    symbolCppVar$new(...)
+  },
+  nCpp = function(value, ...) {
+    symbolCppVar$new(baseType = value, ...)
+  },
+  T = function(symbol) {
+    symbol <- substitute(symbol)
+    symbol <- eval(symbol, envir = parent.frame()$evalEnv)
+    symbol$clone(deep=TRUE)
   }
   ## universal handler for creating symbolBasic objects
 )
+
+#' @export
+argType2Cpp <- function(...) {
+  argType2symbol(...)$genCppVar()$generate()
+}
+
+#' @export
+nMakeType <- function(type, ...) {
+  evalEnv <- parent.frame()
+  type <- substitute(type)
+  argType2symbol(argType = type, ..., evalEnv = evalEnv)
+}
 
 argType2symbol <- function(argType,
                            name = character(),

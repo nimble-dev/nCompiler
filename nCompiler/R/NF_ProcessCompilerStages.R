@@ -125,6 +125,12 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
   NFcompiler$auxEnv[['where']] <-
     if(is.null(sourceObj)) NFcompiler$NFinternals$where
     else sourceObj
+   NFcompiler$auxEnv[['closure']] <-
+    if(is.null(sourceObj)) NFcompiler$NFinternals$where
+    else sourceObj$parent_env
+  # "where" and "closure" are the same for nimbleFunctions outside of nClasses
+  # For an nClass, "where" is the nClass generator (which is an environment)
+  # and "closure" is where nClass was called (or the env argument to nClass).
   invisible(NULL)
 }
 

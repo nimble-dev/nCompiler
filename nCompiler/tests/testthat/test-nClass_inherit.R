@@ -120,7 +120,7 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
           return(wA); returnType('numericScalar')
         })
     ),
-    compileInfo = list(interface = "none")
+    compileInfo = list(interface = "none", createFromR = FALSE)
   )
 
   ncB <- nClass(
@@ -146,9 +146,9 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
   # nOptions(pause_after_writing_files = TRUE)
   for(i in 1:2) { # non-packaged then pacakged
     if(i == 1) {
-      comp <- nCompile(ncA, ncB, package = FALSE) # Order still matters
+      comp <- nCompile(ncB, ncA, package = FALSE) # Order no longer matters (good) but could if they have different #define's or  #include's???
     } else if (i == 2) {
-      comp <- nCompile(ncB, ncA, package = TRUE) # Order still matters
+      comp <- nCompile(ncA, ncB, package = TRUE) # Order no longer matters (good)
     }
     objB <- ncB$new()
     CobjB <- comp$ncB$new()
@@ -231,51 +231,39 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
 
 ##############
 
-debug(nCompile)
+test_that("inheriting-only classes in 3-level hierarchy works", {
+  ncBase <- nClass(
+    classname = "ncBase",
+    Cpublic = list(
+      x = 'numericScalar',
+      add_x = nFunction(function(v = 'numericScalar') {
+        return(v + x); returnType('numericScalar');
+      },
+      name = "add_x"),
+      add_2x_virt = nFunction(function(v = 'numericScalar') {
+        return(v + 2*x); returnType('numericScalar');
+      })
+    ),
+    compileInfo = list(interface = "none",createFromR=FALSE)
+  )
 
-ncBase <- nClass(
-  classname = "ncBase",
-  Cpublic = list(
-    x = 'numericScalar',
-    add_x = nFunction(function(v = 'numericScalar') {
-      return(v + x); returnType('numericScalar');
-    },
-    name = "add_x"),
-    add_2x_virt = nFunction(function(v = 'numericScalar') {
-      return(v + 2*x); returnType('numericScalar');
-    })
-  ),
-  compileInfo = list(interface = "none")
-)
+  ncMid <- nClass(
+    inherit = ncBase,
+    classname = "ncMid",
+    compileInfo = list(interface = "none",createFromR=FALSE),
+    Cpublic = list(x2 = 'numericScalar')
+  )
 
-message("inheriting-only nClass doesn't work")
+  ncDer <- nClass(
+    inherit = ncMid,
+    Cpublic = list(x3 = 'numericScalar')
+  )
 
-ncMid <- nClass(
-  inherit = ncBase,
-  classname = "ncMid",
-  compileInfo = list(interface = "none"),
-  Cpublic = list(x2 = 'numericScalar')
-)
+  comp <- nCompile(ncBase, ncMid, ncDer) # check if order still matters
 
-ncDer <- nClass(
-  inherit = ncMid,
-  Cpublic = list(x3 = 'numericScalar')
-)
-
-comp <- nCompile(ncBase, ncMid, ncDer) # order still matters. base class .h files are not managed for #include
-
-# comp <- nCompile(ncMid, ncBase, ncDer) #breaks
-
-
-# It looks like the C++ interface code was set up correctly
-# but the interface tools on the R side are not there.
-# Also we really need to be able to skip the appended uniquification
-# strings if we are going to write explicit C++ via cppLiteral.
-# Maybe allow a compileInfo field with cppnames.
-# Maybe make nClass methods automatically be given their actual method names.
-
-Cobj <- comp$ncDer$new()
-Cobj$x <- 10
-Cobj$add_x(15)
-method(Cobj$private$CppObj, "add_x")(15)
-Cobj$add_2x_virt(15) # nope
+  Cobj <- comp$ncDer$new()
+  Cobj$x <- 10
+  expect_equal(Cobj$add_x(15), 25)
+  expect_equal(method(Cobj$private$CppObj, "add_x")(15), 25)
+  expect_equal(Cobj$add_2x_virt(15), 35)
+})

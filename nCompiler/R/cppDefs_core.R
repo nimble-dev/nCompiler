@@ -32,10 +32,31 @@ cppDefinitionClass <- R6::R6Class(
         self[[v]] <- dotsList[[v]]
       self
     },
-    getHincludes = function() {return(self$Hincludes)},
-    getCPPincludes = function() {return(self$CPPincludes)},
-    getHpreamble = function() {return(self$Hpreamble)},
-    getCPPpreamble = function() {return(self$CPPpreamble)},
+    getCompileInfo = function() self$compileInfo,
+    getHincludes = function() {
+      ans <- self$Hincludes
+      if(!is.null(self$compileInfo$Hincludes))
+        ans <- c(ans, self$compileInfo$Hincludes)
+      ans
+    },
+    getCPPincludes = function() {
+      ans <- self$CPPincludes
+      if(!is.null(self$compileInfo$CPPincludes))
+        ans <- c(ans, self$compileInfo$CPPincludes)
+      ans
+    },
+    getHpreamble = function() {
+      ans <- self$Hpreamble
+      if(!is.null(self$compileInfo$Hpreamble))
+        ans <- c(ans, self$compileInfo$Hpreamble)
+      ans
+    },
+    getCPPpreamble = function() {
+      ans <- self$CPPpreamble
+      if(!is.null(self$compileInfo$CPPpreamble))
+        ans <- c(ans, self$compileInfo$CPPpreamble)
+      ans
+    },
     getCPPusings = function() {return(self$CPPusings)},
     ## return all objects to be included.  This allows adjunct objects
     ## like SEXPinterfaceFuns to be included
@@ -49,13 +70,13 @@ cppDefinitionClass <- R6::R6Class(
     get_post_cpp_compiler = function() NULL)
 )
 
-# cppMacroCallClass is the most rudimentary cppDef that can generate content.
+# cppManualClass is the most rudimentary cppDef that can generate content.
 # It extends cppDefinitionClass with character vectors of hContent and cppContent
 # and has a generate method.
 # It was designed for things like preprocessor directives or global macro calls,
 # but it can be used in any case where arbitrary text should be included in C++.
-cppMacroCallClass <- R6::R6Class(
-  'cppMacroCallClass',
+cppManualClass <- R6::R6Class(
+  'cppManualClass',
   portable = FALSE,
   inherit = cppDefinitionClass,
   public = list(
@@ -216,6 +237,33 @@ build_set_nClass_env_impl <- function(self) {
   invisible(NULL)
 }
 
+build_get_nClass_env_impl <- function(self) {
+  self$Hpreamble <- c(self$Hpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
+  setterLine <- paste0("return GET_CNCLASS_ENV(",self$name,");")
+  allCodeList <-
+    list(
+      substitute(cppLiteral(SETTERLINE),
+                 list(SETTERLINE = as.character(setterLine)))
+    )
+
+  allCode <- putCodeLinesInBrackets(allCodeList)
+  allCode <- nParse(allCode)
+  args <- symbolTableClass$new()
+  self$internalCppDefs[["get_nClass_env"]] <-
+    cppFunctionClass$new(name = paste0('get_CnClass_env_',self$name),
+                         args = args,
+                         code = cppCodeBlockClass$new(code = allCode,
+                                                      symbolTable = symbolTableClass$new(),
+                                                      skipBrackets = TRUE),
+                         returnType = cppRcppType(baseType = "Rcpp::Environment"),
+                         commentsAbove = paste0('// [[Rcpp::export(name = "get_CnClass_env_',
+                                                self$compileInfo$exportName ,'")]]')
+    )
+  invisible(NULL)
+}
+
 # make_loadedObjectEnv_cppDef <- function() {
 #   LOEfunDef <-
 #     cppMacroCallClass$new(
@@ -280,6 +328,8 @@ addGenericInterface_impl <- function(self) {
       NFint <- NFinternals(current_NCgen$public_methods[[mName]])
       NFcompInfo <- NFint$compileInfo
       if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
+      if(isTRUE(NFcompInfo$destructor)) next
+      if(isTRUE(NFcompInfo$constructor)) next
       argNames <- NFint$argSymTab$getSymbolNames() # we do not want cpp names here.
       refArgs <- NFint$refArgs
       blockRefArgs <- NFint$blockRefArgs
@@ -304,9 +354,13 @@ addGenericInterface_impl <- function(self) {
     # I am belaboring what could be done with unique or setdiff to be more
     # sure that order is preserved aligning fieldNames and cpp_fieldNames
     new_fieldNames <- NCint$symbolTable$getSymbolNames()
+    do_interface <- NCint$symbolTable$getSymbols() |>
+      lapply(\(x) isTRUE(x$interface)) |> unlist()
+    new_fieldNames <- new_fieldNames[do_interface]
     new_fieldNames <- new_fieldNames[!(new_fieldNames %in% fieldNames)]
     fieldNames <- c(fieldNames, new_fieldNames)
     new_cpp_fieldNames <- NCint$cppSymbolNames
+    new_cpp_fieldNames <- new_cpp_fieldNames[do_interface]
     new_cpp_fieldNames <- new_cpp_fieldNames[!(new_cpp_fieldNames %in% cpp_fieldNames)]
     cpp_fieldNames <- c(cpp_fieldNames, new_cpp_fieldNames)
     fieldClassNames <- c(fieldClassNames,
@@ -404,7 +458,7 @@ addGenericInterface_impl <- function(self) {
                                    methodsContent,
                                    sep=",\n"),
                              "\n)")
-  macroCallDef <- cppMacroCallClass$new(cppContent = macroCallContent)
+  macroCallDef <- cppManualClass$new(cppContent = macroCallContent)
   self$internalCppDefs[["macroCall"]] <- macroCallDef
   invisible(NULL)
 }
@@ -443,7 +497,7 @@ cppClassClass <- R6::R6Class(
     # variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
     # globalObjectsDefs = list(),
-    
+
     initialize = function(...) {
       ##useGenerator <<- TRUE
       force(self)
@@ -451,11 +505,13 @@ cppClassClass <- R6::R6Class(
       super$initialize(...)
     },
     getHincludes = function() {
-      Hinc <- c(Hincludes,
+      Hinc <- c(super$getHincludes(),
                 if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                   internalCppDefs[["SEXPgenerator"]]$getHincludes(),
                 if(!is.null(internalCppDefs[["set_nClass_env"]]))
                   internalCppDefs[["set_nClass_env"]]$getHincludes(),
+                if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                  internalCppDefs[["get_nClass_env"]]$getHincludes(),
                 unlist(lapply(memberCppDefs,
                               function(x)
                                 x$getHincludes()),
@@ -463,11 +519,13 @@ cppClassClass <- R6::R6Class(
       Hinc
     },
     getCPPincludes = function() {
-      CPPinc <- c(CPPincludes,
+      CPPinc <- c(super$getCPPincludes(),
                   if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                     internalCppDefs[["SEXPgenerator"]]$getCPPincludes(),
                   if(!is.null(internalCppDefs[["set_nClass_env"]]))
                     internalCppDefs[["set_nClass_env"]]$getCPPincludes(),
+                  if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                    internalCppDefs[["get_nClass_env"]]$getCPPincludes(),
                   unlist(lapply(memberCppDefs,
                                 function(x)
                                   x$getCPPincludes()),
@@ -480,6 +538,8 @@ cppClassClass <- R6::R6Class(
                            internalCppDefs[["SEXPgenerator"]]$getCPPusings(),
                          if(!is.null(internalCppDefs[["set_nClass_env"]]))
                            internalCppDefs[["set_nClass_env"]]$getCPPusings(),
+                         if(!is.null(internalCppDefs[["get_nClass_env"]]))
+                           internalCppDefs[["get_nClass_env"]]$getCPPusings(),
                          unlist(lapply(memberCppDefs,
                                        function(x)
                                          x$getCPPusings()))
@@ -541,6 +601,7 @@ cppClassClass <- R6::R6Class(
     },
     build_set_nClass_env = function() {
       build_set_nClass_env_impl(self)
+      build_get_nClass_env_impl(self)
     },
     addGenericInterface = function(interfaceCalls = TRUE, interface = TRUE) {
       if(interface) {
@@ -697,83 +758,141 @@ cppFunctionClass <- R6::R6Class(
                 generate = function(declaration = FALSE,
                                     scopes = character(),
                                     ...) {
+
+                  if((!declaration) && is.null(self$code$code) && is.null(compileInfo$body))
+                    return(character(0))
+                  ## There is no code. This can occur for
+                  ## a nFunctionVirtual that is an
+                  ## abstract base class.
+
                   argsListToUse <- if(inherits(self$args, 'symbolTableClass'))
                                      self$args$getSymbols()
                   else {
                     list()
                   }
-                  if(declaration) {
-                    outputCode <- paste0(
-                      if(self$virtual)
-                        'virtual '
-                      else
-                        character(0),
-                      
-                      generateFunctionHeader(self$returnType,
-                                             self$name,
-                                             argsListToUse,
-                                             scopes,
-                                             self$template,
-                                             self$static, ...),
-                      
-                      if(self$const)
-                        ' const '
-                      else
-                        character(0),
 
-                      if(self$abstract)
-                        '= 0'
-                      else
-                        character(0),
+                  header <- generateFunctionHeader(self,
+                                                   declaration,
+                                                   scopes,
+                                                   argsListToUse)
 
-                      ';'
-                    ) ## end paste
-                    if(isTRUE(self$externC))
-                      outputCode <- paste0('extern "C" ', outputCode)
-                    return(outputCode) 
-                  } else {
-                    if(is.null(self$code$code))
-                      ## There is no code. This can occur for
-                      ## a nFunctionVirtual that is an
-                      ## abstract base class.
-                      return(character(0))
+                  if(declaration) return(paste0(header, ";"))
+
+                  initializer_text <- character() # only used for constructors
+                  if(!is.null(self$initializerList)) {
+                    initializer_text <- generateInitializerList(self$initializerList)
                   }
-                  c(self$commentsAbove,
+
+                  commentsAbove_text <- character()
+                  commentsAbove_text <- compileInfo$commentsAbove
+                  if(is.null(commentsAbove_text)) commentsAbove_text <- self$commentsAbove
+
+                  if(!is.null(compileInfo$body))
+                    code_text <- compileInfo$body
+                  else
+                    code_text <- self$code$generate(...)
+
+                  res <- c(
+                    commentsAbove_text,
                     paste0(
-                      generateFunctionHeader(self$returnType,
-                                             self$name,
-                                             argsListToUse,
-                                             scopes,
-                                             self$template,
-                                             static = FALSE,
-                                             ...), ' ',
-                      if(self$const)
-                        ' const '
-                      else
-                        character(),
-                      ' ',
-                      
-                      if(!is.null(self$initializerList))
-                        generateInitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
-                      else
-                        character(0),
+                      header,
+                      initializer_text,
                       '{'
-                    ), ## end paste,
+                    ),
                     'RESET_EIGEN_ERRORS'[
                       isTRUE(nOptions('compilerOptions')$throwEigenErrors)
                     ],
                     'BEGIN_NC_ERRORTRAP'[
                       isTRUE(nOptions('compilerOptions')$cppStacktrace)
                     ],
-                    self$code$generate(...),
+                    code_text,
                     'END_NC_ERRORTRAP'[
                       isTRUE(nOptions('compilerOptions')$cppStacktrace)
                     ],
                     list('}')
-                    )## end c()
+                  )
+                  res
                 }
                 )
-)
+  )
+                ##   ## old
+                ##   argsListToUse <- if(inherits(self$args, 'symbolTableClass'))
+                ##                      self$args$getSymbols()
+                ##   else {
+                ##     list()
+                ##   }
+                ##   if(declaration) {
+                ##     outputCode <- paste0(
+                ##       if(self$virtual)
+                ##         'virtual '
+                ##       else
+                ##         character(0),
+
+                ##       generateFunctionHeader(self$returnType,
+                ##                              self$name,
+                ##                              argsListToUse,
+                ##                              scopes,
+                ##                              self$template,
+                ##                              self$static, ...),
+
+                ##       if(self$const)
+                ##         ' const '
+                ##       else
+                ##         character(0),
+
+                ##       if(self$abstract)
+                ##         '= 0'
+                ##       else
+                ##         character(0),
+
+                ##       ';'
+                ##     ) ## end paste
+                ##     if(isTRUE(self$externC))
+                ##       outputCode <- paste0('extern "C" ', outputCode)
+                ##     return(outputCode)
+                ##   } else {
+                ##     if(is.null(self$code$code))
+                ##       ## There is no code. This can occur for
+                ##       ## a nFunctionVirtual that is an
+                ##       ## abstract base class.
+                ##       return(character(0))
+                ##   }
+                ##   c(self$commentsAbove,
+                ##     paste0(
+                ##       generateFunctionHeader(self$returnType,
+                ##                              self$name,
+                ##                              argsListToUse,
+                ##                              scopes,
+                ##                              self$template,
+                ##                              static = FALSE,
+                ##                              ...), ' ',
+                ##       if(self$const)
+                ##         ' const '
+                ##       else
+                ##         character(),
+                ##       ' ',
+
+                ##       if(!is.null(self$initializerList))
+                ##         generateInitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
+                ##       else
+                ##         character(0),
+                ##       '{'
+                ##     ), ## end paste,
+                ##     'RESET_EIGEN_ERRORS'[
+                ##       isTRUE(nOptions('compilerOptions')$throwEigenErrors)
+                ##     ],
+                ##     'BEGIN_NC_ERRORTRAP'[
+                ##       isTRUE(nOptions('compilerOptions')$cppStacktrace)
+                ##     ],
+                ##     self$code$generate(...),
+                ##     'END_NC_ERRORTRAP'[
+                ##       isTRUE(nOptions('compilerOptions')$cppStacktrace)
+                ##     ],
+                ##     list('}')
+                ##     )## end c()
+                ## }
+                ## )
+#)
 
 generateInitializerList <- function(initializerList) {
   ## initializerList should be a list of exprClass objects
@@ -786,39 +905,116 @@ generateInitializerList <- function(initializerList) {
   result
 }
 
-generateFunctionHeader <- function(returnType,
-                                   name,
-                                   args,
-                                   scopes = character(),
-                                   template = character(),
-                                   static = FALSE) {
-  list(paste(
-    paste0(if(length(template) == 0)
-      character()
-      else
-        paste(template$generate(),'\n'),
-      
-      paste0(if(static)
-        'static '
-        else
-          character(),
+generateFunctionHeader <- function(self,
+                                   declaration,
+                                   scopes,
+                                   args
+                                   ) {
+  #returnType,
+  #                                 name,
+#                                   args,
+ #                                  scopes = character(),
+  #                                 template = character(),
+  #                                 static = FALSE) {
 
-        returnType$generate(printName = character()),
-        collapse = ''
-        )
-      ),
-    paste(c(scopes, name), collapse = '::'),
-    '(',
-    paste(unlist(
-      lapply(args,
-             function(x)
-               x$generate())
-    ),
-    collapse = ', '),
-    ')'
+  compileInfo <- self$compileInfo
+
+  full_header <- if(declaration) compileInfo$prototype else compileInfo$deftype
+  if(!is.null(full_header)) return(full_header)
+
+  virtual_text <- character()
+  abstract_text <- character()
+  externC_text <- character()
+  if(declaration) {
+    virtual_text <- compileInfo$virtual
+    if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
+
+    isAbstract <- compileInfo$abstract
+    if(is.null(isAbstract)) isAbstract <- self$abstract
+    if(isTRUE(isAbstract)) abstract_text <- "= 0"
+
+    is_externC <- compileInfo$externC
+    if(is.null(is_externC)) is_externC <- self$externC
+    if(isTRUE(is_externC)) externC_text <- 'extern "C" '
+  }
+
+  template_text <- compileInfo$template
+  if(is.null(template_text))
+    template_text <- if(length(self$template)==0) character() else self$template$generate()
+  if(length(template_text) > 0) template_text <- paste0(template_text, "\n")
+
+  static_text <- if(self$static && declaration) 'static ' else character()
+
+  returnType_text <- compileInfo$returnType
+  if(is.null(returnType_text)) returnType_text <- self$returnType$generate(printName=character())
+
+  ## if(isTRUE(compileInfo$destructor))
+  ##   name_text <- paste0("~", if(length(scopes)) scopes[length(scopes)] else self$name)
+  ## else if(isTRUE(compileInfo$constructor))
+  ##   name_text <- if(length(scopes)) scopes[length(scopes)] else self$name
+  ## else {
+  name_text <- compileInfo$name
+  if(is.null(name_text)) name_text <- self$name
+##  }
+
+  scopes_text <- compileInfo$scopes
+  if(is.null(scopes_text)) scopes_text <- scopes
+
+  scopes_name_text <- paste(c(scopes_text, name_text), collapse = '::')
+
+  args_text <- compileInfo$args
+  if(is.null(args_text)) {
+    args_text <- paste('(',
+                       args |> lapply(\(x) x$generate()) |> unlist() |> paste(collapse=", "),
+                       ')')
+  }
+
+  qualifier_text <- compileInfo$qualifiers
+  if(is.null(qualifier_text)) {
+    qualifier_text <- if(self$const) 'const ' else character()
+    if(self$abstract) qualifier_text <- c(qualifier_text, "= 0")
+  }
+
+  header <- list(
+    paste(
+      externC_text,
+      template_text,
+      static_text,
+      returnType_text,
+      scopes_name_text,
+      args_text,
+      qualifier_text
+    )
   )
-  )
+  header
 }
+
+##   ## old
+##   list(paste(
+##     paste0(if(length(template) == 0)
+##       character()
+##       else
+##         paste(template$generate(),'\n'),
+##       paste0(if(static)
+##         'static '
+##         else
+##           character(),
+##         returnType$generate(printName = character()),
+##         collapse = ''
+##         )
+##       ),
+##     paste(c(scopes, name), collapse = '::'),
+##     '(',
+##     paste(unlist(
+##       lapply(args,
+##              function(x)
+##                x$generate())
+##     ),
+##     collapse = ', '),
+##     ')'
+##   )
+##   )
+## }
 
 generateClassHeader <- function(ns, inheritance) {
   inheritancePart <-

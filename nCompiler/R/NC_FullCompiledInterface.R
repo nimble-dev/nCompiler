@@ -282,32 +282,32 @@ buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
       return(ans)
     }
     
-    if(inherits(sym, "symbolTBD")) { # This is a putative nClass type
-      internal_name <- paste0(name, "_internal")
-      body(ans) <- substitute(
-      {
-        if(missing(value))
-          self$INTERNAL_NAME
-        else {
-          if(!isCNC(value)) {
-            if(nCompiler:::is.loadedObjectEnv(value)) {
-              value <- nCompiler:::to_full_interface(value)
-            } else if(isNC(value))
-              stop("Assigning an uncompiled nClass object to a Cpublic field, where a compiled object is needed.")
-            else
-              stop("Assigning an invalid object to a Cpublic nClass field")          
-          }
-          self$INTERNAL_NAME <- value
-          private$DLLenv$set_value(nCompiler:::getExtptr(private$CppObj), NAME, value$private$CppObj)
-        }
-      },
-      list(NAME = name, INTERNAL_NAME = as.name(internal_name))
-      )
-      activeBindings[[name]] <- ans
-      newFields[internal_name] <- list(NULL)
-      next
-    }
-    
+    ## if(inherits(sym, "symbolTBD")) { # This is a putative nClass type
+    ##   internal_name <- paste0(name, "_internal")
+    ##   body(ans) <- substitute(
+    ##   {
+    ##     if(missing(value))
+    ##       private$DLLenv$get_value(nCompiler:::getExtptr(private$CppObj), NAME)
+    ##     else {
+    ##       if(!isCNC(value)) {
+    ##         if(nCompiler:::is.loadedObjectEnv(value)) {
+    ##           value <- nCompiler:::to_full_interface(value)
+    ##         } else if(isNC(value))
+    ##           stop("Assigning an uncompiled nClass object to a Cpublic field, where a compiled object is needed.")
+    ##         else
+    ##           stop("Assigning an invalid object to a Cpublic nClass field")
+    ##       }
+    ##       self$INTERNAL_NAME <- value
+    ##       private$DLLenv$set_value(nCompiler:::getExtptr(private$CppObj), NAME, value$private$CppObj)
+    ##     }
+    ##   },
+    ##   list(NAME = name, INTERNAL_NAME = as.name(internal_name))
+    ##   )
+    ##   activeBindings[[name]] <- ans
+    ##   newFields[internal_name] <- list(NULL)
+    ##   next
+    ## }
+
     body(ans) <- substitute(
     {
       if(missing(value))

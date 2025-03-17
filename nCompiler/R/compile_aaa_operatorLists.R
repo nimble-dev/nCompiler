@@ -144,6 +144,17 @@ updateOperatorDef(
 )
 
 assignOperatorDef(
+  'type_is',
+  list(
+    matchDef = function(type, value) {},
+    compileArgs = c("type"),
+    help = 'type_is("integerVector", foo(x)) declares that foo(x) return an integer vector (or any valid type declaration including e.g. quote(integerVector())).',
+    labelAbstractTypes = list(
+      handler = 'type_is')
+  )
+)
+
+assignOperatorDef(
   c('if', 'while'),
   list(
     labelAbstractTypes = list(
@@ -495,11 +506,12 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'cppLiteral',
+  c('nCpp','cppLiteral'),
   list(
     matchDef = function(text, types) {},
     compileArgs = c("text","types"),
     help = 'cppLiteral("x = y;") inserts x = y; directly into the C++ output.',
+    simpleTransformations = list(handler = "Literal"),
     labelAbstractTypes = list(handler = 'Literal'),
     cppOutput = list(handler = 'Literal')
   )

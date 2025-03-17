@@ -7,7 +7,7 @@ nimCppKeywordsThatFillSemicolon <- c(
   'for',
   ifOrWhile,
   'nimSwitch',
-  'cppLiteral',
+ # 'cppLiteral',
   'cppComment')
 
 genCppEnv <- new.env()
@@ -470,7 +470,7 @@ inGenCppEnv(
 
 inGenCppEnv(
   Literal <- function(code, symTab) {
-    code$aux$compileArgs$text
+    paste0(code$aux$compileArgs$text, collapse = "\n")
 #    code$args[[1]]$name
   }
 )

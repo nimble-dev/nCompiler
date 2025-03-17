@@ -1,7 +1,7 @@
 # This is called from nCompile or nCompile_nClass
 
 global_serialization_cppDef <-
-  cppMacroCallClass$new(
+  cppManualClass$new(
     Hpreamble = c(#nCompiler_plugin()$includes,
       "#define NCOMPILER_USES_CEREAL",
       "#define NCOMPILER_USES_NCLASS_INTERFACE",
@@ -152,7 +152,7 @@ addSerialization_impl <- function(self) { #},
   ## template void fooC::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
   ## template void fooC::_SERIALIZE_(cereal::BinaryInputArchive &archive);
   cereal_template_instantiations <-
-    cppMacroCallClass$new(
+    cppManualClass$new(
       hContent =
         paste0("template void ",
                self$name,
@@ -167,7 +167,7 @@ addSerialization_impl <- function(self) { #},
   ## A line like:
   ## CEREAL_REGISTER_TYPE(fooC)
   cereal_register_type_macro <-
-    cppMacroCallClass$new(
+    cppManualClass$new(
       cppContent = paste0("CEREAL_REGISTER_TYPE(", self$name, ")\n",
                           "CEREAL_REGISTER_TYPE(shared_ptr_holder<",self$name,">)\n",
                           "CEREAL_REGISTER_TYPE(genericInterfaceC<",self$name,">)\n",
@@ -177,7 +177,7 @@ addSerialization_impl <- function(self) { #},
 
   ## Lines to force dynamic initialization
   cereal_dynamic_init <-
-    cppMacroCallClass$new(
+    cppManualClass$new(
       cppContent = paste0("CEREAL_REGISTER_DYNAMIC_INIT(", self$name, ")\n"),
       hContent = paste0("CEREAL_FORCE_DYNAMIC_INIT(", self$name, ")\n")
     )
@@ -194,7 +194,7 @@ addSerialization_impl <- function(self) { #},
   
   ## Was this a test or a way to avoid a possibly empty class?
   dummy <-
-    cppMacroCallClass$new(
+    cppManualClass$new(
       cppContent = paste0("#ifndef __dummy__\n#define __dummy__\n int dummy;\n#endif"),
       hContent = paste0("extern int dummy;\n")
     )
