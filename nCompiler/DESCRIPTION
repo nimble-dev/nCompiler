@@ -38,6 +38,7 @@ Collate:
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
     compile_finalTransformations.R
+    compileNimble.R
     cppDefs_core.R
     cppDefs_utils.R
     cppDefs_ADutils.R
