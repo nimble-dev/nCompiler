@@ -171,7 +171,10 @@ typeDeclarationList <- list(
   string = function(...) {
     nType("string", 0)
   },
-
+  ##
+  SEXP = function(...) {
+    symbolCppVar$new(baseType = "SEXP", ...)
+  },
   ## Rcpp types
   RcppEnvironment = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::Environment", ...)

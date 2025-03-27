@@ -26,7 +26,7 @@ compile_normalizeCalls <- function(code,
       }
       return(NULL)
     }
-    opInfo <- operatorDefEnv[[code$name]]
+    opInfo <- getOperatorDef(code$name)
     ## Check for nFunctions or nClass methods (also nFunctions)
     if(is.null(opInfo)) {
       obj <- NULL
@@ -52,8 +52,8 @@ compile_normalizeCalls <- function(code,
         ## An nFunction will be transformed to
         ## have code$name 'NFCALL_'.
         if(!is.null(obj)) {
-          code$aux$obj_internals <- NFinternals(obj)
           if(isNF(obj)) {
+            code$aux$obj_internals <- NFinternals(obj)
             opInfo <- operatorDefEnv[['NFCALL_']]
             uniqueName <- NFinternals(obj)$uniqueName
             if(length(uniqueName)==0)
@@ -124,6 +124,14 @@ inNormalizeCallsEnv(
           }
         }
       }
+      NULL
+    }
+)
+
+inNormalizeCallsEnv(
+  skip <-
+    function(code, symTab, auxEnv, handlingInfo,
+             useArgs = rep(TRUE, length(code$args))) {
       NULL
     }
 )

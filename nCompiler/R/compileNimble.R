@@ -17,10 +17,10 @@ RCfun_2_nFun <- function(RCfun) {
 
 BROWSE_COMPILE_NIMBLE <- FALSE
 
-nf <- nimbleFunction(
-  setup = function() {x <- 1:2},
-  run = function() {return(x[1]); returnType(double())}
-)
+## nf <- nimbleFunction(
+##   setup = function() {x <- 1:2},
+##   run = function() {return(x[1]); returnType(double())}
+## )
 
 ## nf1 <- nf()
 
@@ -30,13 +30,23 @@ nf <- nimbleFunction(
 ## test <- nC1$new()
 
 buildCopyFromNimbleFunction <- function(nComp_types_list) {
-  copyfun <- function(NFobj) {
-
+  buildOneCopyLine <- function(type) {
+    paste0('SEXP_to_type(', type$name, ', SdataEnv["',type$name,'"]);')
   }
+  copyLines <- nComp_types_list |> lapply(buildOneCopyLine) |> unlist()
+#  copyLines <- 'Rprintf("copying\\n");'
+  copyfun <- eval(substitute(
+    nFunction(
+      function(NFobj = 'SEXP') {
+        nCpp(c("Rcpp::Environment SdataEnv = get_NF_dataenv(NFobj);",
+               COPYLINES))
+      }),
+    list(COPYLINES=copyLines)
+  ))
 }
 
-nCompile_nimbleFunctionClass <- function(nf) {
-  browser()
+NF_2_nClass <- function(nf) {
+  #browser()
   dirName = tempdir()
   projectName <- ''
   project <- nimble:::nimbleProjectClass(dirName, name = projectName)
@@ -47,12 +57,22 @@ nCompile_nimbleFunctionClass <- function(nf) {
   nComp_types_list <- nimbleSymTab_to_nComp_types(setupSymTab)
   origMethods <- nfProc$origMethods
   nComp_methods_list <- origMethods |> lapply(RCfun_2_nFun)
-  copyFromNimbleFunction <- buildCopyFromNimbleFunction(nComp_types_list)
+  copyFromNimbleFunction <-
+    list(copyFromNF = buildCopyFromNimbleFunction(nComp_types_list))
   nCans <- nClass(
     classname = nfProc$name,
-    Cpublic = c(nComp_types_list, nComp_methods_list)
+    Cpublic = c(nComp_types_list, nComp_methods_list, copyFromNimbleFunction)
   )
   nCans
+}
+
+nCompile_nimbleFunctionClass <- function(nf) {
+  #browser()
+  nCans <- NF_2_nClass(nf)
+  CnCans <- nCompile(nCans)
+  obj <- CnCans$new()
+  obj$copyFromNF(nf)
+  obj
 }
 
 nimbleSymTab_to_nComp_types <- function(symTab) {
@@ -64,7 +84,7 @@ nimbleSymTab_to_nComp_types <- function(symTab) {
     if(symClass[length(symClass)] == "symbolBasic") { # numeric, integer, logical
       nDim <- obj$nDim
       scalarType <- obj$type
-      result[[sn]] <- nType(scalarType=scalarType, nDim=nDim)
+      result[[sn]] <- nType(name = sn, scalarType=scalarType, nDim=nDim)
     }
   }
   result
@@ -146,9 +166,31 @@ compileNimble <- function(..., project, dirName = NULL, projectName = '',
     }
   }
 
+  nfUnits <- unitTypes == 'nf'
+  if(sum(nfUnits) > 0) {
+    whichUnits <- which(nfUnits)
+    if(length(whichUnits)>1) message("Still need to check for multiple objects of the same nimbleFunction class.")
+    for(i in whichUnits) {
+      nComp_units[[i]] <- NF_2_nClass(units[[i]])
+    }
+    #nfAns <- project$compileNimbleFunctionMulti(units[whichUnits], control = control,
+    #                                            reset = reset, showCompilerOutput = showCompilerOutput)
+    #ans[whichUnits] <- nfAns
+    #for(i in whichUnits) if(names(units)[i] != '') names(ans)[i] <- names(units)[i]
+  }
 
   names(nComp_units) <- names(units)
   ans <- do.call(nCompile, nComp_units)
+  if(sum(nfUnits) > 0) {
+    whichUnits <- which(nfUnits)
+    for(i in whichUnits) {
+      obj <- if(is.list(ans)) ans[[i]]$new() else ans$new()
+      obj$copyFromNF(units[[i]])
+      if(is.list(ans))
+        ans[[i]] <- obj
+      else
+        ans <- obj # Add checking that there is one and only one unit.
+    }
+  }
   ans
-
 }

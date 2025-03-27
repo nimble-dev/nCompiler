@@ -24,7 +24,60 @@ returnTypeCode2String <- function(returnTypeCode) {
   else returnTypeCode
 }
 
-operatorDefEnv <- new.env()
+operatorDefEnv <- new.env(parent=emptyenv())
+operatorDefUserEnv <- new.env(parent=operatorDefEnv)
+
+getHandlerEnv <- function(stage) {
+  switch(stage,
+         simpleTransformations = simpleTransformationsEnv,
+         processAD = processADenv,
+         labelAbstractTypes = labelAbstractTypesEnv,
+         normalizeCalls = normalizeCallsEnv,
+         generateCpp = genCppEnv,
+         finalTransformations = finalTransformationsEnv,
+         eigenImpl = eigenizeEnv,
+         NULL
+         )
+}
+
+registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
+  opNames <- names(opDefs)
+  if(is.null(opNames))
+    stop("opDef must be a named list, with names that are the operator names.")
+  for(i in seq_along(opDefs)) {
+    opName <- opNames[i]
+    currentOpDef <- opDefs[[opName]]
+    if(isTRUE(replaceEnv)) {
+      for(field in names(currentOpDef)) {
+        if(is.list(currentOpDef[[field]])) {
+          handler <- currentOpDef[[field]][["handler"]]
+          if(is.function(handler)) {
+            handlerEnv <- getHandlerEnv(field)
+            if(!is.null(handlerEnv)) {
+              environment(handler) <- handlerEnv
+              currentOpDef[[field]][["handler"]] <- handler
+            }
+          }
+        }
+      }
+    }
+    if(isTRUE(modify)) {
+      existingOpDef <- getOperatorDef(opName)
+      if(!is.null(existingOpDef)) {
+        for(field in names(currentOpDef)) {
+          existingOpDef[[field]] <- currentOpDef[[field]]
+        }
+        currentOpDef <- existingOpDef
+      }
+    }
+    operatorDefUserEnv[[opName]] <- currentOpDef
+  }
+}
+
+deregisterOpDef <- function(names) {
+  suppressWarnings(rm(list=names, envir=operatorDefUserEnv))
+}
+
 ##Utility for assigning multiples
 assignOperatorDef <- function(ops, def) {
     for(op in ops)
@@ -41,7 +94,8 @@ updateOperatorDef <- function(ops, field, subfield = NULL, val) {
 }
 
 getOperatorDef <- function(op, field = NULL, subfield = NULL) {
-  opInfo <- operatorDefEnv[[op]]
+  opInfo <- get0(op, envir=operatorDefUserEnv)
+#  opInfo <- operatorDefEnv[[op]]
   if (is.null(opInfo) || is.null(field)) return(opInfo)
   if (is.null(opInfo[[field]]) || is.null(subfield)) return(opInfo[[field]])
   return(opInfo[[field]][[subfield]])
