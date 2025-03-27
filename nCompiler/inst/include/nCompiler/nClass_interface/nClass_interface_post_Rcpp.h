@@ -10,4 +10,7 @@
 #include <nCompiler/nClass_interface/post_Rcpp/generic_class_interface_Rcpp_steps.h>
 //#include <nCompiler/nClass_interface_Rcpp_extensions/shared_ptr_as_wrap.h>
 
+// I think the following will be moved to a nimble 2.0 package but is drafted here for now
+#include <nCompiler/nClass_interface/post_Rcpp/nCompiler_compileNimble_support.h>
+
 //#endif // NCLASS_INTERFACE_POST_RCPP_H_

@@ -24,14 +24,18 @@ compile_simpleTransformations <- function(code,
       }
     }
     
-    opInfo <- operatorDefEnv[[code$name]]        
+    opInfo <- getOperatorDef(code$name) #operatorDefEnv[[code$name]]
     if(!is.null(opInfo)) {
       handlingInfo <- opInfo[[opInfoName]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
         if(!is.null(handler))
-          eval(call(handler, code, symTab, auxEnv, handlingInfo),
-               envir = handlerEnv)
+          if(is.function(handler)) {
+            handler(code, symTab, auxEnv, handlingInfo)
+          } else {
+            eval(call(handler, code, symTab, auxEnv, handlingInfo),
+                 envir = handlerEnv)
+          }
       }
     }
   }

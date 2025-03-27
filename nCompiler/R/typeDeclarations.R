@@ -171,7 +171,10 @@ typeDeclarationList <- list(
   string = function(...) {
     nType("string", 0)
   },
-
+  ##
+  SEXP = function(...) {
+    symbolCppVar$new(baseType = "SEXP", ...)
+  },
   ## Rcpp types
   RcppEnvironment = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::Environment", ...)
@@ -331,6 +334,15 @@ argType2symbol <- function(argType,
     explicitType
   else
     argType
+
+  ## This could be restricted to inherits(typeToUse, "symbolBase")
+  ## but "R6" allows an even wider range of flexibility.
+ if(inherits(typeToUse, "R6")) {
+   ans <- typeToUse$clone(deep=TRUE)
+   ans$name <- name
+   return(ans)
+ }
+
   inputAsCharacter <- FALSE
   if(is.character(typeToUse)) {
     typeToUse <- parse(text = typeToUse, keep.source = FALSE)[[1]]
@@ -465,7 +477,7 @@ argTypeList2symbolTable <- function(argTypeList,
                                     explicitTypeList = list(),
                                     evalEnv = parent.frame()
                                     ) {
-  ## argTypeList is the argument-type list from run-time args to a.nCompiler function
+  ## argTypeList is the argument-type list from run-time args to compile_simpleTransformations.RnCompiler function
   ## This function creates a symbolTable from the argument-type list.
 
   ## Begin error-trapping on arguments
