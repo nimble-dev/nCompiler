@@ -1,0 +1,46 @@
+---
+title: "What operations can be compiled?"
+---
+
+## Quick summary
+
+-   Most math and basic flow control.
+
+## Basic math
+
+### Binary functions
+
+- `+`, `-`, `*`, `/`, `%%`
+
+### Unary functions:
+
+- `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `asinh`, `acosh`, `atanh`, `logit`, `ilogit`, `expit`, `probit`, `iprobit`, `phi`, `cloglog`,`icloglog`, `ceiling`, `floor`, `round`, `trunc`, `lgamma`, `loggam`, `log1p`, `lfactorial`, `logfact`, `mean`, `prod`, `sum`, `exp`, `log`,`sqrt`, `abs`, `cube`, `square`.
+
+## Reduction operators
+
+- `min`, `max`, `all`, `any`, `length`
+
+## Linear algebra
+
+- `%*%`
+
+## Boolean
+
+- `pmin`, `pmax`, `==`, `!=`, `<=`, `>=`, `<`, `>`, `&`, `|`, `+`, `/`, `*`
+
+## Distributions
+
+-`dbeta`, `dbinom`, `ddexp`, `dgamma`, `dinvgamma`, `dlnorm`, `dnbinom`, `dnorm`, `dt`, `dt_nonstandard`, `dunif`, `dweibull`
+    
+Tip: note on recycling rule
+
+## Flow control:
+
+- if-then-else
+- integer for loops
+
+## To-do:
+
+- more general for loops
+- add math operators
+- add distributions

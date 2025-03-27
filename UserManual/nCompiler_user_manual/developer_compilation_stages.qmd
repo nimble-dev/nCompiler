@@ -1,0 +1,35 @@
+---
+title: "Developer: Compilation stages"
+---
+
+Processing code of an `nFunction` goes through a series of stages (see `processNFstages`). Some of these were drafted into the system but either not used or not used as originally intended. The compiler stages have numeric codes and are listed in `NFcompilerStages`.
+
+-   "setInputOutputTypes": The actually just creates the initial `symbolTable` based on function arguments.
+
+-   "substituteMangledArgumentNames": This replaces an argument name like `log` with a name like `ARG1_log`. This step is done only for argument names that clash with keywords. In R, a function name can also be used as a variable name, but that is not the case in C++.
+
+    -   Lack of always checking if an argument name needs mangling or demangling may be a source of future rare bugs.
+
+-   "initializeCode": This uses `nParse` to parse code into nCompiler's own abstract syntax tree objects, called `exprClass` objects.
+
+-   "initializeAuxiliaryEnvironment": The `auxEnv` object is an environment used for sharing information across "handlers" in later stages. For example, it collects information about what other `nFunction` or `nClass` definitions are needed by the current one, what derivative or parallelization information is needed, whether an `nList` is used, what the names of function arguments are, and other such information.
+
+-   "normalizeCalls": This is similar to `match.call` and is used to put arguments in order and fill in defaults. It uses the `matchDef` element of the operator definition ("opDef"), if available. It moves compile-time arguments out of the argument list and into the `aux` field of the `exprClass` object. It also has the first of a set of environments for *handlers* of keywords at different compilation stages. Its environment is called `normalizeCallsEnv`. If the opDef's entry for `normalizeCalls` contains a `handler` entry, the function named by that entry will be found in the `normalizeCallsEnv`. There aren't many keywords needing handlers, but an important one is that calls to an `nFunction` or an `nClass` method are replaced with \`NF_CALL\_(\<method_name\>, \<arguments...\>)\`.
+
+-   "simpleTransformations": This makes transformations of code that do not require information or processing about argument types. Handlers can be provided as the `opDef$simpleTransformations$handler`, which will be found in `simpleTransformationsEnv`. Examples include simply replacing one keyword name with another for later processing as well as processing `cppLiteral` or its more general version, `nCpp`. These are tools for including hand-written arbitrary C++ anywhere one wants.
+
+-   "buildIntermediateCalls": This "lifts" a call from a longer expression to create an intermediate variable first. This is done here only for calls that always needs such lifting, and there aren't many of those. Currently the list includes `eigen`, `chol`, and `run.time`. It is possible that eventually this stage will not be needed.
+
+-   "labelAbstractTypes": This is one of the beating hearts of the whole compilation system. It labels every step of the AST with type information. In the predecessor nimble compiler, the analogous step ended up having many additional purposes cobbled onto it because it usually has its hands on key information about a piece of syntax. In `nCompiler`, the goal is to maintain better discipline about what belongs in this step and what doesn't. In particular we should try to avoid implementation-specific steps, e.g. steps specific to the Eigen (or other) library; this is for *abstract* types, not implementations. The `opDef$labelAbstractTypes$handler` can name a handler that will be found in `labelAbstractTypesEnv`. The handler should fill in the `type` field of each `exprClass` object. Sometimes additional information is collected or managed when it is directly related to types.
+
+-   "processAD": This does processing related to automatic differentiation. Note that AD types and functions are first-class objects at this point. More will be described in another section.
+
+-   "addInsertions": This inserts new lines of code created and collected by previous steps. This has not been necessary to use much.
+
+-   "setImplementation": The idea for this was that we currently use Eigen for non-scalar and linear algebra, but conceivable in the future we could use other implementations. In practice currently this step doesn't do much meaningful.
+
+-   "doImplementation": This is where "eigenization" happens.
+
+-   "finalTransformations": I don't think much is done here.
+
+-   "addDebugging": This is used only if C++ debugging is turned on.

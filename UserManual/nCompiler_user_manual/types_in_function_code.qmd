@@ -1,0 +1,43 @@
+---
+title: "types in function code"
+format: html
+editor: visual
+---
+
+## Quick summary
+
+-   Usually variables inside `nFunction` code will have their types deduced automatically and match R's behavior.
+
+-   If you need to take more control, you can do so.
+
+Types of variables created in a function will be automatically determined from the code. For example:
+
+## The type of a variable can't be changed
+
+Once a variable is created, its type can't later be changed.
+
+## The mimic-R rule
+
+To the extent possible, nCompiler mimics R's output types based on input types. There are cases where this is impossible.
+
+## Surprises and manual control over types
+
+Sometimes you may be surprised by the deduced type of a variable.
+
+-   declare()
+
+-   checking types
+
+-   create a variable with an explicit type
+
+-   Dimensions
+
+-   `nCpp`
+
+### Automatic conversions among types when possible
+
+Tip: Sometimes types will differ from R
+
+## To-do:
+
+-   Add type inspection features for debugging.

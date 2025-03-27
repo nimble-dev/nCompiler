@@ -1,0 +1,29 @@
+---
+title: "Developer: nCompile overview"
+---
+
+`nCompile` is the entry point for all compilation.
+
+## Direct, package, and package development modes
+
+There are three ways `nCompile` can organize generated source code:
+
+-   `nCompile` with `package=FALSE` results in separately ("directly") generated code with no package structure. This is the fastest way to compile, so it is good for development iterations. One can't really serialize and save objects in a useful way in this mode, because there is no package to load in order to support loading the saved objects later.
+
+-   `nCompile` with `package=TRUE` results in code generated into a package structure by calling `writePackage` internally. This is slower but does allow serializing and saving objects and later re-using them. It can be used as an "under-the-hood" way to use package infrastructure to support useful behavior even when a user is not aiming to develop a package.
+
+-   `writePackage` supports generating code into a package that a user is developing. One can then compile the package using normal mechanisms.
+
+## Following nCompile code is tricky
+
+-   `nCompile` attempts to handle inputs fairly generally (e.g. are they named versus using names when they were defined by `nFunction` or `nClass`; are interface settings to be over-ridden; and more).
+
+-   In "direct" mode, the code is fairly linear.
+
+-   In "package" mode, the code is tricky. `nCompile` calls `writePackage`, which calls `nCompile` with different inputs that go down different conditionals, which then return to `writePackage`, which then returns to the original `nCompile` call.
+
+## Current issues:
+
+-   Currently, if one unit needs another (e.g. one `nFunction` calls another `nFunction`), both **must** be provided in the same call to `nCompile`. For some purposes (e.g. support for nimble), we may need to have a mode where needed units are automatically found and included.
+
+-   The ordering of `#define` and `#include` statements has been particularly tricky, partly because of some ways that Rcpp works (due to features of C++). This has been iteratively generalized and may need further generalization. In general, this work involves `Rcpp_packet` objects and how simple vs. complicated they need to be.

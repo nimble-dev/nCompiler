@@ -1,0 +1,11 @@
+---
+title: "Passing arguments by copy, reference or block reference"
+---
+
+## Quick summary
+
+-   By default, arguments are passed by copy (like R), so that changes to values are only local.
+
+-   You can pass arguments by reference (very unlike R), so that changes to values are also seen from the calling function.
+
+-   Passing by "block reference" allows changes to values by reference but doesn't allow changing the size. This is useful if, for example, you want to pass `x[11:20, 11:20]` as a matrix by reference.

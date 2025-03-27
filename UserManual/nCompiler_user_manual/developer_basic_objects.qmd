@@ -1,0 +1,27 @@
+---
+title: "Basic objects for nFunctions and nClasses"
+---
+
+## nFunctions
+
+-   An `nFunction` (e.g. "`nf`") is an object of class `nFunctionClass`, which inherits from ("contains") R's base `function` class. This means an `nFunction` **is a function** and also has slots for `internals` and `originalCode`.
+
+-   The `internals` of `nFunction` is an object of class `NF_InternalsClass`. Access should be via `NFinternals(nf)` and `NFinternals(nf) <-`.
+
+-   When it is time to compile, an `NF_CompilerClass` object is created. This has the purpose of creating a *cppDef*, which for an `nFunction` will be a `cpp_nFunctionClass` object.
+
+-   The `compileInfo` argument to `nFunction` provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way.
+
+## nClasses
+
+-   An `nClass` (e.g. "nc") is an `R6` class. The class object is called the *generator* because it can create objects of the class (e.g. `nc$new()`).
+
+-   An `nClass` has internal information stored in an `NC_InternalsClass` object that can be accessed by `NCinternals(nc)` and `NCinternals(nc) <-`.
+
+-   `Cpublic` methods of the `nClass` are `nFunctions`. (As for `R6` classes, if they are defined before being included in the class definition, their closure is changed when added to the class. All methods of a class object will share the same closure, set by the `env` argument to `nClass`.)
+
+-   When it is time to compile, an `NC_CompilerClass` object is created. This has the purpose of creating a *cppDef*, which for an `nClass` will be a `cpp_nClassClass` object.
+
+-   As for `nFunctions`, the `compileInfo` argument to `nClass` provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way
+
+For both `nFunctions` and `nClasses`, the resulting *cppDef* objects (of which there are other types as well) have the final purpose of creating content for `Rcpp_packet` objects. These contain the actual text pieces to be written to .cpp and .h files.

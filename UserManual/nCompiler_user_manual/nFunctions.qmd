@@ -1,0 +1,70 @@
+---
+title: "Introduction to nFunctions"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: load packages
+#| echo: false
+library(nCompiler)
+```
+
+## Quick summary
+
+-   An `nFunction` lets you compile a subset of R code, mostly numerical, via C++ without knowing C++.
+
+## Introduction to `nFunction`
+
+An `nFunction` is a function in R that can be compiled via C++. You do not need to know C++ to create and use an `nFunction`. If you do know some C++, including Rcpp, you can include your own chunks of C++.
+
+### Quick example
+
+Here is a simple example. We will:
+
+-   write an R function to multiply its input by 2 and return the result.
+
+-   create an `nFunction` from the R function with declarations of input and return types.
+
+-   use the function *uncompiled* (natively in R) or *compiled* (via code-generated and compiled C++).
+
+```{r}
+mult2 <- function(x) {
+  ans <- 2 * x
+  return(ans)
+}
+
+nf_mult2 <- nFunction(
+  fun = mult2,
+  argTypes = list(x = 'numericVector'),
+  returnType = 'numericVector'
+)
+nf_mult2(1:3)
+
+Cnf_mult2 <- nCompile(nf_mult2)
+Cnf_mult2(1:3)
+```
+
+### General features
+
+An `nFunction` has the following features:
+
+-   Arguments and returned objects must have declared types.
+
+-   Arguments can be passed by copy (default), reference, or block reference.
+
+-   A variable can only have one type. It can't be re-used as a different type as it can in R.
+
+-   Code is limited to a subset of R, primarily math and basic flow control (e.g. for loops and if-then-else). This subset of R can be automatically converted to C++.
+
+-   An `nFunction` can be run uncompiled (as R code, usually for debugging) or compiled. Uncompiled and compiled behaviors are identical most of the time, but there are exceptions.
+
+-   Code can also include hand-coded chunks of C++ and Rcpp, enabling a lot of flexibility. If there is hand-coded C++, the code can't be run uncompiled. If you want to mix hand-coded C++ with automatically generated C++, you may need to learn a bit about the types involved.
+
+Each of these points is covered in a subsection.
+
+::: {.callout-note appearance="default" collapse="true"}
+## Check out this note.
+
+I included this as an example of a callout.
+:::

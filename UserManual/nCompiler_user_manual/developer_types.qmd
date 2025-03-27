@@ -1,0 +1,75 @@
+---
+title: "Developer: types and symbol tables"
+---
+
+## Type symbols
+
+The type of a symbol (variable) is represented by an R6 object. Normally these inherit from `symbolBase`. The fields of `symbolBase`, representing common needs of many types, are:
+
+-   `name`: This is only needed for an actual variable, not for example for a return type.
+
+-   `type`: A string label for the type.
+
+-   `isRef`: logical for whether the type is handled by reference.
+
+-   `isArg`: logical for whether the type is a function (or method) argument.
+
+-   `interface`: logical for whether the type can be interfaced between R and C++. (This may turn out to not be needed much.)
+
+-   `implementation`: arbitrary information about C++ implementation. (This may not be needed at all.)
+
+In addition, the base methods are:
+
+-   `initialize`
+
+-   `shortPrint`: This is used by `exprClass$print` (`print` is standard method name for an `R6` class, similar to `show` for base R classes).
+
+-   `generateUse`: This is used for C++ generation.
+
+## Generating C++
+
+Normally a symbol represents an abstract type and the symbol object has a method `generateCppVar` that returns an object inheriting from `cppVarClass`, which represents the C++ type used to implement the abstract type.
+
+## Symbol tables
+
+Symbol tables are represented by an object of type `symbolTableClass`. This has methods for adding, accessing, and removing symbol objects. It also have a parent symbol table (`parentST`), which represents its scope. For example, in an `nFunction`, there will be a symbol table for the function arguments. This will be the parent of another symbol table for local variables. If the `nFunction` is a method of an `nClass`, the parent of the argument symbol table will be yet another symbol table for the class member variables and methods.
+
+## From type declarations to type symbols
+
+A type declaration takes a form like the character string `"nVector(type='integer')"` or the code `nVector(type='integer')`. The function `argType2symbol` converts a type declaration (and possibly other information) into a type symbol. Since multiples types to compose a symbol table often start as a list of type declarations, there is a function `argTypeList2symbolTable`.
+
+`argType2symbol` takes the following steps:
+
+-   If the type declaration is already a symbol object, return a named clone of it.
+
+-   If the type declarations is character, parse it.
+
+-   Look for a handler in the `typeDeclarationList` object. This is the central source for creating types from declarations.
+
+-   If found, call the handler, which will return a symbol object. The handler list contains many type synonyms (e.g. `numericVector`, `nVector(type="numeric")`, etc.) that may return the same underlying symbol object.
+
+-   Try to find an object and deduce the type from the object.
+
+-   If nothing has worked so far, set it as a "to-be-determined" type, represented by a symbol object of class `symbolTBD`. For example, this case covers `nClass` types whose definitions are not currently available.
+
+## Some of the symbol types available
+
+-   `symbolBasic`: For all basic numeric types (integer, double or logical with some number of index dimensions).
+
+-   `symbolBlank`:
+
+-   `symbolNF`: For an `nFunction`.
+
+-   `symbolTBD:` to-be-determined during a compilation stage when other type can be found.
+
+-   `symbolNC`: For an `nClass` object.
+
+-   `symbolNCgenerator` : For an `nClass` generator
+
+-   `symbolNlist` : For an `nList` object
+
+-   `symbolRcppType` : For an Rcpp type, for which there are some derived types for specific Rcpp types.
+
+-   `symbolSparse` : For sparse matrices.
+
+-   `symbolCppVar`: For a C++ type. (In C++ code generation, types are represented by `cppVarClass` objects. The `symbolCppVar` is different: it is for an abstract type that declared to be a C++ type and hence can't be processed through compilation except for being used in hand-coded C++.)

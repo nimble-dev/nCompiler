@@ -1,0 +1,38 @@
+project:
+  type: book
+
+book:
+  title: "nCompiler User Manual"
+  author: ""
+  date: ""
+  chapters:
+    - index.qmd
+    - part: "nFunctions"
+      chapters:
+        - nFunctions.qmd
+        - types.qmd
+        - types_in_function_code.qmd
+        - argument_passing.qmd
+        - supported_operations.qmd
+    - part: "nClasses"
+    - part: "Developer manual"
+      chapters: 
+        - developer_basic_objects.qmd
+        - developer_nCompile.qmd
+        - developer_compilation_stages.qmd
+        - developer_new_opDefs.qmd
+        - developer_types.qmd
+        - developer_exprClass.qmd
+        - developer_cppDefs.qmd
+        - developer_cppImpl.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo
+  pdf:
+    documentclass: scrreprt
+
+editor: visual
+

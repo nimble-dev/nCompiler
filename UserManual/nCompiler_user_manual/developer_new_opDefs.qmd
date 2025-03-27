@@ -1,0 +1,15 @@
+---
+title: "Providing operator definitions for new keywords or nClass methods"
+---
+
+`nCompiler` is designed to be extensible.
+
+## Defining how new keywords should be handled
+
+If you want to support a new keyword for compilation, you can do so by providing an operator definition, including handlers for any compilation stage(s) where they are needed. This is done by `registerOpDef` and can be removed by `deregisterOpDef`.
+
+## Defining how `nClass` methods should be handled.
+
+**This is an idea not yet implemented**.
+
+It would be nice to allow controllable and extensible handling of any method (`nFunction`) within an `nClass`.

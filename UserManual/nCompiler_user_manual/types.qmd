@@ -1,0 +1,147 @@
+---
+title: "types for inputs and outputs"
+format: html
+editor: visual
+---
+
+## Quick summary
+
+- You need to say what the types of inputs and outputs will be.
+- Usually the types of variables created within functions will be handled automatically.
+- Types include basic types (scalars, vectors, matrices, or arrays of doubles, integers, or logicals), `nClass` types, `nList` types, and `Rcpp` types, among others.
+
+::: {.callout-important collapse="true"}
+## nCompiler supports true scalars
+
+In R, there are no true scalar. Rather, what feel like scalars are length-1 vectors. In `nCompiler`, generated C++ can include true scalars, so there is an important type distinction between true scalars and non-scalars.
+:::
+
+
+## How to use type declarations
+
+Type declarations are needed to cross the threshold between R and C++. R allows variables to be any type (dynamic typing), while C++ requires each variable to have a declared, unchanging type (static typing).
+
+
+### Two places for type declarations
+
+Type declarations can be given:
+
+- directly in the function code, or
+- in separate arguments to `nFunction`. 
+
+The `nf_mult2` example given above used the second approach. Here is the alternative:
+
+```{r eval=FALSE}
+nf_mult2 <- nFunction(
+  fun = function(x = 'numericVector') {
+    ans <- 2 * x
+    return(ans)
+    returnType('numericVector') # This can appear anywhere.
+  })
+```
+
+It is also fine to have text like a function call, e.g. `'numericVector()'` because sometimes one wants to include arguments.
+
+The `returnType` call can appear anywhere in the function body. It does not affect code execution.
+
+### Two syntaxes for types
+
+Types declarations can be given as:
+
+- character strings, or
+- code (sometimes "quoted").
+
+The examples so far use character strings. Here are examples with code:
+
+```{r eval=FALSE}
+nf_mult2 <- nFunction(
+  fun = function(x = numericVector()) {
+    ans <- 2 * x
+    return(ans)
+    returnType(numericVector())
+  })
+```
+
+or
+
+```{r eval=FALSE}
+nf_mult2 <- nFunction(
+  fun = mult2,
+  argTypes = list(x = quote(numericVector())),
+  returnType = quote(numericVector())
+)
+```
+
+### Type objects
+
+Sometimes it is useful to make an object that holds the type, allowing one to write code to construct `nFunctions`. That can be done with the function `nMakeType` and the special syntax `T` in type declarations. For example:
+
+```{r eval=FALSE}
+my_type <- nMakeType(numericVector())
+nf_mult2 <- nFunction(
+  fun = function(x = T(my_type)) {
+    ans <- 2 * x
+    return(ans)
+  },
+  returnType = quote(T(my_type))
+)
+```
+
+For illustration, this uses `my_type` once in the function code and again in the `returnType` argument.
+
+::: {.callout-caution collapse="true"}
+## The system for type objects may change.
+
+The scheme for making and using objects containing type information is still being designed and so might change.
+:::
+
+### Numeric types
+
+A numeric type in `nCompiler` comprises the number of dimensions and the scalar type of each element. A special type for sparse matrices is also provided.
+
+-   "Number of dimensions" really means the number of *index* dimensions. For example a matrix or 2D array has two (index) dimensions and a 3D array has three index dimensions. [^types-1]
+-   The scalar type of each element can be `numeric`, `integer`, or `logical`. A synonym for `numeric` is `double` (for standard "double precision" numbers). Note that in R, "numeric" means "integer or double" (e.g. try `is.numeric`), but in `nCompiler` type declarations, `numeric` means `double`.
+
+[^types-1]: Of course, mathematically a vector of length n represents a point in n-dimensional space. That's not what we mean by number of dimensions. A vector is considered one-dimensional because elements are identified by just one index.
+
+#### Declaring numeric types
+
+There are several ways to declare numeric types:
+
+- `integerScalar()`, `numericScalar()`, and `logicalScalar()` are what they sound like.
+- `nScalar(type="integer")` is the same as `integerScalar()`. The `type` argument defaults to `"double"` and can also be `"logical"`. (The "n" in "`nScalar`" and similar names below stands for "nCompiler", not "numeric".)
+- `numericVector()`, `nVector()`, and `double(1)` are all double-precision vectors.
+- `integerVector()`, `nVector(type="integer")` and `integer(1)` are all integer vectors.
+- `logicalVector()`, `nVector(type="logical")` and `logical(1)` are all logical vectors.
+- The `*Vector()` forms and `nVector` can take a `length` argument. `nVector` can also take a `value` argument. `double(1)` exists for compatibility with `nimble`'s type system. The forms like `double(1)` exist for compatibility with `nimble`'s type system.
+- The prefixes "`numeric`", "`integer`", and "`logical`" can also go with the suffixes "`Matrix`" or "`Array`". For example: `integerArray(nDim=3)`.
+- `nMatrix` and `nArray` are similar but take the element type (`double`, `integer`, or `logical` are an argument).
+
+### Character types
+
+- `string`
+
+### Sparse matrix types
+
+- `nSparseMatrix`
+- `nSparseVector`
+
+### Rcpp types
+
+Many Rcpp types are supported. Using these requires some of your own C++ coding. These include:
+
+- `RcppEnvironment`
+- `RcppList`
+- `Rcpp<Numeric, Integer, Character, Logical, Complex><Vector, Matrix>` (e.g. `RcppCharacterVector`).
+- Others to be listed later.
+
+### C++ types
+
+- `SEXP`
+- `void`
+- `cppVar`
+- `nCpp` (for direct coding of an arbitrary type)
+
+### nClass and nList types
+
+These will be covered in later sections.
