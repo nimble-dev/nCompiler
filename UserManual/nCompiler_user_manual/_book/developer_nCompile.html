@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>nCompiler User Manual - 7&nbsp; Developer: nCompile overview</title>
+<title>nCompiler User Manual - 8&nbsp; Developer: nCompile overview</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -66,6 +66,7 @@ ul.task-list li input[type="checkbox"] {
 
 <body class="nav-sidebar floating">
 
+
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
   <nav class="quarto-secondary-nav">
@@ -73,7 +74,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./developer_basic_objects.html">Developer manual</a></li><li class="breadcrumb-item"><a href="./developer_nCompile.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></a></li></ol></nav>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./developer_basic_objects.html">Developer manual</a></li><li class="breadcrumb-item"><a href="./developer_nCompile.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></a></li></ol></nav>
       <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
       </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -143,6 +144,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">What operations can be compiled?</span></span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./controlling_compilation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Controlling compilation</span></span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -161,25 +168,55 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_basic_objects.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_nCompile.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_compilation_stages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Developer: types and symbol tables</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_exprClass.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Developer: the expression class</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_opDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_new_opDefs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppImpl.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Developer: C++ implementations</span></span></a>
   </div>
 </li>
       </ul>
@@ -194,9 +231,9 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#direct-package-and-package-development-modes" id="toc-direct-package-and-package-development-modes" class="nav-link active" data-scroll-target="#direct-package-and-package-development-modes"><span class="header-section-number">7.1</span> Direct, package, and package development modes</a></li>
-  <li><a href="#following-ncompile-code-is-tricky" id="toc-following-ncompile-code-is-tricky" class="nav-link" data-scroll-target="#following-ncompile-code-is-tricky"><span class="header-section-number">7.2</span> Following nCompile code is tricky</a></li>
-  <li><a href="#current-issues" id="toc-current-issues" class="nav-link" data-scroll-target="#current-issues"><span class="header-section-number">7.3</span> Current issues:</a></li>
+  <li><a href="#direct-package-and-package-development-modes" id="toc-direct-package-and-package-development-modes" class="nav-link active" data-scroll-target="#direct-package-and-package-development-modes"><span class="header-section-number">8.1</span> Direct, package, and package development modes</a></li>
+  <li><a href="#following-ncompile-code-is-tricky" id="toc-following-ncompile-code-is-tricky" class="nav-link" data-scroll-target="#following-ncompile-code-is-tricky"><span class="header-section-number">8.2</span> Following nCompile code is tricky</a></li>
+  <li><a href="#current-issues" id="toc-current-issues" class="nav-link" data-scroll-target="#current-issues"><span class="header-section-number">8.3</span> Current issues:</a></li>
   </ul>
 </nav>
     </div>
@@ -205,7 +242,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></h1>
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></h1>
 </div>
 
 
@@ -221,8 +258,8 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 <p><code>nCompile</code> is the entry point for all compilation.</p>
-<section id="direct-package-and-package-development-modes" class="level2" data-number="7.1">
-<h2 data-number="7.1" class="anchored" data-anchor-id="direct-package-and-package-development-modes"><span class="header-section-number">7.1</span> Direct, package, and package development modes</h2>
+<section id="direct-package-and-package-development-modes" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="direct-package-and-package-development-modes"><span class="header-section-number">8.1</span> Direct, package, and package development modes</h2>
 <p>There are three ways <code>nCompile</code> can organize generated source code:</p>
 <ul>
 <li><p><code>nCompile</code> with <code>package=FALSE</code> results in separately (“directly”) generated code with no package structure. This is the fastest way to compile, so it is good for development iterations. One can’t really serialize and save objects in a useful way in this mode, because there is no package to load in order to support loading the saved objects later.</p></li>
@@ -230,16 +267,16 @@ ul.task-list li input[type="checkbox"] {
 <li><p><code>writePackage</code> supports generating code into a package that a user is developing. One can then compile the package using normal mechanisms.</p></li>
 </ul>
 </section>
-<section id="following-ncompile-code-is-tricky" class="level2" data-number="7.2">
-<h2 data-number="7.2" class="anchored" data-anchor-id="following-ncompile-code-is-tricky"><span class="header-section-number">7.2</span> Following nCompile code is tricky</h2>
+<section id="following-ncompile-code-is-tricky" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="following-ncompile-code-is-tricky"><span class="header-section-number">8.2</span> Following nCompile code is tricky</h2>
 <ul>
 <li><p><code>nCompile</code> attempts to handle inputs fairly generally (e.g.&nbsp;are they named versus using names when they were defined by <code>nFunction</code> or <code>nClass</code>; are interface settings to be over-ridden; and more).</p></li>
 <li><p>In “direct” mode, the code is fairly linear.</p></li>
 <li><p>In “package” mode, the code is tricky. <code>nCompile</code> calls <code>writePackage</code>, which calls <code>nCompile</code> with different inputs that go down different conditionals, which then return to <code>writePackage</code>, which then returns to the original <code>nCompile</code> call.</p></li>
 </ul>
 </section>
-<section id="current-issues" class="level2" data-number="7.3">
-<h2 data-number="7.3" class="anchored" data-anchor-id="current-issues"><span class="header-section-number">7.3</span> Current issues:</h2>
+<section id="current-issues" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="current-issues"><span class="header-section-number">8.3</span> Current issues:</h2>
 <ul>
 <li><p>Currently, if one unit needs another (e.g.&nbsp;one <code>nFunction</code> calls another <code>nFunction</code>), both <strong>must</strong> be provided in the same call to <code>nCompile</code>. For some purposes (e.g.&nbsp;support for nimble), we may need to have a mode where needed units are automatically found and included.</p></li>
 <li><p>The ordering of <code>#define</code> and <code>#include</code> statements has been particularly tricky, partly because of some ways that Rcpp works (due to features of C++). This has been iteratively generalized and may need further generalization. In general, this work involves <code>Rcpp_packet</code> objects and how simple vs.&nbsp;complicated they need to be.</p></li>
@@ -485,12 +522,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="./developer_basic_objects.html" class="pagination-link">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span>
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="./developer_compilation_stages.html" class="pagination-link">
-        <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

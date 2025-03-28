@@ -128,13 +128,13 @@ inNormalizeCallsEnv(
     }
 )
 
-inNormalizeCallsEnv(
-  skip <-
-    function(code, symTab, auxEnv, handlingInfo,
-             useArgs = rep(TRUE, length(code$args))) {
-      NULL
-    }
-)
+## inNormalizeCallsEnv(
+##   skip <-
+##     function(code, symTab, auxEnv, handlingInfo,
+##              useArgs = rep(TRUE, length(code$args))) {
+##       NULL
+##     }
+## )
 
 inNormalizeCallsEnv(
   convert_nFunction_or_method_AST <-

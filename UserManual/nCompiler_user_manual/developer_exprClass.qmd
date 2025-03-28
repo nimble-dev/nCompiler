@@ -1,3 +1,117 @@
 ---
 title: "Developer: the expression class"
 ---
+
+In R, code itself is an object, and can be accessed like a list, but there isn't a good way to hold additional information. Therefore `nCompiler` uses its own class, `exprClass`, to represent code expressions. An `exprClass` object has fields available for lots of useful information.
+
+Consider `foo(a = 1, b = x, c = bar(y))`. We obtain the `exprClass` representation of this by:
+
+```{r echo=FALSE}
+library(nCompiler)
+```
+
+```{r}
+AST <- nParse(quote(foo(a=1, b=x, c=bar(y))))
+```
+
+The input could alternatively be the string "foo(a=1, b=x, c=bar(y))"
+
+Here is a guide to the `exprClass` object `AST` (for abstract syntax tree):
+
+```{r}
+AST      # a print method attempts to show the syntax tree
+AST$name # name is the name of the function
+AST$args # args is a list of other exprClass objects for the arguments
+AST$isCall              # TRUE since the expression is a function call.
+AST$Rexpr               # The original R expression
+AST$args[[1]]$isLiteral # TRUE since 1 is a "literal" value.
+AST$args[[1]]$name      # name for a literal gives its value
+AST$args[[2]]$isName    # TRUE since `x` is a name but not a call
+AST$args[[2]]$name      # name for a name gives the name as a string
+AST$args[[2]]           # From the `print` method, we see the string unquoted.
+AST$args[[3]]$isCall    # TRUE
+AST$args[[3]]$args[[1]] # exprClasses can become nested to a high degree.
+```
+
+Note that in R, `{` is itself simply a function. Each line of code before the closing `}` is an argument, it accepts arbitrarily many arguments, and it returns the value of the last argument. Hence, an entire code block can be nested in an `exprClass`.
+
+```{r}
+ASTblock <- nParse(quote(
+  {
+    a <- 1
+    b <- a + 2
+    print("hello world")
+  }
+))
+ASTblock$name
+ASTblock$args[[1]]
+# etc.
+```
+
+Assignments are special operations, so they get marked specifically:
+
+```{r}
+ASTblock$args[[1]]$isAssign # TRUE because the operator is `<-`, `=`, or `<<-`.
+```
+
+`exprClass` objects are doubly-linked, meaning an object for a call knows about its arguments and the arguments correspondingly know about the call they are part of. Conceptually, there are arrows both up and down the syntax tree. For processing, one can recurse down a tree or up a tree.
+
+```{r}
+AST
+arg_c <- AST$args[['c']]
+arg_c
+arg_c$caller      # This is AST
+arg_c$callerArgID # 3 because this is the third argument of the caller
+```
+
+This means that one can't arbitrarily or naively set arguments, because they will not be doubly linked. When an incorrectly formed `exprClass` object is printed, it will indicate that something is wrong.
+
+```{r}
+ASTcopy <- nParse(quote(foo(a=1, b=x, c=bar(y))))
+ASTcopy$args[[2]] <- nParse(quote(z)) # DANGER, DON'T DO THIS.
+ASTcopy # We get a warning that the second argument is not doubly linked correctly.
+```
+
+There is a set of functions for manipulating `exprClass` objects. (They are not exported.) For example:
+
+```{r}
+ASTcopy <- nCompiler:::copyExprClass(AST)
+nCompiler:::setArg(ASTcopy, 2, nParse(quote(z)))
+ASTcopy
+```
+
+*Some* of the functions for manipulating `exprClass` objects include:
+
+-   `copyExprClass(original)` : Make a deep copy that sets up the double links.
+
+-   `insertExprClassLayer(expr, 2, 'g')` Make the second argument of `expr` be wrapped in `g()`.
+
+-   `removeExprClassLayer(expr, argID)`. For the caller of `expr`, replace the argument that is `expr` with the `argID` argument of `expr`. Example: If `expr` is `inner(a, b)` and its caller is `outer(inner(a, b))`, then `removeExprClassLayer(expr, 2)` will replace `inner(a, b)` with `b`, so that the caller is now `outer(b)`.
+
+-   `wrapExprClassOperator(expr, 'g')` Wrap the entire AST `expr` inside `g()`.
+
+-   `newBracketExpr(args)`. Wrap a list of `exprClass` objects (args) inside `{}`.
+
+-   `setCaller(value, expr, ID)` Make `value` be the `ID` argument of `expr`.
+
+-   `insertArg(expr, ID, value)` Insert `value` as a **new** argument in position ID for `expr`, shifting other arguments up one position.
+
+-   `setArg(expr, ID, value)` Set `value` as the argument in position `ID` for `expr` (replacing whatever is previously in that position). This uses `setCaller` but is more general because `ID` can be a string and some error-trapping is done.
+
+-   `removeArg(expr, ID)` Remove the argument in position `ID` from `expr`.
+
+Many of the above functions can take additional arguments that are not shown. Some of them support `ID` to be either a position number or a name of an argument.
+
+### Fields used during compilation
+
+A key step in compilation is labeling every call in the abstract syntax tree of an `nFunction` body with its type information. This is done during the "labelAbstractTypes" stage of `nFunction` compilation. Here is some information on that and other fields used during compilation:
+
+-   `type` This field will be populated with a symbol object representing the type of the `exprClass`. For a literal, this is the type of the literal. For a call, this is the type returned by the call.
+
+-   `aux` This field is used for any auxiliary information that any compilation stage needs to attach to an `exprClass` object for later use.
+
+-   `insertions` This field holds other `exprClass` objects that will need to be inserted into the full code body in order to implement its expression.
+
+-   `cppADcode`: This is `TRUE` if the `exprClass` represents an expression used in automatic differentiation.
+
+There are also some functions (and room for more) to support more concise coding of common `exprClass` objects that need to be created during compilation, with the `type` field already populated. For example, sometimes we need to insert a literal and do so after type labeling. Since it is expected that all `exprClass` objects have types labeled at that and subsequent points, any inserted `exprClass` objects at later points must be inserted with the `type` field populated. We have `literalDoubleExpr`, `literalIntegerExpr`, and `literalLogicalExpr` to create type-labeled literal `exprClass` objects, which otherwise takes a few lines of verbose code.

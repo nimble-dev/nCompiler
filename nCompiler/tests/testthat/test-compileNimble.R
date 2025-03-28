@@ -35,30 +35,55 @@ test_that("compileNimble bridge works for one nimbleFunction object", {
 ## document, document, document
 
 test_that("registering a user-defined operator definition (opDef) works", {
+  ## first version: provide a function
   nimArrayHandler <- function(code,...) {
     code$name <- 'nArray'
     NULL
   }
-  nCompiler:::registerOpDef(list(nimArray =
-                                   list(
-                                     matchDef = function(value, dim) {},
-                                     normalizeCalls=list(handler='skip'),
-                                     simpleTransformations=list(handler = nimArrayHandler))))
+  nCompiler:::registerOpDef(
+    list(nimArray =
+           list(
+             matchDef = function(value=0, dim=c(1,1), init=TRUE,
+                                 fillZeros=TRUE, recycle=TRUE, nDim,
+                                 type="double") {},
+             #    normalizeCalls=list(handler='skip'),
+             simpleTransformations=list(handler = nimArrayHandler))))
   expect_equal(ls(nCompiler:::operatorDefUserEnv), "nimArray")
 
-  foo <- nFunction(
-    function() {
-      ans <- nimArray(6, dim = 2)
-      ans2 <- nArray(value = 5, dim = 2)
-      return(ans)
-      returnType('double(1)')
-    }
-  )
-#  undebug(nCompiler:::compile_normalizeCalls)
-#  undebug(nCompiler:::compile_labelAbstractTypes)
-  cfoo <- nCompile(foo)
-  expect_identical(cfoo(), c(6, 6))
+  nCompiler:::registerOpDef(
+    list(nimArray2 =
+           list(
+             matchDef = function(value=0, dim=c(1,1), init=TRUE,
+                                 fillZeros=TRUE, recycle=TRUE, nDim,
+                                 type="double") {},
+             simpleTransformations=list(handler = 'replace',
+                                        replacement = 'nArray'))))
+  expect_equal(ls(nCompiler:::operatorDefUserEnv), c("nimArray", "nimArray2"))
+
+  nc <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function() {
+          ans <- nimArray( 6, dim = 2)
+          ans2 <- nArray(value = 5, dim = 2)
+          return(ans)
+          returnType('double(1)')
+        }
+      ),
+      foo2 = nFunction(
+        function() {
+          ans <- nimArray2(3,dim = 2)
+          return(ans)
+          returnType('double(1)')
+        })
+      ))
+  Cnc <- nCompile(nc)
+  obj <- Cnc$new()
+  expect_identical(obj$foo(), c(6, 6))
+  expect_identical(obj$foo2(), c(3, 3))
+  rm(obj); gc()
   #
   nCompiler:::deregisterOpDef("nimArray")
+  nCompiler:::deregisterOpDef("nimArray2")
   expect_equal(length(ls(nCompiler:::operatorDefUserEnv)), 0)
 })

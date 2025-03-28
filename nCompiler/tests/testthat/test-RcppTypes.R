@@ -428,6 +428,7 @@ test_that("RcppNumericVector works in nClasses", {
   test_x2 <- c(0, 100, 10, 0.01)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppNumericMatrix works in nClasses", {
@@ -450,6 +451,7 @@ test_that("RcppNumericMatrix works in nClasses", {
   test_x2 <- matrix(c(0, 100, 10, 0.01), nrow = 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppIntegerVector works in nClasses", {
@@ -472,6 +474,7 @@ test_that("RcppIntegerVector works in nClasses", {
   test_x2 <- c(0, 100, 10, 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppIntegerMatrix works in nClasses", {
@@ -494,6 +497,7 @@ test_that("RcppIntegerMatrix works in nClasses", {
   test_x2 <- matrix(c(0, 100, 10, 4), nrow = 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppCharacterVector works in nClasses", {
@@ -516,6 +520,7 @@ test_that("RcppCharacterVector works in nClasses", {
   test_x2 <- c("Hi", "foo1", "Hello", "foo2")
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppCharacterMatrix works in nClasses", {
@@ -538,6 +543,7 @@ test_that("RcppCharacterMatrix works in nClasses", {
   test_x2 <- matrix(c("Hi", "foo1", "Hello", "foo2"), nrow = 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppComplexVector works in nClasses", {
@@ -560,6 +566,7 @@ test_that("RcppComplexVector works in nClasses", {
   test_x2 <- c(4i, 1, 5i + 3, 5i)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppComplexMatrix works in nClasses", {
@@ -582,6 +589,7 @@ test_that("RcppComplexMatrix works in nClasses", {
   test_x2 <- matrix(c(4i, 1, 5i + 3, 0), nrow = 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppLogicalVector works in nClasses", {
@@ -604,6 +612,7 @@ test_that("RcppLogicalVector works in nClasses", {
   test_x2 <- c(TRUE, FALSE, FALSE, FALSE)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 test_that("RcppLogicalMatrix works in nClasses", {
@@ -626,6 +635,7 @@ test_that("RcppLogicalMatrix works in nClasses", {
   test_x2 <- matrix(c(FALSE, FALSE, TRUE, FALSE), nrow = 2)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
 })
 
 ## # TODO: Why do the following tests not work?
@@ -698,4 +708,27 @@ test_that("RcppDataFrame works in nClasses", {
   test_x2 <- data.frame(a = 1:100, b = 101:200)
   my_nc$x <- test_x2
   expect_equal(my_nc$x, test_x2)
+  rm(my_nc); gc()
+})
+
+test_that("RcppEnvironment works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppEnvironment",
+    Cpublic = list(
+      x = "RcppEnvironment",
+      set_x = nFunction(
+        fun = function(myEnv = "RcppEnvironment", new_x = "RcppNumericVector") {
+          x <- myEnv
+          nCpp('x["x"] = new_x;')
+      }
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  myEnv <- new.env()
+  myEnv$x <- 1:3
+  my_nc$set_x(myEnv, 11:13)
+  expect_equal(myEnv$x, 11:13)
+  rm(my_nc); gc()
 })

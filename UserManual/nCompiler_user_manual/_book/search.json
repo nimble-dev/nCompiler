@@ -7,25 +7,11 @@
     "text": "Introduction"
   },
   {
-    "objectID": "intro.html",
-    "href": "intro.html",
-    "title": "1  Introduction",
-    "section": "",
-    "text": "This is a book created from markdown and executable code.\nSee Knuth (1984) for additional discussion of literate programming.\n\n1 + 1\n\n[1] 2\n\n\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97."
-  },
-  {
-    "objectID": "summary.html",
-    "href": "summary.html",
-    "title": "2  Summary",
-    "section": "",
-    "text": "In summary, this book has no content whatsoever.\n\n1 + 1\n\n[1] 2"
-  },
-  {
-    "objectID": "references.html",
-    "href": "references.html",
-    "title": "References",
-    "section": "",
-    "text": "Knuth, Donald E. 1984. “Literate Programming.” Comput.\nJ. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97."
+    "objectID": "nFunctions.html#quick-summary",
+    "href": "nFunctions.html#quick-summary",
+    "title": "1  Introduction to nFunctions",
+    "section": "1.1 Quick summary",
+    "text": "1.1 Quick summary\n\nAn nFunction lets you compile a subset of R code, mostly numerical, via C++ without knowing C++."
   },
   {
     "objectID": "nFunctions.html#introduction-to-nfunction",
@@ -35,39 +21,11 @@
     "text": "1.2 Introduction to nFunction\nAn nFunction is a function in R that can be compiled via C++. You do not need to know C++ to create and use an nFunction. If you do know some C++, including Rcpp, you can include your own chunks of C++.\n\n1.2.1 Quick example\nHere is a simple example. We will:\n\nwrite an R function to multiply its input by 2 and return the result.\ncreate an nFunction from the R function with declarations of input and return types.\nuse the function uncompiled (natively in R) or compiled (via code-generated and compiled C++).\n\n\nmult2 &lt;- function(x) {\n  ans &lt;- 2 * x\n  return(ans)\n}\n\nnf_mult2 &lt;- nFunction(\n  fun = mult2,\n  argTypes = list(x = 'numericVector'),\n  returnType = 'numericVector'\n)\nnf_mult2(1:3)\n\n[1] 2 4 6\n\nCnf_mult2 &lt;- nCompile(nf_mult2)\nCnf_mult2(1:3)\n\n[1] 2 4 6\n\n\n\n\n1.2.2 General features\nAn nFunction has the following features:\n\nArguments and returned objects must have declared types.\nArguments can be passed by copy (default), reference, or block reference.\nA variable can only have one type. It can’t be re-used as a different type as it can in R.\nCode is limited to a subset of R, primarily math and basic flow control (e.g. for loops and if-then-else). This subset of R can be automatically converted to C++.\nAn nFunction can be run uncompiled (as R code, usually for debugging) or compiled. Uncompiled and compiled behaviors are identical most of the time, but there are exceptions.\nCode can also include hand-coded chunks of C++ and Rcpp, enabling a lot of flexibility. If there is hand-coded C++, the code can’t be run uncompiled. If you want to mix hand-coded C++ with automatically generated C++, you may need to learn a bit about the types involved.\n\nEach of these points is covered in a subsection.\n\n\n\n\n\n\nCheck out this note.\n\n\n\n\n\nI included this as an example of a callout."
   },
   {
-    "objectID": "types.html",
-    "href": "types.html",
+    "objectID": "types.html#quick-summary",
+    "href": "types.html#quick-summary",
     "title": "2  types for inputs and outputs",
-    "section": "",
-    "text": "3 How to use type declarations\nType declarations are needed to cross the threshold between R and C++. R allows variables to be any type (dynamic typing), while C++ requires each variable to have a declared, unchanging type (static typing).\nSupported types include:"
-  },
-  {
-    "objectID": "types.html#footnotes",
-    "href": "types.html#footnotes",
-    "title": "2  types for inputs and outputs",
-    "section": "",
-    "text": "Of course, mathematically a vector of length n represents a point in n-dimensional space. That’s not what we mean by number of dimensions. A vector is considered one-dimensional because elements are identified by just one index.↩︎"
-  },
-  {
-    "objectID": "types_in_function_code.html#section",
-    "href": "types_in_function_code.html#section",
-    "title": "3  types in function code",
-    "section": "3.1 ",
-    "text": "3.1 \nTypes of variables created in a function will be automatically determined from the code. For example:\nHere the type of ans is automatically determined to be an integer vector because it is created from adding an integer vector to an integer scalar (denoted with the suffix L just like in R)."
-  },
-  {
-    "objectID": "types_in_function_code.html#the-type-of-a-variable-cant-be-changed",
-    "href": "types_in_function_code.html#the-type-of-a-variable-cant-be-changed",
-    "title": "3  types in function code",
-    "section": "3.2 The type of a variable can’t be changed",
-    "text": "3.2 The type of a variable can’t be changed\nOnce a variable is created, its type can’t later be changed."
-  },
-  {
-    "objectID": "types_in_function_code.html#surprises-and-manual-control-over-types",
-    "href": "types_in_function_code.html#surprises-and-manual-control-over-types",
-    "title": "3  types in function code",
-    "section": "3.4 Surprises and manual control over types",
-    "text": "3.4 Surprises and manual control over types\nSometimes you may be surprised by the deduced type of a variable.\n\ndeclare()\nchecking types\ncreate a variable with an explicit type\nDimensions\nnCpp\n\n\n3.4.1 Automatic conversions among types when possible\nTip: Sometimes types will differ from R"
+    "section": "2.1 Quick summary",
+    "text": "2.1 Quick summary\n\nYou need to say what the types of inputs and outputs will be.\nUsually the types of variables created within functions will be handled automatically.\nTypes include basic types (scalars, vectors, matrices, or arrays of doubles, integers, or logicals), nClass types, nList types, and Rcpp types, among others.\n\n\n\n\n\n\n\nnCompiler supports true scalars\n\n\n\n\n\nIn R, there are no true scalar. Rather, what feel like scalars are length-1 vectors. In nCompiler, generated C++ can include true scalars, so there is an important type distinction between true scalars and non-scalars."
   },
   {
     "objectID": "types.html#how-to-use-type-declarations",
@@ -77,18 +35,11 @@
     "text": "2.2 How to use type declarations\nType declarations are needed to cross the threshold between R and C++. R allows variables to be any type (dynamic typing), while C++ requires each variable to have a declared, unchanging type (static typing).\n\n2.2.1 Two places for type declarations\nType declarations can be given:\n\ndirectly in the function code, or\nin separate arguments to nFunction.\n\nThe nf_mult2 example given above used the second approach. Here is the alternative:\n\nnf_mult2 &lt;- nFunction(\n  fun = function(x = 'numericVector') {\n    ans &lt;- 2 * x\n    return(ans)\n    returnType('numericVector') # This can appear anywhere.\n  })\n\nIt is also fine to have text like a function call, e.g. 'numericVector()' because sometimes one wants to include arguments.\nThe returnType call can appear anywhere in the function body. It does not affect code execution.\n\n\n2.2.2 Two syntaxes for types\nTypes declarations can be given as:\n\ncharacter strings, or\ncode (sometimes “quoted”).\n\nThe examples so far use character strings. Here are examples with code:\n\nnf_mult2 &lt;- nFunction(\n  fun = function(x = numericVector()) {\n    ans &lt;- 2 * x\n    return(ans)\n    returnType(numericVector())\n  })\n\nor\n\nnf_mult2 &lt;- nFunction(\n  fun = mult2,\n  argTypes = list(x = quote(numericVector())),\n  returnType = quote(numericVector())\n)\n\n\n\n2.2.3 Type objects\nSometimes it is useful to make an object that holds the type, allowing one to write code to construct nFunctions. That can be done with the function nMakeType and the special syntax T in type declarations. For example:\n\nmy_type &lt;- nMakeType(numericVector())\nnf_mult2 &lt;- nFunction(\n  fun = function(x = T(my_type)) {\n    ans &lt;- 2 * x\n    return(ans)\n  },\n  returnType = quote(T(my_type))\n)\n\nFor illustration, this uses my_type once in the function code and again in the returnType argument.\n\n\n\n\n\n\nThe system for type objects may change.\n\n\n\n\n\nThe scheme for making and using objects containing type information is still being designed and so might change.\n\n\n\n\n\n2.2.4 Numeric types\nA numeric type in nCompiler comprises the number of dimensions and the scalar type of each element. A special type for sparse matrices is also provided.\n\n“Number of dimensions” really means the number of index dimensions. For example a matrix or 2D array has two (index) dimensions and a 3D array has three index dimensions. 1\nThe scalar type of each element can be numeric, integer, or logical. A synonym for numeric is double (for standard “double precision” numbers). Note that in R, “numeric” means “integer or double” (e.g. try is.numeric), but in nCompiler type declarations, numeric means double.\n\n\n2.2.4.1 Declaring numeric types\nThere are several ways to declare numeric types:\n\nintegerScalar(), numericScalar(), and logicalScalar() are what they sound like.\nnScalar(type=\"integer\") is the same as integerScalar(). The type argument defaults to \"double\" and can also be \"logical\". (The “n” in “nScalar” and similar names below stands for “nCompiler”, not “numeric”.)\nnumericVector(), nVector(), and double(1) are all double-precision vectors.\nintegerVector(), nVector(type=\"integer\") and integer(1) are all integer vectors.\nlogicalVector(), nVector(type=\"logical\") and logical(1) are all logical vectors.\nThe *Vector() forms and nVector can take a length argument. nVector can also take a value argument. double(1) exists for compatibility with nimble’s type system. The forms like double(1) exist for compatibility with nimble’s type system.\nThe prefixes “numeric”, “integer”, and “logical” can also go with the suffixes “Matrix” or “Array”. For example: integerArray(nDim=3).\nnMatrix and nArray are similar but take the element type (double, integer, or logical are an argument).\n\n\n\n\n2.2.5 Character types\n\nstring\n\n\n\n2.2.6 Sparse matrix types\n\nnSparseMatrix\nnSparseVector\n\n\n\n2.2.7 Rcpp types\nMany Rcpp types are supported. Using these requires some of your own C++ coding. These include:\n\nRcppEnvironment\nRcppList\nRcpp&lt;Numeric, Integer, Character, Logical, Complex&gt;&lt;Vector, Matrix&gt; (e.g. RcppCharacterVector).\nOthers to be listed later.\n\n\n\n2.2.8 C++ types\n\nSEXP\nvoid\ncppVar\nnCpp (for direct coding of an arbitrary type)\n\n\n\n2.2.9 nClass and nList types\nThese will be covered in later sections."
   },
   {
-    "objectID": "nFunctions.html#quick-summary",
-    "href": "nFunctions.html#quick-summary",
-    "title": "1  Introduction to nFunctions",
-    "section": "1.1 Quick summary",
-    "text": "1.1 Quick summary\n\nAn nFunction lets you compile a subset of R code, mostly numerical, via C++ without knowing C++."
-  },
-  {
-    "objectID": "types.html#quick-summary",
-    "href": "types.html#quick-summary",
+    "objectID": "types.html#footnotes",
+    "href": "types.html#footnotes",
     "title": "2  types for inputs and outputs",
-    "section": "2.1 Quick summary",
-    "text": "2.1 Quick summary\n\nYou need to say what the types of inputs and outputs will be.\nUsually the types of variables created within functions will be handled automatically.\nTypes include basic types (scalars, vectors, matrices, or arrays of doubles, integers, or logicals), nClass types, nList types, and Rcpp types, among others.\n\n\n\n\n\n\n\nnCompiler supports true scalars\n\n\n\n\n\nIn R, there are no true scalar. Rather, what feel like scalars are length-1 vectors. In nCompiler, generated C++ can include true scalars, so there is an important type distinction between true scalars and non-scalars."
+    "section": "",
+    "text": "Of course, mathematically a vector of length n represents a point in n-dimensional space. That’s not what we mean by number of dimensions. A vector is considered one-dimensional because elements are identified by just one index.↩︎"
   },
   {
     "objectID": "types_in_function_code.html#quick-summary",
@@ -98,11 +49,32 @@
     "text": "3.1 Quick summary\n\nUsually variables inside nFunction code will have their types deduced automatically and match R’s behavior.\nIf you need to take more control, you can do so.\n\nTypes of variables created in a function will be automatically determined from the code. For example:"
   },
   {
+    "objectID": "types_in_function_code.html#the-type-of-a-variable-cant-be-changed",
+    "href": "types_in_function_code.html#the-type-of-a-variable-cant-be-changed",
+    "title": "3  types in function code",
+    "section": "3.2 The type of a variable can’t be changed",
+    "text": "3.2 The type of a variable can’t be changed\nOnce a variable is created, its type can’t later be changed."
+  },
+  {
     "objectID": "types_in_function_code.html#the-mimic-r-rule",
     "href": "types_in_function_code.html#the-mimic-r-rule",
     "title": "3  types in function code",
     "section": "3.3 The mimic-R rule",
     "text": "3.3 The mimic-R rule\nTo the extent possible, nCompiler mimics R’s output types based on input types. There are cases where this is impossible."
+  },
+  {
+    "objectID": "types_in_function_code.html#surprises-and-manual-control-over-types",
+    "href": "types_in_function_code.html#surprises-and-manual-control-over-types",
+    "title": "3  types in function code",
+    "section": "3.4 Surprises and manual control over types",
+    "text": "3.4 Surprises and manual control over types\nSometimes you may be surprised by the deduced type of a variable.\n\ndeclare()\nchecking types\ncreate a variable with an explicit type\nDimensions\nnCpp\n\n\n3.4.1 Automatic conversions among types when possible\nTip: Sometimes types will differ from R"
+  },
+  {
+    "objectID": "types_in_function_code.html#to-do",
+    "href": "types_in_function_code.html#to-do",
+    "title": "3  types in function code",
+    "section": "3.5 To-do:",
+    "text": "3.5 To-do:\n\nAdd type inspection features for debugging."
   },
   {
     "objectID": "argument_passing.html#quick-summary",
@@ -126,6 +98,13 @@
     "text": "5.2 Basic math\n\n5.2.1 Binary functions\n\n+, -, *, /, %%\n\n\n\n5.2.2 Unary functions:\n\nsin, cos, tan, asin, acos, atan, asinh, acosh, atanh, logit, ilogit, expit, probit, iprobit, phi, cloglog,icloglog, ceiling, floor, round, trunc, lgamma, loggam, log1p, lfactorial, logfact, mean, prod, sum, exp, log,sqrt, abs, cube, square."
   },
   {
+    "objectID": "supported_operations.html#reduction-operators",
+    "href": "supported_operations.html#reduction-operators",
+    "title": "5  What operations can be compiled?",
+    "section": "5.3 Reduction operators",
+    "text": "5.3 Reduction operators\n\nmin, max, all, any, length"
+  },
+  {
     "objectID": "supported_operations.html#linear-algebra",
     "href": "supported_operations.html#linear-algebra",
     "title": "5  What operations can be compiled?",
@@ -147,20 +126,6 @@
     "text": "5.6 Distributions\n-dbeta, dbinom, ddexp, dgamma, dinvgamma, dlnorm, dnbinom, dnorm, dt, dt_nonstandard, dunif, dweibull\nTip: note on recycling rule"
   },
   {
-    "objectID": "supported_operations.html#operators-to-be-supported",
-    "href": "supported_operations.html#operators-to-be-supported",
-    "title": "5  What operations can be compiled?",
-    "section": "5.7 Operators to be supported:",
-    "text": "5.7 Operators to be supported:\n\n%/%"
-  },
-  {
-    "objectID": "supported_operations.html#reduction-operators",
-    "href": "supported_operations.html#reduction-operators",
-    "title": "5  What operations can be compiled?",
-    "section": "5.3 Reduction operators",
-    "text": "5.3 Reduction operators\n\nmin, max, all, any, length"
-  },
-  {
     "objectID": "supported_operations.html#flow-control",
     "href": "supported_operations.html#flow-control",
     "title": "5  What operations can be compiled?",
@@ -175,81 +140,53 @@
     "text": "5.8 To-do:\n\nmore general for loops\nadd math operators\nadd distributions"
   },
   {
-    "objectID": "types_in_function_code.html#to-do",
-    "href": "types_in_function_code.html#to-do",
-    "title": "3  types in function code",
-    "section": "3.5 To-do:",
-    "text": "3.5 To-do:\n\nAdd type inspection features for debugging."
+    "objectID": "controlling_compilation.html",
+    "href": "controlling_compilation.html",
+    "title": "6  Controlling compilation",
+    "section": "",
+    "text": "There are many fine-grained controls over compilation that can be provided in the compileInfo list. These include:"
   },
   {
     "objectID": "developer_basic_objects.html#nfunctions",
     "href": "developer_basic_objects.html#nfunctions",
-    "title": "6  Basic objects for nFunctions and nClasses",
-    "section": "6.1 nFunctions",
-    "text": "6.1 nFunctions\n\nAn nFunction (e.g. “nf”) is an object of class nFunctionClass, which inherits from (“contains”) R’s base function class. This means an nFunction is a function and also has slots for internals and originalCode.\nThe internals of nFunction is an object of class NF_InternalsClass. Access should be via NFinternals(nf) and NFinternals(nf) &lt;-.\nWhen it is time to compile, an NF_CompilerClass object is created. This has the purpose of creating a cppDef, which for an nFunction will be a cpp_nFunctionClass object.\nThe compileInfo argument to nFunction provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way."
+    "title": "7  Basic objects for nFunctions and nClasses",
+    "section": "7.1 nFunctions",
+    "text": "7.1 nFunctions\n\nAn nFunction (e.g. “nf”) is an object of class nFunctionClass, which inherits from (“contains”) R’s base function class. This means an nFunction is a function and also has slots for internals and originalCode.\nThe internals of nFunction is an object of class NF_InternalsClass. Access should be via NFinternals(nf) and NFinternals(nf) &lt;-.\nWhen it is time to compile, an NF_CompilerClass object is created. This has the purpose of creating a cppDef, which for an nFunction will be a cpp_nFunctionClass object.\nThe compileInfo argument to nFunction provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way."
   },
   {
     "objectID": "developer_basic_objects.html#nclasses",
     "href": "developer_basic_objects.html#nclasses",
-    "title": "6  Basic objects for nFunctions and nClasses",
-    "section": "6.2 nClasses",
-    "text": "6.2 nClasses\n\nAn nClass (e.g. “nc”) is an R6 class. The class object is called the generator because it can create objects of the class (e.g. nc$new()).\nAn nClass has internal information stored in an NC_InternalsClass object that can be accessed by NCinternals(nc) and NCinternals(nc) &lt;-.\nCpublic methods of the nClass are nFunctions. (As for R6 classes, if they are defined before being included in the class definition, their closure is changed when added to the class. All methods of a class object will share the same closure, set by the env argument to nClass.)\nWhen it is time to compile, an NC_CompilerClass object is created. This has the purpose of creating a cppDef, which for an nClass will be a cpp_nClassClass object.\nAs for nFunctions, the compileInfo argument to nClass provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way\n\nFor both nFunctions and nClasses, the resulting cppDef objects (of which there are other types as well) have the final purpose of creating content for Rcpp_packet objects. These contain the actual text pieces to be written to .cpp and .h files."
+    "title": "7  Basic objects for nFunctions and nClasses",
+    "section": "7.2 nClasses",
+    "text": "7.2 nClasses\n\nAn nClass (e.g. “nc”) is an R6 class. The class object is called the generator because it can create objects of the class (e.g. nc$new()).\nAn nClass has internal information stored in an NC_InternalsClass object that can be accessed by NCinternals(nc) and NCinternals(nc) &lt;-.\nCpublic methods of the nClass are nFunctions. (As for R6 classes, if they are defined before being included in the class definition, their closure is changed when added to the class. All methods of a class object will share the same closure, set by the env argument to nClass.)\nWhen it is time to compile, an NC_CompilerClass object is created. This has the purpose of creating a cppDef, which for an nClass will be a cpp_nClassClass object.\nAs for nFunctions, the compileInfo argument to nClass provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way\n\nFor both nFunctions and nClasses, the resulting cppDef objects (of which there are other types as well) have the final purpose of creating content for Rcpp_packet objects. These contain the actual text pieces to be written to .cpp and .h files."
   },
   {
     "objectID": "developer_nCompile.html#direct-package-and-package-development-modes",
     "href": "developer_nCompile.html#direct-package-and-package-development-modes",
-    "title": "7  Developer: nCompile overview",
-    "section": "7.1 Direct, package, and package development modes",
-    "text": "7.1 Direct, package, and package development modes\nThere are three ways nCompile can organize generated source code:\n\nnCompile with package=FALSE results in separately (“directly”) generated code with no package structure. This is the fastest way to compile, so it is good for development iterations. One can’t really serialize and save objects in a useful way in this mode, because there is no package to load in order to support loading the saved objects later.\nnCompile with package=TRUE results in code generated into a package structure by calling writePackage internally. This is slower but does allow serializing and saving objects and later re-using them. It can be used as an “under-the-hood” way to use package infrastructure to support useful behavior even when a user is not aiming to develop a package.\nwritePackage supports generating code into a package that a user is developing. One can then compile the package using normal mechanisms."
+    "title": "8  Developer: nCompile overview",
+    "section": "8.1 Direct, package, and package development modes",
+    "text": "8.1 Direct, package, and package development modes\nThere are three ways nCompile can organize generated source code:\n\nnCompile with package=FALSE results in separately (“directly”) generated code with no package structure. This is the fastest way to compile, so it is good for development iterations. One can’t really serialize and save objects in a useful way in this mode, because there is no package to load in order to support loading the saved objects later.\nnCompile with package=TRUE results in code generated into a package structure by calling writePackage internally. This is slower but does allow serializing and saving objects and later re-using them. It can be used as an “under-the-hood” way to use package infrastructure to support useful behavior even when a user is not aiming to develop a package.\nwritePackage supports generating code into a package that a user is developing. One can then compile the package using normal mechanisms."
   },
   {
     "objectID": "developer_nCompile.html#following-ncompile-code-is-tricky",
     "href": "developer_nCompile.html#following-ncompile-code-is-tricky",
-    "title": "7  Developer: nCompile overview",
-    "section": "7.2 Following nCompile code is tricky",
-    "text": "7.2 Following nCompile code is tricky\n\nnCompile attempts to handle inputs fairly generally (e.g. are they named versus using names when they were defined by nFunction or nClass; are interface settings to be over-ridden; and more).\nIn “direct” mode, the code is fairly linear.\nIn “package” mode, the code is tricky. nCompile calls writePackage, which calls nCompile with different inputs that go down different conditionals, which then return to writePackage, which then returns to the original nCompile call."
+    "title": "8  Developer: nCompile overview",
+    "section": "8.2 Following nCompile code is tricky",
+    "text": "8.2 Following nCompile code is tricky\n\nnCompile attempts to handle inputs fairly generally (e.g. are they named versus using names when they were defined by nFunction or nClass; are interface settings to be over-ridden; and more).\nIn “direct” mode, the code is fairly linear.\nIn “package” mode, the code is tricky. nCompile calls writePackage, which calls nCompile with different inputs that go down different conditionals, which then return to writePackage, which then returns to the original nCompile call."
   },
   {
     "objectID": "developer_nCompile.html#current-issues",
     "href": "developer_nCompile.html#current-issues",
-    "title": "7  Developer: nCompile overview",
-    "section": "7.3 Current issues:",
-    "text": "7.3 Current issues:\n\nCurrently, if one unit needs another (e.g. one nFunction calls another nFunction), both must be provided in the same call to nCompile. For some purposes (e.g. support for nimble), we may need to have a mode where needed units are automatically found and included.\nThe ordering of #define and #include statements has been particularly tricky, partly because of some ways that Rcpp works (due to features of C++). This has been iteratively generalized and may need further generalization. In general, this work involves Rcpp_packet objects and how simple vs. complicated they need to be."
+    "title": "8  Developer: nCompile overview",
+    "section": "8.3 Current issues:",
+    "text": "8.3 Current issues:\n\nCurrently, if one unit needs another (e.g. one nFunction calls another nFunction), both must be provided in the same call to nCompile. For some purposes (e.g. support for nimble), we may need to have a mode where needed units are automatically found and included.\nThe ordering of #define and #include statements has been particularly tricky, partly because of some ways that Rcpp works (due to features of C++). This has been iteratively generalized and may need further generalization. In general, this work involves Rcpp_packet objects and how simple vs. complicated they need to be."
   },
   {
     "objectID": "developer_compilation_stages.html",
     "href": "developer_compilation_stages.html",
-    "title": "8  Developer: Compilation stages",
+    "title": "9  Developer: Compilation stages",
     "section": "",
     "text": "Processing code of an nFunction goes through a series of stages (see processNFstages). Some of these were drafted into the system but either not used or not used as originally intended. The compiler stages have numeric codes and are listed in NFcompilerStages.\n\n“setInputOutputTypes”: The actually just creates the initial symbolTable based on function arguments.\n“substituteMangledArgumentNames”: This replaces an argument name like log with a name like ARG1_log. This step is done only for argument names that clash with keywords. In R, a function name can also be used as a variable name, but that is not the case in C++.\n\nLack of always checking if an argument name needs mangling or demangling may be a source of future rare bugs.\n\n“initializeCode”: This uses nParse to parse code into nCompiler’s own abstract syntax tree objects, called exprClass objects.\n“initializeAuxiliaryEnvironment”: The auxEnv object is an environment used for sharing information across “handlers” in later stages. For example, it collects information about what other nFunction or nClass definitions are needed by the current one, what derivative or parallelization information is needed, whether an nList is used, what the names of function arguments are, and other such information.\n“normalizeCalls”: This is similar to match.call and is used to put arguments in order and fill in defaults. It uses the matchDef element of the operator definition (“opDef”), if available. It moves compile-time arguments out of the argument list and into the aux field of the exprClass object. It also has the first of a set of environments for handlers of keywords at different compilation stages. Its environment is called normalizeCallsEnv. If the opDef’s entry for normalizeCalls contains a handler entry, the function named by that entry will be found in the normalizeCallsEnv. There aren’t many keywords needing handlers, but an important one is that calls to an nFunction or an nClass method are replaced with `NF_CALL_(&lt;method_name&gt;, &lt;arguments…&gt;)`.\n“simpleTransformations”: This makes transformations of code that do not require information or processing about argument types. Handlers can be provided as the opDef$simpleTransformations$handler, which will be found in simpleTransformationsEnv. Examples include simply replacing one keyword name with another for later processing as well as processing cppLiteral or its more general version, nCpp. These are tools for including hand-written arbitrary C++ anywhere one wants.\n“buildIntermediateCalls”: This “lifts” a call from a longer expression to create an intermediate variable first. This is done here only for calls that always needs such lifting, and there aren’t many of those. Currently the list includes eigen, chol, and run.time. It is possible that eventually this stage will not be needed.\n“labelAbstractTypes”: This is one of the beating hearts of the whole compilation system. It labels every step of the AST with type information. In the predecessor nimble compiler, the analogous step ended up having many additional purposes cobbled onto it because it usually has its hands on key information about a piece of syntax. In nCompiler, the goal is to maintain better discipline about what belongs in this step and what doesn’t. In particular we should try to avoid implementation-specific steps, e.g. steps specific to the Eigen (or other) library; this is for abstract types, not implementations. The opDef$labelAbstractTypes$handler can name a handler that will be found in labelAbstractTypesEnv. The handler should fill in the type field of each exprClass object. Sometimes additional information is collected or managed when it is directly related to types.\n“processAD”: This does processing related to automatic differentiation. Note that AD types and functions are first-class objects at this point. More will be described in another section.\n“addInsertions”: This inserts new lines of code created and collected by previous steps. This has not been necessary to use much.\n“setImplementation”: The idea for this was that we currently use Eigen for non-scalar and linear algebra, but conceivable in the future we could use other implementations. In practice currently this step doesn’t do much meaningful.\n“doImplementation”: This is where “eigenization” happens.\n“finalTransformations”: I don’t think much is done here.\n“addDebugging”: This is used only if C++ debugging is turned on."
-  },
-  {
-    "objectID": "developer_new_opDefs.html#providing-new-keywords",
-    "href": "developer_new_opDefs.html#providing-new-keywords",
-    "title": "9  Providing operator definitions for new keywords or nClass methods",
-    "section": "9.1 Providing new keywords",
-    "text": "9.1 Providing new keywords\nIf you want to support a new keyword for compilation, you can do so by providing an operator definition, including handlers for any compilation stage(s) where they are needed. This is done by registerOpDef and can be removed by deregisterOpDef."
-  },
-  {
-    "objectID": "developer_new_opDefs.html#definition-how-nclass-methods-should-be-handled.",
-    "href": "developer_new_opDefs.html#definition-how-nclass-methods-should-be-handled.",
-    "title": "9  Providing operator definitions for new keywords or nClass methods",
-    "section": "9.2 Definition how nClass methods should be handled.",
-    "text": "9.2 Definition how nClass methods should be handled.\nThis is an idea not yet written.\nIt would be nice to allow controllable and extensible handling of any method (nFunction) within an nClass."
-  },
-  {
-    "objectID": "developer_new_opDefs.html#defining-how-nclass-methods-should-be-handled.",
-    "href": "developer_new_opDefs.html#defining-how-nclass-methods-should-be-handled.",
-    "title": "9  Providing operator definitions for new keywords or nClass methods",
-    "section": "9.2 Defining how nClass methods should be handled.",
-    "text": "9.2 Defining how nClass methods should be handled.\nThis is an idea not yet implemented.\nIt would be nice to allow controllable and extensible handling of any method (nFunction) within an nClass."
-  },
-  {
-    "objectID": "developer_new_opDefs.html#defining-how-new-keywords-should-be-handled",
-    "href": "developer_new_opDefs.html#defining-how-new-keywords-should-be-handled",
-    "title": "9  Providing operator definitions for new keywords or nClass methods",
-    "section": "9.1 Defining how new keywords should be handled",
-    "text": "9.1 Defining how new keywords should be handled\nIf you want to support a new keyword for compilation, you can do so by providing an operator definition, including handlers for any compilation stage(s) where they are needed. This is done by registerOpDef and can be removed by deregisterOpDef."
   },
   {
     "objectID": "developer_types.html#type-symbols",
@@ -285,5 +222,68 @@
     "title": "10  Developer: types and symbol tables",
     "section": "10.5 Some of the symbol types available",
     "text": "10.5 Some of the symbol types available\n\nsymbolBasic: For all basic numeric types (integer, double or logical with some number of index dimensions).\nsymbolBlank:\nsymbolNF: For an nFunction.\nsymbolTBD: to-be-determined during a compilation stage when other type can be found.\nsymbolNC: For an nClass object.\nsymbolNCgenerator : For an nClass generator\nsymbolNlist : For an nList object\nsymbolRcppType : For an Rcpp type, for which there are some derived types for specific Rcpp types.\nsymbolSparse : For sparse matrices.\nsymbolCppVar: For a C++ type. (In C++ code generation, types are represented by cppVarClass objects. The symbolCppVar is different: it is for an abstract type that declared to be a C++ type and hence can’t be processed through compilation except for being used in hand-coded C++.)"
+  },
+  {
+    "objectID": "developer_exprClass.html",
+    "href": "developer_exprClass.html",
+    "title": "11  Developer: the expression class",
+    "section": "",
+    "text": "In R, code itself is an object, and can be accessed like a list, but there isn’t a good way to hold additional information. Therefore nCompiler uses its own class, exprClass, to represent code expressions. An exprClass object has fields available for lots of useful information.\nConsider foo(a = 1, b = x, c = bar(y)). We obtain the exprClass representation of this by:\n\nAST &lt;- nParse(quote(foo(a=1, b=x, c=bar(y))))\n\nThe input could alternatively be the string “foo(a=1, b=x, c=bar(y))”\nHere is a guide to the exprClass object AST (for abstract syntax tree):\n\nAST      # a print method attempts to show the syntax tree\n\nfoo\n  a=1\n  b=x\n  c=bar\n    y\n\nAST$name # name is the name of the function\n\n[1] \"foo\"\n\nAST$args # args is a list of other exprClass objects for the arguments\n\n$a\n1\n\n$b\nx\n\n$c\nbar\n  y\n\nAST$isCall              # TRUE since the expression is a function call.\n\n[1] TRUE\n\nAST$Rexpr               # The original R expression\n\nfoo(a = 1, b = x, c = bar(y))\n\nAST$args[[1]]$isLiteral # TRUE since 1 is a \"literal\" value.\n\n[1] TRUE\n\nAST$args[[1]]$name      # name for a literal gives its value\n\n[1] 1\n\nAST$args[[2]]$isName    # TRUE since `x` is a name but not a call\n\n[1] TRUE\n\nAST$args[[2]]$name      # name for a name gives the name as a string\n\n[1] \"x\"\n\nAST$args[[2]]           # From the `print` method, we see the string unquoted.\n\nx\n\nAST$args[[3]]$isCall    # TRUE\n\n[1] TRUE\n\nAST$args[[3]]$args[[1]] # exprClasses can become nested to a high degree.\n\ny\n\n\nNote that in R, { is itself simply a function. Each line of code before the closing } is an argument, it accepts arbitrarily many arguments, and it returns the value of the last argument. Hence, an entire code block can be nested in an exprClass.\n\nASTblock &lt;- nParse(quote(\n  {\n    a &lt;- 1\n    b &lt;- a + 2\n    print(\"hello world\")\n  }\n))\nASTblock$name\n\n[1] \"{\"\n\nASTblock$args[[1]]\n\n&lt;-\n  a\n  1\n\n# etc.\n\nAssignments are special operations, so they get marked specifically:\n\nASTblock$args[[1]]$isAssign # TRUE because the operator is `&lt;-`, `=`, or `&lt;&lt;-`.\n\n[1] TRUE\n\n\nexprClass objects are doubly-linked, meaning an object for a call knows about its arguments and the arguments correspondingly know about the call they are part of. Conceptually, there are arrows both up and down the syntax tree. For processing, one can recurse down a tree or up a tree.\n\nAST\n\nfoo\n  a=1\n  b=x\n  c=bar\n    y\n\narg_c &lt;- AST$args[['c']]\narg_c\n\nbar\n  y\n\narg_c$caller      # This is AST\n\nfoo\n  a=1\n  b=x\n  c=bar\n    y\n\narg_c$callerArgID # 3 because this is the third argument of the caller\n\n[1] 3\n\n\nThis means that one can’t arbitrarily or naively set arguments, because they will not be doubly linked. When an incorrectly formed exprClass object is printed, it will indicate that something is wrong.\n\nASTcopy &lt;- nParse(quote(foo(a=1, b=x, c=bar(y))))\nASTcopy$args[[2]] &lt;- nParse(quote(z)) # DANGER, DON'T DO THIS.\nASTcopy # We get a warning that the second argument is not doubly linked correctly.\n\nfoo\n  a=1\n  b=z\n****Warning: caller and/or callerArgID are not set correctly.\n  c=bar\n    y\n\n\nThere is a set of functions for manipulating exprClass objects. (They are not exported.) For example:\n\nASTcopy &lt;- nCompiler:::copyExprClass(AST)\nnCompiler:::setArg(ASTcopy, 2, nParse(quote(z)))\nASTcopy\n\nfoo\n  a=1\n  b=z\n  c=bar\n    y\n\n\nSome of the functions for manipulating exprClass objects include:\n\ncopyExprClass(original) : Make a deep copy that sets up the double links.\ninsertExprClassLayer(expr, 2, 'g') Make the second argument of expr be wrapped in g().\nremoveExprClassLayer(expr, argID). For the caller of expr, replace the argument that is expr with the argID argument of expr. Example: If expr is inner(a, b) and its caller is outer(inner(a, b)), then removeExprClassLayer(expr, 2) will replace inner(a, b) with b, so that the caller is now outer(b).\nwrapExprClassOperator(expr, 'g') Wrap the entire AST expr inside g().\nnewBracketExpr(args). Wrap a list of exprClass objects (args) inside {}.\nsetCaller(value, expr, ID) Make value be the ID argument of expr.\ninsertArg(expr, ID, value) Insert value as a new argument in position ID for expr, shifting other arguments up one position.\nsetArg(expr, ID, value) Set value as the argument in position ID for expr (replacing whatever is previously in that position). This uses setCaller but is more general because ID can be a string and some error-trapping is done.\nremoveArg(expr, ID) Remove the argument in position ID from expr.\n\nMany of the above functions can take additional arguments that are not shown. Some of them support ID to be either a position number or a name of an argument.\n\n11.0.1 Fields used during compilation\nA key step in compilation is labeling every call in the abstract syntax tree of an nFunction body with its type information. This is done during the “labelAbstractTypes” stage of nFunction compilation. Here is some information on that and other fields used during compilation:\n\ntype This field will be populated with a symbol object representing the type of the exprClass. For a literal, this is the type of the literal. For a call, this is the type returned by the call.\naux This field is used for any auxiliary information that any compilation stage needs to attach to an exprClass object for later use.\ninsertions This field holds other exprClass objects that will need to be inserted into the full code body in order to implement its expression.\ncppADcode: This is TRUE if the exprClass represents an expression used in automatic differentiation.\n\nThere are also some functions (and room for more) to support more concise coding of common exprClass objects that need to be created during compilation, with the type field already populated. For example, sometimes we need to insert a literal and do so after type labeling. Since it is expected that all exprClass objects have types labeled at that and subsequent points, any inserted exprClass objects at later points must be inserted with the type field populated. We have literalDoubleExpr, literalIntegerExpr, and literalLogicalExpr to create type-labeled literal exprClass objects, which otherwise takes a few lines of verbose code."
+  },
+  {
+    "objectID": "developer_opDefs.html#check-the-source-code-for-handler-argument-protocols.",
+    "href": "developer_opDefs.html#check-the-source-code-for-handler-argument-protocols.",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.1 Check the source code for handler argument protocols.",
+    "text": "12.1 Check the source code for handler argument protocols.\nEach compilation stage may use a different standard set of arguments that will be passed to handlers in that stage."
+  },
+  {
+    "objectID": "developer_opDefs.html#the-help-field",
+    "href": "developer_opDefs.html#the-help-field",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.2 The help field",
+    "text": "12.2 The help field\nA help field in an opDef can provide a simple help string. This is not uniformly filled in and is not currently utilized, but it may be in the future."
+  },
+  {
+    "objectID": "developer_opDefs.html#the-matchdef-field-for-argument-normalization",
+    "href": "developer_opDefs.html#the-matchdef-field-for-argument-normalization",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.3 The matchDef field for argument normalization",
+    "text": "12.3 The matchDef field for argument normalization\nmatchDef is a special field that is used during both the “normalizeCalls” stage and parsing by nParse. It is included as its own field in an opDef rather than nested within the “normalizeCalls” field. The matchDef provides an R function prototype (with empty body, {}), which is used for its argument order, names, and initial values.\nmatchDef is similar to match.call in R, but has some different needs. A common step in processing a call in R, if one wants to use the code provided as arguments rather than just their values, is match.call. For example:\n\nmatch.call(function(a = 1, b, c = 5) {}, quote(foo(c = 100, 20)))\n\nfoo(a = 20, c = 100)\n\n\nHere the first argument is used as a function prototype, and the second argument is a call that needs to be normalized to the prototype: arguments are ordered. Often this is used inside a function in R, and the arguments default to the actual function prototype and the actual call of the function, respectively, and thus are both omitted. Notice that since b has no default in the prototype, it is omitted from the result.\nnCompiler needs a distinct version of this kind of feature for several reasons. It must work with exprClass objects. All arguments must be filled in, even if no value is provided, because at some point in the path towards C++ code one can’t simply have missing arguments (although processing steps must still decide what to fill in if any values are missing). Auxiliary information is recorded about whether arguments were missing from the call. And compile-time arguments are separated. The last two points need explanation.\n\n12.3.0.1 Missing values\nSay a line of code is foo(a = 10) for a prototype function(a = 1, b = 2), resulting in the normalized call foo(a = 10, b = 2). It may be helpful in later processing to know whether each argument was provided or was filled in by a default value. In addition, it is useful to know if any arguments are completely missing, neither provided nor with a default. This information is stored in two entries in the aux list of the exprClass for foo, illustrated below.\n\n\n12.3.0.2 Compile-time arguments\nThe opDef entry compileArgs can give a character vector of any argument names that can only be processed at compile time and then can never change. An example is x &lt;- nVector(type = \"integer\"). The type argument can’t be a variable that changes from run to run (i.e. at run-time). It is a compile-time argument. In a case like this, we would see compileArgs=\"type\" in the opDef. The compileArgs are separated at the earliest possible step, namely nParse, and are placed in a compileArgs field in the the aux list of the resulting exprClass.\n\n\n12.3.0.3 Example\nHere is an example of the whole matchDef and compileArgs system.\nSay we have an opDef for an operator foo:\n\nopDefEnv &lt;- list2env(\n  list(foo = list(\n    matchDef = function(a=1, b, c=2, d=x){},\n    compileArgs = 'd'\n    ))\n)\n\nand say we have the expression\n\ncode &lt;- quote(foo(c=100, d=x2))\n\nWe can manually imitate how these will be handled. The AST from code will be:\n\nexpr &lt;- nParse(code, opDefEnv = opDefEnv)\nexpr\n\nfoo\n  c=100\n  NULL\n\nexpr$args\n\n$c\n100\n\n$d\nNULL\n\nexpr$aux$compileArgs\n\n$d\nx2\n\n\nSo far, the compile-time argument d has been moved out of the call and into the auxiliary information. Its place is held by a NULL.\nNote that the value of d can be a variable, and a compiler stage can use scoping to find the value of x2, but that value can only be resolved at compile-time, once.\nLater, when the “normalizeCalls” stage is done, the use of matchDef is done like this:\n\nmatched_expr &lt;- nCompiler:::exprClass_put_args_in_order(opDefEnv$foo$matchDef,\n                                                        expr)\nmatched_expr                         # defaults filled in; arguments ordered.\n\nfoo\n  a=1\n  c=100\n  NULL\n\nmatched_expr$aux$missing             # b is entirely missing, without default\n\n[1] \"b\"\n\nmatched_expr$aux$provided_as_missing # a and b were not provided in the call.\n\n[1] \"a\" \"b\"\n\n\nNote that some (at the time of this writing, many) handlers were written before this full set of information was available in the exprClass objects. As a result, they may inspect these objects in redundant or inconsistent ways, which we intend to clean up over time."
+  },
+  {
+    "objectID": "developer_opDefs.html#more-details-on-each-compilation-stage",
+    "href": "developer_opDefs.html#more-details-on-each-compilation-stage",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.4 More details on each compilation stage",
+    "text": "12.4 More details on each compilation stage\n\n12.4.1 normalizeCalls\nWhen an nFunction call is found during normalizeCalls, the opDef for the name “NFCALL_” is used. When an nClass method call accessed as a local call (i.e. from an object of the nClass) is found, the opDef for “NCMETHOD_” is used. In both cases, the handler is nFunction_or_method_call.\nFor an nFunction (or method) called “foo”, this results in changing\n\nfoo(a, b) to\nNFCALL_(FUN_ = foo_cpp_name, a, b),\n\nwhere “foo_cpp_name” is the C++ function name for foo. As a result, subsequent handlers will be found from the “NFCALL_” opDef. In addition, the exprClass object for the argument foo_cpp_name has several fields added to its aux list:\n\nobj_internals will be the NF_InteralsClass for foo, i.e. the result of NFinternals(foo). This allows one to look up nearly everything about foo.\nnFunctionName will be the R name, i.e. “foo”.\n\nNote that accessing methods from other nClass objects, such as by myObject$foo(a, b) is handled during labelAbstractTypes, in the handler for “$”, which can inspect the type of myObject.\n\n\n12.4.2 simpleTransformations\nThis stage has only a few handlers:\n\nreplace uses the handlingInfo field replacementName and replaces the operator name with the value of replacementName.\nminMax changes min or max to pairmin or pairmax if there are two arguments.\nLiteral is used for cppLiteral and nCpp to evaluate the text argument in the appropriate scope.\n\n\n\n12.4.3 labelAbstractTypes and the returnTypeCodes system\n\nThis has too many handlers to list here.\nThe returnTypeCodes system for determining numeric outputs from numeric inputs works as follows:\n\nAD, double, integer, or logical name the type always returned by an operator. Their information content is ranked in that order.\npromote means the type of the highest-information argument will be returned.\npromoteToDoubleOrAD means the return type will be double unless there is an AD argument, in which case it will be AD.\npromoteNoLogical means the type of the highest-information argument will be returned, with the exception that logical is promoted to integer.\n\n\nThere are some common transformations that are done during labelAbstractTypes (which can’t be done during simpleTransformations because they rely on type information):\n\n\n12.4.4 eigenImpl\n\nThis has too many handlers to cover here."
+  },
+  {
+    "objectID": "developer_opDefs.html#cppoutput",
+    "href": "developer_opDefs.html#cppoutput",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.5 cppOutput",
+    "text": "12.5 cppOutput\n\nThis has too many handlers to cover here."
+  },
+  {
+    "objectID": "developer_opDefs.html#section",
+    "href": "developer_opDefs.html#section",
+    "title": "12  Developer: Operator definitions",
+    "section": "12.6 ",
+    "text": "12.6"
+  },
+  {
+    "objectID": "developer_new_opDefs.html#defining-how-new-keywords-should-be-handled",
+    "href": "developer_new_opDefs.html#defining-how-new-keywords-should-be-handled",
+    "title": "13  Providing operator definitions for new keywords or nClass methods",
+    "section": "13.1 Defining how new keywords should be handled",
+    "text": "13.1 Defining how new keywords should be handled\nIf you want to support a new keyword for compilation, you can do so by providing an operator definition, including handlers for any compilation stage(s) where they are needed. This is done by registerOpDef and can be removed by deregisterOpDef.\nA difference from built-in handlers is that a new handler can be provided as a function rather than just the name of a function."
+  },
+  {
+    "objectID": "developer_new_opDefs.html#defining-how-nclass-methods-should-be-handled.",
+    "href": "developer_new_opDefs.html#defining-how-nclass-methods-should-be-handled.",
+    "title": "13  Providing operator definitions for new keywords or nClass methods",
+    "section": "13.2 Defining how nClass methods should be handled.",
+    "text": "13.2 Defining how nClass methods should be handled.\nThis is an idea not yet implemented.\nIt would be nice to allow controllable and extensible handling of any method (nFunction) within an nClass."
   }
 ]

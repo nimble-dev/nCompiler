@@ -254,6 +254,8 @@ nDeparse <- function(code,
 ### Deparse from exprClass back to R code:
 ## not guaranteed to be identical, but valid.
 nDeparseToText <- function(code, indent = '') {
+  if(!inherits(code, 'exprClass'))
+    return(class(code))
   ## literals
   if(code$isLiteral) {
     if(is.numeric(code$name) |
@@ -265,8 +267,6 @@ nDeparseToText <- function(code, indent = '') {
       return('NULL')
   }
   ## name
-  if(!inherits(code, 'exprClass'))
-    return(class(code))
   if(code$isName)
     return(code$name)
   ## { : iterate through contents, deparsing and adding indentation

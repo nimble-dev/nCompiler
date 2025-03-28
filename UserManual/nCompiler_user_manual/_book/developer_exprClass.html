@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -30,7 +64,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./developer_cppDefs.html" rel="next">
+<link href="./developer_opDefs.html" rel="next">
 <link href="./developer_types.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -144,6 +178,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">What operations can be compiled?</span></span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./controlling_compilation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Controlling compilation</span></span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -162,25 +202,19 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_basic_objects.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_nCompile.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_compilation_stages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./developer_new_opDefs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
@@ -197,8 +231,26 @@ ul.task-list li input[type="checkbox"] {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./developer_opDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_new_opDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./developer_cppDefs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span></a>
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppImpl.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Developer: C++ implementations</span></span></a>
   </div>
 </li>
       </ul>
@@ -209,7 +261,13 @@ ul.task-list li input[type="checkbox"] {
 <div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#fields-used-during-compilation" id="toc-fields-used-during-compilation" class="nav-link active" data-scroll-target="#fields-used-during-compilation"><span class="header-section-number">11.0.1</span> Fields used during compilation</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -231,8 +289,185 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
+<p>In R, code itself is an object, and can be accessed like a list, but there isn’t a good way to hold additional information. Therefore <code>nCompiler</code> uses its own class, <code>exprClass</code>, to represent code expressions. An <code>exprClass</code> object has fields available for lots of useful information.</p>
+<p>Consider <code>foo(a = 1, b = x, c = bar(y))</code>. We obtain the <code>exprClass</code> representation of this by:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>AST <span class="ot">&lt;-</span> <span class="fu">nParse</span>(<span class="fu">quote</span>(<span class="fu">foo</span>(<span class="at">a=</span><span class="dv">1</span>, <span class="at">b=</span>x, <span class="at">c=</span><span class="fu">bar</span>(y))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The input could alternatively be the string “foo(a=1, b=x, c=bar(y))”</p>
+<p>Here is a guide to the <code>exprClass</code> object <code>AST</code> (for abstract syntax tree):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>AST      <span class="co"># a print method attempts to show the syntax tree</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  b=x
+  c=bar
+    y</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>name <span class="co"># name is the name of the function</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "foo"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args <span class="co"># args is a list of other exprClass objects for the arguments</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$a
+1
+
+$b
+x
+
+$c
+bar
+  y</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>isCall              <span class="co"># TRUE since the expression is a function call.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>Rexpr               <span class="co"># The original R expression</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo(a = 1, b = x, c = bar(y))</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">1</span>]]<span class="sc">$</span>isLiteral <span class="co"># TRUE since 1 is a "literal" value.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">1</span>]]<span class="sc">$</span>name      <span class="co"># name for a literal gives its value</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">2</span>]]<span class="sc">$</span>isName    <span class="co"># TRUE since `x` is a name but not a call</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">2</span>]]<span class="sc">$</span>name      <span class="co"># name for a name gives the name as a string</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "x"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">2</span>]]           <span class="co"># From the `print` method, we see the string unquoted.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>x</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">3</span>]]<span class="sc">$</span>isCall    <span class="co"># TRUE</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>AST<span class="sc">$</span>args[[<span class="dv">3</span>]]<span class="sc">$</span>args[[<span class="dv">1</span>]] <span class="co"># exprClasses can become nested to a high degree.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>y</code></pre>
+</div>
+</div>
+<p>Note that in R, <code>{</code> is itself simply a function. Each line of code before the closing <code>}</code> is an argument, it accepts arbitrarily many arguments, and it returns the value of the last argument. Hence, an entire code block can be nested in an <code>exprClass</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>ASTblock <span class="ot">&lt;-</span> <span class="fu">nParse</span>(<span class="fu">quote</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  {</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    a <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    b <span class="ot">&lt;-</span> a <span class="sc">+</span> <span class="dv">2</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">"hello world"</span>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>))</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>ASTblock<span class="sc">$</span>name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "{"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>ASTblock<span class="sc">$</span>args[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>&lt;-
+  a
+  1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co"># etc.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Assignments are special operations, so they get marked specifically:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>ASTblock<span class="sc">$</span>args[[<span class="dv">1</span>]]<span class="sc">$</span>isAssign <span class="co"># TRUE because the operator is `&lt;-`, `=`, or `&lt;&lt;-`.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] TRUE</code></pre>
+</div>
+</div>
+<p><code>exprClass</code> objects are doubly-linked, meaning an object for a call knows about its arguments and the arguments correspondingly know about the call they are part of. Conceptually, there are arrows both up and down the syntax tree. For processing, one can recurse down a tree or up a tree.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>AST</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  b=x
+  c=bar
+    y</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>arg_c <span class="ot">&lt;-</span> AST<span class="sc">$</span>args[[<span class="st">'c'</span>]]</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>arg_c</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>bar
+  y</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>arg_c<span class="sc">$</span>caller      <span class="co"># This is AST</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  b=x
+  c=bar
+    y</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>arg_c<span class="sc">$</span>callerArgID <span class="co"># 3 because this is the third argument of the caller</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 3</code></pre>
+</div>
+</div>
+<p>This means that one can’t arbitrarily or naively set arguments, because they will not be doubly linked. When an incorrectly formed <code>exprClass</code> object is printed, it will indicate that something is wrong.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>ASTcopy <span class="ot">&lt;-</span> <span class="fu">nParse</span>(<span class="fu">quote</span>(<span class="fu">foo</span>(<span class="at">a=</span><span class="dv">1</span>, <span class="at">b=</span>x, <span class="at">c=</span><span class="fu">bar</span>(y))))</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>ASTcopy<span class="sc">$</span>args[[<span class="dv">2</span>]] <span class="ot">&lt;-</span> <span class="fu">nParse</span>(<span class="fu">quote</span>(z)) <span class="co"># </span><span class="al">DANGER</span><span class="co">, DON'T DO THIS.</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>ASTcopy <span class="co"># We get a warning that the second argument is not doubly linked correctly.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  b=z
+****Warning: caller and/or callerArgID are not set correctly.
+  c=bar
+    y</code></pre>
+</div>
+</div>
+<p>There is a set of functions for manipulating <code>exprClass</code> objects. (They are not exported.) For example:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>ASTcopy <span class="ot">&lt;-</span> nCompiler<span class="sc">:::</span><span class="fu">copyExprClass</span>(AST)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>nCompiler<span class="sc">:::</span><span class="fu">setArg</span>(ASTcopy, <span class="dv">2</span>, <span class="fu">nParse</span>(<span class="fu">quote</span>(z)))</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>ASTcopy</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  b=z
+  c=bar
+    y</code></pre>
+</div>
+</div>
+<p><em>Some</em> of the functions for manipulating <code>exprClass</code> objects include:</p>
+<ul>
+<li><p><code>copyExprClass(original)</code> : Make a deep copy that sets up the double links.</p></li>
+<li><p><code>insertExprClassLayer(expr, 2, 'g')</code> Make the second argument of <code>expr</code> be wrapped in <code>g()</code>.</p></li>
+<li><p><code>removeExprClassLayer(expr, argID)</code>. For the caller of <code>expr</code>, replace the argument that is <code>expr</code> with the <code>argID</code> argument of <code>expr</code>. Example: If <code>expr</code> is <code>inner(a, b)</code> and its caller is <code>outer(inner(a, b))</code>, then <code>removeExprClassLayer(expr, 2)</code> will replace <code>inner(a, b)</code> with <code>b</code>, so that the caller is now <code>outer(b)</code>.</p></li>
+<li><p><code>wrapExprClassOperator(expr, 'g')</code> Wrap the entire AST <code>expr</code> inside <code>g()</code>.</p></li>
+<li><p><code>newBracketExpr(args)</code>. Wrap a list of <code>exprClass</code> objects (args) inside <code>{}</code>.</p></li>
+<li><p><code>setCaller(value, expr, ID)</code> Make <code>value</code> be the <code>ID</code> argument of <code>expr</code>.</p></li>
+<li><p><code>insertArg(expr, ID, value)</code> Insert <code>value</code> as a <strong>new</strong> argument in position ID for <code>expr</code>, shifting other arguments up one position.</p></li>
+<li><p><code>setArg(expr, ID, value)</code> Set <code>value</code> as the argument in position <code>ID</code> for <code>expr</code> (replacing whatever is previously in that position). This uses <code>setCaller</code> but is more general because <code>ID</code> can be a string and some error-trapping is done.</p></li>
+<li><p><code>removeArg(expr, ID)</code> Remove the argument in position <code>ID</code> from <code>expr</code>.</p></li>
+</ul>
+<p>Many of the above functions can take additional arguments that are not shown. Some of them support <code>ID</code> to be either a position number or a name of an argument.</p>
+<section id="fields-used-during-compilation" class="level3" data-number="11.0.1">
+<h3 data-number="11.0.1" class="anchored" data-anchor-id="fields-used-during-compilation"><span class="header-section-number">11.0.1</span> Fields used during compilation</h3>
+<p>A key step in compilation is labeling every call in the abstract syntax tree of an <code>nFunction</code> body with its type information. This is done during the “labelAbstractTypes” stage of <code>nFunction</code> compilation. Here is some information on that and other fields used during compilation:</p>
+<ul>
+<li><p><code>type</code> This field will be populated with a symbol object representing the type of the <code>exprClass</code>. For a literal, this is the type of the literal. For a call, this is the type returned by the call.</p></li>
+<li><p><code>aux</code> This field is used for any auxiliary information that any compilation stage needs to attach to an <code>exprClass</code> object for later use.</p></li>
+<li><p><code>insertions</code> This field holds other <code>exprClass</code> objects that will need to be inserted into the full code body in order to implement its expression.</p></li>
+<li><p><code>cppADcode</code>: This is <code>TRUE</code> if the <code>exprClass</code> represents an expression used in automatic differentiation.</p></li>
+</ul>
+<p>There are also some functions (and room for more) to support more concise coding of common <code>exprClass</code> objects that need to be created during compilation, with the <code>type</code> field already populated. For example, sometimes we need to insert a literal and do so after type labeling. Since it is expected that all <code>exprClass</code> objects have types labeled at that and subsequent points, any inserted <code>exprClass</code> objects at later points must be inserted with the <code>type</code> field populated. We have <code>literalDoubleExpr</code>, <code>literalIntegerExpr</code>, and <code>literalLogicalExpr</code> to create type-labeled literal <code>exprClass</code> objects, which otherwise takes a few lines of verbose code.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -476,8 +711,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./developer_cppDefs.html" class="pagination-link">
-        <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./developer_opDefs.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

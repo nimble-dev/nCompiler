@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.353">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>nCompiler User Manual - 12&nbsp; Developer: Operator definitions</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./developer_new_opDefs.html" rel="next">
+<link href="./developer_exprClass.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./developer_basic_objects.html">Developer manual</a></li><li class="breadcrumb-item"><a href="./developer_opDefs.html"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">nCompiler User Manual</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Introduction</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">nFunctions</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./nFunctions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction to nFunctions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">types for inputs and outputs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./types_in_function_code.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">types in function code</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./argument_passing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Passing arguments by copy, reference or block reference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./supported_operations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">What operations can be compiled?</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./controlling_compilation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Controlling compilation</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <span class="sidebar-item-text sidebar-link text-start">
+ <span class="menu-text">nClasses</span></span>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Developer manual</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_basic_objects.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_nCompile.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_compilation_stages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Developer: types and symbol tables</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_exprClass.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Developer: the expression class</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_opDefs.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_new_opDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppImpl.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Developer: C++ implementations</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#check-the-source-code-for-handler-argument-protocols." id="toc-check-the-source-code-for-handler-argument-protocols." class="nav-link active" data-scroll-target="#check-the-source-code-for-handler-argument-protocols."><span class="header-section-number">12.1</span> Check the source code for handler argument protocols.</a></li>
+  <li><a href="#the-help-field" id="toc-the-help-field" class="nav-link" data-scroll-target="#the-help-field"><span class="header-section-number">12.2</span> The <code>help</code> field</a></li>
+  <li><a href="#the-matchdef-field-for-argument-normalization" id="toc-the-matchdef-field-for-argument-normalization" class="nav-link" data-scroll-target="#the-matchdef-field-for-argument-normalization"><span class="header-section-number">12.3</span> The <code>matchDef</code> field for argument normalization</a></li>
+  <li><a href="#more-details-on-each-compilation-stage" id="toc-more-details-on-each-compilation-stage" class="nav-link" data-scroll-target="#more-details-on-each-compilation-stage"><span class="header-section-number">12.4</span> More details on each compilation stage</a>
+  <ul class="collapse">
+  <li><a href="#normalizecalls" id="toc-normalizecalls" class="nav-link" data-scroll-target="#normalizecalls"><span class="header-section-number">12.4.1</span> <code>normalizeCalls</code></a></li>
+  <li><a href="#simpletransformations" id="toc-simpletransformations" class="nav-link" data-scroll-target="#simpletransformations"><span class="header-section-number">12.4.2</span> <code>simpleTransformations</code></a></li>
+  <li><a href="#labelabstracttypes-and-the-returntypecodes-system" id="toc-labelabstracttypes-and-the-returntypecodes-system" class="nav-link" data-scroll-target="#labelabstracttypes-and-the-returntypecodes-system"><span class="header-section-number">12.4.3</span> <code>labelAbstractTypes</code> and the <code>returnTypeCodes</code> system</a></li>
+  <li><a href="#eigenimpl" id="toc-eigenimpl" class="nav-link" data-scroll-target="#eigenimpl"><span class="header-section-number">12.4.4</span> <code>eigenImpl</code></a></li>
+  </ul></li>
+  <li><a href="#cppoutput" id="toc-cppoutput" class="nav-link" data-scroll-target="#cppoutput"><span class="header-section-number">12.5</span> <code>cppOutput</code></a></li>
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section"><span class="header-section-number">12.6</span> </a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<p>An operator definition, or “opDef”, provides information about how each stage of compilation should be handled for each operator (i.e.&nbsp;keyword) that can be compiled.</p>
+<p>The opDefs can all be found in the <code>operatorDefEnv</code> environment, which provides a single place to determine how an operator is processed.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Be careful when operator names are changed during processing.
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Sometimes, handling an operator will result in changing its name. When that happens, the new name will be used to look up the relevant handling for later compilation stages.</p>
+</div>
+</div>
+</div>
+<p>An opDef contains some basic information and then fields for each compilation stage. For example, here is the opDef used for both <code>+</code> and <code>-</code> :</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">list</span>(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">labelAbstractTypes =</span> <span class="fu">list</span>(</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">handler =</span> <span class="st">'BinaryUnaryCwise'</span>,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">returnTypeCode =</span> returnTypeCodes<span class="sc">$</span>promoteNoLogical),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">eigenImpl =</span> <span class="fu">list</span>(</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">handler =</span> <span class="st">'cWiseAddSub'</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">replacements =</span> <span class="fu">list</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      <span class="st">'+'</span> <span class="ot">=</span> <span class="fu">list</span>(</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">'LHS'</span> <span class="ot">=</span> <span class="st">'nCompiler::binaryOpReshapeLHS&lt;nCompiler::plus&gt;'</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">'RHS'</span> <span class="ot">=</span> <span class="st">'nCompiler::binaryOpReshapeRHS&lt;nCompiler::plus&gt;'</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      <span class="st">'-'</span> <span class="ot">=</span> <span class="fu">list</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">'LHS'</span> <span class="ot">=</span> <span class="st">'nCompiler::binaryOpReshapeLHS&lt;nCompiler::minus&gt;'</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="st">'RHS'</span> <span class="ot">=</span> <span class="st">'nCompiler::binaryOpReshapeRHS&lt;nCompiler::minus&gt;'</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">cppOutput =</span> <span class="fu">list</span>(</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">handler =</span> <span class="st">'BinaryOrUnary'</span>)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In each compilation stage, if there is a <code>handler</code> entry, that will be called, and the entire list for that stage may be passed as an argument to the handler. For example, in the “labelAbstractTypes” stage, if there is an opDef field <code>labelAbstractTypes</code>, and if it has a <code>handler</code> entry, the named function is called. In this case, “BinaryUnaryCwise” is called (named as such because <code>+</code> and <code>-</code> may be unary or binary operators and are component-wise operators). The entire <code>labelAbstractTypes</code> list will be passed as the <code>handlingInfo</code> argument to the handler.</p>
+<section id="check-the-source-code-for-handler-argument-protocols." class="level2 callout-notes" data-number="12.1" data-collapse="true">
+<h2 data-number="12.1" class="anchored" data-anchor-id="check-the-source-code-for-handler-argument-protocols."><span class="header-section-number">12.1</span> Check the source code for handler argument protocols.</h2>
+<p>Each compilation stage may use a different standard set of arguments that will be passed to handlers in that stage.</p>
+</section>
+<p>A common need for “labelAbstractTypes” is to determine the type of a return object from a numerical operation. The <code>returnTypeCode</code> provides an option for that. See below for more information.</p>
+<section id="the-help-field" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="the-help-field"><span class="header-section-number">12.2</span> The <code>help</code> field</h2>
+<p>A help field in an opDef can provide a simple help string. This is not uniformly filled in and is not currently utilized, but it may be in the future.</p>
+</section>
+<section id="the-matchdef-field-for-argument-normalization" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="the-matchdef-field-for-argument-normalization"><span class="header-section-number">12.3</span> The <code>matchDef</code> field for argument normalization</h2>
+<p><code>matchDef</code> is a special field that is used during both the “normalizeCalls” stage and parsing by <code>nParse</code>. It is included as its own field in an opDef rather than nested within the “normalizeCalls” field. The <code>matchDef</code> provides an R function prototype (with empty body, <code>{}</code>), which is used for its argument order, names, and initial values.</p>
+<p><code>matchDef</code> is similar to <code>match.call</code> in R, but has some different needs. A common step in processing a call in R, if one wants to use the code provided as arguments rather than just their values, is <code>match.call</code>. For example:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">match.call</span>(<span class="cf">function</span>(<span class="at">a =</span> <span class="dv">1</span>, b, <span class="at">c =</span> <span class="dv">5</span>) {}, <span class="fu">quote</span>(<span class="fu">foo</span>(<span class="at">c =</span> <span class="dv">100</span>, <span class="dv">20</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo(a = 20, c = 100)</code></pre>
+</div>
+</div>
+<p>Here the first argument is used as a function prototype, and the second argument is a call that needs to be normalized to the prototype: arguments are ordered. Often this is used inside a function in R, and the arguments default to the actual function prototype and the actual call of the function, respectively, and thus are both omitted. Notice that since <code>b</code> has no default in the prototype, it is omitted from the result.</p>
+<p><code>nCompiler</code> needs a distinct version of this kind of feature for several reasons. It must work with <code>exprClass</code> objects. All arguments must be filled in, even if no value is provided, because at some point in the path towards C++ code one can’t simply have missing arguments (although processing steps must still decide what to fill in if any values are missing). Auxiliary information is recorded about whether arguments were missing from the call. And compile-time arguments are separated. The last two points need explanation.</p>
+<section id="missing-values" class="level4" data-number="12.3.0.1">
+<h4 data-number="12.3.0.1" class="anchored" data-anchor-id="missing-values"><span class="header-section-number">12.3.0.1</span> Missing values</h4>
+<p>Say a line of code is <code>foo(a = 10)</code> for a prototype <code>function(a = 1, b = 2)</code>, resulting in the normalized call <code>foo(a = 10, b = 2)</code>. It may be helpful in later processing to know whether each argument was provided or was filled in by a default value. In addition, it is useful to know if any arguments are completely missing, neither provided nor with a default. This information is stored in two entries in the <code>aux</code> list of the <code>exprClass</code> for <code>foo</code>, illustrated below.</p>
+</section>
+<section id="compile-time-arguments" class="level4" data-number="12.3.0.2">
+<h4 data-number="12.3.0.2" class="anchored" data-anchor-id="compile-time-arguments"><span class="header-section-number">12.3.0.2</span> Compile-time arguments</h4>
+<p>The opDef entry <code>compileArgs</code> can give a character vector of any argument names that can only be processed at compile time and then can never change. An example is <code>x &lt;- nVector(type = "integer")</code>. The <code>type</code> argument can’t be a variable that changes from run to run (i.e.&nbsp;at run-time). It is a compile-time argument. In a case like this, we would see <code>compileArgs="type"</code> in the opDef. The <code>compileArgs</code> are separated at the earliest possible step, namely <code>nParse</code>, and are placed in a <code>compileArgs</code> field in the the <code>aux</code> list of the resulting <code>exprClass</code>.</p>
+</section>
+<section id="example" class="level4" data-number="12.3.0.3">
+<h4 data-number="12.3.0.3" class="anchored" data-anchor-id="example"><span class="header-section-number">12.3.0.3</span> Example</h4>
+<p>Here is an example of the whole <code>matchDef</code> and <code>compileArgs</code> system.</p>
+<p>Say we have an opDef for an operator <code>foo</code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>opDefEnv <span class="ot">&lt;-</span> <span class="fu">list2env</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">foo =</span> <span class="fu">list</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">matchDef =</span> <span class="cf">function</span>(<span class="at">a=</span><span class="dv">1</span>, b, <span class="at">c=</span><span class="dv">2</span>, <span class="at">d=</span>x){},</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">compileArgs =</span> <span class="st">'d'</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>and say we have the expression</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>code <span class="ot">&lt;-</span> <span class="fu">quote</span>(<span class="fu">foo</span>(<span class="at">c=</span><span class="dv">100</span>, <span class="at">d=</span>x2))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can manually imitate how these will be handled. The AST from code will be:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>expr <span class="ot">&lt;-</span> <span class="fu">nParse</span>(code, <span class="at">opDefEnv =</span> opDefEnv)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>expr</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  c=100
+  NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>expr<span class="sc">$</span>args</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$c
+100
+
+$d
+NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>expr<span class="sc">$</span>aux<span class="sc">$</span>compileArgs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$d
+x2</code></pre>
+</div>
+</div>
+<p>So far, the compile-time argument <code>d</code> has been moved out of the call and into the auxiliary information. Its place is held by a <code>NULL</code>.</p>
+<p>Note that the value of <code>d</code> can be a variable, and a compiler stage can use scoping to find the value of <code>x2</code>, but that value can only be resolved at compile-time, once.</p>
+<p>Later, when the “normalizeCalls” stage is done, the use of <code>matchDef</code> is done like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>matched_expr <span class="ot">&lt;-</span> nCompiler<span class="sc">:::</span><span class="fu">exprClass_put_args_in_order</span>(opDefEnv<span class="sc">$</span>foo<span class="sc">$</span>matchDef,</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                                                        expr)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>matched_expr                         <span class="co"># defaults filled in; arguments ordered.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>foo
+  a=1
+  c=100
+  NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>matched_expr<span class="sc">$</span>aux<span class="sc">$</span>missing             <span class="co"># b is entirely missing, without default</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "b"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>matched_expr<span class="sc">$</span>aux<span class="sc">$</span>provided_as_missing <span class="co"># a and b were not provided in the call.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "a" "b"</code></pre>
+</div>
+</div>
+<p>Note that some (at the time of this writing, <em>many</em>) handlers were written before this full set of information was available in the <code>exprClass</code> objects. As a result, they may inspect these objects in redundant or inconsistent ways, which we intend to clean up over time.</p>
+</section>
+</section>
+<section id="more-details-on-each-compilation-stage" class="level2" data-number="12.4">
+<h2 data-number="12.4" class="anchored" data-anchor-id="more-details-on-each-compilation-stage"><span class="header-section-number">12.4</span> More details on each compilation stage</h2>
+<section id="normalizecalls" class="level3" data-number="12.4.1">
+<h3 data-number="12.4.1" class="anchored" data-anchor-id="normalizecalls"><span class="header-section-number">12.4.1</span> <code>normalizeCalls</code></h3>
+<p>When an <code>nFunction</code> call is found during <code>normalizeCalls</code>, the opDef for the name “<code>NFCALL_</code>” is used. When an <code>nClass</code> method call accessed as a local call (i.e.&nbsp;from an object of the <code>nClass</code>) is found, the opDef for “<code>NCMETHOD_</code>” is used. In both cases, the handler is <code>nFunction_or_method_call</code>.</p>
+<p>For an <code>nFunction</code> (or method) called “<code>foo</code>”, this results in changing</p>
+<ul>
+<li><p><code>foo(a, b)</code> to</p></li>
+<li><p><code>NFCALL_(FUN_ = foo_cpp_name, a, b)</code>,</p></li>
+</ul>
+<p>where “<code>foo_cpp_name</code>” is the C++ function name for <code>foo</code>. As a result, subsequent handlers will be found from the “<code>NFCALL_</code>” opDef. In addition, the <code>exprClass</code> object for the argument <code>foo_cpp_name</code> has several fields added to its <code>aux</code> list:</p>
+<ul>
+<li><code>obj_internals</code> will be the <code>NF_InteralsClass</code> for <code>foo</code>, i.e.&nbsp;the result of <code>NFinternals(foo)</code>. This allows one to look up nearly everything about <code>foo</code>.</li>
+<li><code>nFunctionName</code> will be the R name, i.e.&nbsp;“foo”.</li>
+</ul>
+<p>Note that accessing methods from other <code>nClass</code> objects, such as by <code>myObject$foo(a, b)</code> is handled during <code>labelAbstractTypes</code>, in the handler for “<code>$</code>”, which can inspect the type of <code>myObject</code>.</p>
+</section>
+<section id="simpletransformations" class="level3" data-number="12.4.2">
+<h3 data-number="12.4.2" class="anchored" data-anchor-id="simpletransformations"><span class="header-section-number">12.4.2</span> <code>simpleTransformations</code></h3>
+<p>This stage has only a few handlers:</p>
+<ul>
+<li><code>replace</code> uses the <code>handlingInfo</code> field <code>replacementName</code> and replaces the operator name with the value of <code>replacementName</code>.</li>
+<li><code>minMax</code> changes <code>min</code> or <code>max</code> to <code>pairmin</code> or <code>pairmax</code> if there are two arguments.</li>
+<li><code>Literal</code> is used for <code>cppLiteral</code> and <code>nCpp</code> to evaluate the <code>text</code> argument in the appropriate scope.</li>
+</ul>
+</section>
+<section id="labelabstracttypes-and-the-returntypecodes-system" class="level3" data-number="12.4.3">
+<h3 data-number="12.4.3" class="anchored" data-anchor-id="labelabstracttypes-and-the-returntypecodes-system"><span class="header-section-number">12.4.3</span> <code>labelAbstractTypes</code> and the <code>returnTypeCodes</code> system</h3>
+<ul>
+<li><p>This has too many handlers to list here.</p></li>
+<li><p>The <code>returnTypeCodes</code> system for determining numeric outputs from numeric inputs works as follows:</p>
+<ul>
+<li><code>AD</code>, <code>double</code>, <code>integer</code>, or <code>logical</code> name the type always returned by an operator. Their information content is ranked in that order.</li>
+<li><code>promote</code> means the type of the highest-information argument will be returned.</li>
+<li><code>promoteToDoubleOrAD</code> means the return type will be <code>double</code> unless there is an <code>AD</code> argument, in which case it will be <code>AD</code>.</li>
+<li><code>promoteNoLogical</code> means the type of the highest-information argument will be returned, with the exception that <code>logical</code> is promoted to <code>integer</code>.</li>
+</ul></li>
+</ul>
+<p>There are some common transformations that are done during <code>labelAbstractTypes</code> (which can’t be done during <code>simpleTransformations</code> because they rely on type information):</p>
+</section>
+<section id="eigenimpl" class="level3" data-number="12.4.4">
+<h3 data-number="12.4.4" class="anchored" data-anchor-id="eigenimpl"><span class="header-section-number">12.4.4</span> <code>eigenImpl</code></h3>
+<ul>
+<li>This has too many handlers to cover here.</li>
+</ul>
+</section>
+</section>
+<section id="cppoutput" class="level2" data-number="12.5">
+<h2 data-number="12.5" class="anchored" data-anchor-id="cppoutput"><span class="header-section-number">12.5</span> <code>cppOutput</code></h2>
+<ul>
+<li>This has too many handlers to cover here.</li>
+</ul>
+</section>
+<section id="section" class="level2" data-number="12.6">
+<h2 data-number="12.6" class="anchored" data-anchor-id="section"><span class="header-section-number">12.6</span> </h2>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./developer_exprClass.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Developer: the expression class</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./developer_new_opDefs.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

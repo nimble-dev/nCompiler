@@ -14,15 +14,17 @@ book:
         - types_in_function_code.qmd
         - argument_passing.qmd
         - supported_operations.qmd
+        - controlling_compilation.qmd
     - part: "nClasses"
     - part: "Developer manual"
       chapters: 
         - developer_basic_objects.qmd
         - developer_nCompile.qmd
         - developer_compilation_stages.qmd
-        - developer_new_opDefs.qmd
         - developer_types.qmd
         - developer_exprClass.qmd
+        - developer_opDefs.qmd
+        - developer_new_opDefs.qmd
         - developer_cppDefs.qmd
         - developer_cppImpl.qmd
 

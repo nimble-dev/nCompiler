@@ -1,0 +1,174 @@
+---
+title: "Developer: Operator definitions"
+---
+
+```{r echo=FALSE}
+library(nCompiler)
+```
+
+An operator definition, or "opDef", provides information about how each stage of compilation should be handled for each operator (i.e. keyword) that can be compiled.
+
+The opDefs can all be found in the `operatorDefEnv` environment, which provides a single place to determine how an operator is processed.
+
+::: {.callout-important collapse="true"}
+## Be careful when operator names are changed during processing.
+
+Sometimes, handling an operator will result in changing its name. When that happens, the new name will be used to look up the relevant handling for later compilation stages.
+:::
+
+An opDef contains some basic information and then fields for each compilation stage. For example, here is the opDef used for both `+` and `-` :
+
+```{r eval=FALSE}
+list(
+  labelAbstractTypes = list(
+    handler = 'BinaryUnaryCwise',
+    returnTypeCode = returnTypeCodes$promoteNoLogical),
+  eigenImpl = list(
+    handler = 'cWiseAddSub',
+    replacements = list(
+      '+' = list(
+        'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::plus>',
+        'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::plus>'
+      ),
+      '-' = list(
+        'LHS' = 'nCompiler::binaryOpReshapeLHS<nCompiler::minus>',
+        'RHS' = 'nCompiler::binaryOpReshapeRHS<nCompiler::minus>'
+      )
+    )
+  ),
+  cppOutput = list(
+    handler = 'BinaryOrUnary')
+)
+```
+
+In each compilation stage, if there is a `handler` entry, that will be called, and the entire list for that stage may be passed as an argument to the handler. For example, in the "labelAbstractTypes" stage, if there is an opDef field `labelAbstractTypes`, and if it has a `handler` entry, the named function is called. In this case, "BinaryUnaryCwise" is called (named as such because `+` and `-` may be unary or binary operators and are component-wise operators). The entire `labelAbstractTypes` list will be passed as the `handlingInfo` argument to the handler.
+
+::: {.callout-notes collapse="true"}
+## Check the source code for handler argument protocols.
+
+Each compilation stage may use a different standard set of arguments that will be passed to handlers in that stage.
+:::
+
+A common need for "labelAbstractTypes" is to determine the type of a return object from a numerical operation. The `returnTypeCode` provides an option for that. See below for more information.
+
+## The `help` field
+
+A help field in an opDef can provide a simple help string. This is not uniformly filled in and is not currently utilized, but it may be in the future.
+
+## The `matchDef` field for argument normalization
+
+`matchDef` is a special field that is used during both the "normalizeCalls" stage and parsing by `nParse`. It is included as its own field in an opDef rather than nested within the "normalizeCalls" field. The `matchDef` provides an R function prototype (with empty body, `{}`), which is used for its argument order, names, and initial values.
+
+`matchDef` is similar to `match.call` in R, but has some different needs. A common step in processing a call in R, if one wants to use the code provided as arguments rather than just their values, is `match.call`. For example:
+
+```{r}
+match.call(function(a = 1, b, c = 5) {}, quote(foo(c = 100, 20)))
+```
+
+Here the first argument is used as a function prototype, and the second argument is a call that needs to be normalized to the prototype: arguments are ordered. Often this is used inside a function in R, and the arguments default to the actual function prototype and the actual call of the function, respectively, and thus are both omitted. Notice that since `b` has no default in the prototype, it is omitted from the result.
+
+`nCompiler` needs a distinct version of this kind of feature for several reasons. It must work with `exprClass` objects. All arguments must be filled in, even if no value is provided, because at some point in the path towards C++ code one can't simply have missing arguments (although processing steps must still decide what to fill in if any values are missing). Auxiliary information is recorded about whether arguments were missing from the call. And compile-time arguments are separated. The last two points need explanation.
+
+#### Missing values
+
+Say a line of code is `foo(a = 10)` for a prototype `function(a = 1, b = 2)`, resulting in the normalized call `foo(a = 10, b = 2)`. It may be helpful in later processing to know whether each argument was provided or was filled in by a default value. In addition, it is useful to know if any arguments are completely missing, neither provided nor with a default. This information is stored in two entries in the `aux` list of the `exprClass` for `foo`, illustrated below.
+
+#### Compile-time arguments
+
+The opDef entry `compileArgs` can give a character vector of any argument names that can only be processed at compile time and then can never change. An example is `x <- nVector(type = "integer")`. The `type` argument can't be a variable that changes from run to run (i.e. at run-time). It is a compile-time argument. In a case like this, we would see `compileArgs="type"` in the opDef. The `compileArgs` are separated at the earliest possible step, namely `nParse`, and are placed in a `compileArgs` field in the the `aux` list of the resulting `exprClass`.
+
+#### Example
+
+Here is an example of the whole `matchDef` and `compileArgs` system.
+
+Say we have an opDef for an operator `foo`:
+
+```{r}
+opDefEnv <- list2env(
+  list(foo = list(
+    matchDef = function(a=1, b, c=2, d=x){},
+    compileArgs = 'd'
+    ))
+)
+```
+
+and say we have the expression
+
+```{r}
+code <- quote(foo(c=100, d=x2))
+```
+
+We can manually imitate how these will be handled. The AST from code will be:
+
+```{r}
+expr <- nParse(code, opDefEnv = opDefEnv)
+expr
+expr$args
+expr$aux$compileArgs
+```
+
+So far, the compile-time argument `d` has been moved out of the call and into the auxiliary information. Its place is held by a `NULL`.
+
+Note that the value of `d` can be a variable, and a compiler stage can use scoping to find the value of `x2`, but that value can only be resolved at compile-time, once.
+
+Later, when the "normalizeCalls" stage is done, the use of `matchDef` is done like this:
+
+```{r}
+matched_expr <- nCompiler:::exprClass_put_args_in_order(opDefEnv$foo$matchDef,
+                                                        expr)
+matched_expr                         # defaults filled in; arguments ordered.
+matched_expr$aux$missing             # b is entirely missing, without default
+matched_expr$aux$provided_as_missing # a and b were not provided in the call.
+```
+
+Note that some (at the time of this writing, *many*) handlers were written before this full set of information was available in the `exprClass` objects. As a result, they may inspect these objects in redundant or inconsistent ways, which we intend to clean up over time.
+
+## More details on each compilation stage
+
+### `normalizeCalls`
+
+When an `nFunction` call is found during `normalizeCalls`, the opDef for the name "`NFCALL_`" is used. When an `nClass` method call accessed as a local call (i.e. from an object of the `nClass`) is found, the opDef for "`NCMETHOD_`" is used. In both cases, the handler is `nFunction_or_method_call`.
+
+For an `nFunction` (or method) called "`foo`", this results in changing
+
+-   `foo(a, b)` to
+
+-   `NFCALL_(FUN_ = foo_cpp_name, a, b)`,
+
+where "`foo_cpp_name`" is the C++ function name for `foo`. As a result, subsequent handlers will be found from the "`NFCALL_`" opDef. In addition, the `exprClass` object for the argument `foo_cpp_name` has several fields added to its `aux` list:
+
+-   `obj_internals` will be the `NF_InteralsClass` for `foo`, i.e. the result of `NFinternals(foo)`. This allows one to look up nearly everything about `foo`.
+-   `nFunctionName` will be the R name, i.e. "foo".
+
+Note that accessing methods from other `nClass` objects, such as by `myObject$foo(a, b)` is handled during `labelAbstractTypes`, in the handler for "`$`", which can inspect the type of `myObject`.
+
+### `simpleTransformations`
+
+This stage has only a few handlers:
+
+-   `replace` uses the `handlingInfo` field `replacementName` and replaces the operator name with the value of `replacementName`.
+-   `minMax` changes `min` or `max` to `pairmin` or `pairmax` if there are two arguments.
+-   `Literal` is used for `cppLiteral` and `nCpp` to evaluate the `text` argument in the appropriate scope.
+
+### `labelAbstractTypes` and the `returnTypeCodes` system
+
+-   This has too many handlers to list here.
+
+-   The `returnTypeCodes` system for determining numeric outputs from numeric inputs works as follows:
+
+    -   `AD`, `double`, `integer`, or `logical` name the type always returned by an operator. Their information content is ranked in that order.
+    -   `promote` means the type of the highest-information argument will be returned.
+    -   `promoteToDoubleOrAD` means the return type will be `double` unless there is an `AD` argument, in which case it will be `AD`.
+    -   `promoteNoLogical` means the type of the highest-information argument will be returned, with the exception that `logical` is promoted to `integer`.
+
+There are some common transformations that are done during `labelAbstractTypes` (which can't be done during `simpleTransformations` because they rely on type information):
+
+### `eigenImpl`
+
+-   This has too many handlers to cover here.
+
+## `cppOutput`
+
+-   This has too many handlers to cover here.
+
+## 

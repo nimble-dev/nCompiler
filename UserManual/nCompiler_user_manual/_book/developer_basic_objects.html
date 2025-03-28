@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>nCompiler User Manual - 6&nbsp; Basic objects for nFunctions and nClasses</title>
+<title>nCompiler User Manual - 7&nbsp; Basic objects for nFunctions and nClasses</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -31,7 +31,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
 <link href="./developer_nCompile.html" rel="next">
-<link href="./supported_operations.html" rel="prev">
+<link href="./controlling_compilation.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -66,6 +66,7 @@ ul.task-list li input[type="checkbox"] {
 
 <body class="nav-sidebar floating">
 
+
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
   <nav class="quarto-secondary-nav">
@@ -73,7 +74,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./developer_basic_objects.html">Developer manual</a></li><li class="breadcrumb-item"><a href="./developer_basic_objects.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></a></li></ol></nav>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./developer_basic_objects.html">Developer manual</a></li><li class="breadcrumb-item"><a href="./developer_basic_objects.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></a></li></ol></nav>
       <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
       </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -143,6 +144,12 @@ ul.task-list li input[type="checkbox"] {
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">What operations can be compiled?</span></span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./controlling_compilation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Controlling compilation</span></span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -161,25 +168,55 @@ ul.task-list li input[type="checkbox"] {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_basic_objects.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_nCompile.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_compilation_stages.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Developer: Compilation stages</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_types.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Developer: types and symbol tables</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_exprClass.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Developer: the expression class</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_opDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Developer: Operator definitions</span></span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./developer_new_opDefs.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Providing operator definitions for new keywords or nClass methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppDefs.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Developer: C++ definition classes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./developer_cppImpl.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Developer: C++ implementations</span></span></a>
   </div>
 </li>
       </ul>
@@ -194,8 +231,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#nfunctions" id="toc-nfunctions" class="nav-link active" data-scroll-target="#nfunctions"><span class="header-section-number">6.1</span> nFunctions</a></li>
-  <li><a href="#nclasses" id="toc-nclasses" class="nav-link" data-scroll-target="#nclasses"><span class="header-section-number">6.2</span> nClasses</a></li>
+  <li><a href="#nfunctions" id="toc-nfunctions" class="nav-link active" data-scroll-target="#nfunctions"><span class="header-section-number">7.1</span> nFunctions</a></li>
+  <li><a href="#nclasses" id="toc-nclasses" class="nav-link" data-scroll-target="#nclasses"><span class="header-section-number">7.2</span> nClasses</a></li>
   </ul>
 </nav>
     </div>
@@ -204,7 +241,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></h1>
+<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Basic objects for nFunctions and nClasses</span></h1>
 </div>
 
 
@@ -219,8 +256,8 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<section id="nfunctions" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="nfunctions"><span class="header-section-number">6.1</span> nFunctions</h2>
+<section id="nfunctions" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="nfunctions"><span class="header-section-number">7.1</span> nFunctions</h2>
 <ul>
 <li><p>An <code>nFunction</code> (e.g.&nbsp;“<code>nf</code>”) is an object of class <code>nFunctionClass</code>, which inherits from (“contains”) R’s base <code>function</code> class. This means an <code>nFunction</code> <strong>is a function</strong> and also has slots for <code>internals</code> and <code>originalCode</code>.</p></li>
 <li><p>The <code>internals</code> of <code>nFunction</code> is an object of class <code>NF_InternalsClass</code>. Access should be via <code>NFinternals(nf)</code> and <code>NFinternals(nf) &lt;-</code>.</p></li>
@@ -228,8 +265,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>The <code>compileInfo</code> argument to <code>nFunction</code> provides an arbitrary list of compilation-relevant information that will be passed through the various steps of compilation, sometimes with additions or modifications along the way.</p></li>
 </ul>
 </section>
-<section id="nclasses" class="level2" data-number="6.2">
-<h2 data-number="6.2" class="anchored" data-anchor-id="nclasses"><span class="header-section-number">6.2</span> nClasses</h2>
+<section id="nclasses" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="nclasses"><span class="header-section-number">7.2</span> nClasses</h2>
 <ul>
 <li><p>An <code>nClass</code> (e.g.&nbsp;“nc”) is an <code>R6</code> class. The class object is called the <em>generator</em> because it can create objects of the class (e.g.&nbsp;<code>nc$new()</code>).</p></li>
 <li><p>An <code>nClass</code> has internal information stored in an <code>NC_InternalsClass</code> object that can be accessed by <code>NCinternals(nc)</code> and <code>NCinternals(nc) &lt;-</code>.</p></li>
@@ -478,13 +515,13 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./supported_operations.html" class="pagination-link">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">What operations can be compiled?</span></span>
+      <a href="./controlling_compilation.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Controlling compilation</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="./developer_nCompile.html" class="pagination-link">
-        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Developer: nCompile overview</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

@@ -93,12 +93,12 @@ exprClass_print <- function(AST,
                       argName = argNames[i]
                       )
       ## check caller and callerArgID validity
-      if(!identical(args[[i]]$caller, AST) |
-           args[[i]]$callerArgID != i)
+      if(!identical(args[[i]]$caller, AST) ||
+           !isTRUE(args[[i]]$callerArgID == i))
         writeLines(
           paste0(indent,
                  '****',
-                 'Warning: caller and/or callerID ',
+                 'Warning: caller and/or callerArgID ',
                  'are not set correctly.')
         )
     } else {
@@ -533,7 +533,9 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
         i <- which(mname == names(formals_def))
         if(i > length(expr$args))
           i <- length(expr$args)+1
-        insertArg(expr, i, value = nParse(formals_def[[mname]]), name = mname)
+        insertArg(expr, i,
+                  value = nParse(formals_def[[mname]], recursing=TRUE), # recursing=TRUE prevents parsing if the default is a string
+                  name = mname)
       } else {
         new_missing_names <- c(new_missing_names, mname)
       }
@@ -543,9 +545,9 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
   expr
 }
 
-expr <- nParse(quote(foo(a = 1, NULL)))
-def <- \(a, b, c = 1) {}
-exprClass_match_call(def, expr)
-test <- exprClass_put_args_in_order(def, expr)
-test
-test$aux
+## expr <- nParse(quote(foo(a = 1, NULL)))
+## def <- \(a, b, c = 1) {}
+## exprClass_match_call(def, expr)
+## test <- exprClass_put_args_in_order(def, expr)
+## test
+## test$aux
