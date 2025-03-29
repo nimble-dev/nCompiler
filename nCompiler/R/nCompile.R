@@ -995,7 +995,8 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
     ## A nClass might need:
     DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "nCompiler", "RcppEigen",
-                                         "RcppEigenAD", "RcppParallel", "Rcereal", sep = ",")
+                                         #"RcppEigenAD",
+                                         "RcppParallel", "Rcereal", sep = ",")
     # DESCRIPTION$Encoding <- "UTF-8"
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.

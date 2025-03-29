@@ -39,10 +39,12 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   ##                       )
   usingEigen <- TRUE
   if(usingEigen) {
-    checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
+    checkPackage <- find.package(c(#"RcppEigenAD",
+                                   "Rcereal"),
                                  quiet = TRUE)
-    if(length(checkPackage)!=2) {
-      stop("Packages RcppEigenAD and Rcereal must be installed.")
+    if(length(checkPackage)!=1) { #2) {
+#      stop("Packages RcppEigenAD and Rcereal must be installed.")
+      stop("Package Rcereal must be installed.")
     }
     ## require(RcppEigenAD)
     ## require(Rcereal)
@@ -51,7 +53,7 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
                      #   paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
                         "using namespace Rcpp;",
                         "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
-                        "// [[Rcpp::depends(RcppEigenAD)]]",
+                   #     "// [[Rcpp::depends(RcppEigenAD)]]",
                         "// [[Rcpp::depends(RcppParallel)]]",
                         "// [[Rcpp::depends(nCompiler)]]",
                         "// [[Rcpp::depends(Rcereal)]]")

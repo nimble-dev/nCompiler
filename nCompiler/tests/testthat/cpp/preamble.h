@@ -13,6 +13,6 @@ using namespace Rcpp;
 // In nimbleCompiler, nimblePlugin turns on cpp11. Not sure if following is needed:
 /* Not needed (should be set by nimble plugins) [[Rcpp::plugins(cpp11)]] */ 
 // [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
-// [[Rcpp::depends(RcppEigenAD)]]
+/* Not needed, will be replaced [[Rcpp::depends(RcppEigenAD)]] */
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]

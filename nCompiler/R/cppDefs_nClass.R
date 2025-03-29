@@ -29,10 +29,12 @@ nClassBaseClass_init_impl <- function(cppDef) {
   usingEigen <- TRUE
   ## The following need to be here, not just in cpp_nFunction, in case there is a nClass with no methods.
   if(usingEigen) {
-    checkPackage <- find.package(c("RcppEigenAD", "Rcereal"),
+    checkPackage <- find.package(c(#"RcppEigenAD",
+                                   "Rcereal"),
                                  quiet = TRUE)
-    if(length(checkPackage)!=2) {
-      stop("Packages RcppEigenAD and Rcereal must be installed.")
+    if(length(checkPackage)!=1) { #2) {
+#      stop("Packages RcppEigenAD and Rcereal must be installed.")
+      stop("Package Rcereal must be installed.")
     }
     ##                require(RcppEigenAD)
     ##                require(Rcereal)
@@ -40,7 +42,7 @@ nClassBaseClass_init_impl <- function(cppDef) {
                         ##paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
                         "using namespace Rcpp;",
                         "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
-                        "// [[Rcpp::depends(RcppEigenAD)]]",
+                   #     "// [[Rcpp::depends(RcppEigenAD)]]",
                         "// [[Rcpp::depends(RcppParallel)]]",
                         "// [[Rcpp::depends(nCompiler)]]",
                         "// [[Rcpp::depends(Rcereal)]]")
@@ -274,6 +276,8 @@ cpp_nClassClass <- R6::R6Class(
         addSerialization()
       if(isTRUE(get_nOption('enableDerivs')))
         addADclassContent()
+      if(isTRUE(self$compileInfo$buildCopyFromNimbleFunction))
+        addCopyFromNimbleFunction(self)
       #interfaceCalls controls whether to include get_values, set_value, call_method
       #self$compileInfo$interface controls whether to inherit from base classes for interfacing
       #It would be wierd to do the former without the latter,
