@@ -150,7 +150,8 @@ dir.create(path = odir, showWarnings = FALSE, recursive = TRUE)
 test_suite = rbind(
   data.frame(base_name = 'math', path = file.path('nCompiler', 'tests', 'nimble')),
   data.frame(base_name = 'indexing', path = file.path('nCompiler', 'tests', 'testthat')),
-  data.frame(base_name = 'allocations', path = file.path('nCompiler', 'tests', 'nimble'))
+  data.frame(base_name = 'allocations', path = file.path('nCompiler', 'tests', 'nimble')),
+  data.frame(base_name = 'coreR', path = file.path('nCompiler', 'tests', 'nimble'))
 )
 
 # run tests

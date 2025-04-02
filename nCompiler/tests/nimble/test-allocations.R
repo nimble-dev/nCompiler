@@ -24,7 +24,6 @@ test_coreRfeature_batch <- function(
     test_coreRfeature_batch_internal(input_batch, verbose = verbose, dirName)
   })
 }
-
 test_coreRfeature_batch_internal <-
   divert_to_nCompiler(test_coreRfeature_batch_internal, list(compileNimble = nCompiler:::compileNimble))
 test_coreRfeature_internal <-
