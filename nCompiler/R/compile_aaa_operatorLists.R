@@ -464,6 +464,18 @@ updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
 updateOperatorDef('min', 'cppOutput', 'cppString', 'minimum')
 
 assignOperatorDef(
+  c('pairmin', 'pairmax'),
+  list(
+    labelAbstractTypes = list(
+        handler = 'BinaryCwise',
+        returnTypeCode = returnTypeCodes$promoteNoLogical),
+    cppOutput = list()
+  )
+)
+updateOperatorDef('pairmax', 'cppOutput', 'cppString', 'std::max')
+updateOperatorDef('pairmin', 'cppOutput', 'cppString', 'std::min')
+
+assignOperatorDef(
   c('pmin', 'pmax'),
   list(
     labelAbstractTypes = list(
