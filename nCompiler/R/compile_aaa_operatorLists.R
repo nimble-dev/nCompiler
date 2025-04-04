@@ -650,7 +650,7 @@ assignOperatorDef(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
-    'loggam', 'log1p', 'lfactorial', 'logfact'),
+    'loggam', 'log1p', 'lfactorial', 'logfact', 'cosh', 'sinh'),
   list(
     help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(
