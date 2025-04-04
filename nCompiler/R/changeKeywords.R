@@ -26,7 +26,9 @@ nKeyWords <- list(copy = 'nCopy',
                   derivs = 'nDerivs',
                   solve = 'nSolve',
                   forwardsolve = 'nForwardsolve',
-                  backsolve = 'nBacksolve')
+                  backsolve = 'nBacksolve',
+                  logdet = 'nLogdet'
+                  )
 
 nf_changeKeywords <- function(code){
     if(length(code) > 0){

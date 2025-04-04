@@ -1381,6 +1381,116 @@ ResultType nMul(const Xpr & x, const Ypr & y) {
     return res;
 }
 
+/**
+ * QR decompositions are an efficient and numerically stable way to evaluate 
+ * determinants of matrices.  However, the QR decomposition classes in 
+ * Eigen 3.4.0 do not support signed log determinants.  This class remedies the
+ * limitation until future releases of Eigen with greater functionality are 
+ * available.
+ */
+template<typename _MatrixType> class nColPivHouseholderQR
+    : public Eigen::ColPivHouseholderQR<_MatrixType>
+{
+
+    private:
+
+    using Scalar = _MatrixType::Scalar;
+    using Index = Eigen::Index;
+
+    /**
+     * Evaluate the determinant of the QR decomposition's Householder rotations
+     * 
+     * Function to be included in future Eigen releases
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/HouseholderQR.h
+     */
+    Scalar householder_determinant() {
+        bool negated = false;
+        Index size = this->m_hCoeffs.rows();
+        for (Index i = 0; i < size; i++) {
+        // Each valid reflection negates the determinant.
+        if (this->m_hCoeffs(i) != Scalar(0)) negated ^= true;
+        }
+        return negated ? Scalar(-1) : Scalar(1);
+    }
+
+    /**
+     * Evaluate the sign of the matrix determinant
+     * 
+     * Function to be included in future Eigen releases
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/ColPivHouseholderQR.h
+     */
+    Scalar signDeterminant() {
+        if(this->isInjective()) {
+            return householder_determinant() * 
+                Scalar(this->m_det_pq) * 
+                this->m_qr.diagonal().array().sign().prod();
+        } else 
+            return Scalar(0);
+    }
+
+    public:
+
+    // let Eigen run its standard QR decomposition initialization routines
+    nColPivHouseholderQR(_MatrixType & x) : 
+        Eigen::ColPivHouseholderQR<_MatrixType>(x) { }
+
+    /**
+     * Compute the log determinant of the matrix
+     * 
+     * Adapted from Eigen::ColPivHouseholderQR<_MatrixType>::logAbsDeterminant
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/ColPivHouseholderQR.h
+     */
+    Scalar logDeterminant() {
+        // det == 0
+        if(!this->isInjective())
+            return -std::numeric_limits<Scalar>::infinity();
+        // det > 0
+        else if(signDeterminant() > 0)
+            return this->m_qr.diagonal().cwiseAbs().array().log().sum();
+        // det < 0
+        else
+            return std::numeric_limits<Scalar>::quiet_NaN();
+    }
+
+};
+
+/**
+ * Log-determinant of a square, matrix-like object, i.e., a rank 2 Eigen::Tensor 
+ * object or Tensor expression.
+ *
+ * @tparam Xpr An Eigen::Tensor or tensor expression object type
+ */
+template<
+    typename Xpr,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Scalar nLogdet(const Xpr & x) {
+    // evaluate arguments, if necessary
+    auto xeval = eval(x);
+    // validate it's a square matrix
+    auto xDim = xeval.dimensions();
+    if(xDim[0] != xDim[1]) {
+        throw std::invalid_argument(
+            "nCompiler::nLdet - Cannot take determinant of non-square matrix"
+        );
+    }
+    // map inputs
+    typedef Eigen::Map<Eigen::MatrixXd> MatrixType;
+    MatrixType xmap = matmap(xeval);
+    // extract determinant from qr decomposition
+    nColPivHouseholderQR<MatrixType> qrdecomp(xmap);
+    return qrdecomp.logDeterminant();
+}
+
+// TODO: implement nLogdet for sparse matrices
+
 // This is drafted but not yet used.
 template<typename Scalar >
 bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {

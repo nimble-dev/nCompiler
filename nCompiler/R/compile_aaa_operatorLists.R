@@ -928,6 +928,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('nLogdet'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nDiag', 'nDiagonal'),
   list(
     labelAbstractTypes = list(
