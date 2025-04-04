@@ -810,7 +810,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('^'),
+  c('^', 'pow'),
   list(
     labelAbstractTypes = list(
       handler = 'BinaryCwise',
