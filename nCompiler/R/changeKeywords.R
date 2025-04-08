@@ -63,3 +63,31 @@ nf_changeKeywordsOne <- function(code, first = FALSE){
     }
     return(code)
 }
+
+#' Add or update keywords to substitude during compilation
+#' 
+#' Add or update keywords whose name will be substituted during calls to 
+#' \code{nCompile}.  The keyword substitution list will only be updated for the 
+#' current R session.  Restarting the R session will reset the keyword 
+#' substitution list to nCompiler defaults.
+#' 
+#' @param keywords A \code{list} whose named elements will be replaced
+#' 
+#' @examples
+#' kw = list(
+#'     nimRound = 'round' # replace calls to "nimRound" code with "round"
+#' )
+#' addKeywords(keywords = kw)
+#' 
+#' @export 
+#' 
+addKeywords <- function(keywords) {
+    # retrieve nCompiler:::nKeywords from current R session
+    nKeyWords = getFromNamespace(x = 'nKeyWords', ns = 'nCompiler')
+    # make changes
+    for(kw in names(keywords)) {
+        nKeyWords[kw] = keywords[[kw]]
+    }
+    # update nCompiler:::nKeywords
+    assignInNamespace(x = 'nKeyWords', value = nKeyWords, ns = 'nCompiler')
+}

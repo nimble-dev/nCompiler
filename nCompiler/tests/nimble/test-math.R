@@ -33,6 +33,9 @@ source(system.file(file.path('tests', 'testthat', 'mathTestLists.R'), package = 
 
 ### Changes start
 
+# for this R session only, add nimble keywords to nCompiler's substitution list
+addKeywords(list(nimRound = 'round'))
+
 # update test expectations: test fails in nimble but succeeds with extra
 #   nCompiler functionality
 tgt_test_ind = which(
