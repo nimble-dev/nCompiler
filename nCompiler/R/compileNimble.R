@@ -219,10 +219,27 @@ nimbleSymTab_to_nComp_types <- function(symTab) {
 }
 
 nimble_nCompiler_opDefs <- list(
-  nimRound = list(simpleTransformations=list(handler='replace', replacement='round')),
-  nimNumeric = list(simpleTransformations=list(handler='replace', replacement='nNumeric')),
-  nimInteger = list(simpleTransformations=list(handler='replace', replacement='nInteger')),
-  nimLogical = list(simpleTransformations=list(handler='replace', replacement='nLogical'))
+  nimRound = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='round')),
+  nimNumeric = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nNumeric')),
+  nimInteger = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nInteger')),
+  nimLogical = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nLogical')),
+  nimC = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nC')),
+  nimRep = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nRep')),
+  nimSeq = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nSeq'))
+)
+
+proxyNimbleProjectClass <- R6::R6Class(
+  classname = "nimbleProjectClass",
+  public = list(
+    dirName = NULL,
+    name = NULL,
+    initialize = function(name, dirName) {
+      if(!missing(name)) self$name <- name
+      if(!missing(dirName)) self$dirName <- dirName
+    },
+    resetFunctions = function() {},
+    clearCompiled = function() {}
+  )
 )
 
 compileNimble <- function(..., project, dirName = NULL, projectName = '',
@@ -257,7 +274,7 @@ compileNimble <- function(..., project, dirName = NULL, projectName = '',
   if(missing(project)) {
     if(reset) warning("You requested 'reset = TRUE', but no project was provided.  If you are trying to re-compiled something into the same project, give it as the project argument as well as a compilation item. For example, 'compileNimble(myFunction, project = myFunction, reset = TRUE)'.")
     if(!is.null(getNimbleOption('nimbleProject'))) project <- getNimbleOption('nimbleProject')
-    else project <- nimble:::nimbleProjectClass(dirName, name = projectName)
+    else project <- proxyNimbleProjectClass$new(dirName, name=projectName) #nimble:::nimbleProjectClass(dirName, name = projectName)
 
     ## Check for uncompiled models.
     if(!any(sapply(units, is, 'RmodelBaseClass'))) {
@@ -324,6 +341,7 @@ compileNimble <- function(..., project, dirName = NULL, projectName = '',
     if(length(whichUnits)>1) message("Still need to check for multiple objects of the same nimbleFunction class.")
     for(i in whichUnits) {
       nComp_units[[i]] <- NF_2_nClass(units[[i]])
+      nfVar(units[[i]], "nimbleProject") <- project
     }
     #nfAns <- project$compileNimbleFunctionMulti(units[whichUnits], control = control,
     #                                            reset = reset, showCompilerOutput = showCompilerOutput)

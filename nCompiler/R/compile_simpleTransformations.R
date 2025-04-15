@@ -62,6 +62,17 @@ simpleTransformationsEnv$replace <-
     code$name <- repl
   }
 
+simpleTransformationsEnv$replaceAndNormalize <-
+  function(code, symTab, auxEnv, info) {
+    repl <- info$replacement
+    if(is.null(repl))
+      stop(paste0("No valid replacement for ",
+                  code$name),
+           call. = FALSE)
+    code$name <- repl
+    compile_normalizeCalls(code, symTab, auxEnv)
+  }
+
 simpleTransformationsEnv$Literal <-
   function(code, symTab, auxEnv, info) {
     if(!is.null(code$aux$compileArgs$text)) {
