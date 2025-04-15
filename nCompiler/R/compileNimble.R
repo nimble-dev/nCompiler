@@ -219,6 +219,7 @@ nimbleSymTab_to_nComp_types <- function(symTab) {
 }
 
 nimble_nCompiler_opDefs <- list(
+  nimRound = list(simpleTransformations=list(handler='replace', replacement='round')),
   nimNumeric = list(simpleTransformations=list(handler='replace', replacement='nNumeric')),
   nimInteger = list(simpleTransformations=list(handler='replace', replacement='nInteger')),
   nimLogical = list(simpleTransformations=list(handler='replace', replacement='nLogical'))
