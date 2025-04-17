@@ -223,6 +223,7 @@ nimble_nCompiler_opDefs <- list(
   nimNumeric = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nNumeric')),
   nimInteger = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nInteger')),
   nimLogical = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nLogical')),
+  nimMatrix = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nMatrix')),
   nimC = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nC')),
   nimRep = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nRep')),
   nimSeq = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nSeq'))

@@ -38,6 +38,7 @@ test_that("nClass replacing default constructor works", {
       v = 'numericScalar',
       w = 'numericScalar',
       hw = nFunction(function() {nCpp('Rprintf("hello world\\n");')}),
+      # same name as class indicates this will replace default
       ctor_test = nFunction(function(v_ = 'numericScalar',
                                  w_ = 'numericScalar') {
         v <- v_;
