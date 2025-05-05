@@ -779,14 +779,12 @@ namespace nCompiler {
           index_tuple< Indexes... >, const std::tuple<Args...>& t, 
           const Device& device
       ) { 
-          return std::tuple<
-            Eigen::TensorEvaluator<const Args, Device>...
-          > ( 
-              // pack expansion acts as a macro creating sequential get<i> calls
-              Eigen::TensorEvaluator<const Args, Device>(
-                std::forward<const Args>(std::get<Indexes>(t)), device
-              )... 
-          );
+        return std::tuple<Eigen::TensorEvaluator<const Args, Device>...> (
+          // pack expansion acts as a macro creating sequential get<i> calls
+          Eigen::TensorEvaluator<const Args, Device>(
+            std::forward<const Args>(std::get<Indexes>(t)), device
+          )... 
+        );
       } 
 
       /**
@@ -914,7 +912,7 @@ namespace Eigen {
    * Note: TensorCwiseRecyclingFunctorOp inherits its scalar type, dimension, 
    * etc. from LeadXprType
    * 
-   * @tparam LeadXprType The type that the expression will materialize as
+   * @tparam LeadXprType The type that the expression will copy key types from
    * @tparam XprTypes 
    */
   template<typename LeadXprType, typename... XprTypes>
@@ -988,7 +986,7 @@ namespace Eigen {
   
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorCwiseRecyclingFunctorOp(
       const LeadXprType & leadXpr, const XprTypes&... xprs
-    ) : m_xpr(leadXpr, xprs...) {}
+    ) : m_xpr(leadXpr, xprs...) { }
   
     /** \returns the nested expressions */
     EIGEN_DEVICE_FUNC
@@ -1045,7 +1043,7 @@ namespace Eigen {
             op.expression(), device
           )
         ),
-        m_size(nCompiler::max_dimension_size(m_xpr_impl))
+        m_dimensions(nCompiler::max_dimension_size(m_xpr_impl))
     {
       EIGEN_STATIC_ASSERT(
         (
@@ -1054,7 +1052,8 @@ namespace Eigen {
             static_cast<int>(TensorEvaluator<const XprTypes, Device>::Layout)...
           >::value
           || 
-          internal::traits<XprType>::NumDimensions <= 1
+          // implement requirement to always materialize as a vector
+          internal::traits<XprType>::NumDimensions != 1
         ),
         YOU_MADE_A_PROGRAMMING_MISTAKE
       );
@@ -1085,8 +1084,8 @@ namespace Eigen {
   
     EIGEN_DEVICE_FUNC const Dimensions& dimensions() const
     {
-      // use leadxpr to get dimension information
-      return std::get<0>(m_xpr_impl).dimensions();
+      // set dimensions for output
+      return m_dimensions;
     }
   
     EIGEN_STRONG_INLINE bool evalSubExprsIfNeeded(EvaluatorPointerType) {
@@ -1156,7 +1155,7 @@ namespace Eigen {
       TensorEvaluator<const LeadXprType, Device>,
       TensorEvaluator<const XprTypes, Device>...
     > m_xpr_impl;
-    std::size_t m_size;
+    Dimensions m_dimensions;
   };
   
   } // end namespace Eigen
