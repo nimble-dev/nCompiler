@@ -3,6 +3,7 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "typedefs.h"
+#include <tuple>
 
 // recycling rule
 // see typedefs.h for the types used below
@@ -376,6 +377,799 @@ Eigen::TensorCwiseRecyclingOp<SrcXprType, DstXprType> recyclingTensor(
   const SrcXprType & src, const DstXprType & dst
 ) {
   return Eigen::TensorCwiseRecyclingOp<SrcXprType, DstXprType>(src, dst);
+}
+
+namespace nCompiler {
+
+  /**
+   * Provides a class with the member constant value equal to true if all of 
+   * the int values vs... equal true.
+   * 
+   * The base template provides the default value of true when the parameter 
+   * pack is empty.
+   * 
+   * Examples: 
+   *  all_equal<1,2,3>::value;  // equals false
+   *  all_equal<1,1,2>::value;  // equals false
+   *  all_equal<1,1,1>::value;  // equals true
+   *  all_equal<8>::value;      // equals true
+   *  all_equal<>::value;       // equals true
+   */
+  template<int... vs>
+  struct all_equal { static const bool value = true; };
+
+  /**
+   * Partial specialization that uses recursion to implement the features of 
+   * the template struct all_equal<vs...> described above
+   */
+  template<int v1, int v2, int... vs>
+  struct all_equal<v1, v2, vs...> { 
+    static const bool value = (v1 == v2) && all_equal<v2, vs...>::value;
+  };
+
+  /**
+   * Provides a class with the member constant value equal to true if all of 
+   * the boolean values vs... equal true.
+   * 
+   * The base template provides the default value of true when the parameter 
+   * pack is empty.
+   * 
+   * Examples: 
+   *  all<std::true_type::type>::value;                          // equals true
+   *  all<std::true_type::type, std::false_type::type>::value;   // equals false
+   *  all<std::false_type::type>::value;                         // equals false
+   *  all<std::false_type::type, std::false_type::type>::value;  // equals false
+   */
+  template<bool... vs>
+  struct all { static const bool value = true; };
+
+  /**
+   * Partial specialization that uses recursion to implement the features of 
+   * the template struct all<vs...> described above
+   */
+  template<bool v, bool... vs>
+  struct all<v, vs...> { 
+    static const bool value = v && all<vs...>::value;
+  };
+
+  /**
+   * Provides a class with the member constant value equal to true if any of 
+   * the boolean values vs... equal true.
+   * 
+   * The base template provides the default value of false when the parameter 
+   * pack is empty.
+   * 
+   * Examples: 
+   *  any<std::true_type::type>::value;                          // equals true
+   *  any<std::true_type::type, std::false_type::type>::value;   // equals true
+   *  any<std::false_type::type>::value;                         // equals false
+   *  any<std::false_type::type, std::false_type::type>::value;  // equals false
+   */
+  template<bool... vs>
+  struct any { static const bool value = false; };
+
+  /**
+   * Partial specialization that uses recursion to implement the features of 
+   * the template struct any<vs...> described above
+   */
+  template<bool v, bool... vs>
+  struct any<v, vs...> { 
+    static const bool value = v || any<vs...>::value;
+  };
+
+  /**
+   * Template methods to construct the type 
+   * Outer<Args1::XprType, Args2::XprType, ...> from the template parameters
+   * 
+   */
+  template<template<typename...> typename Outer,  typename... Args>
+  struct unwrapXprTypes {
+      typedef Outer<const typename Args::XprType...> type;
+  };
+
+  /**
+   * Recursively find the maximum total dimension size across the Tuple elements
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   * @param m Current maximum value
+   */
+  template<std::size_t i, typename Tuple>
+  struct max_size_impl {
+      static std::size_t run(Tuple & t, std::size_t m) {
+        m = std::max(
+          m, 
+          static_cast<std::size_t>(std::get<i-1>(t).dimensions().TotalSize())
+        );
+        return max_size_impl<i-1, Tuple>::run(t, m);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   * @param m Current maximum value
+   */
+  template<typename Tuple>
+  struct max_size_impl<0, Tuple> {
+      static std::size_t run(Tuple & t, std::size_t m) { return m; }
+  };
+
+  /**
+   * Wrapper to template programming technique to get the maximum size of the
+   * Tuple t's elements
+   * 
+   * @tparam Tuple type
+   * @param t Tuple to iterate over
+   */
+  template<typename Tuple>
+  std::size_t max_dimension_size(Tuple & t) {
+    return max_size_impl<std::tuple_size<Tuple>::value, Tuple>::run(t, 0);
+  }
+
+  /**
+   * Recursively aggregate the value of the getResourceRequirements member 
+   * function from each Tuple element
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   */
+  template<typename ResultType, std::size_t i, typename Tuple>
+  struct resourceRequirements_impl {
+      static ResultType run(ResultType & agg, Tuple & t) {
+        agg = Eigen::internal::TensorBlockResourceRequirements::merge(
+          agg, std::get<i-1>(t).getResourceRequirements()
+        );
+        return resourceRequirements_impl<ResultType, i-1, Tuple>::run(agg, t);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   */
+  template<typename ResultType, typename Tuple>
+  struct resourceRequirements_impl<ResultType, 0, Tuple> {
+      static ResultType run(ResultType & agg, Tuple & t) { 
+        return agg;
+      }
+  };
+
+  /**
+   * Wrapper to template programming technique to merge 
+   * getResourceRequirements() member function value for all elements of Tuple t
+   * 
+   * @tparam Tuple type
+   * @tparam ResultType output object type, for Eigen Tensors or Tensor 
+   *  expressions, will often be a TensorBlockResourceRequirements object
+   * @param t Tuple to iterate over
+   */
+  template<typename ResultType, typename Tuple>
+  ResultType merged_resourceRequirements(Tuple & t) {
+    ResultType agg;
+    return resourceRequirements_impl<
+      ResultType, std::tuple_size<Tuple>::value, Tuple
+    >::run(agg, t);
+  }
+
+  /**
+   * Recursively aggregate the value of the costPerCoeff member function from 
+   *  each Tuple element
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   */
+  template<typename ResultType, std::size_t i, typename Tuple>
+  struct costPerCoeff_impl {
+      static ResultType run(ResultType & agg, Tuple & t, bool vectorized) {
+        return agg + 
+          std::get<i-1>(t).costPerCoeff(vectorized) +
+          costPerCoeff_impl<ResultType, i-1, Tuple>::run(agg, t, vectorized);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   */
+  template<typename ResultType, typename Tuple>
+  struct costPerCoeff_impl<ResultType, 0, Tuple> {
+      static ResultType run(ResultType & agg, Tuple & t, bool vectorized) { 
+        return agg;
+      }
+  };
+
+  /**
+   * Wrapper to template programming technique to sum costPerCoeff() member 
+   * function value for all elements of Tuple t
+   * 
+   * @tparam Tuple type
+   * @tparam ResultType output object type, for Eigen Tensors or Tensor 
+   *  expressions, will often be a TensorOpCost object
+   * @param t Tuple to iterate over
+   */
+  template<typename ResultType, typename Tuple>
+  ResultType total_costPerCoeff(Tuple & t, bool vectorized) {
+    ResultType agg;
+    return costPerCoeff_impl<
+      ResultType, std::tuple_size<Tuple>::value, Tuple
+    >::run(agg, t, vectorized);
+  }
+
+  /**
+   * Recursively call the evalSubExprsIfNeeded member function of each Tuple 
+   * element
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   */
+  template<std::size_t i, typename Tuple>
+  struct evalSubExprs_impl {
+      static void run(Tuple & t) {
+          std::get<i-1>(t).evalSubExprsIfNeeded(NULL);
+          evalSubExprs_impl<i-1, Tuple>::run(t);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   */
+  template<typename Tuple>
+  struct evalSubExprs_impl<0, Tuple> {
+      static void run(Tuple & t) { }
+  };
+
+  /**
+   * Wrapper to template programming technique to call evalSubExprsIfNeeded
+   * member for all elements of Tuple t
+   * 
+   * @tparam Tuple type
+   * @param t Tuple to iterate over
+   */
+  template<typename Tuple>
+  void call_evalSubExprsIfNeeded(Tuple & t) {
+    evalSubExprs_impl<std::tuple_size<Tuple>::value, Tuple>::run(t);
+  }
+
+  /**
+   * Recursively call the cleanup member function of each Tuple element
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   */
+  template<std::size_t i, typename Tuple>
+  struct cleanup_impl {
+      static void run(Tuple & t) {
+          std::get<i-1>(t).cleanup();
+          cleanup_impl<i-1, Tuple>::run(t);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   */
+  template<typename Tuple>
+  struct cleanup_impl<0, Tuple> {
+      static void run(Tuple & t) { }
+  };
+
+  /**
+   * Wrapper to template programming technique to call cleanup member for all
+   * elements of Tuple t
+   * 
+   * @tparam Tuple type
+   * @param t Tuple to iterate over, calling cleanup member for each element
+   */
+  template<typename Tuple>
+  void call_cleanup(Tuple & t) {
+      cleanup_impl<std::tuple_size<Tuple>::value, Tuple>::run(t);
+  }
+
+  namespace tupleGeneration {
+      //modified from source: https://stackoverflow.com/questions/687490/how-do-i-expand-a-tuple-into-variadic-template-functions-arguments
+
+      // ------------- UTILITY---------------
+
+      /**
+       * Templated class useful for template metaprogramming.  Useful for 
+       * passing along a compile-time sequence of int's (i.e., the template 
+       * parameters) to other templated structs, functions, etc.
+       * 
+       * @tparam  
+       */
+      template<int...> struct index_tuple{}; 
+
+      /**
+       * Base case for templated recursion
+       */
+      template<int I, typename IndexTuple, typename... Types> 
+      struct make_indexes_impl; 
+
+      /**
+       * Template metaprogramming struct to recursively build the member typedef
+       * "type" with value index_tuple<0,1,2,...>.  Gets called since it 
+       * represents a partial specialization of the base case, since the 
+       * template parameters T and Types... are interpreted as "...Types" in 
+       * the base case for the templated recursion.
+       */
+      template<int I, int... Indexes, typename T, typename ... Types> 
+      struct make_indexes_impl<I, index_tuple<Indexes...>, T, Types...> 
+      { 
+          typedef typename make_indexes_impl<
+              I + 1, index_tuple<Indexes..., I>, Types...
+          >::type type;
+      }; 
+
+      /**
+       * Template metaprogramming struct to create the final struct, when the 
+       * make_indexes_impl Types parameter pack is empty
+       */
+      template<int I, int... Indexes> 
+      struct make_indexes_impl<I, index_tuple<Indexes...> > 
+      { 
+          typedef index_tuple<Indexes...> type; 
+      }; 
+
+      /**
+       * Templated struct with member typedef "type" whose value is 
+       * index_tuple<0, 1, 2, ...>, with one integer for each Type in the 
+       * parameter pack Types...
+       * 
+       * The make_indexes class inherits from make_indexes_impl, instantiated 
+       * with an empty index_tuple<> template specialization, which will be 
+       * recursively built up with indices via template metaprogramming 
+       * techniques on the template class make_indexes_impl and its partial 
+       * specializations
+       * 
+       * @tparam Types list of types that will be enumerated
+       */
+      template<typename ... Types> 
+      struct make_indexes : make_indexes_impl<0, index_tuple<>, Types...> 
+      {}; 
+
+      // ----------UNPACK TUPLE AND APPLY TO FUNCTION ---------
+
+      template<class... Args, int... Indexes > 
+      std::tuple<Args...> generate_helper(
+          index_tuple< Indexes... >, const std::tuple<Args...>& t
+      ) { 
+          return std::tuple<Args...>( 
+              // pack expansion acts as a macro creating sequential get<i> calls
+              std::forward<Args>(std::get<Indexes>(t).expr())... 
+          );
+      } 
+
+      /**
+       * Use the argument t to create a std::tuple<Args...> with entries
+       * std::tuple<Args...>(
+       *    std::get<0>(t).expr(),
+       *    std::get<1>(t).expr(),
+       *    std::get<2>(t).expr(),
+       *    ...
+       *    std::get<N-1>(t).expr()
+       * )
+       * 
+       * @param t source tuple, used to generate return object
+       */
+      template<class ... Args> 
+      std::tuple<Args...> generate_via_expr(const std::tuple<Args...>& t)
+      {
+          return generate_helper(
+              /* trick to pass Indexes... type information to generate_helper. 
+                generate_helper does not use the actual object created, which is 
+                clear since this represents an unnamed argument in the 
+                definition for generate_helper. */
+              typename make_indexes<Args...>::type(),
+              // pass argument t to generate_helper as appropriate r/lvalue type
+              std::forward<const std::tuple<Args...>>(t)
+          );
+      }
+
+      template<typename Device, class... Args, int... Indexes > 
+      std::tuple<
+        Eigen::TensorEvaluator<const Args, Device>...
+      > evaluator_tuple_helper(
+          index_tuple< Indexes... >, const std::tuple<Args...>& t, 
+          const Device& device
+      ) { 
+          return std::tuple<
+            Eigen::TensorEvaluator<const Args, Device>...
+          > ( 
+              // pack expansion acts as a macro creating sequential get<i> calls
+              Eigen::TensorEvaluator<const Args, Device>(
+                std::forward<const Args>(std::get<Indexes>(t)), device
+              )... 
+          );
+      } 
+
+      /**
+       * Use the argument t to create a std::tuple of TensorEvaluator objects
+       * for each tuple element
+       * 
+       * @param t source tuple, used to generate return object
+       */
+      template<typename Device, class... Args> 
+      std::tuple<
+        Eigen::TensorEvaluator<const Args, Device>...
+      > generate_evaluator_tuple(
+        const std::tuple<Args...>& t, const Device& device
+      ) {
+          return evaluator_tuple_helper(
+              /* trick to pass Indexes... type information to generate_helper. 
+                generate_helper does not use the actual object created, which is 
+                clear since this represents an unnamed argument in the 
+                definition for generate_helper. */
+              typename make_indexes<Args...>::type(),
+              // pass argument t to generate_helper as appropriate r/lvalue type
+              std::forward<const std::tuple<Args...>>(t),
+              // additional arguments
+              device
+          );
+      }
+
+      template<
+        typename Ret, typename Desc, typename Scratch, class... Args, 
+        int...Indexes 
+      > 
+      Ret generate_block_helper(
+          index_tuple< Indexes... >, const std::tuple<Args...>& t, Desc &desc,
+          Scratch &scratch
+      ) { 
+          return Ret( 
+              // pack expansion acts as a macro creating sequential get<i> calls
+              std::forward<Args>(std::get<Indexes>(t).block(desc, scratch))... 
+          );
+      } 
+
+      /**
+       * Use the argument t to create a Ret from the pack expansion constructor 
+       * Ret(
+       *    std::get<0>(t).block(desc, scratch),
+       *    std::get<1>(t).block(desc, scratch),
+       *    std::get<2>(t).block(desc, scratch),
+       *    ...
+       *    std::get<0>(N-1).block(desc, scratch)
+       * )
+       * 
+       * @param t source tuple, used to generate return object
+       */
+      template<typename Ret, typename Desc, typename Scratch, class ... Args> 
+      Ret generate_via_block(
+        const std::tuple<Args...>& t, Desc &desc, Scratch &scratch
+      ) {
+          return generate_block_helper<Ret, Desc, Scratch>(
+              /* trick to pass Indexes... type information to generate_helper. 
+                generate_helper does not use the actual object created, which is 
+                clear since this represents an unnamed argument in the 
+                definition for generate_helper. */
+              typename make_indexes<Args...>::type(),
+              // pass argument t to generate_helper as appropriate r/lvalue type
+              std::forward<const std::tuple<Args...>>(t),
+              // pass additional arguments
+              desc, scratch
+          );
+      }
+  };
+
+};
+
+namespace Eigen {
+
+  // forward declaration of an Eigen tensor operation for a recycling functor rule
+  template<typename LeadXprType, typename... XprTypes> 
+  class TensorCwiseRecyclingFunctorOp;
+  
+  namespace internal {
+  
+  //////////// Modified from TensorCwiseBinaryBlock in TensorBlock.h  ////////////
+  
+  template <typename... TensorBlocks>
+  class TensorCwiseRecyclingFunctorBlock {
+  
+    static const bool NoArgBlockAccess = 
+      nCompiler::any<
+        Eigen::internal::is_void<typename TensorBlocks::XprType>::value...
+      >::value;
+  
+  public:
+
+    typedef typename conditional<
+        NoArgBlockAccess, 
+        void,
+        nCompiler::unwrapXprTypes<TensorCwiseRecyclingFunctorBlock,
+                                  TensorBlocks...>
+    >::type XprType;
+  
+    typedef typename XprScalar<XprType>::type Scalar;
+  
+    TensorCwiseRecyclingFunctorBlock(const TensorBlocks&... blocks) : 
+      m_blocks(blocks...) { }
+  
+    TensorBlockKind kind() const { return internal::TensorBlockKind::kExpr; }
+    
+    XprType expr() const {
+      return XprType(nCompiler::tupleGeneration::generate_via_expr(m_blocks));
+    }
+  
+    const Scalar* data() const { return NULL; }
+  
+    void cleanup() { nCompiler::call_cleanup(m_blocks); }
+  
+  private:
+  
+    std::tuple<TensorBlocks...> m_blocks;
+  
+  };
+  
+  ////////////// Modified from TensorCwiseBinaryOp in TensorExpr.h  //////////////
+
+  /**
+   * Note: TensorCwiseRecyclingFunctorOp inherits its scalar type, dimension, 
+   * etc. from LeadXprType
+   * 
+   * @tparam LeadXprType The type that the expression will materialize as
+   * @tparam XprTypes 
+   */
+  template<typename LeadXprType, typename... XprTypes>
+  struct traits<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> >
+  {
+    // Result type copies LeadXprType, which provides data to be operated on
+    typedef typename LeadXprType::Scalar Scalar;
+    typedef traits<LeadXprType> XprTraits;
+    typedef typename traits<LeadXprType>::StorageKind StorageKind;
+    typedef typename traits<LeadXprType>::Index Index;
+    typedef std::tuple<
+      typename LeadXprType::Nested, 
+      typename XprTypes::Nested...
+    > Nested;
+    typedef std::tuple<
+      typename remove_reference<typename LeadXprType::Nested>::type, 
+      typename remove_reference<typename XprTypes::Nested>::type...
+    > _Nested;
+    static const int NumDimensions = XprTraits::NumDimensions;
+    static const int Layout = XprTraits::Layout;
+    typedef typename TypeConversion<
+      Scalar,
+      typename traits<LeadXprType>::PointerType
+    >::type PointerType;
+    enum {
+      Flags = 0
+    };
+  };
+  
+  template<typename LeadXprType, typename... XprTypes>
+  struct eval<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
+              Eigen::Dense>
+  {
+    typedef const TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>& type;
+  };
+  
+  template<typename LeadXprType, typename... XprTypes>
+  struct nested<
+  TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
+    1, 
+    typename eval<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>>::type
+  >
+  {
+    typedef TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> type;
+  };
+  
+  }  // end namespace internal
+  
+  template<typename LeadXprType, typename... XprTypes>
+  class TensorCwiseRecyclingFunctorOp : 
+    public TensorBase<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
+                      ReadOnlyAccessors>
+  {
+  
+  public:
+  
+    typedef typename Eigen::internal::traits<
+      TensorCwiseRecyclingFunctorOp
+    >::Scalar Scalar;
+    typedef typename Eigen::NumTraits<Scalar>::Real RealScalar;
+    typedef Scalar CoeffReturnType;
+    typedef typename Eigen::internal::nested<
+      TensorCwiseRecyclingFunctorOp
+    >::type Nested;
+    typedef typename Eigen::internal::traits<
+      TensorCwiseRecyclingFunctorOp
+    >::StorageKind StorageKind;
+    typedef typename Eigen::internal::traits<
+      TensorCwiseRecyclingFunctorOp
+    >::Index Index;
+  
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorCwiseRecyclingFunctorOp(
+      const LeadXprType & leadXpr, const XprTypes&... xprs
+    ) : m_xpr(leadXpr, xprs...) {}
+  
+    /** \returns the nested expressions */
+    EIGEN_DEVICE_FUNC
+    const std::tuple<
+      typename internal::remove_all<typename LeadXprType::Nested>::type,
+      typename internal::remove_all<typename XprTypes::Nested>::type...
+    >& expression() const {
+      return m_xpr;
+    }
+  
+  protected:
+  
+    std::tuple<LeadXprType, XprTypes...> m_xpr;
+  
+  };
+  
+  /////////// Modified from TensorCwiseBinaryOp in TensorEvaluator.h  ////////////
+  
+  template<typename LeadXprType, typename Device, typename... XprTypes>
+  struct TensorEvaluator<
+    const TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, Device
+  >
+  {
+    typedef TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> XprType;
+  
+    /* Note: Throughout this TensorEvaluator, we need to keep const in 
+       TensorEvaluator<const LeadXprType, Device> to make sure the correct 
+       specialization is found, which will evaluate LeadXprType if it is a 
+       subexpression, etc. */
+  
+    enum {
+      IsAligned         = nCompiler::all<
+          int(TensorEvaluator<const LeadXprType, Device>::IsAligned),
+          int(TensorEvaluator<const XprTypes, Device>::IsAligned)...
+        >::value,
+      PacketAccess      = false, // packets use SIMD, not helpful for plain data access
+      BlockAccess       = nCompiler::all<
+        int(TensorEvaluator<const LeadXprType, Device>::BlockAccess),
+        int(TensorEvaluator<const XprTypes, Device>::BlockAccess)...
+      >::value,
+      PreferBlockAccess = nCompiler::any<
+        int(TensorEvaluator<const LeadXprType, Device>::PreferBlockAccess),
+        int(TensorEvaluator<const XprTypes, Device>::PreferBlockAccess)...
+      >::value,
+      Layout            = TensorEvaluator<const LeadXprType, Device>::Layout,
+      CoordAccess       = false,  // to be implemented
+      RawAccess         = false
+    };
+  
+    TensorEvaluator(const XprType& op, const Device& device)
+      : m_device(device),
+        m_xpr_impl(
+          nCompiler::tupleGeneration::generate_evaluator_tuple(
+            op.expression(), device
+          )
+        ),
+        m_size(nCompiler::max_dimension_size(m_xpr_impl))
+    {
+      EIGEN_STATIC_ASSERT(
+        (
+          nCompiler::all_equal<
+            static_cast<int>(TensorEvaluator<const LeadXprType, Device>::Layout),
+            static_cast<int>(TensorEvaluator<const XprTypes, Device>::Layout)...
+          >::value
+          || 
+          internal::traits<XprType>::NumDimensions <= 1
+        ),
+        YOU_MADE_A_PROGRAMMING_MISTAKE
+      );
+    }
+  
+    typedef typename XprType::Index Index;
+    typedef typename XprType::Scalar Scalar;
+    typedef typename internal::traits<XprType>::Scalar CoeffReturnType;
+    typedef typename TensorEvaluator<
+      const LeadXprType, Device
+    >::Dimensions Dimensions;
+    typedef StorageMemory<CoeffReturnType, Device> Storage;
+    typedef typename Storage::Type EvaluatorPointerType;
+  
+    static const int NumDims = internal::array_size<
+      typename TensorEvaluator<const LeadXprType, Device>::Dimensions
+    >::value;
+  
+    //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
+    typedef internal::TensorBlockDescriptor<NumDims, Index> TensorBlockDesc;
+    typedef internal::TensorBlockScratchAllocator<Device> TensorBlockScratch;
+  
+    typedef internal::TensorCwiseRecyclingFunctorBlock<
+      typename TensorEvaluator<const LeadXprType, Device>::TensorBlock, 
+      typename TensorEvaluator<const XprTypes, Device>::TensorBlock...
+    > TensorBlock;
+    //===--------------------------------------------------------------------===//
+  
+    EIGEN_DEVICE_FUNC const Dimensions& dimensions() const
+    {
+      // use leadxpr to get dimension information
+      return std::get<0>(m_xpr_impl).dimensions();
+    }
+  
+    EIGEN_STRONG_INLINE bool evalSubExprsIfNeeded(EvaluatorPointerType) {
+      nCompiler::call_evalSubExprsIfNeeded(m_xpr_impl);
+      return true;
+    }
+  
+  // #ifdef EIGEN_USE_THREADS
+  //   template <typename EvalSubExprsCallback>
+  //   EIGEN_STRONG_INLINE void evalSubExprsIfNeededAsync(
+  //       EvaluatorPointerType, EvalSubExprsCallback done) {
+  //     // TODO(ezhulenev): Evaluate two expression in parallel?
+  //     m_leftImpl.evalSubExprsIfNeededAsync(nullptr, [this, done](bool) {
+  //       m_rightImpl.evalSubExprsIfNeededAsync(nullptr,
+  //                                             [done](bool) { done(true); });
+  //     });
+  //   }
+  // #endif  // EIGEN_USE_THREADS
+  
+    EIGEN_STRONG_INLINE void cleanup() {
+      nCompiler::call_cleanup(m_xpr_impl);
+    }
+  
+    EIGEN_DEVICE_FUNC CoeffReturnType coeff(Index index) const
+    {
+      // TODO: implement
+      // return m_leftImpl.coeff(index % m_leftSize);
+      return 0;
+    }
+  
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorOpCost
+    costPerCoeff(bool vectorized) const {
+      return nCompiler::total_costPerCoeff<TensorOpCost>(
+        m_xpr_impl, vectorized
+      );
+    }
+  
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+    internal::TensorBlockResourceRequirements getResourceRequirements() const {
+      return nCompiler::merged_resourceRequirements(m_xpr_impl);
+    }
+  
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorBlock
+    block(TensorBlockDesc& desc, TensorBlockScratch& scratch,
+            bool /*root_of_expr_ast*/ = false) const {
+      desc.DropDestinationBuffer();
+      return nCompiler::tupleGeneration::generate_via_block<
+        TensorBlock, TensorBlockDesc, TensorBlockScratch
+      >(
+        m_xpr_impl, desc, scratch
+      );
+    }
+  
+    EIGEN_DEVICE_FUNC EvaluatorPointerType data() const { return NULL; }
+  
+    // #ifdef EIGEN_USE_SYCL
+    // // binding placeholder accessors to a command group handler for SYCL
+    // EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void bind(cl::sycl::handler &cgh) const {
+    //   m_leftImpl.bind(cgh);
+    //   m_rightImpl.bind(cgh);
+    // }
+    // #endif
+
+   private:
+    const Device EIGEN_DEVICE_REF m_device;
+    std::tuple<
+      TensorEvaluator<const LeadXprType, Device>,
+      TensorEvaluator<const XprTypes, Device>...
+    > m_xpr_impl;
+    std::size_t m_size;
+  };
+  
+  } // end namespace Eigen
+
+/**
+ * @brief 
+ * 
+ */
+template<typename... XprTypes>
+Eigen::TensorCwiseRecyclingFunctorOp<XprTypes...> recyclingFunctor(
+  const XprTypes&... args
+) {
+  return Eigen::TensorCwiseRecyclingFunctorOp<XprTypes...>(args...);
 }
 
 #endif
