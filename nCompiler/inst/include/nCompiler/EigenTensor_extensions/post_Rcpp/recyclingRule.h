@@ -468,6 +468,52 @@ namespace nCompiler {
   };
 
   /**
+   * Recursively find the total dimension size across the Tuple elements
+   * 
+   * @tparam i index of Tuple element being processed
+   * @tparam Tuple type
+   * @param m Container for sizes
+   */
+  template<std::size_t i, typename Tuple, typename Container>
+  struct dimension_sizes_impl {
+      static Container& run(Tuple & t, Container & m) {
+        m[i-1] = static_cast<std::size_t>(
+          std::get<i-1>(t).dimensions().TotalSize()
+        );
+        return dimension_sizes_impl<i-1, Tuple, Container>::run(t, m);
+      }
+  };
+
+  /**
+   * Partial template specialization to implement the end of the recursion
+   * 
+   * @tparam Tuple 
+   * @param m Current set of results
+   */
+  template<typename Tuple, typename Container>
+  struct dimension_sizes_impl<0, Tuple, Container> {
+      static Container& run(Tuple & t, Container & m) { return m; }
+  };
+
+  /**
+   * Wrapper to template programming technique to get the size of the Tuple t's 
+   * elements
+   * 
+   * @tparam Tuple type
+   * @param t Tuple to iterate over
+   */
+  template<typename Tuple>
+  std::array<std::size_t, std::tuple_size<Tuple>::value> dimension_sizes(
+    Tuple & t
+  ) {
+    typedef std::array<std::size_t, std::tuple_size<Tuple>::value> Container; 
+    Container sizes;
+    return dimension_sizes_impl<
+      std::tuple_size<Tuple>::value, Tuple, Container
+    >::run(t, sizes);
+  }
+
+  /**
    * Recursively find the maximum total dimension size across the Tuple elements
    * 
    * @tparam i index of Tuple element being processed
@@ -737,18 +783,15 @@ namespace nCompiler {
       // ----------UNPACK TUPLE AND APPLY TO FUNCTION ---------
 
       template<
-        typename ReturnType, typename Functor, typename Index, class... Args, 
-        int... Indexes 
+        typename ReturnType, typename Functor, typename Index, typename Sizes,
+        class... Args, int... Indexes 
       > 
       ReturnType functor_tuple_helper(
           index_tuple< Indexes... >, const std::tuple<Args...>& t, 
-          const Functor& func, Index index
+          const Functor & func, Index index, const Sizes & sizes
       ) { 
         return func(
-          // TODO: do the .dimensions().TotalSize() call externally
-          std::get<Indexes>(t).coeff(
-            index % std::get<Indexes>(t).dimensions().TotalSize()
-          )...
+          std::get<Indexes>(t).coeff(index % sizes[Indexes])...
         );
       } 
 
@@ -756,13 +799,19 @@ namespace nCompiler {
        * Use the argument t to create a std::tuple of TensorEvaluator objects
        * for each tuple element
        * 
-       * @param t source tuple, used to generate return object
+       * @param func function to call using the source tuple's entries
+       * @param t source tuple with data to pass to func with recycling rule
+       * @param index the index of t's data to send to func
+       * @param sizes container (i.e., std::array) with the length of the data 
+       *  in each tuple's element, to help implement the recycling rule
        */
       template<
-        typename ReturnType, typename Functor, typename Index, class... Args
+        typename ReturnType, typename Functor, typename Index, typename Sizes, 
+        class... Args
       > 
       ReturnType recycling_call_with_tuple(
-        const Functor & func, const std::tuple<Args...>& t, Index index
+        const Functor & func, const std::tuple<Args...>& t, Index index,
+        const Sizes & sizes
       ) {
           return functor_tuple_helper<ReturnType>(
               /* trick to pass Indexes... type information to generate_helper. 
@@ -773,7 +822,7 @@ namespace nCompiler {
               // pass argument t to generate_helper as appropriate r/lvalue type
               std::forward<const std::tuple<Args...>>(t),
               // additional arguments
-              func, index
+              func, index, sizes
           );
       }
 
@@ -1105,7 +1154,9 @@ namespace Eigen {
             op.expression(), device
           )
         ),
+        m_xpr_sizes(nCompiler::dimension_sizes(m_xpr_impl)),
         m_dimensions(nCompiler::max_dimension_size(m_xpr_impl))
+        
     {
       EIGEN_STATIC_ASSERT(
         (
@@ -1176,7 +1227,7 @@ namespace Eigen {
       // call the functor, applying the recycling rule
       return nCompiler::tupleGeneration::recycling_call_with_tuple<
         CoeffReturnType, Functor
-        >(m_func, m_xpr_impl, index);
+        >(m_func, m_xpr_impl, index, m_xpr_sizes);
     }
   
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorOpCost
@@ -1218,6 +1269,7 @@ namespace Eigen {
       TensorEvaluator<const LeadXprType, Device>,
       TensorEvaluator<const XprTypes, Device>...
     > m_xpr_impl;
+    std::array<std::size_t, sizeof...(XprTypes) + 1> m_xpr_sizes;
     Dimensions m_dimensions;
     const Functor & m_func;
   };
@@ -1225,15 +1277,79 @@ namespace Eigen {
   } // end namespace Eigen
 
 /**
- * @brief 
+ * Create an Eigen Tensorexpression that will evaluate the functor func at the 
+ * values of the tensors (or tensor expressions) represented by args...  A
+ * recycling rule will be used to ensure that func always has data.  
  * 
+ * The recyclingFunctor will always materialize as a one dimensional tensor.  
+ * The tensor's size will be equal to the largest args... tensor or 
+ * tensorexpression---i.e., the arg with the most coefficients.
  */
 template<typename Functor, typename... XprTypes>
 Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> recyclingFunctor(
   Functor & func, const XprTypes&... args
 ) {
-  Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> op(func, args...);
-  return op;
+  Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...>(func, args...);
 }
+
+namespace nCompiler {
+  /**
+   * wrappers to make recycling rule tensor expressions for common distributions
+   */
+  namespace distributions {
+
+    // the function signature here must match the functor that will be called
+    template <typename... XprTypes>
+    using distn_d3i = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, double, int), XprTypes...
+    >;
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dbeta(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dbeta, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dbinom(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dbinom, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dgamma(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dgamma, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dlnorm(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dlnorm, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dnbinom(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dnbinom, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dnorm(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dnorm4, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dt(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dt, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dunif(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dunif, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dweibull(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(Rf_dweibull, args...);
+    }
+
+  };
+};
 
 #endif
