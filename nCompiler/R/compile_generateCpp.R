@@ -478,7 +478,7 @@ inGenCppEnv(
 inGenCppEnv(
   RR_Distribution <- function(code, symTab) {
     paste0(
-      'RR_', code$name, '(',
+      'nCompiler::distributions::', code$name, '(',
       paste0(
         unlist(lapply(code$args, compile_generateCpp, symTab)),
         collapse = ', '
