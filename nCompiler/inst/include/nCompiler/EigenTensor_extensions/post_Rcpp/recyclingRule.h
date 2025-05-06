@@ -736,6 +736,47 @@ namespace nCompiler {
 
       // ----------UNPACK TUPLE AND APPLY TO FUNCTION ---------
 
+      template<
+        typename ReturnType, typename Functor, typename Index, class... Args, 
+        int... Indexes 
+      > 
+      ReturnType functor_tuple_helper(
+          index_tuple< Indexes... >, const std::tuple<Args...>& t, 
+          const Functor& func, Index index
+      ) { 
+        return func(
+          // TODO: do the .dimensions().TotalSize() call externally
+          std::get<Indexes>(t).coeff(
+            index % std::get<Indexes>(t).dimensions().TotalSize()
+          )...
+        );
+      } 
+
+      /**
+       * Use the argument t to create a std::tuple of TensorEvaluator objects
+       * for each tuple element
+       * 
+       * @param t source tuple, used to generate return object
+       */
+      template<
+        typename ReturnType, typename Functor, typename Index, class... Args
+      > 
+      ReturnType recycling_call_with_tuple(
+        const Functor & func, const std::tuple<Args...>& t, Index index
+      ) {
+          return functor_tuple_helper<ReturnType>(
+              /* trick to pass Indexes... type information to generate_helper. 
+                generate_helper does not use the actual object created, which is 
+                clear since this represents an unnamed argument in the 
+                definition for generate_helper. */
+              typename make_indexes<Args...>::type(),
+              // pass argument t to generate_helper as appropriate r/lvalue type
+              std::forward<const std::tuple<Args...>>(t),
+              // additional arguments
+              func, index
+          );
+      }
+
       template<class... Args, int... Indexes > 
       std::tuple<Args...> generate_helper(
           index_tuple< Indexes... >, const std::tuple<Args...>& t
@@ -861,7 +902,7 @@ namespace nCompiler {
 namespace Eigen {
 
   // forward declaration of an Eigen tensor operation for a recycling functor rule
-  template<typename LeadXprType, typename... XprTypes> 
+  template<typename Functor, typename LeadXprType, typename... XprTypes> 
   class TensorCwiseRecyclingFunctorOp;
   
   namespace internal {
@@ -912,11 +953,12 @@ namespace Eigen {
    * Note: TensorCwiseRecyclingFunctorOp inherits its scalar type, dimension, 
    * etc. from LeadXprType
    * 
+   * @tparam Functor A callable type that will be the functor
    * @tparam LeadXprType The type that the expression will copy key types from
    * @tparam XprTypes 
    */
-  template<typename LeadXprType, typename... XprTypes>
-  struct traits<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> >
+  template<typename Functor, typename LeadXprType, typename... XprTypes>
+  struct traits<TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...> >
   {
     // Result type copies LeadXprType, which provides data to be operated on
     typedef typename LeadXprType::Scalar Scalar;
@@ -942,29 +984,37 @@ namespace Eigen {
     };
   };
   
-  template<typename LeadXprType, typename... XprTypes>
-  struct eval<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
+  template<typename Functor, typename LeadXprType, typename... XprTypes>
+  struct eval<TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...>, 
               Eigen::Dense>
   {
-    typedef const TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>& type;
+    typedef const TensorCwiseRecyclingFunctorOp<
+      Functor, LeadXprType, XprTypes...
+    >& type;
   };
   
-  template<typename LeadXprType, typename... XprTypes>
+  template<typename Functor, typename LeadXprType, typename... XprTypes>
   struct nested<
-  TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
+  TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...>, 
     1, 
-    typename eval<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>>::type
+    typename eval<
+      TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...>
+    >::type
   >
   {
-    typedef TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> type;
+    typedef TensorCwiseRecyclingFunctorOp<
+      Functor, LeadXprType, XprTypes...
+    > type;
   };
   
   }  // end namespace internal
   
-  template<typename LeadXprType, typename... XprTypes>
+  template<typename Functor, typename LeadXprType, typename... XprTypes>
   class TensorCwiseRecyclingFunctorOp : 
-    public TensorBase<TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, 
-                      ReadOnlyAccessors>
+    public TensorBase<
+      TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...>, 
+      ReadOnlyAccessors
+    >
   {
   
   public:
@@ -985,8 +1035,11 @@ namespace Eigen {
     >::Index Index;
   
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorCwiseRecyclingFunctorOp(
-      const LeadXprType & leadXpr, const XprTypes&... xprs
-    ) : m_xpr(leadXpr, xprs...) { }
+      const Functor & func, const LeadXprType & leadXpr, const XprTypes&... xprs
+    ) : m_func(func), m_xpr(leadXpr, xprs...) { }
+
+    EIGEN_DEVICE_FUNC
+    const Functor& functor() const { return m_func; }
   
     /** \returns the nested expressions */
     EIGEN_DEVICE_FUNC
@@ -1000,17 +1053,25 @@ namespace Eigen {
   protected:
   
     std::tuple<LeadXprType, XprTypes...> m_xpr;
+    Functor & m_func;
   
   };
   
   /////////// Modified from TensorCwiseBinaryOp in TensorEvaluator.h  ////////////
   
-  template<typename LeadXprType, typename Device, typename... XprTypes>
+  template<
+    typename Functor, typename LeadXprType, typename Device, 
+    typename... XprTypes
+  >
   struct TensorEvaluator<
-    const TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...>, Device
+    const TensorCwiseRecyclingFunctorOp<Functor, LeadXprType, XprTypes...>, 
+    Device
   >
   {
-    typedef TensorCwiseRecyclingFunctorOp<LeadXprType, XprTypes...> XprType;
+
+    typedef TensorCwiseRecyclingFunctorOp<
+      Functor, LeadXprType, XprTypes...
+    > XprType;
   
     /* Note: Throughout this TensorEvaluator, we need to keep const in 
        TensorEvaluator<const LeadXprType, Device> to make sure the correct 
@@ -1038,6 +1099,7 @@ namespace Eigen {
   
     TensorEvaluator(const XprType& op, const Device& device)
       : m_device(device),
+        m_func(op.functor()),
         m_xpr_impl(
           nCompiler::tupleGeneration::generate_evaluator_tuple(
             op.expression(), device
@@ -1111,9 +1173,10 @@ namespace Eigen {
   
     EIGEN_DEVICE_FUNC CoeffReturnType coeff(Index index) const
     {
-      // TODO: implement
-      // return m_leftImpl.coeff(index % m_leftSize);
-      return 0;
+      // call the functor, applying the recycling rule
+      return nCompiler::tupleGeneration::recycling_call_with_tuple<
+        CoeffReturnType, Functor
+        >(m_func, m_xpr_impl, index);
     }
   
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorOpCost
@@ -1156,6 +1219,7 @@ namespace Eigen {
       TensorEvaluator<const XprTypes, Device>...
     > m_xpr_impl;
     Dimensions m_dimensions;
+    const Functor & m_func;
   };
   
   } // end namespace Eigen
@@ -1164,11 +1228,12 @@ namespace Eigen {
  * @brief 
  * 
  */
-template<typename... XprTypes>
-Eigen::TensorCwiseRecyclingFunctorOp<XprTypes...> recyclingFunctor(
-  const XprTypes&... args
+template<typename Functor, typename... XprTypes>
+Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> recyclingFunctor(
+  Functor & func, const XprTypes&... args
 ) {
-  return Eigen::TensorCwiseRecyclingFunctorOp<XprTypes...>(args...);
+  Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> op(func, args...);
+  return op;
 }
 
 #endif
