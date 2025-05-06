@@ -861,7 +861,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
+  c('dbeta', 'dbinom', 'dexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
     'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
   list(
     labelAbstractTypes = list(
