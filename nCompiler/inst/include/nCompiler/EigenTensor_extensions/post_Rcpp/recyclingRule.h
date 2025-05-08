@@ -1022,7 +1022,7 @@ namespace Eigen {
       typename remove_reference<typename LeadXprType::Nested>::type, 
       typename remove_reference<typename XprTypes::Nested>::type...
     > _Nested;
-    static const int NumDimensions = XprTraits::NumDimensions;
+    static const int NumDimensions = 1; // always materializes as a vector
     static const int Layout = XprTraits::Layout;
     typedef typename TypeConversion<
       Scalar,
@@ -1148,12 +1148,12 @@ namespace Eigen {
   
     TensorEvaluator(const XprType& op, const Device& device)
       : m_device(device),
-        m_func(op.functor()),
         m_xpr_impl(
           nCompiler::tupleGeneration::generate_evaluator_tuple(
             op.expression(), device
           )
         ),
+        m_func(op.functor()),
         m_xpr_sizes(nCompiler::dimension_sizes(m_xpr_impl)),
         m_dimensions(nCompiler::max_dimension_size(m_xpr_impl))
         
@@ -1175,15 +1175,10 @@ namespace Eigen {
     typedef typename XprType::Index Index;
     typedef typename XprType::Scalar Scalar;
     typedef typename internal::traits<XprType>::Scalar CoeffReturnType;
-    typedef typename TensorEvaluator<
-      const LeadXprType, Device
-    >::Dimensions Dimensions;
+    static const int NumDims = 1; // always materialize as a vector
+    typedef DSizes<Index, NumDims> Dimensions;
     typedef StorageMemory<CoeffReturnType, Device> Storage;
     typedef typename Storage::Type EvaluatorPointerType;
-  
-    static const int NumDims = internal::array_size<
-      typename TensorEvaluator<const LeadXprType, Device>::Dimensions
-    >::value;
   
     //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
     typedef internal::TensorBlockDescriptor<NumDims, Index> TensorBlockDesc;
@@ -1298,11 +1293,27 @@ namespace nCompiler {
    */
   namespace distributions {
 
-    // the function signature here must match the functor that will be called
+    /* function signature templates must match what will be called */
+
+    // TODO: write a function that ensures last arg has size one, or just only 
+    // take the first elem
+
+    template <typename... XprTypes>
+    using distn_d4i = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, double, double, int), XprTypes...
+    >;
+
     template <typename... XprTypes>
     using distn_d3i = Eigen::TensorCwiseRecyclingFunctorOp<
       double(double, double, double, int), XprTypes...
     >;
+
+    template <typename... XprTypes>
+    using distn_d2i = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, int), XprTypes...
+    >;
+
+    /* end function signature templates */
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dbeta(const XprTypes&... args) {
@@ -1315,9 +1326,19 @@ namespace nCompiler {
     }
 
     template<typename... XprTypes>
+    distn_d2i<XprTypes...> dexp(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(Rf_dexp, args...);
+    }
+
+    template<typename... XprTypes>
     distn_d3i<XprTypes...> dgamma(const XprTypes&... args) {
       return distn_d3i<XprTypes...>(Rf_dgamma, args...);
     }
+
+    // template<typename... XprTypes>
+    // distn_d3i<XprTypes...> dinvgamma(const XprTypes&... args) {
+    //   return distn_d3i<XprTypes...>(nimble_dinvgamma, args...);
+    // }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dlnorm(const XprTypes&... args) {
@@ -1338,6 +1359,11 @@ namespace nCompiler {
     distn_d3i<XprTypes...> dt(const XprTypes&... args) {
       return distn_d3i<XprTypes...>(Rf_dt, args...);
     }
+
+    // template<typename... XprTypes>
+    // distn_d4i<XprTypes...> dt_nonstandard(const XprTypes&... args) {
+    //   return distn_d4i<XprTypes...>(nimble_dt_nonstandard, args...);
+    // }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dunif(const XprTypes&... args) {
