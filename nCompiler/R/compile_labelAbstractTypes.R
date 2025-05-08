@@ -1013,6 +1013,14 @@ inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
     code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # ensure last argument is scalar, to indicate returning values on log scale
+    lastArg = code$args[[length(code$args)]]
+    if(lastArg$type$nDim > 0) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'final argument to density function is not scalar (i.e., log = TRUE).'
+      ), call. = FALSE)
+    }
     # wrap scalar args to length-1 vectors for C++ implementation compatibility
     for(arg in code$args) {
       if(arg$type$nDim == 0) {
