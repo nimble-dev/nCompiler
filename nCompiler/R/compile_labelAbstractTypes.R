@@ -1011,7 +1011,7 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
-    code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # ensure last argument is scalar, to indicate returning values on log scale
     lastArg = code$args[[length(code$args)]]
@@ -1021,19 +1021,27 @@ inLabelAbstractTypesEnv(
         'final argument to density function is not scalar (i.e., log = TRUE).'
       ), call. = FALSE)
     }
-    # wrap scalar args to length-1 vectors for C++ implementation compatibility
-    for(arg in code$args) {
-      if(arg$type$nDim == 0) {
-        # wrap the scalar in a vector
-        newExpr <- wrapExprClassOperator(
-          code = arg, 
-          funName = 'nNumeric',
-          type = typeDeclarationList$nNumeric()
+    # value type and C++ generation depends on whether all args are scalars
+    if(all(sapply(code$args, function(arg) arg$type$nDim) == 0)) {
+      # value is a scalar
+      code$type <- symbolBasic$new(nDim = 0, type = setReturnType(handlingInfo))
+    } else {
+      # value is a vector
+      code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+      # wrap scalar args to length-1 vectors for implementation compatibility
+      for(arg in code$args) {
+        if(arg$type$nDim == 0) {
+          # wrap the scalar in a vector
+          newExpr <- wrapExprClassOperator(
+            code = arg, 
+            funName = 'nNumeric',
+            type = typeDeclarationList$nNumeric()
           )
-        # set vector length
-        insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
-        # name arguments
-        names(newExpr$args) = c('value', 'length')
+          # set vector length
+          insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+          # name arguments
+          names(newExpr$args) = c('value', 'length')
+        }
       }
     }
     invisible(inserts)

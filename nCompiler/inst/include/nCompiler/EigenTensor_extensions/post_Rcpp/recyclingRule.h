@@ -1206,15 +1206,33 @@ Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> recyclingFunctor(
 }
 
 namespace nCompiler {
+
+  /**
+   * Function references provide a way to ensure consistent distribution 
+   * function calls between scalar vs. tensor arguments during nCompiler C++
+   * generation
+   */
+  namespace scalarArgDist {
+
+    double (&dbeta) (double, double, double, int) = Rf_dbeta;
+    double (&dbinom) (double, double, double, int) = Rf_dbinom;
+    double (&dexp) (double, double, int) = Rf_dexp;
+    double (&dgamma) (double, double, double, int) = Rf_dgamma;
+    double (&dlnorm) (double, double, double, int) = Rf_dlnorm;
+    double (&dnbinom) (double, double, double, int) = Rf_dnbinom;
+    double (&dnorm) (double, double, double, int) = Rf_dnorm4;
+    double (&dt) (double, double, int) = Rf_dt;
+    double (&dunif) (double, double, double, int) = Rf_dunif;
+    double (&dweibull) (double, double, double, int) = Rf_dweibull;
+    
+  };
+
   /**
    * wrappers to make recycling rule tensor expressions for common distributions
    */
-  namespace distributions {
+  namespace tensorArgDist {
 
     /* function signature templates must match what will be called */
-
-    // TODO: write a function that ensures last arg has size one, or just only 
-    // take the first elem
 
     template <typename... XprTypes>
     using distn_d4i = Eigen::TensorCwiseRecyclingFunctorOp<
@@ -1235,22 +1253,22 @@ namespace nCompiler {
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dbeta(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dbeta, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dbeta, args...);
     }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dbinom(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dbinom, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dbinom, args...);
     }
 
     template<typename... XprTypes>
     distn_d2i<XprTypes...> dexp(const XprTypes&... args) {
-      return distn_d2i<XprTypes...>(Rf_dexp, args...);
+      return distn_d2i<XprTypes...>(scalarArgDist::dexp, args...);
     }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dgamma(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dgamma, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dgamma, args...);
     }
 
     // template<typename... XprTypes>
@@ -1260,22 +1278,22 @@ namespace nCompiler {
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dlnorm(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dlnorm, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dlnorm, args...);
     }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dnbinom(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dnbinom, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dnbinom, args...);
     }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dnorm(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dnorm4, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dnorm, args...);
     }
 
     template<typename... XprTypes>
-    distn_d3i<XprTypes...> dt(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dt, args...);
+    distn_d2i<XprTypes...> dt(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(scalarArgDist::dt, args...);
     }
 
     // template<typename... XprTypes>
@@ -1285,12 +1303,12 @@ namespace nCompiler {
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dunif(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dunif, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dunif, args...);
     }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dweibull(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(Rf_dweibull, args...);
+      return distn_d3i<XprTypes...>(scalarArgDist::dweibull, args...);
     }
 
   };
