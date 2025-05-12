@@ -1208,48 +1208,199 @@ Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> recyclingFunctor(
 }
 
 /**
- * Create an Eigen Tensorexpression that will evaluate the functor func at the 
- * values of the tensors (or tensor expressions) represented by args... The size 
- * and shape of the output will be determined by shapeArg.  The functor does not 
- * use any of the data stored in shapeArg; shapeArg only provides shape 
- * information for the output.
+ * Informal template metaprogramming check via SFINAE to see if type T is an 
+ * Eigen::Tensor or tensor expression.  Check is informal because it assumes the 
+ * type is an Eigen::Tensor or tensorexpression if type T has a member 
+ * T::NumDimensions.
  * 
- * This function is useful for creating tensors with random variables as 
- * elements, using the arguments args... to parameterize the distribution stored
- * in func.
+ * This is the default type, for when T is (implicitly assumed to be) a true 
+ * scalar type (e.g., int, double, etc.).  The check is informal because it does 
+ * not use std::is_scalar to more formally check 
  */
-template<typename Functor, typename ShapeXprType, typename... XprTypes>
-Eigen::TensorCwiseRecyclingFunctorOp<
-  Functor, 
-  Eigen::TensorCwiseRecyclingOp<XprTypes, ShapeXprType>...
-> recyclingGenerator(
-  Functor & func, const ShapeXprType & shapeArg, const XprTypes&... args
-) {
-  return recyclingFunctor(func, recyclingTensor(args, shapeArg)...);
-}
+template<typename T, typename HasNumDimensionsMember = int>
+struct TypeLike {
+  const static bool true_scalar = true;
+  const static bool scalar_tensor = false;
+  const static bool true_tensor = false;
+  const static std::size_t ndim = 0;
+};
 
+/**
+ * Partial specialization to help implement the template metaprogramming check 
+ * described above
+ */
+template<typename T>
+struct TypeLike<T, decltype(T::NumDimensions, 0)> {
+  const static bool true_scalar = false;
+  const static std::size_t ndim = T::NumDimensions;
+  const static bool scalar_tensor = ndim == 0;
+  const static bool true_tensor = ndim > 0;
+};
+
+/**
+ * Convenience class using template metaprogramming to choose a static run 
+ * method (based on ShapeXprType) that will create an Eigen Tensor expression to
+ * evaluate the functor func at the values of the tensors 
+ * (or tensor expressions) passed as leadArg and args... The output will be a 
+ * vector (i.e., a 1-dimensional tensor) with size (i.e., number of elements) of 
+ * the output determined by shapeArg.  The functor does not use any of 
+ * the data stored in shapeArg; shapeArg only provides shape information for the 
+ * output.
+ * 
+ * This struct is useful for creating tensors with random variables as 
+ * elements, using the arguments leadArg and args... to parameterize the 
+ * distribution referenced by func.
+ * 
+ * A recycling rule is used to reuse leadArg and args..., as needed, to create 
+ * as much output is requested via shapeArg.  The output size is determined 
+ * using the following rules, generally reproducing those of R's rXXX random
+ * generator functions:
+ * 
+ *   1) If shapeArg is an Eigen::Tensor or tensor expression, the output will be 
+ *      a vector (i.e., a 1-dimensional tensor) with the same size (i.e., 
+ *      number of elements/coefficients) as in shapeArg (i.e., shapeArg.size())
+ * 
+ *   2) If shapeArg is either a) a 0-dimensional Eigen::Tensor or tensor 
+ *      expression (i.e., a scalar wrapped in a tensor type, perhaps resulting 
+ *      from a reduction operation), or b) a scalar type (e.g., int, double)
+ *      then the output will be a vector (i.e., a 1-dimensional tensor) with 
+ *      "shapeArg" number of elements.
+ * 
+ */
+template<
+  typename Functor, typename ShapeXprType, typename LeadXprType, 
+  typename... XprTypes
+>
+struct recyclingGenerator {
+
+  // run_impl requires Tensor or tensor expressions with non-trivial size
+  typedef typename std::conditional<
+    // determine if ShapeXprType is a scalar or wraps one in a 0-dim tensor
+    TypeLike<ShapeXprType>::true_tensor,
+    // use ShapeXprType directly for non-trivial tensors
+    ShapeXprType,
+    // use dummy tensors to represent size info when ShapeXprType is scalar-like
+    Eigen::TensorMap<Eigen::Tensor<typename LeadXprType::Scalar, 1>>
+  >::type ShapeXprImpl;
+
+  // type of the tensor expression to generate
+  typedef Eigen::TensorCwiseRecyclingFunctorOp<
+      Functor, 
+      Eigen::TensorCwiseRecyclingOp<LeadXprType, ShapeXprImpl>,
+      Eigen::TensorCwiseRecyclingOp<XprTypes, ShapeXprImpl>...
+  > GeneratorXprType;
+
+  /**
+   * Common method to create the tensor expression that implements generation
+   * 
+   * See documentation for struct for more details about the generation rules,
+   * limitations, etc.
+   * 
+   * @param func A callable object, who will be called with leadArg and args...
+   * @param shapeArg A tensor or tensor expression, whose shape will determine 
+   *  the output size
+   * @param leadArg 
+   * @param args 
+   * @return GeneratorXprType 
+   */
+  static GeneratorXprType run_impl(
+    const Functor & func, const ShapeXprImpl & shapeArg, 
+    const LeadXprType& leadArg, const XprTypes&... args
+  ) {
+    return recyclingFunctor(
+      func, 
+      recyclingTensor(leadArg, shapeArg), 
+      recyclingTensor(args, shapeArg)...
+    );
+  }
+
+  /**
+   * Partial specialization for when shapeArg is a non-trivial tensor or tensor
+   * expression with more than one coefficient.  This is the case run_impl 
+   * supports, so this function works as a pass-through
+   */
+  template<
+    typename T = ShapeXprType,
+    typename std::enable_if<TypeLike<T>::true_tensor, bool>::type = true
+  >
+  static GeneratorXprType run(
+    const Functor & func, const ShapeXprType & shapeArg, 
+    const LeadXprType & leadArg, const XprTypes&... args
+  ) {
+    return run_impl(func, shapeArg, leadArg, args...);
+  }
+
+  /**
+   * Partial specialization for when shapeArg is a scalar wrapped in a 
+   * zero-dimension Tensor.  Extracts the scalar value of shapeArg and creates a 
+   * dummy tensor (ShapeXprImpl) for run_impl whose length is equal to the value 
+   * stored in shapeArg
+   */
+  template<
+    typename T = ShapeXprType,
+    typename std::enable_if<TypeLike<T>::scalar_tensor, bool>::type = true
+  >
+  static GeneratorXprType run(
+    const Functor & func, const ShapeXprType & shapeArg, 
+    const LeadXprType & leadArg, const XprTypes&... args
+  ) {
+    return run_impl(
+      // TODO: Recall that tensor expressions don't provide a coeff accessor, 
+      // so consider wrapping shapeArg in a tensorref or similar object first
+      func, ShapeXprImpl(nullptr, shapeArg.coeff(0)), leadArg, args...
+    );
+  }
+
+  /**
+   * Partial specialization for when shapeArg is a true scalar type 
+   * (e.g., double, int, etc.).  Uses the value of shapeArg to create a 
+   * dummy tensor (ShapeXprImpl) for run_impl whose length is equal to shapeArg
+   */
+  template<
+    typename T = ShapeXprType,
+    typename std::enable_if<TypeLike<T>::true_scalar, bool>::type = true
+  >
+  static GeneratorXprType run(
+    const Functor & func, const ShapeXprType & shapeArg, 
+    const LeadXprType & leadArg, const XprTypes&... args
+  ) {
+    return run_impl(func, ShapeXprImpl(nullptr, shapeArg), leadArg, args...);
+  }
+
+};
 
 namespace nCompiler {
 
   /**
-   * Function references provide a way to ensure consistent distribution 
-   * function calls between scalar vs. tensor arguments during nCompiler C++
-   * generation
+   * nCompiler uses the function references in scalarArgDist during C++ code
+   * generation to ensure the same distribution function implementations are 
+   * called regardless of whether the calling nFunctions in R use scalar or 
+   * tensor arguments (by having tensor arguments use the tensorArgDist 
+   * namespace, which references the scalarArgDist namespace)
    */
   namespace scalarArgDist {
 
-    double (&dbeta) (double, double, double, int) = Rf_dbeta;
-    double (&dbinom) (double, double, double, int) = Rf_dbinom;
-    double (&dexp) (double, double, int) = Rf_dexp;
-    double (&dgamma) (double, double, double, int) = Rf_dgamma;
-    double (&dlnorm) (double, double, double, int) = Rf_dlnorm;
-    double (&dnbinom) (double, double, double, int) = Rf_dnbinom;
-    double (&dnorm) (double, double, double, int) = Rf_dnorm4;
-    double (&dt) (double, double, int) = Rf_dt;
-    double (&dunif) (double, double, double, int) = Rf_dunif;
-    double (&dweibull) (double, double, double, int) = Rf_dweibull;
+    auto & dbeta = Rf_dbeta;
+    auto & dbinom = Rf_dbinom;
+    auto & dexp = Rf_dexp;
+    auto & dgamma = Rf_dgamma;
+    auto & dlnorm = Rf_dlnorm;
+    auto & dnbinom = Rf_dnbinom;
+    auto & dnorm = Rf_dnorm4;
+    auto & dt = Rf_dt;
+    auto & dunif = Rf_dunif;
+    auto & dweibull = Rf_dweibull;
     
-    double (&rnorm) (double, double) = Rf_rnorm;
+    auto & rbeta = Rf_rbeta;
+    auto & rbinom = Rf_rbinom;
+    auto & rexp = Rf_rexp;
+    auto & rgamma = Rf_rgamma;
+    auto & rlnorm = Rf_rlnorm;
+    auto & rnbinom = Rf_rnbinom;
+    auto & rnorm = Rf_rnorm;
+    auto & rt = Rf_rt;
+    auto & runif = Rf_runif;
+    auto & rweibull = Rf_rweibull;
     
   };
 
@@ -1273,12 +1424,6 @@ namespace nCompiler {
     template <typename... XprTypes>
     using distn_d2i = Eigen::TensorCwiseRecyclingFunctorOp<
       double(double, double, int), XprTypes...
-    >;
-
-    template<typename ShapeXprType, typename... XprTypes>
-    using generator_d2 = Eigen::TensorCwiseRecyclingFunctorOp<
-      double(double, double), 
-      Eigen::TensorCwiseRecyclingOp<XprTypes, ShapeXprType>...
     >;
 
     /* end function signature templates */
@@ -1344,52 +1489,32 @@ namespace nCompiler {
     }
 
     /**
-     * Normally distributed random number generation with tensor shape info
+     * Macro to write methods that call the static recyclyingGenerator::run 
+     * method for common distributions.  A limitation is that the function name
+     * NAME must be a member in the nCompiler::scalarArgDist namespace.
      */
-    template<typename ShapeXprType, typename... XprTypes>
-    constexpr typename std::enable_if<
-      (ShapeXprType::NumDimensions > 0),
-      generator_d2<ShapeXprType, XprTypes...>
-    >::type rnorm(
-      const ShapeXprType & shapeArg, const XprTypes&... args
-    ) {
-      return recyclingGenerator(scalarArgDist::rnorm, shapeArg, args...);
+    #define RANDOM_GENERATOR(NAME, SIGNATURE)                                  \ 
+    template<typename ShapeXprType, typename... XprTypes>                      \
+    auto NAME(const ShapeXprType & shapeArg, XprTypes&... args) -> decltype(   \
+      recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(           \
+        scalarArgDist::NAME, shapeArg, args...                                 \
+      )                                                                        \
+    ) {                                                                        \
+      return recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(    \
+        scalarArgDist::NAME, shapeArg, args...                                 \
+      );                                                                       \
     }
 
-    /**
-     * Normally distributed random number generation with scalar tensor info
-     */
-    template<typename ShapeXprType, typename... XprTypes>
-    constexpr typename std::enable_if<
-      (ShapeXprType::NumDimensions == 0),
-      generator_d2<Eigen::TensorMap<Eigen::Tensor<double, 1>>, XprTypes...>
-    >::type rnorm(
-      const ShapeXprType & shapeArg, const XprTypes&... args
-    ) {
-      return recyclingGenerator(
-        scalarArgDist::rnorm, 
-        Eigen::TensorMap<Eigen::Tensor<double, 1>>(nullptr, shapeArg.coeff(0)), 
-        args...
-      );
-    }
-
-    /**
-     * Normally distributed random number generation from true scalar
-     */
-    template<typename ShapeXprType, typename... XprTypes>
-    constexpr typename std::enable_if<
-      std::is_scalar<ShapeXprType>::value,
-      generator_d2<Eigen::TensorMap<Eigen::Tensor<double, 1>>, XprTypes...>
-    >::type rnorm(
-      const ShapeXprType & shapeArg, const XprTypes&... args
-    ) {
-      return recyclingGenerator(
-        scalarArgDist::rnorm, 
-        // reformat true scalar for supporting generator implementations
-        Eigen::TensorMap<Eigen::Tensor<double, 1>>(nullptr, shapeArg), 
-        args...
-      );
-    }
+    RANDOM_GENERATOR(rbeta, double(double, double))
+    RANDOM_GENERATOR(rbinom, double(double, double))
+    RANDOM_GENERATOR(rexp, double(double))
+    RANDOM_GENERATOR(rgamma, double(double, double))
+    RANDOM_GENERATOR(rlnorm, double(double, double))
+    RANDOM_GENERATOR(rnbinom, double(double, double))
+    RANDOM_GENERATOR(rnorm, double(double, double))
+    RANDOM_GENERATOR(rt, double(double))
+    RANDOM_GENERATOR(runif, double(double, double))
+    RANDOM_GENERATOR(rweibull, double(double, double))
 
   };
 };
