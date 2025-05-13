@@ -878,6 +878,20 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('rbeta', 'rbinom', 'rexp', 'rgamma', 'rinvgamma', 'rlnorm', 'rnbinom',
+    'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RandomGeneration',
+      returnTypeCode = returnTypeCodes$double
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
+assignOperatorDef(
   c('length'),
   list(
     labelAbstractTypes = list(

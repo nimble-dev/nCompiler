@@ -1049,6 +1049,14 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  RandomGeneration <- function(code, symTab, auxEnv, handlingInfo) {
+    code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   Bracket <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
