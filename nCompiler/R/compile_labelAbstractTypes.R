@@ -1050,8 +1050,25 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   RandomGeneration <- function(code, symTab, auxEnv, handlingInfo) {
+    # output will always be a vector
     code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # wrap scalar args to length-1 vectors for implementation compatibility
+    for(arg in code$args) {
+      if(arg$type$nDim == 0) {
+        # wrap the scalar in a vector
+        newExpr <- wrapExprClassOperator(
+          code = arg, 
+          funName = 'nNumeric',
+          type = typeDeclarationList$nNumeric()
+        )
+        # set vector length
+        insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+        # name arguments
+        names(newExpr$args) = c('value', 'length')
+      }
+    }
     invisible(inserts)
   }
 )
