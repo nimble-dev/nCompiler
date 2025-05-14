@@ -403,3 +403,17 @@ nForwardsolve <- function(l, x) {
 nBacksolve <- function(r, x) {
   backsolve(r,x)
 }
+
+#' Wrapper for var
+#' 
+#' @export
+nVar <- function(x) { 
+  var(x) 
+}
+
+#' Wrapper for sd
+#' 
+#' @export
+nSd <- function(x) { 
+  sd(x) 
+}
