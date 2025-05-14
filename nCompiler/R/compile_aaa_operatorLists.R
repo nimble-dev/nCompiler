@@ -145,6 +145,15 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dim'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'dim'
+    )
+  )
+)
+
 assignOperatorDef( # c()
   c('nC'),
   list(

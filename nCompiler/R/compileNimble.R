@@ -226,7 +226,8 @@ nimble_nCompiler_opDefs <- list(
   nimMatrix = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nMatrix')),
   nimC = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nC')),
   nimRep = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nRep')),
-  nimSeq = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nSeq'))
+  nimSeq = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nSeq')),
+  nimDim = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='dim'))
 )
 
 proxyNimbleProjectClass <- R6::R6Class(

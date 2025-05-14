@@ -1656,6 +1656,22 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  dim <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'dim called with argument length != 1.'
+        ),
+        call. = FALSE)
+    # recurse arguments
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # output will be a vector of sizes
+    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   nOptim <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     code$type <- symbolNC$new(name = '',
