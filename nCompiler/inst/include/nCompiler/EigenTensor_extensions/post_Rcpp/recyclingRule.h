@@ -16,9 +16,9 @@ namespace internal {
 template <typename LhsTensorBlock, typename RhsTensorBlock>
 class TensorCwiseRecyclingBlock {
 
-  static const bool NoArgBlockAccess =
-    internal::is_void<typename LhsTensorBlock::XprType>::value ||
-    internal::is_void<typename RhsTensorBlock::XprType>::value;
+  static const bool NoArgBlockAccess = true;
+    // internal::is_void<typename LhsTensorBlock::XprType>::value ||
+    // internal::is_void<typename RhsTensorBlock::XprType>::value;
 
 public:
 
@@ -879,10 +879,10 @@ namespace Eigen {
   template <typename... TensorBlocks>
   class TensorCwiseRecyclingFunctorBlock {
   
-    static const bool NoArgBlockAccess = 
-      nCompiler::any<
-        Eigen::internal::is_void<typename TensorBlocks::XprType>::value...
-      >::value;
+    static const bool NoArgBlockAccess = true;
+      // nCompiler::any<
+      //   Eigen::internal::is_void<typename TensorBlocks::XprType>::value...
+      // >::value;
   
   public:
 
@@ -1495,7 +1495,8 @@ namespace nCompiler {
      */
     #define RANDOM_GENERATOR(NAME, SIGNATURE)                                  \ 
     template<typename ShapeXprType, typename... XprTypes>                      \
-    auto NAME(const ShapeXprType & shapeArg, XprTypes&... args) -> decltype(   \
+    auto NAME(const ShapeXprType & shapeArg, const XprTypes&... args) ->       \
+    decltype(                                                                  \
       recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(           \
         scalarArgDist::NAME, shapeArg, args...                                 \
       )                                                                        \
