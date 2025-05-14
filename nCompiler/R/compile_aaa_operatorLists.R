@@ -605,6 +605,17 @@ assignOperatorDef(
 updateOperatorDef('squaredNorm', 'eigenImpl', 'removeForScalar', FALSE)
 
 assignOperatorDef(
+  c('nVar', 'nSd'),
+  list(
+    help = 'Example help entry',
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction',
+      returnTypeCode = returnTypeCodes$double
+    )
+  )
+)
+
+assignOperatorDef(
   c('all', 'any'),
   list(
     help = 'Example help entry',

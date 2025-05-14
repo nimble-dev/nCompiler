@@ -1614,5 +1614,34 @@ std::shared_ptr<SVDDecomp> nSvd(
     return ans;
   }
 #endif
-  
+
+/**
+ * Templated variance function assuming an Eigen::tensor or tensor expression 
+ * as input
+ * 
+ * Note: Cannot seem to be done without xEval since x.size() is not necessarily
+ * defined when x is a tensor expression, and it seems to be difficult to find 
+ * a TensorRef or other type of lazy Eigen object that can be used to simply 
+ * extract the size of x
+ */
+template<typename XprType>
+double nVar(const XprType & x) {
+    // evaluate input tensor
+    const auto xEval = eval(x);
+    // sample variance
+    return scalar_cast_<double>::cast(
+        (xEval - scalar_cast_<double>::cast(xEval.mean())).pow(2.0).sum() / 
+            (xEval.size() - 1.0)
+    );
+}
+
+/**
+ * Templated variance function assuming an Eigen::tensor or tensor expression 
+ * as input
+ */
+template<typename XprType>
+double nSd(const XprType & x) {
+    return std::sqrt(nVar(x));
+}
+
 #endif
