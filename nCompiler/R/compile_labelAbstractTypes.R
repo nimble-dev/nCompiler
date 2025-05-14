@@ -1054,8 +1054,12 @@ inLabelAbstractTypesEnv(
     code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    # wrap scalar args to length-1 vectors for implementation compatibility
-    for(arg in code$args) {
+    # remove sample size from the list of arguments parameterizing the dist'n.
+    size_ind = match('n', sapply(code$args, function(x) x$name))
+    if(is.na(size_ind)) size_ind = 1 # assume sample size is first if unnamed
+    parameterArgs = code$args[-size_ind]
+    # wrap scalar parameterization args to length-1 vectors for C++ generation
+    for(arg in parameterArgs) {
       if(arg$type$nDim == 0) {
         # wrap the scalar in a vector
         newExpr <- wrapExprClassOperator(
