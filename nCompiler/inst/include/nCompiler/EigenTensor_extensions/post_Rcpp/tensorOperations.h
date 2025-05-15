@@ -1618,21 +1618,14 @@ std::shared_ptr<SVDDecomp> nSvd(
 /**
  * Templated variance function assuming an Eigen::tensor or tensor expression 
  * as input
- * 
- * Note: Cannot seem to be done without xEval since x.size() is not necessarily
- * defined when x is a tensor expression, and it seems to be difficult to find 
- * a TensorRef or other type of lazy Eigen object that can be used to simply 
- * extract the size of x
  */
 template<typename XprType>
-double nVar(const XprType & x) {
-    // evaluate input tensor
-    const auto xEval = eval(x);
-    // sample variance
-    return scalar_cast_<double>::cast(
-        (xEval - scalar_cast_<double>::cast(xEval.mean())).pow(2.0).sum() / 
-            (xEval.size() - 1.0)
-    );
+auto nVar(const XprType & x) -> decltype(
+    (x - scalar_cast_<double>::cast(x.mean())).pow(2.0).sum() / 
+        (nDimTraits2_size(x) - 1.0)
+) {
+    return (x - scalar_cast_<double>::cast(x.mean())).pow(2.0).sum() / 
+        (nDimTraits2_size(x) - 1.0);
 }
 
 /**
@@ -1640,22 +1633,18 @@ double nVar(const XprType & x) {
  * as input
  */
 template<typename XprType>
-double nSd(const XprType & x) {
-    return std::sqrt(nVar(x));
+auto nSd(const XprType & x) -> decltype(nVar(x).sqrt()){
+    return nVar(x).sqrt();
 }
 
 /**
  * Templated dimensions function assuming an Eigen::tensor or tensor expression 
  * as input
- * 
- * Note: Cannot seem to be done without xEval since x.dimensions() is not 
- * necessarily defined when x is a tensor expression, and it seems to be 
- * difficult to find a TensorRef or other type of lazy Eigen object that can be 
- * used to simply extract the dimensions of x
  */
 template<typename XprType>
-auto dim(const XprType & x) -> decltype( eval(x).dimensions() ) {
-    return eval(x).dimensions();
+auto dim(const XprType & x) -> decltype( nDimTraits2_dimensions(x) ) {
+    // TODO: Cast to an Eigen::Tensor type
+    return nDimTraits2_dimensions(x);
 }
 
 #endif
