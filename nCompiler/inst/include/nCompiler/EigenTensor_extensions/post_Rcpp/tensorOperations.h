@@ -1640,11 +1640,22 @@ auto nSd(const XprType & x) -> decltype(nVar(x).sqrt()){
 /**
  * Templated dimensions function assuming an Eigen::tensor or tensor expression 
  * as input
+ * 
+ * Note: nDimTraits2_dimensions returns an object of type XprType::Dimensions,
+ * which is typically an Eigen Dsizes object (subclass of std::array).  For 
+ * compatability with nCompiler inputs/outputs, which relies on Eigen::Tensor 
+ * types, we must convert the Dsizes object to an Eigen::Tensor object.  It 
+ * seems like the Eigen library does not offer tools to do this directly
  */
-template<typename XprType>
-auto dim(const XprType & x) -> decltype( nDimTraits2_dimensions(x) ) {
-    // TODO: Cast to an Eigen::Tensor type
-    return nDimTraits2_dimensions(x);
+template<typename Scalar, typename XprType>
+Eigen::Tensor<Scalar, 1> dim(const XprType & x) {
+    auto dims = nDimTraits2_dimensions(x);
+    Eigen::Tensor<Scalar, 1> out(dims.size());
+    std::transform(
+        dims.begin(), dims.end(), out.data(),
+        [](typename XprType::Index s){ return static_cast<Scalar>(s); }
+    );
+    return out;
 }
 
 #endif

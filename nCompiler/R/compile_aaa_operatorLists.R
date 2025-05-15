@@ -150,6 +150,9 @@ assignOperatorDef(
   list(
     labelAbstractTypes = list(
       handler = 'dim'
+    ),
+    cppOutput = list(
+      handler = 'dim'
     )
   )
 )
