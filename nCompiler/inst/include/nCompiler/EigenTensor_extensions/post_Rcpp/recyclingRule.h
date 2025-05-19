@@ -11,50 +11,6 @@ template<typename LeftXprType, typename RightXprType> class TensorCwiseRecycling
 
 namespace internal {
 
-//////////// Modified from TensorCwiseBinaryBlock in TensorBlock.h  ////////////
-
-template <typename LhsTensorBlock, typename RhsTensorBlock>
-class TensorCwiseRecyclingBlock {
-
-  static const bool NoArgBlockAccess = true;
-    // internal::is_void<typename LhsTensorBlock::XprType>::value ||
-    // internal::is_void<typename RhsTensorBlock::XprType>::value;
-
-public:
-
-  typedef typename conditional<
-      NoArgBlockAccess, 
-      void,
-      TensorCwiseRecyclingBlock<const typename LhsTensorBlock::XprType,
-                                const typename RhsTensorBlock::XprType> 
-  >::type XprType;
-
-  typedef typename XprScalar<XprType>::type Scalar;
-
-  TensorCwiseRecyclingBlock(
-    const LhsTensorBlock& left_block, const RhsTensorBlock& right_block) : 
-      m_left_block(left_block), m_right_block(right_block) { }
-
-  TensorBlockKind kind() const { return internal::TensorBlockKind::kExpr; }
-
-  XprType expr() const {
-    return XprType(m_left_block.expr(), m_right_block.expr());
-  }
-
-  const Scalar* data() const { return NULL; }
-
-  void cleanup() {
-    m_left_block.cleanup();
-    m_right_block.cleanup();
-  }
-
-private:
-
-  LhsTensorBlock m_left_block;
-  RhsTensorBlock m_right_block;
-
-};
-
 ////////////// Modified from TensorCwiseBinaryOp in TensorExpr.h  //////////////
 
   template<typename LhsXprType, typename RhsXprType>
@@ -156,8 +112,7 @@ struct TensorEvaluator<const TensorCwiseRecyclingOp<LeftArgType, RightArgType>, 
     IsAligned         = int(TensorEvaluator<const LeftArgType, Device>::IsAligned) &
                         int(TensorEvaluator<const RightArgType, Device>::IsAligned),
     PacketAccess      = false, // packets use SIMD, not helpful for plain data access
-    BlockAccess       = int(TensorEvaluator<const LeftArgType, Device>::BlockAccess) &
-                        int(TensorEvaluator<const RightArgType, Device>::BlockAccess),
+    BlockAccess       = false,
     PreferBlockAccess = int(TensorEvaluator<const LeftArgType, Device>::PreferBlockAccess) |
                         int(TensorEvaluator<const RightArgType, Device>::PreferBlockAccess),
     Layout            = TensorEvaluator<const LeftArgType, Device>::Layout,
@@ -186,16 +141,7 @@ struct TensorEvaluator<const TensorCwiseRecyclingOp<LeftArgType, RightArgType>, 
   >::value;
 
   //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
-  typedef internal::TensorBlockDescriptor<NumDims, Index> TensorBlockDesc;
-  typedef internal::TensorBlockScratchAllocator<Device> TensorBlockScratch;
-
-  typedef typename TensorEvaluator<const LeftArgType, Device>::TensorBlock
-      LeftTensorBlock;
-  typedef typename TensorEvaluator<const RightArgType, Device>::TensorBlock
-      RightTensorBlock;
-
-  typedef internal::TensorCwiseRecyclingBlock<LeftTensorBlock, RightTensorBlock>
-      TensorBlock;
+  typedef internal::TensorBlockNotImplemented TensorBlock;
   //===--------------------------------------------------------------------===//
 
   EIGEN_DEVICE_FUNC const Dimensions& dimensions() const
@@ -237,21 +183,6 @@ struct TensorEvaluator<const TensorCwiseRecyclingOp<LeftArgType, RightArgType>, 
   costPerCoeff(bool vectorized) const {
     return m_leftImpl.costPerCoeff(vectorized) +
            m_rightImpl.costPerCoeff(vectorized);
-  }
-
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-  internal::TensorBlockResourceRequirements getResourceRequirements() const {
-    return internal::TensorBlockResourceRequirements::merge(
-               m_leftImpl.getResourceRequirements(),
-               m_rightImpl.getResourceRequirements());
-  }
-
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorBlock
-  block(TensorBlockDesc& desc, TensorBlockScratch& scratch,
-          bool /*root_of_expr_ast*/ = false) const {
-    desc.DropDestinationBuffer();
-    return TensorBlock(m_leftImpl.block(desc, scratch),
-                         m_rightImpl.block(desc, scratch));
   }
 
   EIGEN_DEVICE_FUNC EvaluatorPointerType data() const { return NULL; }
@@ -874,46 +805,6 @@ namespace Eigen {
   
   namespace internal {
   
-  //////////// Modified from TensorCwiseBinaryBlock in TensorBlock.h  ////////////
-  
-  template <typename... TensorBlocks>
-  class TensorCwiseRecyclingFunctorBlock {
-  
-    static const bool NoArgBlockAccess = true;
-      // nCompiler::any<
-      //   Eigen::internal::is_void<typename TensorBlocks::XprType>::value...
-      // >::value;
-  
-  public:
-
-    typedef typename conditional<
-        NoArgBlockAccess, 
-        void,
-        nCompiler::unwrapXprTypes<TensorCwiseRecyclingFunctorBlock,
-                                  TensorBlocks...>
-    >::type XprType;
-  
-    typedef typename XprScalar<XprType>::type Scalar;
-  
-    TensorCwiseRecyclingFunctorBlock(const TensorBlocks&... blocks) : 
-      m_blocks(blocks...) { }
-  
-    TensorBlockKind kind() const { return internal::TensorBlockKind::kExpr; }
-    
-    XprType expr() const {
-      return XprType(nCompiler::tupleGeneration::generate_via_expr(m_blocks));
-    }
-  
-    const Scalar* data() const { return NULL; }
-  
-    void cleanup() { nCompiler::call_cleanup(m_blocks); }
-  
-  private:
-  
-    std::tuple<TensorBlocks...> m_blocks;
-  
-  };
-  
   ////////////// Modified from TensorCwiseBinaryOp in TensorExpr.h  //////////////
 
   /**
@@ -1051,10 +942,7 @@ namespace Eigen {
           int(TensorEvaluator<const XprTypes, Device>::IsAligned)...
         >::value,
       PacketAccess      = false, // packets use SIMD, not helpful for plain data access
-      BlockAccess       = nCompiler::all<
-        int(TensorEvaluator<const LeadXprType, Device>::BlockAccess),
-        int(TensorEvaluator<const XprTypes, Device>::BlockAccess)...
-      >::value,
+      BlockAccess       = false,
       PreferBlockAccess = nCompiler::any<
         int(TensorEvaluator<const LeadXprType, Device>::PreferBlockAccess),
         int(TensorEvaluator<const XprTypes, Device>::PreferBlockAccess)...
@@ -1099,14 +987,8 @@ namespace Eigen {
     typedef typename Storage::Type EvaluatorPointerType;
   
     //===- Tensor block evaluation strategy (see TensorBlock.h) -------------===//
-    typedef internal::TensorBlockDescriptor<NumDims, Index> TensorBlockDesc;
-    typedef internal::TensorBlockScratchAllocator<Device> TensorBlockScratch;
-  
-    typedef internal::TensorCwiseRecyclingFunctorBlock<
-      typename TensorEvaluator<const LeadXprType, Device>::TensorBlock, 
-      typename TensorEvaluator<const XprTypes, Device>::TensorBlock...
-    > TensorBlock;
-    //===--------------------------------------------------------------------===//
+  typedef internal::TensorBlockNotImplemented TensorBlock;
+  //===--------------------------------------------------------------------===//
   
     EIGEN_DEVICE_FUNC const Dimensions& dimensions() const
     {
@@ -1147,22 +1029,6 @@ namespace Eigen {
     costPerCoeff(bool vectorized) const {
       return nCompiler::total_costPerCoeff<TensorOpCost>(
         m_xpr_impl, vectorized
-      );
-    }
-  
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    internal::TensorBlockResourceRequirements getResourceRequirements() const {
-      return nCompiler::merged_resourceRequirements(m_xpr_impl);
-    }
-  
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE TensorBlock
-    block(TensorBlockDesc& desc, TensorBlockScratch& scratch,
-            bool /*root_of_expr_ast*/ = false) const {
-      desc.DropDestinationBuffer();
-      return nCompiler::tupleGeneration::generate_via_block<
-        TensorBlock, TensorBlockDesc, TensorBlockScratch
-      >(
-        m_xpr_impl, desc, scratch
       );
     }
   
