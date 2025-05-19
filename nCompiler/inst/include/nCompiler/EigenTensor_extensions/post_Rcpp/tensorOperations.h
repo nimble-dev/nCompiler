@@ -696,7 +696,7 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
     // initialize Eigen::Tensor to store the decomposition
     Eigen::Tensor<Scalar, 2> res(xDim[0], xDim[1]);
     // decompose
-    auto llt = (x_eval).template selfadjointView<Eigen::Upper>().llt();
+    auto llt = (xmat).template selfadjointView<Eigen::Upper>().llt();
     // extract upper Cholesky factor and return
     Eigen::Map<MatrixType> resMat(res.data(), xDim[0], xDim[1]);
     resMat = llt.matrixU();
