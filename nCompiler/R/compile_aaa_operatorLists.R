@@ -900,6 +900,44 @@ assignOperatorDef(
   )
 )
 
+updateOperatorDef(
+  'dbeta', 'matchDef', val = function(x, shape1, shape2, log = FALSE) {}
+)
+updateOperatorDef(
+  'dbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
+)
+updateOperatorDef(
+  'dexp', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dinvgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dlnorm', 'matchDef', val = function(x, meanlog = 0, sdlog = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dnbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
+)
+updateOperatorDef(
+  'dnorm', 'matchDef', val = function(x, mean = 0, sd = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dt', 'matchDef', val = function(x, df, log = FALSE) {}
+)
+updateOperatorDef(
+  'dt_nonstandard', 'matchDef', 
+  val = function(x, df = 1, mu = 0, sigma = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dunif', 'matchDef', val = function(x, min = 0, max = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dweibull', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+
 assignOperatorDef(
   c('rbeta', 'rbinom', 'rexp', 'rgamma', 'rinvgamma', 'rlnorm', 'rnbinom',
     'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull'),
@@ -913,6 +951,19 @@ assignOperatorDef(
     )
   )
 )
+
+updateOperatorDef('rbeta', 'matchDef', val = function(n, shape1, shape2) {})
+updateOperatorDef('rbinom', 'matchDef', val = function(n, size, prob) {})
+updateOperatorDef('rexp', 'matchDef', val = function(n, rate = 1) {})
+updateOperatorDef('rgamma', 'matchDef', val = function(n, shape, scale = 1) {})
+updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {})
+updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
+updateOperatorDef('rnbinom', 'matchDef', val = function(n, size, prob) {})
+updateOperatorDef('rnorm', 'matchDef', val = function(n, mean = 0, sd = 1) {})
+updateOperatorDef('rt', 'matchDef', val = function(n, df) {})
+updateOperatorDef('rt_nonstandard', 'matchDef', val = function(n, df = 1, mu = 0, sigma = 1) {})
+updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
+updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
   c('length'),

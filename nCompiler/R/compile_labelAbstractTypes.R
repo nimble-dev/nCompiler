@@ -1055,7 +1055,7 @@ inLabelAbstractTypesEnv(
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # remove sample size from the list of arguments parameterizing the dist'n.
-    size_ind = match('n', sapply(code$args, function(x) x$name))
+    size_ind = match('n', names(code$args))
     if(is.na(size_ind)) size_ind = 1 # assume sample size is first if unnamed
     parameterArgs = code$args[-size_ind]
     # wrap scalar parameterization args to length-1 vectors for C++ generation
