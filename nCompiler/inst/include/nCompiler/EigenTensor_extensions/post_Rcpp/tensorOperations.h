@@ -1620,12 +1620,14 @@ std::shared_ptr<SVDDecomp> nSvd(
  * as input
  */
 template<typename XprType>
-auto nVar(const XprType & x) -> decltype(
-    (x - scalar_cast_<double>::cast(x.mean())).pow(2.0).sum() / 
-        (nDimTraits2_size(x) - 1.0)
-) {
-    return (x - scalar_cast_<double>::cast(x.mean())).pow(2.0).sum() / 
-        (nDimTraits2_size(x) - 1.0);
+double nVar(const XprType & x) {
+    // evaluate input tensor
+    const auto xEval = eval(x);
+    // sample variance
+    return scalar_cast_<double>::cast(
+        (xEval - scalar_cast_<double>::cast(xEval.mean())).pow(2.0).sum() / 
+            (xEval.size() - 1.0)
+    );
 }
 
 /**
@@ -1633,8 +1635,8 @@ auto nVar(const XprType & x) -> decltype(
  * as input
  */
 template<typename XprType>
-auto nSd(const XprType & x) -> decltype(nVar(x).sqrt()){
-    return nVar(x).sqrt();
+double nSd(const XprType & x) {
+    return std::sqrt(nVar(x));
 }
 
 /**
