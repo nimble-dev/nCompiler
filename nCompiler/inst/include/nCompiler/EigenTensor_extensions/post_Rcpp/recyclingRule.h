@@ -1376,7 +1376,7 @@ namespace nCompiler {
      * method for common distributions.  A limitation is that the function name
      * NAME must be a member in the nCompiler::scalarArgDist namespace.
      */
-    #define RANDOM_GENERATOR(NAME, SIGNATURE)                                  \ 
+    #define RANDOM_GENERATOR(NAME, SIGNATURE)                                  \
     template<typename ShapeXprType, typename... XprTypes>                      \
     auto NAME(const ShapeXprType & shapeArg, const XprTypes&... args) ->       \
     decltype(                                                                  \

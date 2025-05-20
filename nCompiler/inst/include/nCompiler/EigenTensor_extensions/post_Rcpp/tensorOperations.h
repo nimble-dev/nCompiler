@@ -1394,7 +1394,7 @@ template<typename _MatrixType> class nColPivHouseholderQR
 
     private:
 
-    using Scalar = _MatrixType::Scalar;
+    using Scalar = typename _MatrixType::Scalar;
     using Index = Eigen::Index;
 
     /**
