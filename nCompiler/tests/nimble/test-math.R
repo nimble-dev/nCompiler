@@ -31,16 +31,7 @@ nimbleOptions(verbose = FALSE)
 
 source(system.file(file.path('tests', 'testthat', 'mathTestLists.R'), package = 'nimble'))
 
-### Changes start
 
-# update test expectations: test fails in nimble but succeeds with extra
-#   nCompiler functionality
-tgt_test_ind = which(
-  sapply(testsBasicMath, function(x) x$name) == 'modulo of vector and scalar'
-)
-testsBasicMath[[tgt_test_ind]]$knownFailure = NULL
-
-### Changes end
 
 set.seed(0)
 ans1 <- sapply(testsVaried, test_math, 'math')    ## 12
