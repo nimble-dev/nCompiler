@@ -161,7 +161,7 @@ assignOperatorDef( # c()
   c('nC'),
   list(
     labelAbstractTypes = list(
-      handler = 'RecurseAndLabel',
+      handler = 'nC',
       return_nDim = 1,
       returnTypeCodes$promote),
     eigenImpl = list()

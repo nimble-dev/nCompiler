@@ -462,6 +462,31 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nC <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
+    code$type <- symbolBasic$new(type = type, nDim = nDim)
+    # wrap scalar args to length-1 vectors for implementation compatibility
+      for(arg in code$args) {
+        if(arg$type$nDim == 0) {
+          # wrap the scalar in a vector
+          newExpr <- wrapExprClassOperator(
+            code = arg, 
+            funName = 'nNumeric',
+            type = typeDeclarationList$nNumeric()
+          )
+          # set vector length
+          insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+          # name arguments
+          names(newExpr$args) = c('value', 'length')
+        }
+      }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
