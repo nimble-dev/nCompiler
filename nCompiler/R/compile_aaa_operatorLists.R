@@ -905,8 +905,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  # Note: besselK is not a distribution, but its usage has nearly identical 
+  # functional needs as density functions
   c('dbeta', 'dbinom', 'dexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
-    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
+    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK'),
   list(
     labelAbstractTypes = list(
       handler = 'Distribution',
@@ -957,6 +959,9 @@ updateOperatorDef(
 )
 updateOperatorDef(
   'dweibull', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'besselK', 'matchDef', val = function(x, nu, expon.scaled = FALSE) {}
 )
 
 assignOperatorDef(

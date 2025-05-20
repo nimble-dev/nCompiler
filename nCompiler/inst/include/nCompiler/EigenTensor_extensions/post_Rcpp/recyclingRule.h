@@ -1257,6 +1257,13 @@ namespace nCompiler {
     auto & dunif = Rf_dunif;
     auto & dweibull = Rf_dweibull;
     
+    // match R's usage of internal besselK function
+    // use template to satisfy C++ one definition rule
+    template<int shift = 1> 
+    double besselK(double x, double alpha, double expo) {
+      return Rf_bessel_k(x, alpha, expo + static_cast<double>(shift));
+    }
+    
     auto & rbeta = Rf_rbeta;
     auto & rbinom = Rf_rbinom;
     auto & rexp = Rf_rexp;
@@ -1290,6 +1297,11 @@ namespace nCompiler {
     template <typename... XprTypes>
     using distn_d2i = Eigen::TensorCwiseRecyclingFunctorOp<
       double(double, double, int), XprTypes...
+    >;
+
+    template <typename... XprTypes>
+    using fn_d3 = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, double), XprTypes...
     >;
 
     /* end function signature templates */
@@ -1352,6 +1364,11 @@ namespace nCompiler {
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dweibull(const XprTypes&... args) {
       return distn_d3i<XprTypes...>(scalarArgDist::dweibull, args...);
+    }
+
+    template<typename... XprTypes>
+    fn_d3<XprTypes...> besselK(const XprTypes&... args) {
+      return fn_d3<XprTypes...>(scalarArgDist::besselK, args...);
     }
 
     /**
