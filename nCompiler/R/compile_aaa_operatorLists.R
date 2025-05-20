@@ -731,6 +731,13 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = 'UnaryCwise',
       returnTypeCode = returnTypeCodes$logical
+    ),
+    eigenImpl = list(
+      handler = 'cWiseUnary_external',
+      method = TRUE
+    ),
+    cppOutput = list(
+      handler = 'AsIs' # relevant only for scalar cases
     )
   )
 )
