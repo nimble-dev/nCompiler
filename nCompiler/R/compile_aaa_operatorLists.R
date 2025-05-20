@@ -726,6 +726,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('!'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryCwise',
+      returnTypeCode = returnTypeCodes$logical
+    )
+  )
+)
+
+assignOperatorDef(
   c('&','|'),
   list(
     labelAbstractTypes = list(
