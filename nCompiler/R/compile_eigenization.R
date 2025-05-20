@@ -636,6 +636,10 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(isTRUE(handlingInfo$allScalar)) {
+      ## The first argument must be scalar
+      if(!is.numeric(code$args[[1]]$name)) checkArgDims(code, 1, c(0, 0))
+    }
     ## key difference for ByScalar case:
     ## The second argument must be scalar
     if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))

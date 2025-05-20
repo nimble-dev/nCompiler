@@ -867,7 +867,11 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
+      ## Eigen::Tensor requires the rhs of % to be scalar
+      handler = 'cWiseByScalar', 
+      ## Backwards compatibility with nimble functionality
+      allScalar = TRUE
+    ), 
     cppOutput = list(
       handler = 'AsIs',
       cppString = 'nc_mod')
