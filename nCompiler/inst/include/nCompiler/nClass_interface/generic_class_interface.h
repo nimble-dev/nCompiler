@@ -84,7 +84,7 @@ class genericInterfaceBaseC {
       APtype(type_) {}
   };
   struct args {
-    typedef std::vector<const arg> argVectorT;
+    typedef std::vector<arg> argVectorT;
     // explicit saves the compiler from giving ambiguous
     // constructor error from implicit copy and move constructors.
     // I am not sure if this is the right way to resolve the issue.
