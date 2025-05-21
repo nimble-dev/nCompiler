@@ -4,6 +4,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "tensorIndexingOps.h"
 #include "tensorUtils.h"
+#include "recyclingRule.h"
 
 template<typename T>
 struct repTypes {
@@ -52,17 +53,91 @@ auto repTimes(const T &xpr, const Scalar_ &times) ->
 
 // repTimesLen does not make sense because length.out always moots (trumps) times
 
+template<typename RepType, typename EachType>
+struct RepEachImpl {
+
+  /**
+   * If EachType is a Tensor or TensorExpression, unwrap the underlying Scalar 
+   * type, otherwise (if EachType is a native scalar) effectively yield
+   * "typedef EachType EachScalar;"
+   * 
+   * TypeLike uses SFINAE under the hood to extract EachType::Scalar if the 
+   * member type exists and not cause compilation errors otherwise (i.e., if 
+   * EachType = double, etc.)
+   */
+  typedef typename TypeLike<EachType>::Scalar EachScalar;
+
+  /**
+   * only used to make decltype well defined.  struct RepEachImpl is not 
+     intended to be instantiated
+   */
+  const RepType & dummy_xpr;
+
+  /**
+   * Determine return type here to simplify SFINAE coding patterns with auto 
+   * return types,
+   */
+  typedef decltype(
+    Eigen::as_1D_tensor(
+      Eigen::as_2D_flat_tensor(dummy_xpr).broadcast(
+        typename repTypes<RepType>::IndexArray2(
+          {{ typename repTypes<RepType>::Index(1),  
+             typename repTypes<RepType>::Index(1)  }}
+        )
+      )
+    )
+  ) ReturnType;
+   
+  static ReturnType run_impl(const RepType & xpr, const EachScalar & each) {
+    double deach = static_cast<double>(each);
+    if(deach < 0) {
+      Rcpp::stop("Invalid times in rep.");
+    }
+    typedef typename repTypes<RepType>::Index Index;
+    Index ueach = static_cast<Index>(floor(deach));
+    return Eigen::as_1D_tensor(
+      Eigen::as_2D_flat_tensor(xpr).broadcast(
+        typename repTypes<RepType>::IndexArray2(
+          {{ueach, typename repTypes<RepType>::Index(1) }}
+        )
+      )
+    );
+  }
+
+  /**
+   * Partial specialization for when EachType is a scalar.  This is the case 
+   * run_impl supports, so this function works as a pass-through.
+   */
+  template<
+    typename T = EachType,
+    typename std::enable_if<TypeLike<T>::true_scalar, bool>::type = true
+  >
+  static ReturnType run(const RepType & xpr, const EachType & each) {
+    return run_impl(xpr, each);
+  }
+
+  /**
+   * Partial specialization for when EachType is implied to be a tensor or 
+   * tensor expression.  
+   * 
+   * To match R's implementation, only uses the first element of argument "each"
+   */
+  template<
+    typename T = EachType,
+    typename std::enable_if<!TypeLike<T>::true_scalar, bool>::type = true
+  >
+  static ReturnType run(const RepType & xpr, const EachType & each) {
+    const Eigen::TensorRef<EachType> each_ref(each);
+    return run_impl(xpr, each_ref.coeff(0));
+  }
+
+};
+
 template<typename T, typename Scalar_>
 auto repEach(const T &xpr, const Scalar_ &each) ->
-  decltype(Eigen::as_1D_tensor(Eigen::as_2D_flat_tensor(xpr).broadcast(typename repTypes<T>::IndexArray2({{ typename repTypes<T>::Index(1),  typename repTypes<T>::Index(1)  }})))) {
-  double deach = static_cast<double>(each);
-  if(deach < 0) {
-    Rcpp::stop("Invalid times in rep.");
+  decltype(RepEachImpl<T, Scalar_>::run(xpr, each)) {
+    return RepEachImpl<T, Scalar_>::run(xpr, each);
   }
-  typedef typename repTypes<T>::Index Index;
-  Index ueach = static_cast<Index>(floor(deach));
-  return Eigen::as_1D_tensor(Eigen::as_2D_flat_tensor(xpr).broadcast(typename repTypes<T>::IndexArray2({{ueach, typename repTypes<T>::Index(1) }})));
-}
 
 template<typename T, typename Scalar_, typename Each_>
 auto repTimesEach(const T &xpr, const Scalar_ &times, const Each_ &each) ->

@@ -1085,6 +1085,7 @@ Eigen::TensorCwiseRecyclingFunctorOp<Functor, XprTypes...> recyclingFunctor(
  */
 template<typename T, typename HasNumDimensionsMember = int>
 struct TypeLike {
+  typedef T Scalar;
   const static bool true_scalar = true;
   const static bool scalar_tensor = false;
   const static bool true_tensor = false;
@@ -1097,6 +1098,7 @@ struct TypeLike {
  */
 template<typename T>
 struct TypeLike<T, decltype(T::NumDimensions, 0)> {
+  typedef typename T::Scalar Scalar;
   const static bool true_scalar = false;
   const static std::size_t ndim = T::NumDimensions;
   const static bool scalar_tensor = ndim == 0;
