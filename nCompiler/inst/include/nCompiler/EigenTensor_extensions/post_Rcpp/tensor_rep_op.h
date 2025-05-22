@@ -132,18 +132,32 @@ struct RepTimesImpl {
   const RepType & dummy_xpr;
 
   /**
-   * Determine return type here to simplify SFINAE coding patterns with auto 
-   * return types,
+   * Determine return type here to simplify SFINAE coding patterns vs auto 
+   * return types
    */
-  typedef decltype(
-    Eigen::as_1D_tensor(dummy_xpr).broadcast(
-      typename repTypes<RepType>::IndexArray(
-        {{ typename repTypes<RepType>::Index(1)  }}
+  typedef typename std::conditional<
+    TypeLike<TimesType>::true_scalar,
+    // yields an eigen tensor expression when TimesType is a true scalar
+    decltype(
+      Eigen::as_1D_tensor(dummy_xpr).broadcast(
+        typename repTypes<RepType>::IndexArray(
+          {{ typename repTypes<RepType>::Index(1)  }}
+        )
       )
-    )
-  ) ReturnType;
+    ),
+    // otherwise, yields a materialized tensor when TimesType is a tensor/expr.
+    Eigen::Tensor<typename RepType::Scalar, 1>
+  >::type ReturnType;
 
-  static ReturnType run_impl(const RepType & xpr, const TimesScalar & times) {
+  /**
+   * Partial specialization for when TimesType is a scalar.  Can implement rep 
+   * as a Tensor expression
+   */
+  template<
+    typename T = TimesType,
+    typename std::enable_if<TypeLike<T>::true_scalar, bool>::type = true
+  >
+  static ReturnType run(const RepType & xpr, const TimesType & times) {
     double dtimes = static_cast<double>(times);
     if(dtimes < 0) {
       Rcpp::stop("Invalid times in rep.");
@@ -156,30 +170,37 @@ struct RepTimesImpl {
   }
 
   /**
-   * Partial specialization for when TimesType is a scalar.  This is the case 
-   * run_impl supports, so this function works as a pass-through.
-   */
-  template<
-    typename T = TimesType,
-    typename std::enable_if<TypeLike<T>::true_scalar, bool>::type = true
-  >
-  static ReturnType run(const RepType & xpr, const TimesType & times) {
-    return run_impl(xpr, times);
-  }
-
-  /**
    * Partial specialization for when TimesType is implied to be a tensor or 
-   * tensor expression.  
-   * 
-   * To match test cases, only uses the first element of argument length
+   * tensor expression.  Need to directly generate the result.
    */
   template<
     typename T = TimesType,
     typename std::enable_if<!TypeLike<T>::true_scalar, bool>::type = true
   >
-  static ReturnType run(const RepType & xpr, const TimesType & each) {
-    const Eigen::TensorRef<TimesType> times_ref(each);
-    return run_impl(xpr, times_ref.coeff(0));
+  static ReturnType run(const RepType & xpr, const TimesType & times) {
+
+    std::size_t n_elem_xpr = nDimTraits2_size(xpr);
+    std::size_t n_elem_times_xpr = nDimTraits2_size(times);
+    if(n_elem_xpr !=  n_elem_times_xpr) {
+      Rcpp::stop("Invalid times in rep (x and times have different lengths).");
+    }
+
+    Eigen::Tensor<typename TimesType::Scalar, 0> res_size = times.sum();
+    ReturnType res(res_size.coeff(0));
+    auto res_data = res.data();
+
+    const Eigen::TensorRef<RepType> xpr_ref(xpr);
+    const Eigen::TensorRef<TimesType> times_ref(times);
+
+    for(std::size_t i = 0; i < n_elem_xpr; ++i) {
+      auto thisVal = xpr_ref.coeff(i);
+      std::size_t thisTimes = static_cast<std::size_t>(times_ref.coeff(i));
+      for(std::size_t j = 0; j < thisTimes; ++j) {
+        *(res_data++) = thisVal;
+      }
+    }
+
+    return res;
   }
 
 };
