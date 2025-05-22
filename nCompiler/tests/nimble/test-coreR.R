@@ -256,10 +256,10 @@ repTests <- list(
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(7, 8)); arg3 <- as.numeric(4:5)}), outputType = quote(double(1)), expectWarnings = list("R eval" = 'Expected warning: vector each', "R run" = "Expected warning: vector each")),
   
   ## x, times expressions
-  list(name = "rep(vector double expression, expression)", expr = quote(out <- rep(exp(arg1), arg2^2)), args = list(arg1 = quote(double(1)), arg2 = quote(integer())),
+  list(name = "rep(vector double expression, expression)", expr = quote(out <- rep(exp(arg1), arg2^2)), args = list(arg1 = quote(double(1)), arg2 = quote(integer())), checkEqual = TRUE,
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- 4}), outputType = quote(double(1))),
   ##26
-  list(name = "rep(vector double expression, non-scalar expression)", expr = quote(out <- rep(exp(arg1), sum(arg2^2))), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
+  list(name = "rep(vector double expression, non-scalar expression)", expr = quote(out <- rep(exp(arg1), sum(arg2^2))), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))), checkEqual = TRUE,
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(2,3))}), outputType = quote(double(1))),
   
   
