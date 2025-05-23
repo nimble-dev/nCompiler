@@ -299,6 +299,92 @@ std::is_base_of<
 > { };
 
 /**
+ * Template meta programming check to see if Class is an Eigen::Transpose type
+ * 
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not required members.  SFINAE is used because Eigen::Transpose is 
+ * an incomplete type, requiring additional template parameters
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class, typename HasNestedExpression = int>
+struct IsTranspose : std::false_type { };
+
+// partial specialization to check Eigen::Transpose type
+template<typename T>
+struct IsTranspose<T, decltype(sizeof(typename T::NestedExpression), 0)> :
+std::conditional<
+    std::is_base_of<
+        Eigen::Transpose<typename T::NestedExpression>,
+        T
+    >::value,
+    std::true_type,
+    std::false_type
+>:: type { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::Map type
+ * 
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not required members.  SFINAE is used because Eigen::Map is an 
+ * incomplete type, requiring additional template parameters
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class, typename HasScalarType = int>
+struct IsMap : std::false_type { };
+
+// partial specialization to check Eigen::Map types in use (e.g., via matmap)
+template<typename T>
+struct IsMap<
+    T, decltype(sizeof(typename Eigen::internal::traits<T>::Scalar), 0)
+> :
+std::conditional<
+    std::is_base_of<
+        Eigen::Map<
+            const Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                1
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                1
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            const Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                Eigen::Dynamic
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                Eigen::Dynamic
+            >
+        >, 
+        T
+    >::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
  * Template meta programming check to see if Class is an Eigen object for which
  * coefficients are immediately accessible, unlike unevaluated Tensor
  * operations.
@@ -308,7 +394,8 @@ std::is_base_of<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseType<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
+    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value ||
+    IsMap<Class>::value || IsTranspose<Class>::value,
     std::true_type,
     std::false_type
 >::type { };
