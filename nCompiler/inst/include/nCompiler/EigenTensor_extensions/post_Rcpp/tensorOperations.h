@@ -211,42 +211,6 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
     return binaryOp<OP_, Scalar>(xEval, y);
 }
 
-/**
- * Globally overloaded operators to define x OP y where x (or y) is an
- * Eigen::Tensor or Tensor expression object (i.e., an object derived from
- * Eigen::TensorBase) and y (or x) is an Eigen::SparseMatrix<Scalar> object,
- * where Scalar is a template parameter.
- *
- * @param OP The operator to overload, i.e., +, -, /, *
- * @param OP_FNCTR Functor that wraps the binary operation
- */
-#define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
-template<typename TensorExpr, typename Scalar>                                 \
-Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
-    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y                  \
-) {                                                                            \
-    return binaryOp<OP_FNCTR>(x,y);                                            \
-}                                                                              \
-                                                                               \
-template<typename TensorExpr, typename Scalar>                                 \
-Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
-    const Eigen::SparseMatrix<Scalar> &x, const TensorExpr &y                  \
-) {                                                                            \
-    return binaryOp<nCompiler::reverseOp<OP_FNCTR>>(y,x);                      \
-}
-
-TENSOR_SPMAT_OP(+, nCompiler::plus)
-TENSOR_SPMAT_OP(-, nCompiler::minus)
-TENSOR_SPMAT_OP(*, nCompiler::product)
-TENSOR_SPMAT_OP(/, nCompiler::divide)
-TENSOR_SPMAT_OP(>, nCompiler::gt)
-TENSOR_SPMAT_OP(>=, nCompiler::geq)
-TENSOR_SPMAT_OP(<, nCompiler::lt)
-TENSOR_SPMAT_OP(<=, nCompiler::leq)
-TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
-TENSOR_SPMAT_OP(||, nCompiler::logical_or)
-TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
-
 // forward declaration of nCompiler struct to store Sparse Chol. decompositions
 class SparseCholesky;
 
@@ -370,6 +334,48 @@ struct IsEvaluatedType : std::conditional<
      std::false_type,
      std::true_type
  >:: type { };
+
+/**
+ * Globally overloaded operators to define x OP y where x (or y) is an
+ * Eigen::Tensor or Tensor expression object (i.e., an object derived from
+ * Eigen::TensorBase) and y (or x) is an Eigen::SparseMatrix<Scalar> object,
+ * where Scalar is a template parameter.
+ *
+ * @param OP The operator to overload, i.e., +, -, /, *
+ * @param OP_FNCTR Functor that wraps the binary operation
+ */
+#define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
+template<typename TensorExpr, typename Scalar>                                 \
+typename std::enable_if<                                                       \
+   IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,       \
+   Eigen::Tensor<Scalar, TensorExpr::NumDimensions>                            \
+ >::type operator OP(                                                          \
+    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y                  \
+) {                                                                            \
+    return binaryOp<OP_FNCTR>(x,y);                                            \
+}                                                                              \
+                                                                               \
+template<typename TensorExpr, typename Scalar>                                 \
+typename std::enable_if<                                                       \
+   IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,       \
+   Eigen::Tensor<Scalar, TensorExpr::NumDimensions>                            \
+ >::type operator OP(                                                          \
+    const Eigen::SparseMatrix<Scalar> &x, const TensorExpr &y                  \
+) {                                                                            \
+    return binaryOp<nCompiler::reverseOp<OP_FNCTR>>(y,x);                      \
+}
+
+TENSOR_SPMAT_OP(+, nCompiler::plus)
+TENSOR_SPMAT_OP(-, nCompiler::minus)
+TENSOR_SPMAT_OP(*, nCompiler::product)
+TENSOR_SPMAT_OP(/, nCompiler::divide)
+TENSOR_SPMAT_OP(>, nCompiler::gt)
+TENSOR_SPMAT_OP(>=, nCompiler::geq)
+TENSOR_SPMAT_OP(<, nCompiler::lt)
+TENSOR_SPMAT_OP(<=, nCompiler::leq)
+TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
+TENSOR_SPMAT_OP(||, nCompiler::logical_or)
+TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
  /**
   * Returns true if template Class has N dimensions
