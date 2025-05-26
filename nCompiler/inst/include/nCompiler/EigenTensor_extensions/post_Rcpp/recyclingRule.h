@@ -1248,16 +1248,26 @@ namespace nCompiler {
    */
   namespace scalarArgDist {
 
-    auto & dbeta = Rf_dbeta;
-    auto & dbinom = Rf_dbinom;
-    auto & dexp = Rf_dexp;
-    auto & dgamma = Rf_dgamma;
-    auto & dlnorm = Rf_dlnorm;
-    auto & dnbinom = Rf_dnbinom;
-    auto & dnorm = Rf_dnorm4;
-    auto & dt = Rf_dt;
-    auto & dunif = Rf_dunif;
-    auto & dweibull = Rf_dweibull;
+    /**
+     * Macro to write methods that call the R implementations for common 
+     * density functions.
+     */
+    #define R_WRAPPER(LOCAL_NAME, R_NAME)                                      \
+    template<typename... ArgTypes>                                             \
+    double LOCAL_NAME(ArgTypes... args) {                                      \
+      return R_NAME(args...);                                                  \
+    }
+
+    R_WRAPPER(dbeta, Rf_dbeta)
+    R_WRAPPER(dbinom, Rf_dbinom)
+    R_WRAPPER(dexp, Rf_dexp)
+    R_WRAPPER(dgamma, Rf_dgamma)
+    R_WRAPPER(dlnorm, Rf_dlnorm)
+    R_WRAPPER(dnbinom, Rf_dnbinom)
+    R_WRAPPER(dnorm, Rf_dnorm4)
+    R_WRAPPER(dt, Rf_dt)
+    R_WRAPPER(dunif, Rf_dunif)
+    R_WRAPPER(dweibull, Rf_dweibull)
     
     // match R's usage of internal besselK function
     // use template to satisfy C++ one definition rule
@@ -1266,16 +1276,16 @@ namespace nCompiler {
       return Rf_bessel_k(x, alpha, expo + static_cast<double>(shift));
     }
     
-    auto & rbeta = Rf_rbeta;
-    auto & rbinom = Rf_rbinom;
-    auto & rexp = Rf_rexp;
-    auto & rgamma = Rf_rgamma;
-    auto & rlnorm = Rf_rlnorm;
-    auto & rnbinom = Rf_rnbinom;
-    auto & rnorm = Rf_rnorm;
-    auto & rt = Rf_rt;
-    auto & runif = Rf_runif;
-    auto & rweibull = Rf_rweibull;
+    R_WRAPPER(rbeta, Rf_rbeta)
+    R_WRAPPER(rbinom, Rf_rbinom)
+    R_WRAPPER(rexp, Rf_rexp)
+    R_WRAPPER(rgamma, Rf_rgamma)
+    R_WRAPPER(rlnorm, Rf_rlnorm)
+    R_WRAPPER(rnbinom, Rf_rnbinom)
+    R_WRAPPER(rnorm, Rf_rnorm)
+    R_WRAPPER(rt, Rf_rt)
+    R_WRAPPER(runif, Rf_runif)
+    R_WRAPPER(rweibull, Rf_rweibull)
     
   };
 
