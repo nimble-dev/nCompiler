@@ -1252,13 +1252,15 @@ inEigenizeEnv(
           code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
                                isLiteral = FALSE, name = xArg$name, 
                                type = xArg$type),
-          funName = 'length'
+          funName = 'length',
+          type = symbolBasic$new(name = 'nrow', nDim = 0, type = 'integer')
         )
         ncolValue <- wrapExprClassOperator(
           code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
                                isLiteral = FALSE, name = xArg$name, 
                                type = xArg$type),
-          funName = 'length'
+          funName = 'length',
+          type = symbolBasic$new(name = 'ncol', nDim = 0, type = 'integer')
         )
         insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
         insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')

@@ -165,7 +165,7 @@ cDiagXR <- nCompile(nDiagXR)
 cDiagXCv <- nCompile(nDiagXCv)
 cDiagXC <- nCompile(nDiagXC)
 cDiagRC <- nCompile(nDiagRC)
-cDiagXv <- nCompile(nDiagXv) # # error during eigenize
+cDiagXv <- nCompile(nDiagXv)
 cDiagX <- nCompile(nDiagX)
 cDiagR <- nCompile(nDiagR)
 
@@ -310,7 +310,7 @@ cSpDiagXR <- nCompile(nSpDiagXR)
 cSpDiagXCv <- nCompile(nSpDiagXCv)
 cSpDiagXC <- nCompile(nSpDiagXC)
 cSpDiagRC <- nCompile(nSpDiagRC)
-cSpDiagXv <- nCompile(nSpDiagXv) # error during eigenize
+cSpDiagXv <- nCompile(nSpDiagXv)
 cSpDiagX <- nCompile(nSpDiagX)
 cSpDiagR <- nCompile(nSpDiagR)
 
