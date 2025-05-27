@@ -436,7 +436,6 @@ nSpDiagAssignment <- nFunction(
   returnType = 'nSparseMatrix'
 )
 
-# these all have erors
 cDiagExprAssignment <- nCompile(nDiagExprAssignment)
 cDiagAssignmentv <- nCompile(nDiagAssignmentv)
 cDiagAssignment <- nCompile(nDiagAssignment)
