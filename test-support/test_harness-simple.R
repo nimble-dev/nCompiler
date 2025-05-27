@@ -142,6 +142,99 @@ GithubIssueReporter <- R6::R6Class(
   )
 )
 
+# Custom testthat reporter to indicate which tests ran with errors, etc.
+# 
+# Behavior: reporter saves a local file for each test with errors or other 
+#   testthat issues
+#
+LocalIssueReporter <- R6::R6Class(
+  "LocalIssueReporter", 
+  inherit = testthat::SummaryReporter,
+  public = list(
+    
+    test_file = NULL,
+    base_name = NULL,
+    
+    tmpfile = NULL,
+    log_issue = FALSE,
+    outdir = NULL,
+    
+    initialize = function(test_file, outdir) {
+      super$initialize()
+      self$test_file = test_file
+      self$base_name = basename(self$test_file)
+      self$outdir = outdir
+    },
+    
+    start_test = function(context, test) {
+      # reset issue flag
+      self$log_issue = FALSE
+      
+      self$cat_tight(" [test] ", test, ": ")
+      
+      # capture test' console output in temp file
+      self$tmpfile = tempfile()
+      sink(self$tmpfile)
+      cat(paste(paste0('[',self$base_name,']'), test, '\n\n'))
+      cat(paste0("Error in `", self$test_file, "` test suite:\n```\n"))
+    },
+    
+    end_test = function(context, test) {
+      self$cat_line()
+      
+      if(isTRUE(self$log_issue)) {
+        cat('\n```\n')
+        # log session info
+        cat('Session info:\n```\n')
+        print(sessionInfo())
+        cat('```')
+        # close file connection
+        sink()
+        # save to disk
+        fs::file_copy(
+          path = self$tmpfile,
+          new_path = file.path(
+            self$outdir, 
+            fs::path_sanitize(
+              paste0(paste(paste0('[',self$base_name,']'), test), '.md')
+            )
+          )
+        )
+        # reconnect to temp file
+        sink(self$tmpfile)
+      }
+      
+      # close and clear temp file
+      sink()
+      unlink(self$tmpfile)
+    },
+    
+    start_context = function(context) {
+      self$cat_tight('[context] ', context, ":\n")
+    },
+    
+    end_context = function(context) { },
+    
+    add_result = function(context, test, result) {
+      if (testthat:::expectation_broken(result)) {
+        self$log_issue = TRUE
+        self$failures$push(result)
+      } else if (testthat:::expectation_skip(result)) {
+        self$log_issue = TRUE
+        self$skips$push(result)
+      } else if (testthat:::expectation_warning(result)) {
+        self$log_issue = TRUE
+        self$warnings$push(result)
+      } else {
+        if (isTRUE(self$omit_dots)) {
+          return()
+        }
+      }
+      self$cat_tight(private$get_summary(result))
+    }
+  )
+)
+
 # set/create log file directory
 odir = file.path('test-support', 'logs')
 dir.create(path = odir, showWarnings = FALSE, recursive = TRUE)
@@ -152,6 +245,10 @@ test_suite = rbind(
   data.frame(base_name = 'indexing', path = file.path('nCompiler', 'tests', 'testthat')),
   data.frame(base_name = 'allocations', path = file.path('nCompiler', 'tests', 'nimble')),
   data.frame(base_name = 'coreR', path = file.path('nCompiler', 'tests', 'nimble'))
+)
+
+test_suite = rbind(
+  data.frame(base_name = 'argumentPassing', path = file.path('nCompiler', 'tests', 'testthat'))
 )
 
 # run tests
@@ -166,11 +263,15 @@ invisible(apply(test_suite, 1, function(r) {
   test_file = file.path(r['path'], paste0('test-', r['base_name'], '.R'))
   test_file(
     path = test_file, 
-    reporter = DetailedSummaryReporter$new()
+    # reporter = DetailedSummaryReporter$new()
     # reporter = GithubIssueReporter$new(
     #   test_file = test_file,
     #   github_repo = 'jmhewitt/nCompiler'
     # )
+    reporter = LocalIssueReporter$new(
+      test_file = test_file,
+      outdir = "/Users/pointdex/Documents/Berkeley/nCompilerFork/test-support/logs"
+    )
   )
   # close log file
   # sink()
