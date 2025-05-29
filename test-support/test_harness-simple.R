@@ -220,7 +220,8 @@ LocalIssueReporter <- R6::R6Class(
         self$log_issue = TRUE
         self$failures$push(result)
       } else if (testthat:::expectation_skip(result)) {
-        self$log_issue = TRUE
+        # logging skips cause local logger to fail
+        self$log_issue = FALSE
         self$skips$push(result)
       } else if (testthat:::expectation_warning(result)) {
         self$log_issue = TRUE
