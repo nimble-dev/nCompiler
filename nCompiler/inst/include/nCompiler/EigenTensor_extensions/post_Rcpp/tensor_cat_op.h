@@ -21,9 +21,9 @@ struct nC_impl;
 template<typename T1, typename T2>
 struct nC_impl<T1, T2> {
   static auto run(const T1 & t1, const T2 & t2) -> decltype(
-    t1.concatenate(t2, 0)
+    Eigen::as_1D_tensor(t1).concatenate(Eigen::as_1D_tensor(t2), 0)
   ) {
-    return t1.concatenate(t2, 0);
+    return Eigen::as_1D_tensor(t1).concatenate(Eigen::as_1D_tensor(t2), 0);
   }
 };
 
@@ -45,13 +45,16 @@ struct nC_impl<T1, T2, TT...> {
    * Determine return type here to simplify recursive variadic template coding 
    * patterns with auto return types
    */
-  typedef decltype(m_t1.concatenate(m_t2,0)) IntermediateConcat;
+  typedef decltype(
+    Eigen::as_1D_tensor(m_t1).concatenate(Eigen::as_1D_tensor(m_t2),0)
+  ) IntermediateConcat;
   
   static auto run(const T1 & t1, const T2 & t2, const TT&... tt) -> decltype(
-    nC_impl<IntermediateConcat, TT...>::run(t1.concatenate(t2, 0), tt...)
+    nC_impl<IntermediateConcat, TT...>::run(
+      Eigen::as_1D_tensor(t1).concatenate(Eigen::as_1D_tensor(t2), 0), tt...)
   ) {
     return nC_impl<IntermediateConcat, TT...>::run(
-      t1.concatenate(t2, 0), tt...
+      Eigen::as_1D_tensor(t1).concatenate(Eigen::as_1D_tensor(t2), 0), tt...
     );
   }
 };
