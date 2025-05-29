@@ -1260,7 +1260,6 @@ namespace nCompiler {
 
     R_WRAPPER(dbeta, Rf_dbeta)
     R_WRAPPER(dbinom, Rf_dbinom)
-    R_WRAPPER(dexp, Rf_dexp)
     R_WRAPPER(dgamma, Rf_dgamma)
     R_WRAPPER(dlnorm, Rf_dlnorm)
     R_WRAPPER(dnbinom, Rf_dnbinom)
@@ -1269,6 +1268,17 @@ namespace nCompiler {
     R_WRAPPER(dt, Rf_dt)
     R_WRAPPER(dunif, Rf_dunif)
     R_WRAPPER(dweibull, Rf_dweibull)
+
+    // we need our own exp implementation because R dexp uses rate and C exp 
+    // uses scale
+    template<int dummy = 0>
+    double rexp_nCompiler(double rate) {
+      return Rf_rexp( 1/rate );
+    }
+    template<int dummy = 0>
+    double dexp_nCompiler(double x, double rate, int give_log) {
+      return Rf_dexp(x, 1/rate, give_log); 
+    } 
     
     // match R's usage of internal besselK function
     // use template to satisfy C++ one definition rule
@@ -1279,7 +1289,6 @@ namespace nCompiler {
     
     R_WRAPPER(rbeta, Rf_rbeta)
     R_WRAPPER(rbinom, Rf_rbinom)
-    R_WRAPPER(rexp, Rf_rexp)
     R_WRAPPER(rgamma, Rf_rgamma)
     R_WRAPPER(rlnorm, Rf_rlnorm)
     R_WRAPPER(rnbinom, Rf_rnbinom)
@@ -1332,7 +1341,7 @@ namespace nCompiler {
 
     template<typename... XprTypes>
     distn_d2i<XprTypes...> dexp(const XprTypes&... args) {
-      return distn_d2i<XprTypes...>(scalarArgDist::dexp, args...);
+      return distn_d2i<XprTypes...>(scalarArgDist::dexp_nCompiler, args...);
     }
 
     template<typename... XprTypes>
@@ -1410,7 +1419,7 @@ namespace nCompiler {
 
     RANDOM_GENERATOR(rbeta, double(double, double))
     RANDOM_GENERATOR(rbinom, double(double, double))
-    RANDOM_GENERATOR(rexp, double(double))
+    RANDOM_GENERATOR(rexp_nCompiler, double(double))
     RANDOM_GENERATOR(rgamma, double(double, double))
     RANDOM_GENERATOR(rlnorm, double(double, double))
     RANDOM_GENERATOR(rnbinom, double(double, double))

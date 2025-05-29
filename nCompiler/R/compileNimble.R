@@ -228,6 +228,8 @@ nimble_nCompiler_opDefs <- list(
   nimRep = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nRep')),
   nimSeq = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nSeq')),
   nimDim = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='dim')),
+  rexp_nimble = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='rexp_nCompiler')),
+  dexp_nimble = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='dexp_nCompiler')),
   nimStep = list(simpleTransformations=list(handler='replaceAndNormalize', replacement='nStep'))
 )
 
