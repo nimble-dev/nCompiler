@@ -459,6 +459,18 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('inprod'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'BinaryReduction'
+    ),
+    eigenImpl = list(
+      handler = 'BinaryReduction'
+    )
+  )
+)
+
+assignOperatorDef(
   c('min', 'max'),
   list(
     simpleTransformations = list(
@@ -686,7 +698,8 @@ assignOperatorDef(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
-    'loggam', 'log1p', 'factorial', 'lfactorial', 'logfact', 'cosh', 'sinh'),
+    'loggam', 'log1p', 'factorial', 'lfactorial', 'logfact', 'cosh', 'sinh',
+    'nStep'),
   list(
     help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(

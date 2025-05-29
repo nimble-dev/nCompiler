@@ -1004,6 +1004,50 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  BinaryReduction <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 2)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'BinaryReduction called with argument length != 2.'
+        ),
+        call. = FALSE)
+      
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      
+      ## pull out the two arguments
+      a1 <- code$args[[1]]
+      a2 <- code$args[[2]]
+
+      a1Type <- a1$type
+      a2Type <- a2$type
+      
+      # tensor args must have same nDims
+      if(a1Type$nDim != a2Type$nDim) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('BinaryReduction called with non-conformable tensors with ',
+                'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
+        ),
+        call. = FALSE)
+      }
+
+      resultScalarType <- arithmeticOutputType(
+        a1Type$type, a2Type$type, handlingInfo$returnTypeCode
+      )
+
+      resultType <-symbolBasic$new(
+        nDim = 0,
+        type = resultScalarType
+      )
+
+      code$type <- resultType
+
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
   UnaryReduction <-
     function(code, symTab, auxEnv, handlingInfo) {
       if(length(code$args) != 1)

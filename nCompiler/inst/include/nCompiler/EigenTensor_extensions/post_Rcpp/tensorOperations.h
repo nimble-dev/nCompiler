@@ -1753,4 +1753,12 @@ Eigen::Tensor<Scalar, 1> dim(const XprType & x) {
     return out;
 }
 
+template<typename XprType, typename YprType>
+auto inprod(const XprType & x, const YprType & y) -> decltype((x*y).sum()) {
+    return (x*y).sum();
+}
+
+template<typename T>
+auto nStep(T x) -> decltype(x >= 0 ? 1 : 0) { return(x >= 0 ? 1 : 0); }
+
 #endif

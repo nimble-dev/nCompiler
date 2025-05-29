@@ -536,6 +536,14 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  BinaryReduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
+    scalarCast(code$caller, code$callerArgID, code$type$type)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
     if (isTRUE(handlingInfo$castLogical)) {
