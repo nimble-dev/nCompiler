@@ -1268,6 +1268,8 @@ namespace nCompiler {
     R_WRAPPER(dt, Rf_dt)
     R_WRAPPER(dunif, Rf_dunif)
     R_WRAPPER(dweibull, Rf_dweibull)
+    R_WRAPPER(dpois, Rf_dpois)
+    R_WRAPPER(dchisq, Rf_dchisq)
 
     // we need our own exp implementation because R dexp uses rate and C exp 
     // uses scale
@@ -1278,7 +1280,23 @@ namespace nCompiler {
     template<int dummy = 0>
     double dexp_nCompiler(double x, double rate, int give_log) {
       return Rf_dexp(x, 1/rate, give_log); 
-    } 
+    }
+
+    // NIMBLE's C parameterization of invgamma is (shape,rate) because
+    // when passing to R's C gamma, which uses (shape,scale), 
+    // the gamma scale parameter is the invgamma rate parameter
+    template<int dummy = 0>
+    double dinvgamma(double x, double shape, double rate, int give_log)
+    // scalar function that can be called directly by NIMBLE with same name as in R
+    {
+    #ifdef IEEE_754
+      if (ISNAN(x) || ISNAN(shape) || ISNAN(rate))
+        return x + shape + rate;
+    #endif
+      double xinv = 1/x;
+      if(give_log) return(dgamma(xinv, shape, rate, give_log) - 2*log(x));
+      else return(dgamma(xinv, shape, rate, give_log) * xinv * xinv);
+    }
     
     // match R's usage of internal besselK function
     // use template to satisfy C++ one definition rule
@@ -1297,6 +1315,22 @@ namespace nCompiler {
     R_WRAPPER(rt, Rf_rt)
     R_WRAPPER(runif, Rf_runif)
     R_WRAPPER(rweibull, Rf_rweibull)
+    R_WRAPPER(rpois, Rf_rpois)
+    R_WRAPPER(rchisq, Rf_rchisq)
+
+    // NIMBLE's C parameterization of invgamma is (shape,rate) because
+    // when passing to R's C gamma, which uses (shape,scale), 
+    // the gamma scale parameter is the invgamma rate parameter
+    template<int dummy = 0>
+    double rinvgamma(double shape, double rate)
+    // scalar function that can be called directly by NIMBLE with same name as in R
+    {
+      if (ISNAN(shape) || ISNAN(rate)) {
+        throw std::domain_error("rinvgamma - Shape or rate are NAN.\n");
+        return R_NaN;
+      }
+      return(1 / rgamma(shape, rate));
+    }
     
   };
 
@@ -1345,14 +1379,24 @@ namespace nCompiler {
     }
 
     template<typename... XprTypes>
+    distn_d2i<XprTypes...> dpois(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(scalarArgDist::dpois, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2i<XprTypes...> dchisq(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(scalarArgDist::dchisq, args...);
+    }
+
+    template<typename... XprTypes>
     distn_d3i<XprTypes...> dgamma(const XprTypes&... args) {
       return distn_d3i<XprTypes...>(scalarArgDist::dgamma, args...);
     }
 
-    // template<typename... XprTypes>
-    // distn_d3i<XprTypes...> dinvgamma(const XprTypes&... args) {
-    //   return distn_d3i<XprTypes...>(nimble_dinvgamma, args...);
-    // }
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dinvgamma(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dinvgamma, args...);
+    }
 
     template<typename... XprTypes>
     distn_d3i<XprTypes...> dlnorm(const XprTypes&... args) {
@@ -1420,7 +1464,10 @@ namespace nCompiler {
     RANDOM_GENERATOR(rbeta, double(double, double))
     RANDOM_GENERATOR(rbinom, double(double, double))
     RANDOM_GENERATOR(rexp_nCompiler, double(double))
+    RANDOM_GENERATOR(rpois, double(double))
+    RANDOM_GENERATOR(rchisq, double(double))
     RANDOM_GENERATOR(rgamma, double(double, double))
+    RANDOM_GENERATOR(rinvgamma, double(double, double))
     RANDOM_GENERATOR(rlnorm, double(double, double))
     RANDOM_GENERATOR(rnbinom, double(double, double))
     RANDOM_GENERATOR(rnorm, double(double, double))

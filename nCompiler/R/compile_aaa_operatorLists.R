@@ -925,7 +925,7 @@ assignOperatorDef(
   # functional needs as density functions
   c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm', 
     'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK', 
-    'dlogis'),
+    'dlogis', 'dpois', 'dchisq'),
   list(
     labelAbstractTypes = list(
       handler = 'Distribution',
@@ -948,6 +948,12 @@ updateOperatorDef(
 )
 updateOperatorDef(
   'dexp_nCompiler', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dpois', 'matchDef', val = function(x, lambda, log = FALSE) {}
+)
+updateOperatorDef(
+  'dchisq', 'matchDef', val = function(x, df, ncp = 0, log = FALSE) {}
 )
 updateOperatorDef(
   'dgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
@@ -987,7 +993,8 @@ updateOperatorDef(
 
 assignOperatorDef(
   c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm', 
-    'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis'),
+    'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis',
+    'rpois', 'rchisq'),
   list(
     labelAbstractTypes = list(
       handler = 'RandomGeneration',
@@ -1002,6 +1009,8 @@ assignOperatorDef(
 updateOperatorDef('rbeta', 'matchDef', val = function(n, shape1, shape2) {})
 updateOperatorDef('rbinom', 'matchDef', val = function(n, size, prob) {})
 updateOperatorDef('rexp_nCompiler', 'matchDef', val = function(n, rate = 1) {})
+updateOperatorDef('rpois', 'matchDef', val = function(n, lambda) {})
+updateOperatorDef('rchisq', 'matchDef', val = function(n, df, ncp = 0) {})
 updateOperatorDef('rgamma', 'matchDef', val = function(n, shape, scale = 1) {})
 updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {})
 updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
