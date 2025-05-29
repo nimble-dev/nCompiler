@@ -714,6 +714,9 @@ assignOperatorDef(
     )
   )
 )
+updateOperatorDef(
+  'nStep', 'labelAbstractTypes', 'returnTypeCode',returnTypeCodes$integer
+)
 updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
 updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
 updateOperatorDef('ceiling', 'eigenImpl', 'nameReplacement', 'ceil')
