@@ -924,7 +924,7 @@ assignOperatorDef(
   # Note: besselK is not a distribution, but its usage has nearly identical 
   # functional needs as density functions
   c('dbeta', 'dbinom', 'dexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
-    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK'),
+    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK', 'dlogis'),
   list(
     labelAbstractTypes = list(
       handler = 'Distribution',
@@ -964,6 +964,10 @@ updateOperatorDef(
   'dnorm', 'matchDef', val = function(x, mean = 0, sd = 1, log = FALSE) {}
 )
 updateOperatorDef(
+  'dlogis', 'matchDef', 
+  val = function(x, location = 0, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
   'dt', 'matchDef', val = function(x, df, log = FALSE) {}
 )
 updateOperatorDef(
@@ -982,7 +986,7 @@ updateOperatorDef(
 
 assignOperatorDef(
   c('rbeta', 'rbinom', 'rexp', 'rgamma', 'rinvgamma', 'rlnorm', 'rnbinom',
-    'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull'),
+    'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis'),
   list(
     labelAbstractTypes = list(
       handler = 'RandomGeneration',
@@ -1002,6 +1006,7 @@ updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {
 updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
 updateOperatorDef('rnbinom', 'matchDef', val = function(n, size, prob) {})
 updateOperatorDef('rnorm', 'matchDef', val = function(n, mean = 0, sd = 1) {})
+updateOperatorDef('rlogis', 'matchDef', val = function(n, location = 0, scale = 1) {})
 updateOperatorDef('rt', 'matchDef', val = function(n, df) {})
 updateOperatorDef('rt_nonstandard', 'matchDef', val = function(n, df = 1, mu = 0, sigma = 1) {})
 updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})

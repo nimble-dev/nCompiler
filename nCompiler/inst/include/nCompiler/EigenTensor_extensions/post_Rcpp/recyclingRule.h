@@ -1265,6 +1265,7 @@ namespace nCompiler {
     R_WRAPPER(dlnorm, Rf_dlnorm)
     R_WRAPPER(dnbinom, Rf_dnbinom)
     R_WRAPPER(dnorm, Rf_dnorm4)
+    R_WRAPPER(dlogis, Rf_dlogis)
     R_WRAPPER(dt, Rf_dt)
     R_WRAPPER(dunif, Rf_dunif)
     R_WRAPPER(dweibull, Rf_dweibull)
@@ -1283,6 +1284,7 @@ namespace nCompiler {
     R_WRAPPER(rlnorm, Rf_rlnorm)
     R_WRAPPER(rnbinom, Rf_rnbinom)
     R_WRAPPER(rnorm, Rf_rnorm)
+    R_WRAPPER(rlogis, Rf_rlogis)
     R_WRAPPER(rt, Rf_rt)
     R_WRAPPER(runif, Rf_runif)
     R_WRAPPER(rweibull, Rf_rweibull)
@@ -1359,6 +1361,11 @@ namespace nCompiler {
     }
 
     template<typename... XprTypes>
+    distn_d3i<XprTypes...> dlogis(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dlogis, args...);
+    }
+
+    template<typename... XprTypes>
     distn_d2i<XprTypes...> dt(const XprTypes&... args) {
       return distn_d2i<XprTypes...>(scalarArgDist::dt, args...);
     }
@@ -1408,6 +1415,7 @@ namespace nCompiler {
     RANDOM_GENERATOR(rlnorm, double(double, double))
     RANDOM_GENERATOR(rnbinom, double(double, double))
     RANDOM_GENERATOR(rnorm, double(double, double))
+    RANDOM_GENERATOR(rlogis, double(double, double))
     RANDOM_GENERATOR(rt, double(double))
     RANDOM_GENERATOR(runif, double(double, double))
     RANDOM_GENERATOR(rweibull, double(double, double))
