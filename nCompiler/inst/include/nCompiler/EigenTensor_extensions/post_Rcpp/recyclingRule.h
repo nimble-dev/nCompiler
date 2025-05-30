@@ -1316,7 +1316,7 @@ namespace nCompiler {
     R_WRAPPER(runif, Rf_runif)
     R_WRAPPER(rweibull, Rf_rweibull)
     R_WRAPPER(rpois, Rf_rpois)
-    R_WRAPPER(rchisq, Rf_rchisq)
+    R_WRAPPER(rchisq, Rf_rnchisq)
 
     // NIMBLE's C parameterization of invgamma is (shape,rate) because
     // when passing to R's C gamma, which uses (shape,scale), 
@@ -1465,7 +1465,7 @@ namespace nCompiler {
     RANDOM_GENERATOR(rbinom, double(double, double))
     RANDOM_GENERATOR(rexp_nCompiler, double(double))
     RANDOM_GENERATOR(rpois, double(double))
-    RANDOM_GENERATOR(rchisq, double(double))
+    RANDOM_GENERATOR(rchisq, double(double, double))
     RANDOM_GENERATOR(rgamma, double(double, double))
     RANDOM_GENERATOR(rinvgamma, double(double, double))
     RANDOM_GENERATOR(rlnorm, double(double, double))
