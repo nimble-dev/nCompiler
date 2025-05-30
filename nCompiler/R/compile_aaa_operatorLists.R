@@ -1000,6 +1000,9 @@ assignOperatorDef(
       handler = 'RandomGeneration',
       returnTypeCode = returnTypeCodes$double
     ),
+    eigenImpl = list(
+      handler = 'RandomGeneration'
+    ),
     cppOutput = list(
       handler = 'RR_Distribution'
     )

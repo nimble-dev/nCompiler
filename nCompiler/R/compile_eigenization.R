@@ -410,6 +410,17 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  RandomGeneration <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    # determine arguments that parameterize the dist'n.
+    size_ind = match('n', names(code$args))
+    parameterArgInds = seq_along(code$args)[-size_ind]
+    # promote argument types
+    promoteTypes(code, which_args = parameterArgInds)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     ## replace the operator name with the equivalent C++ method name if needed
     replaceCodeName(code, handlingInfo)    
