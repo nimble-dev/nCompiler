@@ -175,7 +175,7 @@ template<int LhsNdim, int RhsNdim>
 template<typename XprType>
 struct nDimTraits {
   static const int NumDimensions = Eigen::internal::traits<XprType>::NumDimensions;
-  typedef Eigen::TensorEvaluator<XprType, Eigen::DefaultDevice> EvaluatorType;
+  typedef Eigen::TensorEvaluator<const XprType, Eigen::DefaultDevice> EvaluatorType;
   //typedef typename EvaluatorType::Dimensions Dimensions;
   typedef Eigen::array<long, NumDimensions> Dimensions;
 

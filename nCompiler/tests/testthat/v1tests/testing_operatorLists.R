@@ -43,7 +43,7 @@ nCompiler:::updateOperatorDef(
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
     'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum', 'exp', 'log',
-    'sqrt', 'abs', 'cube', 'square'), # 'rsqrt'
+    'sqrt', 'abs', 'cube', 'square', 'cosh', 'sinh', 'factorial'), # 'rsqrt'
   'testing',
   val = list(
     ## derivatives currently only available for scalar and vector inputs  

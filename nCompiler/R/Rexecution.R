@@ -302,6 +302,22 @@ nChol <- function(x) {
   chol(x)
 }
 
+#' Compute the log-determinant of a matrix
+#' 
+#' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
+#'
+#' @details This function is similar to R's \code{\link{diag}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param x a square matrix
+#'
+#' @export
+#' 
+nLogdet <- function(x) {
+    ldet <- determinant(x, logarithm = TRUE)
+    ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+  }
+
 #' Replicate Elements of Vectors and Lists
 #' 
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}
@@ -386,4 +402,18 @@ nForwardsolve <- function(l, x) {
 #' @export
 nBacksolve <- function(r, x) {
   backsolve(r,x)
+}
+
+#' Wrapper for var
+#' 
+#' @export
+nVar <- function(x) { 
+  var(x) 
+}
+
+#' Wrapper for sd
+#' 
+#' @export
+nSd <- function(x) { 
+  sd(x) 
 }

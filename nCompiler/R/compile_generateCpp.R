@@ -477,8 +477,13 @@ inGenCppEnv(
 
 inGenCppEnv(
   RR_Distribution <- function(code, symTab) {
+    callingNamespace = ifelse(
+      all(sapply(code$args, function(arg) arg$type$nDim) == 0),
+      'nCompiler::scalarArgDist',
+      'nCompiler::tensorArgDist'
+    )
     paste0(
-      'RR_', code$name, '(',
+      callingNamespace, '::', code$name, '(',
       paste0(
         unlist(lapply(code$args, compile_generateCpp, symTab)),
         collapse = ', '
@@ -494,6 +499,14 @@ inGenCppEnv(
            ">::go(",
            compile_generateCpp(code$args[[1]], symTab),
            ")")
+  }
+)
+
+inGenCppEnv(
+  dim <- function(code, symTab) {
+    scalarType <- symbolBasic$new(nDim = 0, type = code$type$type)
+    paste0(code$name, "<", trimws(scalarType$genCppVar()$generate("")), 
+          ">(", compile_generateCpp(code$args[[1]], symTab), ")")
   }
 )
 

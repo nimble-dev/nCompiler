@@ -211,42 +211,6 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
     return binaryOp<OP_, Scalar>(xEval, y);
 }
 
-/**
- * Globally overloaded operators to define x OP y where x (or y) is an
- * Eigen::Tensor or Tensor expression object (i.e., an object derived from
- * Eigen::TensorBase) and y (or x) is an Eigen::SparseMatrix<Scalar> object,
- * where Scalar is a template parameter.
- *
- * @param OP The operator to overload, i.e., +, -, /, *
- * @param OP_FNCTR Functor that wraps the binary operation
- */
-#define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
-template<typename TensorExpr, typename Scalar>                                 \
-Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
-    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y                  \
-) {                                                                            \
-    return binaryOp<OP_FNCTR>(x,y);                                            \
-}                                                                              \
-                                                                               \
-template<typename TensorExpr, typename Scalar>                                 \
-Eigen::Tensor<Scalar, TensorExpr::NumDimensions> operator OP(                  \
-    const Eigen::SparseMatrix<Scalar> &x, const TensorExpr &y                  \
-) {                                                                            \
-    return binaryOp<nCompiler::reverseOp<OP_FNCTR>>(y,x);                      \
-}
-
-TENSOR_SPMAT_OP(+, nCompiler::plus)
-TENSOR_SPMAT_OP(-, nCompiler::minus)
-TENSOR_SPMAT_OP(*, nCompiler::product)
-TENSOR_SPMAT_OP(/, nCompiler::divide)
-TENSOR_SPMAT_OP(>, nCompiler::gt)
-TENSOR_SPMAT_OP(>=, nCompiler::geq)
-TENSOR_SPMAT_OP(<, nCompiler::lt)
-TENSOR_SPMAT_OP(<=, nCompiler::leq)
-TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
-TENSOR_SPMAT_OP(||, nCompiler::logical_or)
-TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
-
 // forward declaration of nCompiler struct to store Sparse Chol. decompositions
 class SparseCholesky;
 
@@ -335,6 +299,92 @@ std::is_base_of<
 > { };
 
 /**
+ * Template meta programming check to see if Class is an Eigen::Transpose type
+ * 
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not required members.  SFINAE is used because Eigen::Transpose is 
+ * an incomplete type, requiring additional template parameters
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class, typename HasNestedExpression = int>
+struct IsTranspose : std::false_type { };
+
+// partial specialization to check Eigen::Transpose type
+template<typename T>
+struct IsTranspose<T, decltype(sizeof(typename T::NestedExpression), 0)> :
+std::conditional<
+    std::is_base_of<
+        Eigen::Transpose<typename T::NestedExpression>,
+        T
+    >::value,
+    std::true_type,
+    std::false_type
+>:: type { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::Map type
+ * 
+ * Implementation strategy uses partial specialization with SFINAE in case type
+ * Class does not required members.  SFINAE is used because Eigen::Map is an 
+ * incomplete type, requiring additional template parameters
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class, typename HasScalarType = int>
+struct IsMap : std::false_type { };
+
+// partial specialization to check Eigen::Map types in use (e.g., via matmap)
+template<typename T>
+struct IsMap<
+    T, decltype(sizeof(typename Eigen::internal::traits<T>::Scalar), 0)
+> :
+std::conditional<
+    std::is_base_of<
+        Eigen::Map<
+            const Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                1
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                1
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            const Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                Eigen::Dynamic
+            >
+        >, 
+        T
+    >::value || 
+    std::is_base_of<
+        Eigen::Map<
+            Eigen::Matrix<
+                typename Eigen::internal::traits<T>::Scalar, 
+                Eigen::Dynamic, 
+                Eigen::Dynamic
+            >
+        >, 
+        T
+    >::value,
+    std::true_type,
+    std::false_type
+>::type { };
+
+/**
  * Template meta programming check to see if Class is an Eigen object for which
  * coefficients are immediately accessible, unlike unevaluated Tensor
  * operations.
@@ -344,7 +394,8 @@ std::is_base_of<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseType<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value,
+    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value ||
+    IsMap<Class>::value || IsTranspose<Class>::value,
     std::true_type,
     std::false_type
 >::type { };
@@ -370,6 +421,48 @@ struct IsEvaluatedType : std::conditional<
      std::false_type,
      std::true_type
  >:: type { };
+
+/**
+ * Globally overloaded operators to define x OP y where x (or y) is an
+ * Eigen::Tensor or Tensor expression object (i.e., an object derived from
+ * Eigen::TensorBase) and y (or x) is an Eigen::SparseMatrix<Scalar> object,
+ * where Scalar is a template parameter.
+ *
+ * @param OP The operator to overload, i.e., +, -, /, *
+ * @param OP_FNCTR Functor that wraps the binary operation
+ */
+#define TENSOR_SPMAT_OP(OP, OP_FNCTR)                                          \
+template<typename TensorExpr, typename Scalar>                                 \
+typename std::enable_if<                                                       \
+   IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,       \
+   Eigen::Tensor<Scalar, TensorExpr::NumDimensions>                            \
+ >::type operator OP(                                                          \
+    const TensorExpr &x, const Eigen::SparseMatrix<Scalar> &y                  \
+) {                                                                            \
+    return binaryOp<OP_FNCTR>(x,y);                                            \
+}                                                                              \
+                                                                               \
+template<typename TensorExpr, typename Scalar>                                 \
+typename std::enable_if<                                                       \
+   IsTensorExpression<TensorExpr>::value || IsTensor<TensorExpr>::value,       \
+   Eigen::Tensor<Scalar, TensorExpr::NumDimensions>                            \
+ >::type operator OP(                                                          \
+    const Eigen::SparseMatrix<Scalar> &x, const TensorExpr &y                  \
+) {                                                                            \
+    return binaryOp<nCompiler::reverseOp<OP_FNCTR>>(y,x);                      \
+}
+
+TENSOR_SPMAT_OP(+, nCompiler::plus)
+TENSOR_SPMAT_OP(-, nCompiler::minus)
+TENSOR_SPMAT_OP(*, nCompiler::product)
+TENSOR_SPMAT_OP(/, nCompiler::divide)
+TENSOR_SPMAT_OP(>, nCompiler::gt)
+TENSOR_SPMAT_OP(>=, nCompiler::geq)
+TENSOR_SPMAT_OP(<, nCompiler::lt)
+TENSOR_SPMAT_OP(<=, nCompiler::leq)
+TENSOR_SPMAT_OP(&&, nCompiler::logical_and)
+TENSOR_SPMAT_OP(||, nCompiler::logical_or)
+TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
 
  /**
   * Returns true if template Class has N dimensions
@@ -696,7 +789,7 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
     // initialize Eigen::Tensor to store the decomposition
     Eigen::Tensor<Scalar, 2> res(xDim[0], xDim[1]);
     // decompose
-    Eigen::LLT<MatrixType> llt(xmat);
+    auto llt = (xmat).template selfadjointView<Eigen::Upper>().llt();
     // extract upper Cholesky factor and return
     Eigen::Map<MatrixType> resMat(res.data(), xDim[0], xDim[1]);
     resMat = llt.matrixU();
@@ -1381,6 +1474,116 @@ ResultType nMul(const Xpr & x, const Ypr & y) {
     return res;
 }
 
+/**
+ * QR decompositions are an efficient and numerically stable way to evaluate 
+ * determinants of matrices.  However, the QR decomposition classes in 
+ * Eigen 3.4.0 do not support signed log determinants.  This class remedies the
+ * limitation until future releases of Eigen with greater functionality are 
+ * available.
+ */
+template<typename _MatrixType> class nColPivHouseholderQR
+    : public Eigen::ColPivHouseholderQR<_MatrixType>
+{
+
+    private:
+
+    using Scalar = typename _MatrixType::Scalar;
+    using Index = Eigen::Index;
+
+    /**
+     * Evaluate the determinant of the QR decomposition's Householder rotations
+     * 
+     * Function to be included in future Eigen releases
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/HouseholderQR.h
+     */
+    Scalar householder_determinant() {
+        bool negated = false;
+        Index size = this->m_hCoeffs.rows();
+        for (Index i = 0; i < size; i++) {
+        // Each valid reflection negates the determinant.
+        if (this->m_hCoeffs(i) != Scalar(0)) negated ^= true;
+        }
+        return negated ? Scalar(-1) : Scalar(1);
+    }
+
+    /**
+     * Evaluate the sign of the matrix determinant
+     * 
+     * Function to be included in future Eigen releases
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/ColPivHouseholderQR.h
+     */
+    Scalar signDeterminant() {
+        if(this->isInjective()) {
+            return householder_determinant() * 
+                Scalar(this->m_det_pq) * 
+                this->m_qr.diagonal().array().sign().prod();
+        } else 
+            return Scalar(0);
+    }
+
+    public:
+
+    // let Eigen run its standard QR decomposition initialization routines
+    nColPivHouseholderQR(_MatrixType & x) : 
+        Eigen::ColPivHouseholderQR<_MatrixType>(x) { }
+
+    /**
+     * Compute the log determinant of the matrix
+     * 
+     * Adapted from Eigen::ColPivHouseholderQR<_MatrixType>::logAbsDeterminant
+     * 
+     * source: https://gitlab.com/libeigen/eigen/-/blob/master/Eigen/src/QR/ColPivHouseholderQR.h
+     */
+    Scalar logDeterminant() {
+        // det == 0
+        if(!this->isInjective())
+            return -std::numeric_limits<Scalar>::infinity();
+        // det > 0
+        else if(signDeterminant() > 0)
+            return this->m_qr.diagonal().cwiseAbs().array().log().sum();
+        // det < 0
+        else
+            return std::numeric_limits<Scalar>::quiet_NaN();
+    }
+
+};
+
+/**
+ * Log-determinant of a square, matrix-like object, i.e., a rank 2 Eigen::Tensor 
+ * object or Tensor expression.
+ *
+ * @tparam Xpr An Eigen::Tensor or tensor expression object type
+ */
+template<
+    typename Xpr,
+    typename Scalar = typename Xpr::Scalar,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Scalar nLogdet(const Xpr & x) {
+    // evaluate arguments, if necessary
+    auto xeval = eval(x);
+    // validate it's a square matrix
+    auto xDim = xeval.dimensions();
+    if(xDim[0] != xDim[1]) {
+        throw std::invalid_argument(
+            "nCompiler::nLdet - Cannot take determinant of non-square matrix"
+        );
+    }
+    // map inputs
+    typedef Eigen::Map<Eigen::MatrixXd> MatrixType;
+    MatrixType xmap = matmap(xeval);
+    // extract determinant from qr decomposition
+    nColPivHouseholderQR<MatrixType> qrdecomp(xmap);
+    return qrdecomp.logDeterminant();
+}
+
+// TODO: implement nLogdet for sparse matrices
+
 // This is drafted but not yet used.
 template<typename Scalar >
 bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
@@ -1504,5 +1707,58 @@ std::shared_ptr<SVDDecomp> nSvd(
     return ans;
   }
 #endif
-  
+
+/**
+ * Templated variance function assuming an Eigen::tensor or tensor expression 
+ * as input
+ */
+template<typename XprType>
+double nVar(const XprType & x) {
+    // evaluate input tensor
+    const auto xEval = eval(x);
+    // sample variance
+    return scalar_cast_<double>::cast(
+        (xEval - scalar_cast_<double>::cast(xEval.mean())).pow(2.0).sum() / 
+            (xEval.size() - 1.0)
+    );
+}
+
+/**
+ * Templated variance function assuming an Eigen::tensor or tensor expression 
+ * as input
+ */
+template<typename XprType>
+double nSd(const XprType & x) {
+    return std::sqrt(nVar(x));
+}
+
+/**
+ * Templated dimensions function assuming an Eigen::tensor or tensor expression 
+ * as input
+ * 
+ * Note: nDimTraits2_dimensions returns an object of type XprType::Dimensions,
+ * which is typically an Eigen Dsizes object (subclass of std::array).  For 
+ * compatability with nCompiler inputs/outputs, which relies on Eigen::Tensor 
+ * types, we must convert the Dsizes object to an Eigen::Tensor object.  It 
+ * seems like the Eigen library does not offer tools to do this directly
+ */
+template<typename Scalar, typename XprType>
+Eigen::Tensor<Scalar, 1> dim(const XprType & x) {
+    auto dims = nDimTraits2_dimensions(x);
+    Eigen::Tensor<Scalar, 1> out(dims.size());
+    std::transform(
+        dims.begin(), dims.end(), out.data(),
+        [](typename XprType::Index s){ return static_cast<Scalar>(s); }
+    );
+    return out;
+}
+
+template<typename XprType, typename YprType>
+auto inprod(const XprType & x, const YprType & y) -> decltype((x*y).sum()) {
+    return (x*y).sum();
+}
+
+template<typename T>
+auto nStep(T x) -> decltype(x >= 0 ? 1 : 0) { return(x >= 0 ? 1 : 0); }
+
 #endif

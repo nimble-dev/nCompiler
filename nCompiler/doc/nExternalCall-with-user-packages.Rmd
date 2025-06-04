@@ -1,0 +1,183 @@
+---
+title: "Using nExternalCall with C++ in custom R packages"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using nExternalCall with C++ in custom R packages}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+# Overview
+
+The nCompiler function `nExternalCall` lets users call functions written in C++ from nCompiler.  In the simplest cases, C++ functions can be written in a single header (.h) and source file (.cpp).  In more complex cases, several header files, source files, and other C++ libraries may be required.  To use complex C++ functions within nCompiler, users should bundle C++ functions in a custom R package that follows specific conventions.  This vignette documents the conventions custom R packages must follow in order to make C++ functions accessible to `nExternalCall`.
+
+# Setup: A simple `nExternalCall` example
+
+The C++ header file `my_sum.h` defines a C++ function that uses pointers to efficiently sum the elements of a vector:
+
+```cpp
+#ifndef my_sum_h
+#define my_sum_h
+
+#include <Rcpp.h>
+
+double my_sum(double * x, std::size_t n);
+
+#endif
+```
+
+The C++ source file `my_sum.cpp` implements the function:
+
+```cpp
+#include "my_sum.h"
+
+double my_sum(double * x, std::size_t n) {
+  
+  double res = 0;
+  
+  if(n > 0) {
+    double * xend = x + n;
+    for(double * it = x; it != xend; ++it) 
+      res += *it;
+  }
+  
+  return res;
+}
+```
+
+R uses nCompiler to call `my_sum`:
+
+```r
+library(nCompiler)
+
+rsum <- nExternalCall(
+  prototype = function(x = double(1), n = integer(0)) {},
+  Cfun = 'my_sum',
+  headerFile = 'my_sum.h',
+  cppFile = 'my_sum.cpp',
+  returnType = double(0)
+)
+
+csum <- nCompile(rsum)
+
+x <- rep(1, 5)
+
+csum(x, length(x))
+```
+
+# Example: Moving C++ code to a custom R package
+
+An R package can also implement the C++ function `my_sum`.  An R package must include boilerplate code that creates an Rcpp plugin and package header files needed to make C++ code accessible to nCompiler.
+
+## Package structure 
+
+The `nExternalCall.package.skeleton` function in nCompiler creates an R package with minimal boilerplate code to implement the `my_sum` C++ function:
+
+```r
+# create minimal external package
+nExternalCall.package.skeleton(
+  name = 'MySumPackage',
+  example_code = TRUE # FALSE to only create boilerplate code
+)
+```
+
+The package structure looks like:
+
+```
+# ├── DESCRIPTION
+# ├── inst
+# │   └── include
+# │       ├── headers
+# │       │   └── my_sum.h
+# │       └── MySumPackage.h
+# ├── man
+# ├── NAMESPACE
+# ├── R
+# └── src
+#     ├── Makevars
+#     ├── Makevars.win
+#     ├── my_sum.cpp
+#     └── MySumPackage.cpp
+```
+
+The package's structure has several features, and its contents require some changes from the simple example earlier:
+
+- The `my_sum.h` header file is saved in the `inst/include/headers/` folder.  
+    - The header file's include guards ```#ifndef my_sum_h``` and ```#define my_sum_h``` should be changed to ```#ifndef MySumPackage_my_sum_h``` and ```#define MySumPackage_my_sum_h```, respectively, to reduce the risk of namespace collisions during C++ compilation.
+    - The header file must also define the `my_sum` function within the `MySumPackage` namespace.  See the example files for details.  Declaration within the namespace is a boilerplate requirement that must be done with all functions made accessible to nCompiler.
+- The package's C++ include file `inst/include/MySumPackage.h` uses an include directive to make the contents of the header file `my_sum.h` accessible to `nCompiler`.  Additional header files can be added to `MySumPackage.h` to make more C++ functions accessible to nCompiler.
+- The `my_sum.cpp` source file is saved in the `src/` folder.  
+    - The include statement `#include "my_sum.h"` should be updated to `#include "MySumPackage.h"`.  
+- Additional C++ header (.h) and source (.cpp) files can be added to the `src/` directory, as needed.  In general, not all C++ source files in `src/` may need to contain the directive `#include "MySumPackage.h"`.
+- The package can be used like any regular package, as desired.  For example, R functions can be added to the `R/` folder for standalone use.  Tests, vignettes, and more can also be added.
+
+
+
+
+## Package use
+
+The package must be installed before `nCompiler` can use the packaged version of `my_sum`.  Installation can be done from R:
+
+```r
+# install package
+devtools::install('MySumPackage')
+```
+
+or a command line:
+
+```bash
+R CMD INSTALL MySumPackage
+```
+
+Now, we're almost entirely back to the beginning, simple example because nCompiler can only call `my_sum` indirectly.  So, we need to write a C++ header file `my_sum_wrapper.h` that nCompiler will call directly:
+
+```cpp
+#ifndef my_sum_wrapper_h
+#define my_sum_wrapper_h
+
+#include <Rcpp.h>
+
+double my_sum_wrapper(double * x, std::size_t n);
+
+#endif
+```
+
+Critically, the C++ source file `my_sum_wrapper.cpp` uses the Rcpp::depends attribute to access the `my_sum` function:
+
+```cpp
+#include "my_sum_wrapper.h"
+
+// make MySumPackage's C++ namespace accessible
+// [[Rcpp::depends(MySumPackage)]]
+#include<MySumPackage.h> 
+
+double my_sum_wrapper(double * x, std::size_t n) {
+  
+  return MySumPackage::my_sum(x, n);
+  
+}
+```
+
+R uses nCompiler to call `my_sum` through `my_sum_wrapper`:
+
+```r
+library(nCompiler)
+
+rsum <- nExternalCall(
+  prototype = function(x = double(1), n = integer(0)) {},
+  Cfun = 'my_sum_wrapper',
+  headerFile = 'my_sum_wrapper.h',
+  cppFile = 'my_sum_wrapper.cpp',
+  returnType = double(0)
+)
+
+csum <- nCompile(rsum)
+
+x <- rep(1, 5)
+
+csum(x, length(x))
+```
+
+# Acknowledgements
+
+One reason R is successful is because its packages are highly portable across operating systems and software versions. The R core team promotes portability by advising developers to avoid direct C++ calls between packages. The R core team also regulates how and when C++ code can be used.  Discussion on stackoverflow from [Nathan Russell](https://github.com/nathan-russell) and [Dirk Eddelbuettel](http://dirk.eddelbuettel.com) helped [clarify](https://stackoverflow.com/questions/42261822/c-interface-with-rcppinterfaces-not-working-for-a-function-returning-stdpa) different strategies to call C++ code between packages. [Matteo Fasiolo](https://mfasiolo.github.io) offers [similar discussion](https://mfasiolo.github.io/sc2-2019/rcpp_advanced_ii/3_rcpp_in_packages_2/).

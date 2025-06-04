@@ -230,9 +230,9 @@ cAdd2_force <- nCompile(nAdd2_force)
 cAdd2_force_mixed <- nCompile(nAdd2_force_mixed)
 cAdd2_promote <- nCompile(nAdd2_promote)
 cAdd3 <- nCompile(nAdd3)
-cAdd2_sparse <- nCompile(nAdd2_sparse) # ERROR
+cAdd2_sparse <- nCompile(nAdd2_sparse)
 cPrune <- nCompile(nPrune)
-cAdd2_force_dense <- nCompile(nAdd2_force_dense) #ERROR
+cAdd2_force_dense <- nCompile(nAdd2_force_dense)
 cAdd2_force_dense_mixed <- nCompile(nAdd2_force_dense_mixed)
 cAdd2_force_dense_unnecessary <- nCompile(nAdd2_force_dense_unnecessary)
 cAsSparse <- nCompile(nAsSparse)

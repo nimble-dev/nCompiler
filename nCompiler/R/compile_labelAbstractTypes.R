@@ -462,6 +462,31 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nC <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
+    code$type <- symbolBasic$new(type = type, nDim = nDim)
+    # wrap scalar args to length-1 vectors for implementation compatibility
+      for(arg in code$args) {
+        if(arg$type$nDim == 0) {
+          # wrap the scalar in a vector
+          newExpr <- wrapExprClassOperator(
+            code = arg, 
+            funName = 'nNumeric',
+            type = typeDeclarationList$nNumeric()
+          )
+          # set vector length
+          insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+          # name arguments
+          names(newExpr$args) = c('value', 'length')
+        }
+      }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
@@ -979,6 +1004,50 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  BinaryReduction <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 2)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'BinaryReduction called with argument length != 2.'
+        ),
+        call. = FALSE)
+      
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      
+      ## pull out the two arguments
+      a1 <- code$args[[1]]
+      a2 <- code$args[[2]]
+
+      a1Type <- a1$type
+      a2Type <- a2$type
+      
+      # tensor args must have same nDims
+      if(a1Type$nDim != a2Type$nDim) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('BinaryReduction called with non-conformable tensors with ',
+                'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
+        ),
+        call. = FALSE)
+      }
+
+      resultScalarType <- arithmeticOutputType(
+        a1Type$type, a2Type$type, handlingInfo$returnTypeCode
+      )
+
+      resultType <-symbolBasic$new(
+        nDim = 0,
+        type = resultScalarType
+      )
+
+      code$type <- resultType
+
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
   UnaryReduction <-
     function(code, symTab, auxEnv, handlingInfo) {
       if(length(code$args) != 1)
@@ -1011,8 +1080,68 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
-    code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # ensure last argument is scalar, defining a constant across recycling
+    lastArg = code$args[[length(code$args)]]
+    if(lastArg$type$nDim > 0) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'final argument to function is not scalar (i.e., log = TRUE).'
+      ), call. = FALSE)
+    }
+    # value type and C++ generation depends on whether all args are scalars
+    if(all(sapply(code$args, function(arg) arg$type$nDim) == 0)) {
+      # value is a scalar
+      code$type <- symbolBasic$new(nDim = 0, type = setReturnType(handlingInfo))
+    } else {
+      # value is a vector
+      code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+      # wrap scalar args to length-1 vectors for implementation compatibility
+      for(arg in code$args) {
+        if(arg$type$nDim == 0) {
+          # wrap the scalar in a vector
+          newExpr <- wrapExprClassOperator(
+            code = arg, 
+            funName = 'nNumeric',
+            type = typeDeclarationList$nNumeric()
+          )
+          # set vector length
+          insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+          # name arguments
+          names(newExpr$args) = c('value', 'length')
+        }
+      }
+    }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  RandomGeneration <- function(code, symTab, auxEnv, handlingInfo) {
+    # output will always be a vector
+    code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
+    # determine argument types and dimensions
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # remove sample size from the list of arguments parameterizing the dist'n.
+    size_ind = match('n', names(code$args))
+    if(is.na(size_ind)) size_ind = 1 # assume sample size is first if unnamed
+    parameterArgs = code$args[-size_ind]
+    # wrap scalar parameterization args to length-1 vectors for C++ generation
+    for(arg in parameterArgs) {
+      if(arg$type$nDim == 0) {
+        # wrap the scalar in a vector
+        newExpr <- wrapExprClassOperator(
+          code = arg, 
+          funName = 'nNumeric',
+          type = typeDeclarationList$nNumeric()
+        )
+        # set vector length
+        insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+        # name arguments
+        names(newExpr$args) = c('value', 'length')
+      }
+    }
     invisible(inserts)
   }
 )
@@ -1591,6 +1720,22 @@ inLabelAbstractTypesEnv(
       ))
     }
     
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  dim <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'dim called with argument length != 1.'
+        ),
+        call. = FALSE)
+    # recurse arguments
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # output will be a vector of sizes
+    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
     invisible(inserts)
   }
 )

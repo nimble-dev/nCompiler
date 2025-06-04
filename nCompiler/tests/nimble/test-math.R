@@ -31,6 +31,8 @@ nimbleOptions(verbose = FALSE)
 
 source(system.file(file.path('tests', 'testthat', 'mathTestLists.R'), package = 'nimble'))
 
+
+
 set.seed(0)
 ans1 <- sapply(testsVaried, test_math, 'math')    ## 12
 ans2 <- sapply(testsBasicMath, test_math, 'math') ## 70

@@ -75,6 +75,7 @@ registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
 }
 
 deregisterOpDef <- function(names) {
+  if(!isTRUE(is.character(names))) names <- ls(names) # in case an env or list is passed in as names.
   suppressWarnings(rm(list=names, envir=operatorDefUserEnv))
 }
 
@@ -144,11 +145,23 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dim'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'dim'
+    ),
+    cppOutput = list(
+      handler = 'dim'
+    )
+  )
+)
+
 assignOperatorDef( # c()
   c('nC'),
   list(
     labelAbstractTypes = list(
-      handler = 'RecurseAndLabel',
+      handler = 'nC',
       return_nDim = 1,
       returnTypeCodes$promote),
     eigenImpl = list()
@@ -446,6 +459,18 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('inprod'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'BinaryReduction'
+    ),
+    eigenImpl = list(
+      handler = 'BinaryReduction'
+    )
+  )
+)
+
+assignOperatorDef(
   c('min', 'max'),
   list(
     simpleTransformations = list(
@@ -462,6 +487,18 @@ assignOperatorDef(
 )
 updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
 updateOperatorDef('min', 'cppOutput', 'cppString', 'minimum')
+
+assignOperatorDef(
+  c('pairmin', 'pairmax'),
+  list(
+    labelAbstractTypes = list(
+        handler = 'BinaryCwise',
+        returnTypeCode = returnTypeCodes$promoteNoLogical),
+    cppOutput = list()
+  )
+)
+updateOperatorDef('pairmax', 'cppOutput', 'cppString', 'std::max')
+updateOperatorDef('pairmin', 'cppOutput', 'cppString', 'std::min')
 
 assignOperatorDef(
   c('pmin', 'pmax'),
@@ -592,6 +629,17 @@ assignOperatorDef(
 updateOperatorDef('squaredNorm', 'eigenImpl', 'removeForScalar', FALSE)
 
 assignOperatorDef(
+  c('nVar', 'nSd'),
+  list(
+    help = 'Example help entry',
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction',
+      returnTypeCode = returnTypeCodes$double
+    )
+  )
+)
+
+assignOperatorDef(
   c('all', 'any'),
   list(
     help = 'Example help entry',
@@ -650,7 +698,8 @@ assignOperatorDef(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
-    'loggam', 'log1p', 'lfactorial', 'logfact'),
+    'loggam', 'log1p', 'factorial', 'lfactorial', 'logfact', 'cosh', 'sinh',
+    'nStep'),
   list(
     help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(
@@ -664,6 +713,9 @@ assignOperatorDef(
       handler = 'AsIs' # relevant only for scalar cases
     )
   )
+)
+updateOperatorDef(
+  'nStep', 'labelAbstractTypes', 'returnTypeCode',returnTypeCodes$integer
 )
 updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
 updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
@@ -686,6 +738,23 @@ assignOperatorDef(
       handler = 'cWiseBinaryLogical'),
     cppOutput = list(
       handler = 'MidOperator')
+  )
+)
+
+assignOperatorDef(
+  c('!'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryCwise',
+      returnTypeCode = returnTypeCodes$logical
+    ),
+    eigenImpl = list(
+      handler = 'cWiseUnary_external',
+      method = TRUE
+    ),
+    cppOutput = list(
+      handler = 'AsIs' # relevant only for scalar cases
+    )
   )
 )
 
@@ -810,7 +879,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('^'),
+  c('^', 'pow'),
   list(
     labelAbstractTypes = list(
       handler = 'BinaryCwise',
@@ -831,7 +900,11 @@ assignOperatorDef(
       handler = 'BinaryCwise',
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
-      handler = 'cWiseByScalar'), ## Eigen::Tensor requires the rhs of % to be scalar
+      ## Eigen::Tensor requires the rhs of % to be scalar
+      handler = 'cWiseByScalar', 
+      ## Backwards compatibility with nimble functionality
+      allScalar = TRUE
+    ), 
     cppOutput = list(
       handler = 'AsIs',
       cppString = 'nc_mod')
@@ -848,8 +921,11 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
-    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
+  # Note: besselK is not a distribution, but its usage has nearly identical 
+  # functional needs as density functions
+  c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm', 
+    'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK', 
+    'dlogis', 'dpois', 'dchisq'),
   list(
     labelAbstractTypes = list(
       handler = 'Distribution',
@@ -863,6 +939,91 @@ assignOperatorDef(
     )
   )
 )
+
+updateOperatorDef(
+  'dbeta', 'matchDef', val = function(x, shape1, shape2, log = FALSE) {}
+)
+updateOperatorDef(
+  'dbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
+)
+updateOperatorDef(
+  'dexp_nCompiler', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dpois', 'matchDef', val = function(x, lambda, log = FALSE) {}
+)
+updateOperatorDef(
+  'dchisq', 'matchDef', val = function(x, df, ncp = 0, log = FALSE) {}
+)
+updateOperatorDef(
+  'dgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dinvgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dlnorm', 'matchDef', val = function(x, meanlog = 0, sdlog = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dnbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
+)
+updateOperatorDef(
+  'dnorm', 'matchDef', val = function(x, mean = 0, sd = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dlogis', 'matchDef', 
+  val = function(x, location = 0, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dt', 'matchDef', val = function(x, df, log = FALSE) {}
+)
+updateOperatorDef(
+  'dt_nonstandard', 'matchDef', 
+  val = function(x, df = 1, mu = 0, sigma = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dunif', 'matchDef', val = function(x, min = 0, max = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'dweibull', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
+)
+updateOperatorDef(
+  'besselK', 'matchDef', val = function(x, nu, expon.scaled = FALSE) {}
+)
+
+assignOperatorDef(
+  c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm', 
+    'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis',
+    'rpois', 'rchisq'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'RandomGeneration',
+      returnTypeCode = returnTypeCodes$double
+    ),
+    eigenImpl = list(
+      handler = 'RandomGeneration'
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
+updateOperatorDef('rbeta', 'matchDef', val = function(n, shape1, shape2) {})
+updateOperatorDef('rbinom', 'matchDef', val = function(n, size, prob) {})
+updateOperatorDef('rexp_nCompiler', 'matchDef', val = function(n, rate = 1) {})
+updateOperatorDef('rpois', 'matchDef', val = function(n, lambda) {})
+updateOperatorDef('rchisq', 'matchDef', val = function(n, df, ncp = 0) {})
+updateOperatorDef('rgamma', 'matchDef', val = function(n, shape, scale = 1) {})
+updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {})
+updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
+updateOperatorDef('rnbinom', 'matchDef', val = function(n, size, prob) {})
+updateOperatorDef('rnorm', 'matchDef', val = function(n, mean = 0, sd = 1) {})
+updateOperatorDef('rlogis', 'matchDef', val = function(n, location = 0, scale = 1) {})
+updateOperatorDef('rt', 'matchDef', val = function(n, df) {})
+updateOperatorDef('rt_nonstandard', 'matchDef', val = function(n, df = 1, mu = 0, sigma = 1) {})
+updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
+updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
   c('length'),
@@ -923,6 +1084,15 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nLogdet'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction'
     )
   )
 )

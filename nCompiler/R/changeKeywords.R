@@ -21,12 +21,18 @@ nKeyWords <- list(copy = 'nCopy',
                   '%*%' = 'nMul',
                   svd = 'nSvd',
                   chol = 'nChol',
+                  rexp = 'rexp_nCompiler',
+                  dexp = 'dexp_nCompiler',
                   optim = 'nOptim',
                   optimDefaultControl = 'nOptimDefaultControl',
                   derivs = 'nDerivs',
                   solve = 'nSolve',
                   forwardsolve = 'nForwardsolve',
-                  backsolve = 'nBacksolve')
+                  backsolve = 'nBacksolve',
+                  logdet = 'nLogdet',
+                  var = 'nVar',
+                  sd = 'nSd'
+                  )
 
 nf_changeKeywords <- function(code){
     if(length(code) > 0){

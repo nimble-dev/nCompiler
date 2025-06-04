@@ -336,3 +336,57 @@ test_that("matrix mult works", {
   expect_equal(m %*% v, cMultMV(x = m, y = v))
   expect_identical(cv %*% v, cMultMV(x = cv, y = v))
 })
+
+test_that("log determinants work (dense matrices)", {
+  
+  ldet_direct = nFunction(
+    fun = function(x) return(logdet(x)),
+    argTypes = list(x = 'numericMatrix()'), 
+    returnType = 'numericScalar()'
+  )
+  
+  ldet_tensor_op = nFunction(
+    fun = function(x, y) return(logdet(x + y)),
+    argTypes = list(x = 'numericMatrix()', y = 'numericMatrix()'), 
+    returnType = 'numericScalar()'
+  )
+  
+  ldet_direct_cpp = nCompile(ldet_direct)
+  ldet_tensor_op_cpp = nCompile(ldet_tensor_op)
+  
+  n = 9
+  
+  set.seed(2025)
+  
+  x = matrix(rnorm(n = n^2), nrow = n)
+  x = t(x) %*% x
+  
+  y = matrix(rnorm(n = n^2), nrow = n)
+  y = t(y) %*% y
+  
+  #
+  # uncompiled execution
+  #
+  
+  # det > 0
+  expect_equal(ldet_direct(x = x), log(det(x)))
+  # det < 0
+  expect_identical(ldet_direct(x = -x), NaN)
+  # det = 0
+  expect_identical(ldet_direct(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
+  
+  #
+  # compiled execution
+  #
+  
+  # det > 0
+  expect_equal(ldet_direct_cpp(x = x), log(det(x)))
+  # det < 0
+  expect_identical(ldet_direct_cpp(x = -x), NaN)
+  # det = 0
+  expect_identical(ldet_direct_cpp(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
+  
+  # tensor expressions
+  expect_equal(ldet_tensor_op_cpp(x,y), log(det(x+y)))
+  
+})

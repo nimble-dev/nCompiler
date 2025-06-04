@@ -410,6 +410,17 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  RandomGeneration <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    # determine arguments that parameterize the dist'n.
+    size_ind = match('n', names(code$args))
+    parameterArgInds = seq_along(code$args)[-size_ind]
+    # promote argument types
+    promoteTypes(code, which_args = parameterArgInds)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     ## replace the operator name with the equivalent C++ method name if needed
     replaceCodeName(code, handlingInfo)    
@@ -536,6 +547,14 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  BinaryReduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
+    scalarCast(code$caller, code$callerArgID, code$type$type)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   Reduction <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     if (!isTRUE(handlingInfo$noPromotion)) promoteTypes(code)
     if (isTRUE(handlingInfo$castLogical)) {
@@ -636,6 +655,10 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   cWiseByScalar <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(isTRUE(handlingInfo$allScalar)) {
+      ## The first argument must be scalar
+      if(!is.numeric(code$args[[1]]$name)) checkArgDims(code, 1, c(0, 0))
+    }
     ## key difference for ByScalar case:
     ## The second argument must be scalar
     if(!is.numeric(code$args[[2]]$name)) checkArgDims(code, 2, c(0, 0))
@@ -1248,13 +1271,15 @@ inEigenizeEnv(
           code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
                                isLiteral = FALSE, name = xArg$name, 
                                type = xArg$type),
-          funName = 'length'
+          funName = 'length',
+          type = symbolBasic$new(name = 'nrow', nDim = 0, type = 'integer')
         )
         ncolValue <- wrapExprClassOperator(
           code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
                                isLiteral = FALSE, name = xArg$name, 
                                type = xArg$type),
-          funName = 'length'
+          funName = 'length',
+          type = symbolBasic$new(name = 'ncol', nDim = 0, type = 'integer')
         )
         insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
         insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')

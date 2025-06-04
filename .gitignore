@@ -32,3 +32,5 @@ rsconnect/
 *~
 # .Rproj file
 nCompiler.Rproj
+sketches/
+.vscode/

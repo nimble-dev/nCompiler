@@ -85,4 +85,4 @@ Collate:
     typeDeclarations.R
     compile_zzz_operatorLists.R
     zzz_NC_Predefined.R
-RoxygenNote: 7.1.2
+RoxygenNote: 7.3.2
