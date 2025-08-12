@@ -1043,6 +1043,8 @@ inEigenizeEnv(
         }
       }
 
+    # This is the only use of Make_Length1_Tensor in the code
+    # Can we replace it with CreateTensor?
     if(code$args[[1]]$type$nDim == 0) {
       insertExprClassLayer(code, 1, "Eigen::Make_Length1_Tensor")
     }

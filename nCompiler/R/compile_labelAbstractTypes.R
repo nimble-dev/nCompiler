@@ -465,6 +465,11 @@ inLabelAbstractTypesEnv(
   nC <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    if(length(code$args) > 1) {
+      for(i in 2:length(code$args)) {
+        type <- arithmeticOutputType(type, code$args[[i]]$type$type)
+      }
+    }
     nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
     code$type <- symbolBasic$new(type = type, nDim = nDim)
     # wrap scalar args to length-1 vectors for implementation compatibility
@@ -1379,6 +1384,7 @@ inLabelAbstractTypesEnv(
           ),
           call. = FALSE)
         }
+        # To-do: Warn about element type mismatches and cast later.
         type_mismatch <- FALSE
         # if returnType is a scalar, do more checks
         if(auxEnv$returnSymbol$nDim==0) {

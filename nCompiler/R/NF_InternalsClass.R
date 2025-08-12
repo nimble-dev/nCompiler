@@ -86,7 +86,7 @@ NF_InternalsClass <- R6::R6Class(
       if(code[[1]] != '{')
         self$code <- substitute({CODE}, list(CODE=code))
       ## check all code except.nCompiler package nFunctions
-      ##            if(check && "package.nCompiler" %in% search()) 
+      ##            if(check && "package.nCompiler" %in% search())
       ##                nf_checkDSLcode(code, methodNames, setupVarNames)
       ## Some of this should become unnecessary.
       ## However, a problem is how regular R default values will be used
@@ -129,7 +129,7 @@ NF_InternalsClass <- R6::R6Class(
           stop("enableDerivs must be NULL, FALSE, TRUE, or a list.")
         if(isTRUE(enableDerivs$isAD)) {
           self$isAD <- TRUE
-          self$callFromR <- FALSE
+          self$compileInfo$callFromR <- FALSE
         } else {
           self$ADcontent <- list()
           self$ADcontent$ADfun <- enableDerivs$ADfun

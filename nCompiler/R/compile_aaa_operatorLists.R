@@ -163,7 +163,7 @@ assignOperatorDef( # c()
     labelAbstractTypes = list(
       handler = 'nC',
       return_nDim = 1,
-      returnTypeCodes$promote),
+      returnTypeCode = returnTypeCodes$promote),
     eigenImpl = list()
   )
 )

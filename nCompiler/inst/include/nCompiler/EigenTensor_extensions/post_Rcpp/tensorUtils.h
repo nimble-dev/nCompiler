@@ -81,7 +81,8 @@ namespace Eigen {
     static const  std::size_t NumDimensions = 0;
   };
 
-
+// This is used in one place, generated code for Rep.
+// It could probably be replaced with CreateTensor.
   template<typename Scalar_>
   auto Make_Length1_Tensor(const Scalar_ &x) -> Eigen::Tensor<Scalar_, 1> {
     Eigen::Tensor<Scalar_, 1> ans(1);
@@ -97,16 +98,10 @@ namespace Eigen {
     typedef Eigen::DSizes<Index, 1> DSizes; // for later chained ops such as concatenate, it must be a DSizes.
     typename XprType::Nested m_expr;
     typedef decltype(m_expr.reshape(DSizes())) returnType;
-    //typedef const T constT;
-    //typedef const decltype(x.reshape(DimArr())) returnType;
     as_1D_tensor_impl(const XprType &expr) : m_expr(expr) {}
     returnType go() const {
       const DSizes newDim( DimArr{{
             nDimTraits2_size(m_expr)
-//            Eigen::internal::array_prod( nDimTraits< typename std::remove_reference<typename XprType::Nested>::type >::getEvaluator(m_expr).dimensions() )
-//            Eigen::TensorRef<
-//            Eigen::Tensor<typename T::Scalar, T::NumDimensions>
- //           >(x).dimensions().TotalSize()
           }});
       return m_expr.reshape(newDim);
     }
@@ -116,6 +111,24 @@ namespace Eigen {
             size
           }});
       return m_expr.reshape(newDim);
+    }
+  };
+
+  // Specialization for when input is already a 1D tensor - just return it as-is
+  template<typename Scalar>
+  struct as_1D_tensor_impl<Eigen::Tensor<Scalar, 1>> {
+    typedef typename Eigen::Tensor<Scalar, 1>::Index Index;
+    typedef const Eigen::Tensor<Scalar, 1>& returnType;
+    const Eigen::Tensor<Scalar, 1> &m_expr;
+    as_1D_tensor_impl(const Eigen::Tensor<Scalar, 1> &expr) : m_expr(expr) {}
+    returnType go() const {
+      // Rcpp::Rcout<<"as_1D_tensor_impl is doing a no-op"<<std::endl;
+      return m_expr;
+    }
+    template<typename S>
+    returnType go(const S& size) const {
+      // For 1D tensors, ignore the size parameter and return as-is
+      return m_expr;
     }
   };
 

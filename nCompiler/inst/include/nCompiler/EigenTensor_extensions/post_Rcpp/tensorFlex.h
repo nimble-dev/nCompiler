@@ -339,6 +339,84 @@ struct scalar_cast_ {
   }
 };
 
+// Generic casting system that handles scalars and Eigen objects appropriately
+template<typename TargetType, typename XprType, bool eval>
+TargetType do_flex_cast(const XprType &x, trueScalar) {
+  // Rcpp::Rcout << "Debug flex_cast: casting trueScalar to " << typeid(TargetType).name() << std::endl;
+  return static_cast<TargetType>(x);
+}
+
+template<typename TargetType, typename XprType, bool eval>
+decltype(auto) do_flex_cast(const XprType &x, eigenTensor) {
+  // Rcpp::Rcout << "Debug flex_cast: casting eigenTensor to " << typeid(TargetType).name() << std::endl;
+  // Rcpp::Rcout <<" eval = "<<eval<<std::endl;
+  if constexpr (eval) {
+    // Always materialize when eval=true
+    if constexpr (std::is_same_v<TargetType, typename XprType::Scalar>) {
+      // Rcpp::Rcout<<"Using this branch (2)"<<std::endl;
+      // No casting needed, input is already concrete tensor with correct type
+      return x.eval();
+    } else {
+      // Cast and materialize
+      //Eigen::Tensor<TargetType, XprType::NumDimensions> result = x.template cast<TargetType>();
+      //return result;
+      return x.template cast<TargetType>().eval();
+    }
+  } else {
+    // Return lazy expression when eval=false
+    if constexpr (std::is_same_v<TargetType, typename XprType::Scalar>) {
+      // No casting needed, return as-is
+      return x;
+    } else {
+      // Return lazy cast expression
+      return x.template cast<TargetType>();
+    }
+  }
+}
+
+template<typename TargetType, typename XprType, bool eval>
+decltype(auto) do_flex_cast(const XprType &x, eigenOp) {
+  // Rcpp::Rcout << "Debug flex_cast: casting eigenOp to " << typeid(TargetType).name() << std::endl;
+  if constexpr (eval) {
+    // Always materialize when eval=true
+    if constexpr (std::is_same_v<TargetType, typename Eigen::internal::traits<XprType>::Scalar>) {
+      // Same type but need to materialize the lazy expression
+      // Rcpp::Rcout<<"Using this branch"<<std::endl;
+      //Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions> result = x.eval();
+      return x.eval(); //result;
+    } else {
+      // Different type and need to materialize
+      //Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions> result = x.template cast<TargetType>();
+      return x.template cast<TargetType>().eval(); //result;
+    }
+  } else {
+    // Return lazy expression when eval=false
+    if constexpr (std::is_same_v<TargetType, typename Eigen::internal::traits<XprType>::Scalar>) {
+      // No casting needed, return lazy expression as-is
+      return x;
+    } else {
+      // Return lazy cast expression
+      return x.template cast<TargetType>();
+    }
+  }
+}
+
+//
+// syntax will be flex_cast<double>(x);
+template<typename TargetType, bool eval=false>
+struct flex_cast_ {
+  template<typename XprType>
+  static auto cast(const XprType &x) {
+    return do_flex_cast<TargetType, XprType, eval>(x, typename type_category<XprType>::type());
+  }
+};
+
+// Convenience function for easier syntax: flex_cast<double>(x) instead of flex_cast_<double>::cast(x)
+template<typename TargetType, bool eval=false, typename XprType>
+auto flex_cast(const XprType &x) {
+  return flex_cast_<TargetType, eval>::cast(x);
+}
+
 // smartAssignWholeObject handles assignment when the sizes of the LHS
 // can be changed because the entire object is assigned to.
 // This is tag dispatched similarly to smartAssignFixedSize
