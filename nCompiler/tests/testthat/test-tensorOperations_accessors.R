@@ -5,7 +5,7 @@ library(Matrix)
 message("Diag testing (in accessors) might lack the case of diag(matrix)")
 
 #
-# test the ability to read/write using nCompiler C++ implementations of diag(), 
+# test the ability to read/write using nCompiler C++ implementations of diag(),
 # and related accessor functions
 
 # cDiagXv cSpDiagXv have errors in eigenization
@@ -42,10 +42,10 @@ diag(Xsp)[sample(x = nrow(Xsp), size = .1 * nrow(Xsp))] <- 3
 # diag as a creation operator
 #
 
-# Documenting many of R's behaviors for diag().  There are a few other cases 
-# where x may be either a scalar or a vector, expanding upon the ideas 
+# Documenting many of R's behaviors for diag().  There are a few other cases
+# where x may be either a scalar or a vector, expanding upon the ideas
 # documented here.
-# 
+#
 # FN. ARGS.         NROW      NCOL        DIAG  EIGENIZED
 #
 # (x, nrow, ncol)   nrow      ncol        x     (x, nrow, ncol)
@@ -321,22 +321,22 @@ expect_error(cSpDiagXRCv(x = 4, nrow = nr, ncol = nc))
 expect_error(cSpDiagXRCv(x = runif(nr), nrow = nr, ncol = nc))
 expect_identical(cSpDiagXRC(x = 3, nrow = nr, ncol = nc),
                  as(diag(x = 3, nrow = nr, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXRv(x = xv_nr, nrow = nr), 
+expect_identical(cSpDiagXRv(x = xv_nr, nrow = nr),
                  as(diag(x = xv_nr, nrow = nr), 'dgCMatrix'))
 expect_error(cSpDiagXRv(x = xv, nrow = nr))
-expect_identical(cSpDiagXR(x = 3, nrow = nr), 
+expect_identical(cSpDiagXR(x = 3, nrow = nr),
                  as(diag(x = 3, nrow = nr), 'dgCMatrix'))
-expect_identical(cSpDiagXCv(x = 3, ncol = nc), 
+expect_identical(cSpDiagXCv(x = 3, ncol = nc),
                  as(diag(x = 3, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXC(x = 3, ncol = nc), 
+expect_identical(cSpDiagXC(x = 3, ncol = nc),
                  as(diag(x = 3, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagRC(nrow = nr, ncol = nc), 
+expect_identical(cSpDiagRC(nrow = nr, ncol = nc),
                  as(diag(nrow = nr, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXv(x = xv), 
+expect_identical(cSpDiagXv(x = xv),
                  as(diag(x = xv), 'dgCMatrix'))
-expect_identical(cSpDiagX(x = 3), 
+expect_identical(cSpDiagX(x = 3),
                  as(diag(x = 3), 'dgCMatrix'))
-expect_identical(cSpDiagR(nrow = nr), 
+expect_identical(cSpDiagR(nrow = nr),
                  as(diag(nrow = nr), 'dgCMatrix'))
 
 
@@ -355,22 +355,22 @@ diagAccessor <- function(x) {
 }
 
 nDiagAccessor <- nFunction(
-  fun = diagAccessor, 
-  argTypes = list(x = 'nMatrix'), 
+  fun = diagAccessor,
+  argTypes = list(x = 'nMatrix'),
   returnType = 'numericVector'
-)  
+)
 
 nDiagExprAccessor <- nFunction(
-  fun = diagExprAccessor, 
-  argTypes = list(x = 'nMatrix', y = 'nMatrix'), 
+  fun = diagExprAccessor,
+  argTypes = list(x = 'nMatrix', y = 'nMatrix'),
   returnType = 'numericVector'
-)  
+)
 
 nDiagAccessorSp <- nFunction(
-  fun = diagAccessor, 
-  argTypes = list(x = 'nSparseMatrix'), 
+  fun = diagAccessor,
+  argTypes = list(x = 'nSparseMatrix'),
   returnType = 'numericVector'
-)  
+)
 
 cDiagAccessor <- nCompile(nDiagAccessor)
 cDiagAccessorSp <- nCompile(nDiagAccessorSp)
@@ -401,13 +401,13 @@ diagAssignment <- function(x, y) {
 }
 
 nDiagExprAssignment <- nFunction(
-  fun = diagExprAssignment, 
+  fun = diagExprAssignment,
   argTypes = list(x = 'nMatrix', y = 'numericVector', z = 'numericVector'),
   returnType = 'nMatrix'
 )
 
 nSpDiagExprAssignment <- nFunction(
-  fun = diagExprAssignment, 
+  fun = diagExprAssignment,
   argTypes = list(x = 'nSparseMatrix', y = 'numericVector', z = 'numericVector'),
   returnType = 'nSparseMatrix'
 )
@@ -493,14 +493,14 @@ d2Sp <- function(x) {
 }
 
 nD2 <- nFunction(
-  fun = d2, 
-  argTypes = list(x = 'integer'), 
+  fun = d2,
+  argTypes = list(x = 'integer'),
   returnType = 'numericVector'
 )
 
 nD2Sp <- nFunction(
-  fun = d2Sp, 
-  argTypes = list(x = 'integer'), 
+  fun = d2Sp,
+  argTypes = list(x = 'integer'),
   returnType = 'numericVector'
 )
 
@@ -509,4 +509,3 @@ cD2Sp <- nCompile(nD2Sp)
 
 expect_equivalent(cD2(x = 5), rep(1,5))
 expect_equivalent(cD2Sp(x = 5), rep(1,5))
-

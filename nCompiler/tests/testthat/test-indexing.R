@@ -1,5 +1,9 @@
 message("test-indexing works but there are disabled tests at the end waiting for better error trapping to test error trapping.")
 
+## Tests to add:
+## indexing by numeric vector for higher dimensional objects and for multiple indexing dimensions at once.
+## setting option nimble=TRUE or the component options TRUE
+
 test_that("indexing by numeric vector works", {
   nC <- nClass(
     Cpublic = list(

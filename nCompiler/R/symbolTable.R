@@ -31,6 +31,11 @@ symbolBase <- R6::R6Class(
 ## nDim and size are redundant for convenience with one exception:
 ## nDim = 0 must have size = 1 and means it is a true scalar -- NOT sure this is correct anymore...
 ## nDim = 1 with size = 1 means it is a 1D vector that happens to be length 1
+## size may end up not being used, but at least in principle it is to define a C++ object of FIXED size.
+## knownSize is added for some backward compatibility needs with nimble
+##   In cases such as x[3:3, 2:4] or x[c(3), 2:4], nimble's system for 
+##   symbolic sizeExprs determines that 3:3 or c(3) have sizeExpr "1"
+##   and then the bracket processing will drop the index (if drop=TRUE)
 symbolBasic <-
   R6::R6Class(
     classname = 'symbolBasic',
@@ -39,6 +44,7 @@ symbolBasic <-
     public = list(
       nDim  = NULL,
       size = NULL,
+      knownSize = NULL,
       isBlockRef = FALSE,
       initialize = function(...,
                             nDim = 0,

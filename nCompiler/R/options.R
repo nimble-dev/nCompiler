@@ -45,7 +45,9 @@ updateDefaults <- function(defaults, control) {
     error_recover = FALSE, # if TRUE, attempt to recover into a browser() after errors caught by nComp's error trapping, similarly to options(error = recover)
     pause_after_writing_files = FALSE, #if TRUE, enter browser() after generated code files have been written but before the C++ compiler has been called. 
     verbose = FALSE,
-    sourceCpp_verbose = FALSE
+    sourceCpp_verbose = FALSE,
+    nimble = FALSE, ## ensure all backward compatibility
+    dropSingleSizes = FALSE ## backward compatibility
   )
 )
 

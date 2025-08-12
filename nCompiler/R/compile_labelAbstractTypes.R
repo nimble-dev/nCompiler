@@ -472,6 +472,13 @@ inLabelAbstractTypesEnv(
     }
     nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
     code$type <- symbolBasic$new(type = type, nDim = nDim)
+    # For nimble backward compatibility, set knownSize to 1
+    # if it is contains a single scalar
+    # could put behind if(isTRUE(nOptions("nimble")))
+    if(length(code$args)==1 && !is.null(code$args[[1]]$type$nDim)
+       && code$args[[1]]$type$nDim==0) {
+      code$type$knownSize <- 1
+    }
     # wrap scalar args to length-1 vectors for implementation compatibility
       for(arg in code$args) {
         if(arg$type$nDim == 0) {
@@ -813,6 +820,9 @@ inLabelAbstractTypesEnv(
     fromType <- code$args[[1]]$type$type
     code_type <- if (fromType == 'logical') 'integer' else fromType
     code$type <- symbolBasic$new(nDim = 1, type = code_type)
+    # For backward compatibility cases with nimble:
+    if(code$args[[1]]$isLiteral && code$args[[2]]$isLiteral)
+      code$type$knownSize <- code$args[[2]]$name - code$args[[1]]$name + 1
     invisible(inserts)
   }
 )
@@ -1151,8 +1161,9 @@ inLabelAbstractTypesEnv(
   }
 )
 
-inLabelAbstractTypesEnv(
+nCompiler:::inLabelAbstractTypesEnv(
   Bracket <- function(code, symTab, auxEnv, handlingInfo) {
+    # To-Do: Mark "drop" as a compile-time arg in the op entry.
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
     ## drop must be named if provided, so this should work
@@ -1166,9 +1177,14 @@ inLabelAbstractTypesEnv(
 
     code$args <- NULL ## reset args
 
-    brackets_empty <- length(index_args) == 1 &&
-      index_args[[1]]$isName &&
-      index_args[[1]]$name == ""
+    brackets_empty <- TRUE
+    for(i in seq_along(index_args))
+      if(!(index_args[[i]]$isName && index_args[[i]]$name == ""))
+        brackets_empty <- FALSE
+
+    # brackets_empty <- length(index_args) == 1 &&
+    #   index_args[[1]]$isName &&
+    #   index_args[[1]]$name == ""
 
     if (brackets_empty) {
       ## no indexing is happening, so just replace [ with the obj in the AST
@@ -1207,6 +1223,10 @@ inLabelAbstractTypesEnv(
 
     setArg(code, 1, obj) ## put indexed object back as first arg
 
+    # Here we only determine if dropping will occur and for how many
+    # index dimensions. The actual dropping occurs in the implementation
+    # during eigenization.
+
     nDrop <- 0
     for (i in seq_along(index_args)) {
       ## ensure that indexing args appear before drop in AST
@@ -1228,51 +1248,33 @@ inLabelAbstractTypesEnv(
       ##     )
 
       if (index_args[[i]]$name != '') {
-        ##   ## not a call resulting in non-scalar other than ':'
-        ##   if (is.null(index_args[[i]]$type) || ## missing index nDim info
-        ##         is.null(index_args[[i]]$type$nDim)) ## would this ever happen?
-        ##     stop(
-        ##       exprClassProcessingErrorMsg(
-        ##         code,
-        ##         paste0("In Bracket: '", index_args[[i]]$name,
-        ##                "' has no dimension.")
-        ##       ), call. = FALSE
-        ##     )
-        ##   ## TODO: allow for scalar logicals?
-        ##   if (index_args[[i]]$type$type == 'logical') ## index logical
-        ##     stop(
-        ##       exprClassProcessingErrorMsg(
-        ##         code,
-        ##         paste0("In Bracket: '", index_args[[i]]$name,
-        ##                "' is a logical which is not allowed when indexing.")
-        ##       ), call. = FALSE
-        ##     )
-        ##   if (index_args[[i]]$type$nDim > 1) ## bad index nDim
-        ##     stop(
-        ##       exprClassProcessingErrorMsg(
-        ##         code,
-        ##         paste0(
-        ##           "In Bracket: the dimension of '", index_args[[i]]$name,
-        ##           " is ", index_args[[i]]$type$nDim, " but must be 0 or 1."
-        ##         )
-        ##       ), call. = FALSE
-        ##     )
-        ##   if (nDim == 0 && index_args[[i]]$type$nDim != 0) ## indexing a scalar with non-scalar
-        ##     stop(
-        ##       exprClassProcessingErrorMsg(
-        ##         code,
-        ##         paste0(
-        ##           "In Bracket: '", obj$name,
-        ##           "' is a scalar but the indexing arg has dimension ",
-        ##           index_args[[i]]$type$nDim, "."
-        ##         )
-        ##       ), call. = FALSE
-        ##     )
-        ## no errors were triggered so increment nDrop if the arg is scalar
+        # Possible checks to add (from nimble)
+        # - invalid type result (missing or nDim>1) from recursing on indices above
+        # - logical index (not allowed in nimble). Possible to-do extension later.
+        # - indexing a scalar beyond a "[1]"
         if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
+        else {
+          ## Backward compatibility with some slightly odd nimble behavior
+          ## If an index slot contains a literal sequence of length one (e.g. 3:3, but not i:i)
+          ## or a concatenation of a scalar (e.g. c(3) or c(i)), both of which
+          ## nimble determines are length 1, it treats it as a drop dimension.
+          ## In some cases this creates more R-like behavior (R will drop 3:3 or i:i or c(3) or c(i))
+          ## but it also creates internal inconsistencies (3:3 different from i:i)
+          ## and generally sneaky inspection of a vector's length.
+          ## Hence nCompiler will never drop a vector index, even of obvious length 1
+          ## but will do so as tracked by knownSize if nimble compatibility is set.
+          ## If we discover other cases where nimble drops a dimension
+          ##  we can handle it by making sure the expression resulting in that gets
+          ##  knownSize == 1.
+          if(isTRUE(nOptions("nimble")) || isTRUE(nOptions("dropSingleSizes"))) {
+            if(is.numeric(index_args[[i]]$type$knownSize) 
+               && index_args[[i]]$type$knownSize == 1) {
+                nDrop <- nDrop + 1
+            }
+          }
+        }
       }
     }
-
     drop <- TRUE
     if (nDim == 0) {
                                         # If we're indexing a scalar, any drop arg provided is ignored.

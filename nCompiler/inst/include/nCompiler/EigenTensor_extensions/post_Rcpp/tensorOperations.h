@@ -829,6 +829,8 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
     return res;
  }
 
+ struct MakeSquareDiag__ {}; // tag to pass for nrow and/or ncol as a "missing"
+
  /**
  * Generate a rank-2 Eigen::Tensor object (i.e., a matrix) with non-constant
  * diagonal
@@ -853,20 +855,29 @@ Eigen::Tensor<Scalar, 2> nChol(const TensorExpr &x) {
 >
 Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
     // evaluate input if needed
+    Eigen::Index nrow_, ncol_;
+    Eigen::Index size_x = nDimTraits2_size(x);
+    if constexpr (std::is_same<Index, MakeSquareDiag__>::value) {
+        nrow_ = ncol_ = size_x;
+    } else {
+        nrow_ = nrow;
+        ncol_ = ncol;
+    }
+
     auto xEval = eval(x);
     // initialize output
-    Eigen::Tensor<Scalar, 2> res(nrow, ncol);
+    Eigen::Tensor<Scalar, 2> res(nrow_, ncol_);
     // zero-initialize tensor contents
     res.setZero();
     // figure out how large the main diagonal is
-    Index nEntries = std::min(nrow, ncol);
-    if(x.size() != nEntries) {
+    Eigen::Index nEntries = std::min(nrow_, ncol_);
+    if(size_x != nEntries) {
         throw std::range_error(
             "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
         );
     }
     // populate diagonal and return
-    for(Index i = 0; i < nEntries; ++i) {
+    for(Eigen::Index i = 0; i < nEntries; ++i) {
         res(i,i) = xEval(i);
     }
     return res;

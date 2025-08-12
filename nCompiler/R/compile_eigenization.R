@@ -858,6 +858,34 @@ nCompiler:::inEigenizeEnv(
     drop <- code$args$drop$name
     if(!is.logical(drop))
       warning("Problem determining whether to drop dimensions.")
+    
+    if(isTRUE(nOptions("nimble") || isTRUE(nOptions("dropSingleSizes")))) {
+      ## Here we imitate nimble's blockIndexInfo to determine
+      ## scalar indices from ":" or c() (or possibly other?) cases
+      ## but here what we do is replace the argument right now and
+      ## then the rest of the logic below should work correctly.
+      ## Currently in nimble there are three cases:
+      ##   "3:3" Take the first "3"
+      ##   A name with sizeExpr 1, which would be from a lifted c(scalar)
+      ##   here it won't be lifted so it is like ":", take the first arg
+      ##   There are also cases where a name is deparsed or not, and
+      ##    I am not sure which arises when or what I might be missing.
+      if(drop) {
+        for(argInd in 2:(length(code$args)-1)) {
+          if(code$args[[argInd]]$type$nDim > 0
+             && !is.null(code$args[[argInd]]$type$knownSize)
+             && code$args[[argInd]]$type$knownSize == 1) {
+              if(code$args[[argInd]]$isCall) {
+                if(code$args[[argInd]]$name %in% c(':', 'nC')) {
+                  singleValueArg <- code$args[[argInd]]$args[[1]]$clone()
+                  setArg(code, argInd, singleValueArg)
+                }
+              }
+            }
+        }
+      }
+    }
+
     for(argInd in 2:(length(code$args)-1)) {
       ind <- argInd - 1
       isBlank <- code$args[[argInd]]$isName & code$args[[argInd]]$name == ""
@@ -1193,7 +1221,7 @@ inEigenizeEnv(
   }
 )
 
-inEigenizeEnv(
+nCompiler:::inEigenizeEnv(
   
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     
@@ -1269,20 +1297,8 @@ inEigenizeEnv(
       } 
       # vector input yields arbitrary diagonal matrix
       else if(xArg$type$nDim == 1) {
-        nrowValue <- wrapExprClassOperator(
-          code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
-                               isLiteral = FALSE, name = xArg$name, 
-                               type = xArg$type),
-          funName = 'length',
-          type = symbolBasic$new(name = 'nrow', nDim = 0, type = 'integer')
-        )
-        ncolValue <- wrapExprClassOperator(
-          code = exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
-                               isLiteral = FALSE, name = xArg$name, 
-                               type = xArg$type),
-          funName = 'length',
-          type = symbolBasic$new(name = 'ncol', nDim = 0, type = 'integer')
-        )
+        nrowValue <- nParse(paste0('cppLiteral("MakeSquareDiag__{}")'))
+        ncolValue <- nParse(paste0('cppLiteral("MakeSquareDiag__{}")'))
         insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
         insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')
         argNames <- names(code$args)

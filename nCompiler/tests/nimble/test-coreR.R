@@ -2,6 +2,7 @@
 
 library(nimble)
 library(nCompiler)
+nOptions(nimble=TRUE)
 
 divert_to_nCompiler <- function(fun, replacements) {
   diversion_env <- list2env(replacements, parent = environment(fun))
@@ -13,9 +14,9 @@ source(system.file(file.path('tests', 'testthat', 'test_utils.R'), package = 'ni
 
 ## Changes start
 test_coreRfeature_batch <- function(
-    input_batch, 
-    info = '', 
-    verbose = nimbleOptions('verbose'), 
+    input_batch,
+    info = '',
+    verbose = nimbleOptions('verbose'),
     dirName = NULL
 ) {
   test_that(info, {
@@ -33,8 +34,6 @@ options(warn = 1)
 nimbleVerboseSetting <- nimbleOptions('verbose')
 nimbleOptions(verbose = FALSE)
 
-context("Testing of core R functions in NIMBLE code")
-
 ## fix result_type in nimbleEigen.h
 
 cTests <- list(
@@ -44,22 +43,22 @@ cTests <- list(
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.integer(4:5)}), outputType = quote(double(1))),
   list(name = "c(double, logical)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(logical(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- c(TRUE, FALSE, TRUE)}), outputType = quote(double(1))),
-  
-  
+
+
   list(name = "c(integer, double)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(integer(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- as.integer(1:3); arg2 <- as.numeric(4:5)}), outputType = quote(double(1))),
   list(name = "c(integer, integer)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(integer(1)), arg2 = quote(integer(1))),
        setArgVals = quote({arg1 <- as.integer(1:3); arg2 <- as.integer(4:5)}), outputType = quote(integer(1))),
   list(name = "c(integer, logical)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(integer(1)), arg2 = quote(logical(1))),
        setArgVals = quote({arg1 <- as.integer(1:3); arg2 <- c(TRUE, FALSE, TRUE)}), outputType = quote(integer(1))),
-  
+
   list(name = "c(logical, double)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(logical(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- c(FALSE, TRUE, FALSE); arg2 <- as.numeric(4:5)}), outputType = quote(double(1))),
-  
-  
+
+
   list(name = "c(double(2), double)", expr = quote(out <- c(arg1, arg2)), args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:4), nrow = 2); arg2 <- as.numeric(10:11)}), outputType = quote(double(1))),
-  
+
   list(name = "c(double, double, double)", expr = quote(out <- c(arg1, arg2, arg3)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1)), arg3 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3);
@@ -119,7 +118,7 @@ blockTests <- list(
   ##6
   list(name = "fullxfull block", expr = quote(out <- arg1[, ] + 2), args = list(arg1 = quote(double(2))),
        setArgVals = quote(arg1 <- matrix(as.numeric(1:25), nrow = 5)), outputType = quote(double(2))),
-  ## expressions in index ranges (should be lifted) 
+  ## expressions in index ranges (should be lifted)
   list(name = "3x3 block variable index range", expr = quote({i <- 1; j <- 3; out <- arg1[(j-1):(j+1), 2:4] + 2}), args = list(arg1 = quote(double(2))),
        setArgVals = quote(arg1 <- matrix(as.numeric(1:25), nrow = 5)), outputType = quote(double(2))),
   ## dropping a dimension
@@ -185,8 +184,8 @@ blockTests <- list(
        setArgVals = quote(arg1 <- array(as.numeric(1:120), dim = c(4, 5, 6))), outputType = quote(double(2))),
   list(name = "3x3x1 chained to 2x2 block non-arg", expr = quote({temp <- arg1; out <- temp[2:4, 2:5, 2][2:3, 3:4] + 2}), args = list(arg1 = quote(double(3))),
        setArgVals = quote(arg1 <- array(as.numeric(1:120), dim = c(4, 5, 6))), outputType = quote(double(2)))
-  
-  ## Following is not currently supported: 
+
+  ## Following is not currently supported:
   ##    list(name = "5d nimArray map copy", expr = quote({temp <- arg1; out <- temp[2:4, 3:6, 2, 4, 1:3]}), args = list(arg1 = quote(double(5))),
   ##         setArgVals = quote(arg1 <- array(as.numeric(1:(5^5)), dim = c(5, 5, 5, 5, 5))), outputType = quote(double(3)))
   ## tests to add:
@@ -223,7 +222,7 @@ repTests <- list(
   ##11
   list(name = "rep(vector double, first arg)", expr = quote(out <- rep(arg1, each = arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(integer(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.integer(4:5)}), outputType = quote(double(1)), expectWarnings = list("R eval" = 'Expected warning: vector each', "R run" = "Expected warning: vector each")),
-  
+
   ## basic cases with x, times and each
   list(name = "rep(vector double, variable, each = 2)", expr = quote(out <- rep(arg1, times = arg2, each = 2)), args = list(arg1 = quote(double(1)), arg2 = quote(double(0))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(4))}), outputType = quote(double(1))),
@@ -254,7 +253,7 @@ repTests <- list(
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(7, 8))}), outputType = quote(double(1))),
   list(name = "rep(vector double, times to ignore, each = first arg, length.out = first arg)", expr = quote(out <- rep(arg1, each = arg3, times = 10, length.out = arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(double(1)), arg3 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(7, 8)); arg3 <- as.numeric(4:5)}), outputType = quote(double(1)), expectWarnings = list("R eval" = 'Expected warning: vector each', "R run" = "Expected warning: vector each")),
-  
+
   ## x, times expressions
   # mods for nCompiler (that weren't needed for nimble): add checkEqual = TRUE to account for floating point errors between R vs Eigen
   list(name = "rep(vector double expression, expression)", expr = quote(out <- rep(exp(arg1), arg2^2)), args = list(arg1 = quote(double(1)), arg2 = quote(integer())), checkEqual = TRUE,
@@ -263,22 +262,22 @@ repTests <- list(
   # mods for nCompiler (that weren't needed for nimble): add checkEqual = TRUE to account for floating point errors between R vs Eigen
   list(name = "rep(vector double expression, non-scalar expression)", expr = quote(out <- rep(exp(arg1), sum(arg2^2))), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))), checkEqual = TRUE,
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(2,3))}), outputType = quote(double(1))),
-  
-  
+
+
   list(name = "rep(matrix, 3)", expr = quote(out <- rep(arg1, 3)), args = list(arg1 = quote(double(2))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:9), nrow = 3)}),outputType = quote(double(1))),
-  
-  list(name = "rep(vector, vector)", expr = quote(out <- rep(arg1, arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))), 
+
+  list(name = "rep(vector, vector)", expr = quote(out <- rep(arg1, arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(2:4)}), outputType = quote(double(1))),
-  
+
   list(name = "rep(vector double, 3) in expression", expr = quote(out <- log(rep(arg1, 3))^2 + c(arg1, arg1, arg1)), args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3)}), outputType = quote(double(1)))
-  
+
 )
 
 diagTests <- list(
   ## could add some where non-scalar inputs are copied in order to get different map behavior
-  ## 
+  ##
   ##1
   ## diag(scalar)
   list(name = "diag(scalar)", expr = quote(out <- diag(arg1)), args = list(arg1 = quote(double(0))),
@@ -286,7 +285,7 @@ diagTests <- list(
   list(name = "diag(scalar expression)", expr = quote(out <- diag(arg1 + arg2)), args = list(arg1 = quote(double(0)), arg2 = quote(double(0))),
        setArgVals = quote({arg1 <- 3; arg2 <- 2}), outputType = quote(double(2))),
   list(name = "diag(scalar-producing vector expression)", expr = quote(out <- diag(sum(arg1))), args = list(arg1 = quote(double(1))),
-       setArgVals = quote({arg1 <- as.numeric(1:3);}), outputType = quote(double(2))),    
+       setArgVals = quote({arg1 <- as.numeric(1:3);}), outputType = quote(double(2))),
   list(name = "diag(scalar) with expr", expr = quote(out <- exp(diag(arg1)) + arg2), args = list(arg1 = quote(double(0)), arg2 = quote(double(2))),
        setArgVals = quote({arg1 <- 3; arg2 = matrix(1:9, nrow = 3)}), outputType = quote(double(2))),
   list(name = "diag(0)", expr = quote(out <- diag(arg1)), args = list(arg1 = quote(double(0))),
@@ -298,8 +297,8 @@ diagTests <- list(
   list(name = "diag(vector expression)", expr = quote(out <- diag(arg1 + arg2)), args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(c(10,20, 30))}), outputType = quote(double(2))),
   list(name = "diag(vector) with expression", expr = quote(out <- exp(diag(arg1)) + arg2), args = list(arg1 = quote(double(1)), arg2 = quote(double(2))),
-       setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- matrix(as.numeric(11:19), nrow = 3)}), outputType = quote(double(2))), 
-  
+       setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- matrix(as.numeric(11:19), nrow = 3)}), outputType = quote(double(2))),
+
   ## diag(matrix)
   list(name = "diag(square matrix)", expr = quote(out <- diag(arg1)), args = list(arg1 = quote(double(2))),
        setArgVals = quote({arg1 <- matrix(rnorm(25), nrow = 5)}), outputType = quote(double(1))),
@@ -308,7 +307,7 @@ diagTests <- list(
   ## 11
   list(name = "diag(non-square matrix)", expr = quote(out <- diag(arg1)), args = list(arg1 = quote(double(2))),
        setArgVals = quote({arg1 <- matrix(rnorm(12), nrow = 3)}), outputType = quote(double(1))),
-  
+
   list(name = "diag(square matrix) <-", expr = quote({diag(arg1) <- arg2; out <- arg1}), args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- matrix(rnorm(25), nrow = 5); arg2 <- as.numeric(101:105)}), outputType = quote(double(2))),
   list(name = "copy, then diag(square matrix) <-", expr = quote({A1 <- arg1; diag(A1) <- arg2; out <- A1}), args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
@@ -321,7 +320,7 @@ diagTests <- list(
   ## aliasing
   list(name = "diag(matrix)[3:5] <- diag(matrix[1:3])", expr = quote({diag(arg1)[3:5] <- diag(arg1)[1:3]; out <- arg1}), args = list(arg1 = quote(double(2))),
        setArgVals = quote({arg1 <- matrix(rnorm(25), nrow = 5)}), outputType = quote(double(2)))
-  
+
 )
 
 recyclingRuleTests <- list(
@@ -383,67 +382,67 @@ rRecyclingRuleTests <- list(
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(.1, .4, length = 10)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rexp case 1", expr = quote(out <- rexp(5, arg1)),
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(.1, .4, length = 10)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rnbinom case 1", expr = quote(out <- rnbinom(5, prob = arg1, size = arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(.1, .4, length = 10); arg2 <- seq(4, 1, length = 10)}),
        outputType = quote(double(1)), checkEqual = TRUE),
-  
+
   list(name = "rpois case 1", expr = quote(out <- rpois(5, arg1)),
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(.1, .4, length = 10)}),
        outputType = quote(double(1)), checkEqual = TRUE),
-  
+
   list(name = "rchisq case 1", expr = quote(out <- rchisq(5, arg1)),
        args = list(arg1 = quote(integer(1))),
        setArgVals = quote({arg1 <- 1:10}),
        outputType = quote(double(1))),
-  
+
   list(name = "rbeta case 1", expr = quote(out <- rbeta(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rgamma case 1", expr = quote(out <- rgamma(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rinvgamma case 1", expr = quote(out <- rinvgamma(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rlnorm case 1", expr = quote(out <- rlnorm(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rlogis case 1", expr = quote(out <- rlogis(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "runif case 1", expr = quote(out <- runif(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rweibull case 1", expr = quote(out <- rweibull(5, arg1, arg2)),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(0.1, 0.4, length = 10); arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1))),
-  
+
   list(name = "rt case 1", expr = quote(out <- rt(5, arg1)),
        args = list(arg1 = quote(integer(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- 5:14; arg2 <- seq(0.9, 0.7, length = 3)}),
        outputType = quote(double(1)))
-  
+
 )
 
 seqTests <- list(
@@ -591,43 +590,43 @@ indexChainTests <- list(
        arg2 <- c(2, 3, 5);
        arg3 <- c(4, 6, 7, 8)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 1b", expr = quote(out <- arg1[, arg3][2:3, 2:4]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
        arg2 <- c(2, 3, 5);
        arg3 <- c(4, 6, 7, 8)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 1c", expr = quote(out <- arg1[arg2, ][2:3, 2:4]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
        arg2 <- c(2, 3, 5);
        arg3 <- c(4, 6, 7, 8)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 1d", expr = quote(out <- arg1[arg2, arg3][, 2:4]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
        arg2 <- c(2, 3, 5);
        arg3 <- c(4, 6, 7, 8)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 1e", expr = quote(out <- arg1[arg2, arg3][2:3, ]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
        arg2 <- c(2, 3, 5);
        arg3 <- c(4, 6, 7, 8)}),
        outputType = quote(double(2))),
-  
-  
+
+
   list(name = "block chaining 2", expr = quote(out <- arg1[2:8, 3:6][arg2, arg3]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
        arg2 <- c(2, 3, 5);
        arg3 <- c(2, 4)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 3", expr = quote(out <- arg1[arg2, arg3][arg4, arg5]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1)), arg4 = quote(integer(1)), arg5 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
@@ -636,7 +635,7 @@ indexChainTests <- list(
        arg4 <- c(2, 3);
        arg5 <- c(1, 4, 5)}),
        outputType = quote(double(2))),
-  
+
   list(name = "block chaining 4", expr = quote(out <- arg1[1, arg3][arg5]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1)), arg4 = quote(integer(1)), arg5 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
@@ -645,7 +644,7 @@ indexChainTests <- list(
        arg4 <- c(2, 3);
        arg5 <- c(1, 4)}),
        outputType = quote(double(1))),
-  
+
   list(name = "block chaining 4b", expr = quote(out <- arg1[1, arg3, drop = FALSE][1, arg5]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1)), arg4 = quote(integer(1)), arg5 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
@@ -654,8 +653,8 @@ indexChainTests <- list(
        arg4 <- c(2, 3);
        arg5 <- c(1, 4)}),
        outputType = quote(double(1))),
-  
-  
+
+
   list(name = "block chaining 4c", expr = quote(out <- arg1[arg2, 2][arg5]),
        args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1)), arg4 = quote(integer(1)), arg5 = quote(integer(1))),
        setArgVals = quote({arg1 <- matrix(as.numeric(1:100), nrow = 10);
@@ -664,7 +663,7 @@ indexChainTests <- list(
        arg4 <- c(2, 3);
        arg5 <- c(1, 4)}),
        outputType = quote(double(1))),
-  
+
   list(name = "block chaining assignment 1", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[arg2, arg3][2:3, 2:4] <- arg1[arg2, arg3][2:3, 2:4]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -672,8 +671,8 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(4, 6, 7, 8)}),
   outputType = quote(double(2))),
-  
-  
+
+
   list(name = "block chaining assignment 1b", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[, arg3][2:3, 2:4] <- arg1[, arg3][2:3, 2:4]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -681,7 +680,7 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(4, 6, 7, 8)}),
   outputType = quote(double(2))),
-  
+
   list(name = "block chaining assignment 1c", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[arg2, ][2:3, 2:4] <- arg1[arg2, ][2:3, 2:4]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -689,7 +688,7 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(4, 6, 7, 8)}),
   outputType = quote(double(2))),
-  
+
   list(name = "block chaining assignment 1d", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[arg2, arg3][, 2:4] <- arg1[arg2, arg3][, 2:4]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -697,7 +696,7 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(4, 6, 7, 8)}),
   outputType = quote(double(2))),
-  
+
   list(name = "block chaining assignment 1e", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[arg2, arg3][2:3, ] <- arg1[arg2, arg3][2:3, ]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -705,7 +704,7 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(4, 6, 7, 8)}),
   outputType = quote(double(2))),
-  
+
   list(name = "block chaining assignment 2", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[2:8, 3:6][arg2, arg3] <- arg1[2:8, 3:6][arg2, arg3]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1))),
@@ -713,7 +712,7 @@ indexChainTests <- list(
   arg2 <- c(2, 3, 5);
   arg3 <- c(2, 4)}),
   outputType = quote(double(2))),
-  
+
   list(name = "block chaining assignment 3", expr = quote({out <- matrix(-1, nrow = 10, ncol = 10);
   out[arg2, arg3][arg4, arg5] <- arg1[arg2, arg3][arg4, arg5]}),
   args = list(arg1 = quote(double(2)), arg2 = quote(integer(1)), arg3 = quote(integer(1)), arg4 = quote(integer(1)), arg5 = quote(integer(1))),
@@ -730,55 +729,55 @@ logicalTests <- list(
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100)}),
        outputType = quote(logical(1))),
-  
+
   list(name = "create boolean vector with expressions", expr = quote(out <- arg1 > 3 & arg1 + 1 < 6),
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100)}),
        outputType = quote(logical(1))),
-  
+
   list(name = "use boolean vector with expressions",
        expr = quote({out <- arg1 > 3 & arg1 + 1 < 6; out <- out | arg1 > 7}),
        args = list(arg1 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100)}),
        outputType = quote(logical(1))),
-  
+
   list(name = "index from boolean vector 1",
        expr = quote({out <- arg1[arg2 < 5]}),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(1))),
-  
+
   list(name = "index from boolean vector 2 (in expression)",
        expr = quote({out <- (arg1[arg2 < 5]^2) + 1}),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(1))),
-  
+
   list(name = "index from boolean vector 3 (2D)",
        expr = quote({out <- arg1[arg2 < 5, arg2 > 4]}),
        args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- matrix(seq(1, 8, length = 10000), nrow = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(2))),
-  
+
   list(name = "index from boolean vector 3 (2D with mixed types)",
        expr = quote({out <- arg1[arg2 < 5, 30:50]}),
        args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- matrix(seq(1, 8, length = 10000), nrow = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(2))),
-  
-  
+
+
   list(name = "index assignment from boolean vector 1",
        expr = quote({out <- rep(100, length(arg1)); out[arg2 < 5] <- (arg1[arg2 < 5]^2) + 1}),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- seq(1, 8, length = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(1))),
-  
+
   list(name = "index assignment from boolean vector 2 (2D)",
        expr = quote({out <- matrix(rep(100, length(arg1)), nrow = dim(arg1)[1]); out[arg2 < 5, arg2 > 4] <- (arg1[arg2 < 5, arg2 > 4]^2) + 1}),
        args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- matrix(seq(1, 8, length = 10000), nrow = 100); arg2 <- seq(2, 9, length = 100)}),
        outputType = quote(double(2)), checkEqual = TRUE), ## small numerical differences
-  
+
   list(name = "index assignment from boolean vector 2 (2D, mixed types)",
        expr = quote({out <- matrix(rep(100, length(arg1)), nrow = dim(arg1)[1]); out[arg2 < 5, 30:40] <- (arg1[arg2 < 5, 30:40]^2) + 1}),
        args = list(arg1 = quote(double(2)), arg2 = quote(double(1))),
@@ -852,7 +851,7 @@ returnTests <- list(
        return = quote(return(A + B)),
        args = list(),
        setArgVals = quote({}),
-       outputType = quote(double(1))) 
+       outputType = quote(double(1)))
 )
 
 ## Regression test for Issue #563
@@ -988,7 +987,7 @@ aliasTests <- list(
          out <- x}),
        args = list(arg1 = quote(double(1)), arg2 = quote(double(1))),
        setArgVals = quote({arg1 <- as.numeric(1:3); arg2 <- as.numeric(4:6)}),
-       outputType = quote(double(1))),    
+       outputType = quote(double(1))),
   list(name = "x[2:3] <- x[1:2]",   ## Fails due to lack of eval with eigenBlock map
        expr = quote({
          x <- arg1
@@ -1068,10 +1067,10 @@ seqTestsResults <- test_coreRfeature_batch(seqTests, 'seqTests') ## lapply(seqTe
 nonSeqIndexTestsResults <- test_coreRfeature_batch(nonSeqIndexTests, 'nonSeqIndexTests') ## lapply(nonSeqIndexTests, test_coreRfeature)
 indexChainTestsResults <- test_coreRfeature_batch(indexChainTests, 'indexChainTests') ## lapply(indexChainTests, test_coreRfeature)
 logicalTestsResults <- test_coreRfeature_batch(logicalTests, 'logicalTests') ## lapply(logicalTests, test_coreRfeature)
-anyNaTestResults <- test_coreRfeature_batch(anyNaTests, 'anyNaTests') 
+anyNaTestResults <- test_coreRfeature_batch(anyNaTests, 'anyNaTests')
 returnTestResults <- test_coreRfeature_batch(returnTests, 'returnTests') ## lapply(returnTests, test_coreRfeature)
-simpleCopyTestResults <- test_coreRfeature_batch(simpleCopyTests, 'simpleCopyTests') 
-higherDimBlockTestResults <- test_coreRfeature_batch(higherDimBlockTests, 'higherDimBlockTests') 
+simpleCopyTestResults <- test_coreRfeature_batch(simpleCopyTests, 'simpleCopyTests')
+higherDimBlockTestResults <- test_coreRfeature_batch(higherDimBlockTests, 'higherDimBlockTests')
 aliasTestResults <- test_coreRfeature_batch(aliasTests, 'aliasTests')
 
 ## basic seq_along test
@@ -1097,7 +1096,7 @@ test_that('c(a, 1.1) in BUGS works', {
     a ~ dnorm(0,1)
     b[1:2] <- c(a, 1.1)
   })
-  
+
   m <- nimbleModel(mc, inits = list(a = 2))
   expect_identical(as.numeric(m$b), c(2, 1.1))
   m$b <- as.numeric(rep(NA, 2))
@@ -1129,7 +1128,7 @@ test_that('rep(a, 2) in BUGS works', {
     a ~ dnorm(0,1)
     b[1:2] <- rep(a, 2)
   })
-  
+
   m <- nimbleModel(mc, inits = list(a = 1.2))
   expect_identical(as.numeric(m$b), c(1.2, 1.2))
   m$b <- as.numeric(rep(NA, 2))
@@ -1159,7 +1158,7 @@ test_that('rep(1,2)  in BUGS works', {
 
 test_that('2:3   in BUGS works', {
   mc <- nimbleCode({
-    b[1:2] <- 2:3 
+    b[1:2] <- 2:3
   })
   m <- nimbleModel(mc)
   expect_equal(as.numeric(m$b), 2:3 )
