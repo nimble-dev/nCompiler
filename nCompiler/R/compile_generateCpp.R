@@ -436,14 +436,14 @@ nCompiler:::inGenCppEnv(
     ## piece1 <- paste0("nCompiler::IndexBySeqs<",
     ##                  NumSeqs,
     ##                  ">().op(nCompiler::IndexBySeqs<",N,">::AllSliceDetails{")
-    piece1 <- paste0("ISEQS_(", NumSeqs, ", SEQS_(")
+    piece1 <- paste0("ISEQS_((", NumSeqs, "), SEQS_(")
     midpieces <- list()
     iArg <- 2
     for(i in 1:((length(code$args)-2)/3)) {
-      midpieces[[i]] <- paste0("SEQ_(",
-                               compile_generateCpp(code$args[[iArg]], symTab), ",",
-                               MinusOne(compile_generateCpp(code$args[[iArg+1]], symTab)), ",",
-                               MinusOne(compile_generateCpp(code$args[[iArg+2]], symTab)), ")"
+      midpieces[[i]] <- paste0("SEQ_((",
+                               compile_generateCpp(code$args[[iArg]], symTab), "), (",
+                               MinusOne(compile_generateCpp(code$args[[iArg+1]], symTab)), "), (",
+                               MinusOne(compile_generateCpp(code$args[[iArg+2]], symTab)), "))"
                                )
 
       ## midpieces[[i]] <- paste0("nCompiler::IndexBySeqs<",N,">::SliceDetail{",
@@ -457,7 +457,7 @@ nCompiler:::inGenCppEnv(
     }
     piece2 <- paste0(unlist(midpieces), collapse=", \n ")
     piece3 <- paste0( nCompiler:::compile_generateCpp(code$args[[iArg]], symTab))
-    ans <- paste0(piece1, "\n ", piece2, "),\n ", piece3, ")")
+    ans <- paste0(piece1, "\n ", piece2, "),\n (", piece3, "))")
     ans
   }
 )

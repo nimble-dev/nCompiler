@@ -1,4 +1,3 @@
-
 library(Rcpp)
 test_that("basic uses of repClass work", {
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'repClass_tests.cpp'), package = 'nCompiler')
@@ -9,4 +8,6 @@ test_that("basic uses of repClass work", {
   expect_equivalent(repClass_test3(1:7, 4), rep(1:7, length.out = 4))
   expect_equivalent(repClass_test4(array(1:12, c(2,3,2)), 7), rep(array(1:12, c(2,3,2)), length.out=7))
   expect_equivalent(repClass_test5(matrix(1:16, 8), 3), rep(matrix(1:16, 8), 3))
+  repClass_test6(1:3)
+
 })
