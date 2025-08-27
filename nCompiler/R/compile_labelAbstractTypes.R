@@ -54,7 +54,8 @@ compile_labelAbstractTypes <- function(code,
         }
         # see if code$name is a method of current nClass
         if(is.null(obj) & isNCgenerator(auxEnv$where)) {
-          if(code$name %in% names(auxEnv$where$public_methods)) {
+          found_method <- NC_find_method(auxEnv$where, code$name, inherits = TRUE)
+          if(!is.null(found_method)) {
             # code$name is as a reference to the member function as an object
             labelAbstractTypesEnv$reference_nFunction_or_method_AST(
               code, auxEnv$where
@@ -273,8 +274,7 @@ inLabelAbstractTypesEnv(
       ## 1. Check if RHS is a method
       ## 2. Check if RHS is a field
       innerName <- code$args[[2]]$name
-      method <- code$args[[1]]$type$NCgenerator$public_methods[[
-        innerName]]
+      method <- NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)
       if(!is.null(method)) { ## Is RHS a method?
         obj_internals <- NFinternals(method)
         returnSym <- symbolNF$new(
@@ -292,7 +292,7 @@ inLabelAbstractTypesEnv(
         code$args[[2]]$name <- NFinternals(method)$cpp_code_name
         obj_internals <- NULL
       } else {  ## Is RHS a field?
-        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName)
+        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
         if(is.null(symbol))
           stop(exprClassProcessingErrorMsg(
             code,
@@ -360,8 +360,7 @@ inLabelAbstractTypesEnv(
     }
     
     # access nFunction
-    tgt <- NFinternals(obj$public_methods[[code$name]])
-    
+    tgt <- NC_find_method(obj, code$name, inherits=TRUE)
     if(is.null(tgt)) {
       stop(exprClassProcessingErrorMsg(
         code, paste('In reference_nFunction_or_method_AST: the nFunction ', 

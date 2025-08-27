@@ -95,7 +95,7 @@ struct nC_impl<CAST_TYPE, T1, T2, TT...> {
  * Convenience wrapper to generate tensor concatenations
  */
 // Empty case: nC() - default to double
-auto nC() -> Eigen::Tensor<double, 1> {
+inline auto nC() -> Eigen::Tensor<double, 1> { // inline to avoid duplicate symbol since this is not templated
   return nC_impl<double>::run();
 }
 

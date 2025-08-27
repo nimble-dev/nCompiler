@@ -81,3 +81,26 @@ NCinternals <- function(x) {
          call. = FALSE)
   x
 }
+
+# Utility function to allow searching up an inheritance
+# ladder to find a method.
+NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
+  if(!isNCgenerator(NCgenerator))
+    stop("Input must be a nClass generator.")
+  current_NCgen <- NCgenerator
+  done <- FALSE
+  method <- NULL
+  while(!done) {
+    if(name %in% NCinternals(current_NCgen)$methodNames) {
+      method <- current_NCgen$public_methods[[name]]
+      done <- TRUE
+    } else {
+      if(inherits)  {
+        current_NCgen <- current_NCgen$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+        done <- is.null(current_NCgen)
+      } else
+        done <- TRUE
+    }
+  }
+  method
+}

@@ -1,9 +1,10 @@
-
 library(nCompiler)
 
 message("uncompiled nClass Cpublic variables are not initialized well")
 message("Using inheritance for nClasses with serialization needs fixing.")
 message("See comments in test-nClass_inherit.R for more notes.")
+
+## See also test-nClass_nested
 
 # With inheritcance, we DO NOT support interfacing to both base class and derived class.
 # Only the most derived class should have interface = "generic" or "base".

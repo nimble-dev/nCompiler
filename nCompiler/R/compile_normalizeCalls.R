@@ -31,7 +31,7 @@ compile_normalizeCalls <- function(code,
     if(is.null(opInfo)) {
       obj <- NULL
       if(isNCgenerator(auxEnv$where)) {## We are in a class method (by direct call within another class method, no `$` involved)
-        obj <- auxEnv$where$public_methods[[code$name]]
+        obj <- NC_find_method(auxEnv$where, code$name, inherits=TRUE)
         if(!is.null(obj)) {
           code$aux$obj_internals <- NFinternals(obj)
           if(isNF(obj)) {
