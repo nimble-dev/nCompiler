@@ -85,6 +85,7 @@ nFunction <- function(fun,
                       # returnCallable = TRUE,
                       control = list(),
                       compileInfo = list(),
+                      predefined = FALSE,
                       where = parent.frame(),
                       ...
                       ) {
@@ -142,6 +143,7 @@ nFunction <- function(fun,
 #                                     C_fun = C_fun,
                                      control = control,
                                      compileInfo = compileInfo,
+                                     predefined = predefined,
                                      where = where)
   ## Return a callable function.
   ## This will be modified:

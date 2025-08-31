@@ -269,6 +269,22 @@ cpp_nClassClass <- R6::R6Class(
     addADclassContent = function() {
       addADclassContent_impl(self)
     },
+    buildGenericInterface = function(interfaceCalls = TRUE, interface = TRUE) {
+      #interfaceCalls controls whether to include get_values, set_value, call_method
+      #self$compileInfo$interface controls whether to inherit from base classes for interfacing
+      #It would be wierd to do the former without the latter,
+      # so unless/until we get a case where that behavior is needed
+      # we will prevent it. 
+      # The option interface=FALSE will be called in the case of a predefined,
+      # when building the predefined, when first we do buildAll(interfaceCalls=FALSE).
+      # This might build the interface but will not build the calls.
+      # By then calling buildGenericInterface(TRUE, FALSE), we get the interface
+      # calls but only if they are needed, but we don't repeat building the interface.
+      interface_needed <- !identical(self$compileInfo$interface, "none")
+      interfaceCalls <- interfaceCalls && interface_needed
+      addGenericInterface(interfaceCalls = interfaceCalls,
+                          interface = interface_needed && interface)
+    },
     buildAll = function(interfaceCalls = TRUE, where = where) {
       super$buildAll(where)
       buildDefaultConstructor()
@@ -278,15 +294,7 @@ cpp_nClassClass <- R6::R6Class(
         addADclassContent()
       if(isTRUE(self$compileInfo$buildCopyFromNimbleFunction))
         addCopyFromNimbleFunction(self)
-      #interfaceCalls controls whether to include get_values, set_value, call_method
-      #self$compileInfo$interface controls whether to inherit from base classes for interfacing
-      #It would be wierd to do the former without the latter,
-      # so unless/until we get a case where that behavior is needed
-      # we will prevent it.
-      interface_needed <- !identical(self$compileInfo$interface, "none")
-      interfaceCalls <- interfaceCalls && interface_needed
-      addGenericInterface(interfaceCalls = interfaceCalls,
-                          interface = interface_needed)
+      buildGenericInterface(interfaceCalls = interfaceCalls)
     }
   )
 )

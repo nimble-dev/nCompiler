@@ -9,7 +9,7 @@
 #' @param dir Directory where generated C++ will be written.
 #'
 #' @param cacheDir Directory to be used for Rcpp cache.
-#' 
+#'
 #' @param env Environment to be used for loading results of compilation.
 #'
 #' @param control List of control settings for compilation.  See...
@@ -17,7 +17,7 @@
 #' @return Generator of objects of the compiled version of class
 #'     \code{NC}.  These will use C++ objects internally for compiled
 #'     data and methods.
-#' 
+#'
 #' @export
 nCompile_nClass <- function(NC,
                             dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -27,7 +27,7 @@ nCompile_nClass <- function(NC,
                             control = list(),
                             interface = c("full", "generic", "both"),
                             ...) {
-  ## ... is used for internal arguments that are not necessarily documents or 
+  ## ... is used for internal arguments that are not necessarily documents or
   ## promised to stay stable.
   dotArgs <- list(...)
 
@@ -35,7 +35,7 @@ nCompile_nClass <- function(NC,
     stop(paste0("Argument NC must be an nClass generator."))
 
   ## When called from nCompile, stopAfterRcppPacket will be TRUE.
-  ## While this could also be done from the control() list, 
+  ## While this could also be done from the control() list,
   ## we leave that to the user.  E.g. That might set endStage even
   ## earlier.
   stopAfterRcppPacket <- isTRUE(dotArgs$stopAfterRcppPacket)
@@ -46,25 +46,17 @@ nCompile_nClass <- function(NC,
     control
   )
   is_predefined <- !isFALSE(NCinternals(NC)$predefined)
-  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
-    if(!is.character(NCinternals(NC)$predefined))
+  if(is_predefined) {
+    predefined_dir <-  NCinternals(NC)$predefined
+    if(!is.character(predefined_dir))
       stop("There is a predefined nClass whose predefined field is not character.  It should give the filename base of the predefined nClass.")
-    predefined_filename <-  NCinternals(NC)$predefined
     regular_filename <-  NCinternals(NC)$cpp_classname
-    if(identical(predefined_filename, regular_filename))
-      warning(paste0("There is a predefined class whose predefined_filename and regular_filename are both ", 
-                     predefined_filename,". These should be different."))
-    cppContent <- readLines(
-      system.file(
-        file.path("include", "nCompiler", paste0(predefined_filename,".cpp")),
-        package = "nCompiler"))
-    cppDef <- cppManualClass$new(
-      name =  regular_filename,
-      Hpreamble = paste0("#define PREDEFINED_", regular_filename," ", predefined_filename),
-      Hincludes = nCompilerIncludeFile(paste0(predefined_filename, ".h")),
-      cppContent = cppContent,
-      externalCppDefs = list(R_generic_interface_calls = get_R_interface_cppDef())
-    )
+  }
+  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
+    RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
+    cppDef <- cppRcppPacket$new(RcppPacket = RcppPacket)
+    cppDef$externalCppDefs <- c(cppDef$externalCppDefs,
+                                get_R_interface_cppDef()) #might not be needed, but doesn't hurt to add and we don't have the details on whether it is needed from the loaded RcppPacket.
   } else {
     if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
@@ -76,6 +68,14 @@ nCompile_nClass <- function(NC,
                           interfaceCalls = !is_predefined) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
+    if(is_predefined) {
+      RcppPacket <- cppDefs_2_RcppPacket(cppDef)
+      saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
+      # Now add interface calls if necessary for this live compilation, having
+      # kept them out of the written packet code.
+      cppDef$buildGenericInterface(interfaceCalls=TRUE, interface=FALSE)
+    }
+
     ##
     ## if(isTRUE(get_nOption('serialize')))
     ##   cppDef$addSerialization(include_DLL_funs = !stopAfterRcppPacket)
@@ -91,16 +91,16 @@ nCompile_nClass <- function(NC,
   # We might deprecate from here onward.
   # Then nCompile_nClass would only be called via nCompile
   filebase <- controlFull$filename
-  
+
   if(is.null(filebase))
     filebase <- make_cpp_filebase(cppDef$name)
   RcppPacket <- cppDefs_2_RcppPacket(cppDef,
                                      filebase = filebase)
   NCinternals(NC)$RcppPacket <- RcppPacket
 
-  if(stopAfterRcppPacket) 
+  if(stopAfterRcppPacket)
     return(NC)
-  
+
   compiledFuns <- cpp_nCompiler(RcppPacket,
                               dir = dir,
                               cacheDir = cacheDir,
@@ -111,23 +111,23 @@ nCompile_nClass <- function(NC,
   if(NFcompilerMaybeStop('compileCpp', controlFull)) {
     return(compiledFuns)
   }
-  
+
   R6interface <- list(build_compiled_nClass(NC, compiledFuns, env = env))
   names(R6interface) <- cppDef$name # formerly filebase
-  
+
   interface <- match.arg(interface)
-  
+
   newDLLenv <- make_DLLenv()
   # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
   finalFun <- setup_nClass_environments(compiledFuns,
                                         newDLLenv,
                                         nC_names = NC$classname,
                                         R6interfaces = R6interface)
-  
+
   if(length(finalFun) != 1)
     warning("There may be a problem with number of returned functions in nCompile_nClass.")
   #  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
-  
+
   if(interface == "generic")
     return(finalFun[[1]])
   if(interface == "full")
@@ -135,4 +135,3 @@ nCompile_nClass <- function(NC,
   ## interface is "both"
   return(list(full = R6interface[[1]], generic = finalFun[[1]]))
 }
-

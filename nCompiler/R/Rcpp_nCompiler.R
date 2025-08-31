@@ -27,6 +27,9 @@ Rcpp_nCompilerPacket <- function(...) {
 ## To be expanded to take a list of cppDefs
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {
+  if(inherits(cppDef, 'cppRcppPacket'))
+    return(cppDef$RcppPacket)
+
   name <- cppDef$name
   if(missing(filebase))
     filebase <- make_cpp_filebase(name)
@@ -450,4 +453,204 @@ compileCpp_nCompiler <- function(Rcpp_packet,
   ##   }
   ## }
   return(ans)
+}
+
+## Functions for saving and loading RcppPackets
+## Created with assistance from Copilot using Claude Sonnet 4
+
+#' Save an RcppPacket to disk as a set of files
+#'
+#' @param RcppPacket The RcppPacket object to save
+#' @param dir Directory to save the packet files in
+#' @param name Base name for the packet files (defaults to filebase from packet)
+#' @return Invisibly returns the directory path where files were saved
+#' @export
+saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
+  if (is.null(name)) {
+    name <- RcppPacket$filebase
+    if (is.null(name)) {
+      stop("RcppPacket must have a filebase element or name must be provided")
+    }
+  }
+  
+  # Normalize the directory path for platform independence
+  dir <- normalizePath(dir, mustWork = FALSE)
+  
+  # Create directory if it doesn't exist
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  
+  # Helper function to write content safely
+  writePacketElement <- function(content, filename) {
+    filepath <- normalizePath(file.path(dir, filename), mustWork = FALSE)
+    if (is.null(content) || length(content) == 0) {
+      # Create empty file to indicate element exists but is empty
+      file.create(filepath)
+    } else if (is.character(content)) {
+      writeLines(content, filepath)
+    } else if (is.list(content)) {
+      # For structured content like cppContent/hContent
+      if (all(c("opener", "body") %in% names(content))) {
+        # Write as separate sections
+        con <- file(filepath, "w")
+        writeLines("### OPENER ###", con)
+        if (length(content$opener) > 0) {
+          writeLines(content$opener, con)
+        }
+        writeLines("### BODY ###", con)
+        if (length(content$body) > 0) {
+          writeLines(content$body, con)
+        }
+        close(con)
+      } else {
+        # Other list content - serialize to text
+        dput(content, file = filepath)
+      }
+    } else {
+      # For other types, use dput
+      dput(content, file = filepath)
+    }
+  }
+  
+  # Write each element to its own file
+  writePacketElement(RcppPacket$preamble, paste0(name, "_preamble.txt"))
+  writePacketElement(RcppPacket$cppContent, paste0(name, "_cppContent.txt"))
+  writePacketElement(RcppPacket$hContent, paste0(name, "_hContent.txt"))
+  writePacketElement(RcppPacket$filebase, paste0(name, "_filebase.txt"))
+  writePacketElement(RcppPacket$post_cpp_compiler, paste0(name, "_post_cpp_compiler.txt"))
+  writePacketElement(RcppPacket$copyFiles, paste0(name, "_copyFiles.txt"))
+  
+  # Write a manifest file listing what was saved
+  manifest <- list(
+    saved_at = Sys.time(),
+    packet_name = name,
+    elements = names(RcppPacket),
+    files = list(
+      preamble = paste0(name, "_preamble.txt"),
+      cppContent = paste0(name, "_cppContent.txt"),
+      hContent = paste0(name, "_hContent.txt"),
+      filebase = paste0(name, "_filebase.txt"),
+      post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
+      copyFiles = paste0(name, "_copyFiles.txt")
+    )
+  )
+  
+  manifest_path <- normalizePath(file.path(dir, paste0(name, "_manifest.txt")), mustWork = FALSE)
+  dput(manifest, file = manifest_path)
+  
+  invisible(normalizePath(dir))
+}
+
+#' Load an RcppPacket from disk files
+#'
+#' @param dir Directory containing the packet files
+#' @param name Base name of the packet files to load
+#' @return An RcppPacket object (list)
+#' @export
+loadRcppPacket <- function(dir, name) {
+  # Normalize and check if directory exists
+  dir <- normalizePath(dir, mustWork = TRUE)
+  
+  # Load manifest first to check what files should exist
+  manifest_file <- normalizePath(file.path(dir, paste0(name, "_manifest.txt")), mustWork = FALSE)
+  if (file.exists(manifest_file)) {
+    manifest <- dget(manifest_file)
+    cat("Loading RcppPacket saved at:", as.character(manifest$saved_at), "\n")
+  } else {
+    warning("No manifest file found. Attempting to load standard files.")
+    manifest <- list(files = list(
+      preamble = paste0(name, "_preamble.txt"),
+      cppContent = paste0(name, "_cppContent.txt"),
+      hContent = paste0(name, "_hContent.txt"),
+      filebase = paste0(name, "_filebase.txt"),
+      post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
+      copyFiles = paste0(name, "_copyFiles.txt")
+    ))
+  }
+  
+  # Helper function to read content safely
+  readPacketElement <- function(filename) {
+    filepath <- normalizePath(file.path(dir, filename), mustWork = FALSE)
+    if (!file.exists(filepath)) {
+      return(NULL)
+    }
+    
+    # Check if file is empty
+    if (file.size(filepath) == 0) {
+      return(character(0))
+    }
+    
+    # Try to detect the content type
+    first_line <- readLines(filepath, n = 1, warn = FALSE)
+    
+    if (length(first_line) == 0) {
+      return(character(0))
+    }
+    
+    # Check if it's a structured file (cppContent/hContent)
+    if (first_line == "### OPENER ###") {
+      lines <- readLines(filepath, warn = FALSE)
+      opener_start <- which(lines == "### OPENER ###")
+      body_start <- which(lines == "### BODY ###")
+      
+      if (length(opener_start) == 1 && length(body_start) == 1) {
+        opener_lines <- if (body_start > opener_start + 1) {
+          lines[(opener_start + 1):(body_start - 1)]
+        } else {
+          character(0)
+        }
+        
+        body_lines <- if (length(lines) > body_start) {
+          lines[(body_start + 1):length(lines)]
+        } else {
+          character(0)
+        }
+        
+        return(list(opener = opener_lines, body = body_lines))
+      }
+    }
+    
+    # Check if it looks like dput output
+    if (grepl("^(list|c|character|NULL|[0-9])", first_line)) {
+      tryCatch({
+        return(dget(filepath))
+      }, error = function(e) {
+        # If dget fails, treat as plain text
+        return(readLines(filepath, warn = FALSE))
+      })
+    }
+    
+    # Default: read as character lines
+    return(readLines(filepath, warn = FALSE))
+  }
+  
+  # Load each element
+  RcppPacket <- Rcpp_nCompilerPacket(
+    preamble = readPacketElement(manifest$files$preamble),
+    cppContent = readPacketElement(manifest$files$cppContent),
+    hContent = readPacketElement(manifest$files$hContent),
+    filebase = readPacketElement(manifest$files$filebase),
+    post_cpp_compiler = readPacketElement(manifest$files$post_cpp_compiler),
+    copyFiles = readPacketElement(manifest$files$copyFiles)
+  )
+  
+  return(RcppPacket)
+}
+
+#' List available saved RcppPackets in a directory
+#'
+#' @param dir Directory to search for saved packets
+#' @return Character vector of packet names found
+#' @export
+listRcppPackets <- function(dir) {
+  # Normalize path, but allow non-existent directories
+  dir <- normalizePath(dir, mustWork = FALSE)
+  
+  if (!dir.exists(dir)) {
+    return(character(0))
+  }
+  
+  manifest_files <- list.files(dir, pattern = "_manifest\\.txt$", full.names = FALSE)
+  packet_names <- sub("_manifest\\.txt$", "", manifest_files)
+  
+  return(packet_names)
 }

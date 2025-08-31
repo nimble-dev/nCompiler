@@ -9,13 +9,101 @@
 # or by including something else in the nCompile that is not predefined and hence
 # will trigger inclusion of the interface calls. Tests here take the latter approach.
 #
+library(nCompiler)
+
+foo <- nFunction(
+  fun=function(x) {return(x+1)},
+  argTypes = list(x='numericScalar'),
+  returnType='numericScalar',
+  name="myfoofun"
+)
+cfoo <- nCompile(foo)
+cfoo(2)
+
+foo <- nFunction(
+  fun=function(x) {return(x+1)},
+  argTypes = list(x='numericScalar'),
+  returnType='numericScalar',
+  name="myfoofun",
+  predefined=file.path(tempdir(), 'foo_fun_pre')
+)
+cfoo <- nCompile(foo, control=list(generate_predefined=TRUE))
+cfoo(2)
+
+foo <- nFunction(
+  fun=function(x) {return(x+1)},
+  argTypes = list(x='numericScalar'),
+  returnType='numericScalar',
+  name="myfoofun",
+  predefined=file.path(tempdir(), 'foo_fun_pre')
+)
+cfoo <- nCompile(foo)
+cfoo(2)
+
+foo <- nFunction(
+  fun=function(x) {return(x+1)},
+  argTypes = list(x='numericScalar'),
+  returnType='numericScalar',
+  name="myfoofun",
+  predefined=file.path(tempdir(), 'foo_fun_pre')
+)
+cfoo <- nCompile(foo, control=list(generate_predefined=TRUE), package = TRUE)
+cfoo(2)
+
+foo <- nFunction(
+  fun=function(x) {return(x+1)},
+  argTypes = list(x='numericScalar'),
+  returnType='numericScalar',
+  name="myfoofun",
+  predefined=file.path(tempdir(), 'foo_fun_pre')
+)
+cfoo <- nCompile(foo, package=TRUE)
+cfoo(2)
+
+###
+
+foo <- nClass(Cpublic = list(
+  bar=nFunction(
+    fun=function(x){return(x+1)},
+    argTypes = list(x='numericScalar'),
+    returnType = 'numericScalar')),
+  classname = "my_foo"
+  )
+# Generate new code.
+ctest <- nCompile(foo)
+obj <- ctest$new()
+obj$bar(2)
 
 test_that("test_predefined class works",
 {
   # dummy nClass to include in nCompile so that interface calls are included.
-  foo <- nClass(Cpublic = list(foo=nFunction(fun=function(){})))
+  foo <- nClass(Cpublic = list(
+    bar=nFunction(
+      fun=function(x){return(x+1)},
+      argTypes = list(x='numericScalar'),
+      returnType = 'numericScalar')),
+    classname = "foo_test_predefined",
+    predefined = file.path(tempdir(), "test_predefined_dir")
+  )
   # Generate new code.
-  ctest <- nCompile(test_predefined, foo, control = list(generate_predefined = TRUE))
+  ctest <- nCompile(foo, control = list(generate_predefined = TRUE))
+  obj <- ctest$new()
+  obj$bar(2)
+
+  ctest <- nCompile(foo, control = list(generate_predefined = TRUE), package=TRUE)
+  obj <- ctest$new()
+  obj$bar(2)
+
+  # Use existing (predefined) code
+  ctest <- nCompile(foo, control = list(generate_predefined = FALSE))
+  obj <- ctest$new()
+  obj$bar(2)
+
+  ctest <- nCompile(foo, control = list(generate_predefined = FALSE), package=TRUE)
+  obj <- ctest$new()
+  obj$bar(2)
+
+# Below here is old
   ctest <- ctest$test_predefined
   obj <- ctest$new()
   obj$a <- 1.2
@@ -24,13 +112,14 @@ test_that("test_predefined class works",
   obj <- test_predefined$new()
   obj$a <- 1.2
   expect_equal(obj$a, 1.2)
-  
+
   # Use existing (predefined) code
-  ctest <- nCompile(test_predefined, control = list(generate_predefined = FALSE))
+  ctest <- nCompile(foo, control = list(generate_predefined = FALSE))
   obj <- ctest$new()
-  obj$a <- 1.2
+  obj$bar(2)
+    obj$a <- 1.2
   expect_equal(obj$a, 1.2)
-  
+
   # Default to existing (predefined) code
   # We could add a test to confirm that it is actually the predefined code that is used.
   ctest <- nCompile(test_predefined)
@@ -122,14 +211,14 @@ test_that("test_predefined class works",
   x$a <- 1.2
   x2 <- f1(x)
   expect_equal(x2$a, 2.2)
-  
-  # Call C++ test function that relies on correctly reading the header  
+
+  # Call C++ test function that relies on correctly reading the header
   get_test_predefined <- nFunction(
     fun = function() {
       cppLiteral("std::shared_ptr<test_predefined> A = make_test_predefined();")
       cppLiteral("return(A);")
     },
-    returnType = 'test_predefined')  
+    returnType = 'test_predefined')
   C_gtp <- nCompile(get_test_predefined, test_predefined)
   x <- C_gtp$get_test_predefined()
   x$a <- 1.2
@@ -151,13 +240,13 @@ test_that("predefined derivClass class works",
   obj <- derivClass$new()
   obj$gradient <- matrix(1:4, nrow = 2)
   expect_equal(obj$gradient, matrix(1:4, nrow = 2))
-  
+
   # Use existing (predefined) code
   ctest <- nCompile(derivClass, control = list(generate_predefined = FALSE))
   obj <- ctest$new()
   obj$gradient <- matrix(1:4, nrow = 2)
   expect_equal(obj$gradient, matrix(1:4, nrow = 2))
- 
+
   # Default to existing (predefined) code
   # We could add a test to confirm that it is actually the predefined code that is used.
   ctest <- nCompile(derivClass)
@@ -251,14 +340,14 @@ test_that("predefined derivClass class works",
   x$gradient <- matrix(1:4, nrow = 2)
   x2 <- obj$foo(x)
   expect_equal(x2$gradient, matrix(2:5, nrow = 2))
-  
-  # Call C++ test function that relies on correctly reading the header  
+
+  # Call C++ test function that relies on correctly reading the header
   get_derivClass <- nFunction(
     fun = function() {
       cppLiteral("std::shared_ptr<derivClass> A = make_derivClass();")
       cppLiteral("return(A);")
     },
-    returnType = 'derivClass')  
+    returnType = 'derivClass')
   C_get <- nCompile(get_derivClass, derivClass)
   x <- C_get$get_derivClass()
   x$gradient <- matrix(1:4, nrow = 2)
@@ -287,7 +376,7 @@ test_that("predefined EigenDecomp class works",
   obj <- ctest$new()
   obj$vectors <- matrix(1:4, nrow = 2)
   expect_equal(obj$vectors, matrix(1:4, nrow = 2))
- 
+
   # Default to existing (predefined) code
   # We could add a test to confirm that it is actually the predefined code that is used.
   ctest <- nCompile(EigenDecomp)
@@ -379,19 +468,19 @@ test_that("predefined EigenDecomp class works",
   x$vectors <- matrix(1:4, nrow = 2)
   x2 <- obj$foo(x)
   expect_equal(x2$vectors, matrix(2:5, nrow = 2))
-  
-  # Call C++ test function that relies on correctly reading the header  
+
+  # Call C++ test function that relies on correctly reading the header
   get_EigenDecomp <- nFunction(
     fun = function() {
       cppLiteral("std::shared_ptr<EigenDecomp> A = make_EigenDecomp();")
       cppLiteral("return(A);")
     },
-    returnType = 'EigenDecomp')  
+    returnType = 'EigenDecomp')
   C_get <- nCompile(get_EigenDecomp, EigenDecomp)
   x <- C_get$get_EigenDecomp()
   x$vectors <- matrix(1:4, nrow = 2)
   expect_equal(x$vectors, matrix(1:4, nrow = 2))
-  
+
   doEigen <- nFunction(
     fun = function(x, symmetric, valuesOnly) {
       eigX <- nEigen(x, symmetric, valuesOnly)
@@ -400,7 +489,7 @@ test_that("predefined EigenDecomp class works",
     argTypes = list(x = 'numericMatrix', symmetric = 'logicalScalar', valuesOnly = 'logicalScalar'),
     returnType = 'EigenDecomp')
   comp <- nCompile(doEigen, EigenDecomp)
-  
+
   # test non-symmetric eigen decomposition
   x <- matrix(as.numeric(c(2, 4, 1, 3)), nrow = 2)
   Cres <- comp$doEigen(x, FALSE, FALSE)
@@ -411,18 +500,18 @@ test_that("predefined EigenDecomp class works",
     Cvec = as.numeric(Cres$vectors[,i])
     Rvec = as.numeric(Rres$vectors[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
+
   # test values only
   x <- matrix(as.numeric(c(2, 4, 1, 3)), nrow = 2)
   Cres <- comp$doEigen(x = x, symmetric = FALSE, valuesOnly = TRUE)
   Rres <- eigen(x, only.values = TRUE)
   expect_equal(as.numeric(Cres$values), as.numeric(Rres$values))
   expect_equal(Cres$vectors, matrix(data = 0, nrow = 0, ncol = 0))
-  
+
   # test symmetric eigen decomposition
   xsym <- x + t(x)
   Cres <- comp$doEigen(x = xsym, symmetric = TRUE, valuesOnly = FALSE)
@@ -433,11 +522,11 @@ test_that("predefined EigenDecomp class works",
     Cvec = as.numeric(Cres$vectors[,i])
     Rvec = as.numeric(Rres$vectors[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
+
   # verify nEigen works with tensor expression inputs
   doEigenOp <- nFunction(
     fun = function(x, y, z, symmetric, valuesOnly) {
@@ -445,9 +534,9 @@ test_that("predefined EigenDecomp class works",
       return(eigX)
     },
     argTypes = list(x = 'numericMatrix',
-                    y = 'numericMatrix', 
-                    z = 'numericMatrix', 
-                    symmetric = 'logicalScalar', 
+                    y = 'numericMatrix',
+                    z = 'numericMatrix',
+                    symmetric = 'logicalScalar',
                     valuesOnly = 'logicalScalar'),
     returnType = 'EigenDecomp'
   )
@@ -462,7 +551,7 @@ test_that("predefined EigenDecomp class works",
     Cvec = as.numeric(Cres$vectors[,i])
     Rvec = as.numeric(Rres$vectors[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
@@ -481,20 +570,20 @@ test_that("predefined SVDDecomp class works", {
   obj <- SVDDecomp$new()
   obj$v <- matrix(1:4, nrow = 2)
   expect_equal(obj$v, matrix(1:4, nrow = 2))
-  
+
   # Use existing (predefined) code
   ctest <- nCompile(SVDDecomp, control = list(generate_predefined = FALSE))
   obj <- ctest$new()
   obj$v <- matrix(1:4, nrow = 2)
   expect_equal(obj$v, matrix(1:4, nrow = 2))
-  
+
   # Default to existing (predefined) code
   # We could add a test to confirm that it is actually the predefined code that is used.
   ctest <- nCompile(SVDDecomp)
   obj <- ctest$new()
   obj$v <- matrix(1:4, nrow = 2)
   expect_equal(obj$v, matrix(1:4, nrow = 2))
-  
+
   # Use in a class as member data
   nc1 <- nClass(
     classname = "nc1",
@@ -511,7 +600,7 @@ test_that("predefined SVDDecomp class works", {
   obj$x <- SVDDecomp$new()
   obj$x$v <- matrix(1:4, nrow = 2)
   expect_equal(obj$x$v, matrix(1:4, nrow = 2))
-  
+
   # Use in a class as return object
   nc1 <- nClass(
     classname = "nc1",
@@ -533,7 +622,7 @@ test_that("predefined SVDDecomp class works", {
   x <- obj$foo()
   x$v <- matrix(1:4, nrow = 2)
   expect_equal(x$v, matrix(1:4, nrow = 2))
-  
+
   # Use in a class as input object
   nc1 <- nClass(
     classname = "nc1",
@@ -559,7 +648,7 @@ test_that("predefined SVDDecomp class works", {
   x$v <- matrix(1:4, nrow = 2)
   x2 <- obj$foo(x)
   expect_equal(x2$v, matrix(2:5, nrow = 2))
-  
+
   # Use in a function
   f1 <- nFunction(
     fun = function(x) {
@@ -579,19 +668,19 @@ test_that("predefined SVDDecomp class works", {
   x$v <- matrix(1:4, nrow = 2)
   x2 <- obj$foo(x)
   expect_equal(x2$v, matrix(2:5, nrow = 2))
-  
-  # Call C++ test function that relies on correctly reading the header  
+
+  # Call C++ test function that relies on correctly reading the header
   get_SVDDecomp <- nFunction(
     fun = function() {
       cppLiteral("std::shared_ptr<SVDDecomp> A = make_SVDDecomp();")
       cppLiteral("return(A);")
     },
-    returnType = 'SVDDecomp')  
+    returnType = 'SVDDecomp')
   C_get <- nCompile(get_SVDDecomp, SVDDecomp)
   x <- C_get$get_SVDDecomp()
   x$v <- matrix(1:4, nrow = 2)
   expect_equal(x$v, matrix(1:4, nrow = 2))
-  
+
   # update tests!
   doSVD <- nFunction(
     fun = function(x, vectors) {
@@ -601,7 +690,7 @@ test_that("predefined SVDDecomp class works", {
     argTypes = list(x = 'numericMatrix', vectors = 'integer'),
     returnType = 'SVDDecomp')
   comp <- nCompile(doSVD, SVDDecomp)
-  
+
   # test singular value decomposition: values only
   x <- matrix(as.numeric(c(2, 4, 1, 3, 6, 5)), nrow = 2)
   Cres <- comp$doSVD(x = x, vectors = 0)
@@ -609,7 +698,7 @@ test_that("predefined SVDDecomp class works", {
   expect_equal(as.numeric(Cres$d), as.numeric(Rres$d))
   expect_equal(Cres$u, matrix(0, nrow = 0, ncol = 0))
   expect_equal(Cres$v, matrix(0, nrow = 0, ncol = 0))
-  
+
   # test singular value decomposition: thin
   x <- matrix(as.numeric(c(2, 4, 1, 3, 6, 5)), nrow = 2)
   Cres <- comp$doSVD(x = x, vectors = 1)
@@ -621,18 +710,18 @@ test_that("predefined SVDDecomp class works", {
     Cvec = as.numeric(Cres$u[,i])
     Rvec = as.numeric(Rres$u[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
     # right singular vectors
     Cvec = as.numeric(Cres$v[,i])
     Rvec = as.numeric(Rres$v[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
+
   # test singular value decomposition: full
   x <- matrix(as.numeric(c(2, 4, 1, 3, 6, 5)), nrow = 2)
   Cres <- comp$doSVD(x = x, vectors = 2)
@@ -644,7 +733,7 @@ test_that("predefined SVDDecomp class works", {
     Cvec = as.numeric(Cres$u[,i])
     Rvec = as.numeric(Rres$u[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
@@ -654,11 +743,11 @@ test_that("predefined SVDDecomp class works", {
     Cvec = as.numeric(Cres$v[,i])
     Rvec = as.numeric(Rres$v[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
+
   # verify nSvd works with tensor expression inputs
   doSvdOp <- nFunction(
     fun = function(x, y, z, vectors) {
@@ -666,8 +755,8 @@ test_that("predefined SVDDecomp class works", {
       return(svdX)
     },
     argTypes = list(x = 'numericMatrix',
-                    y = 'numericMatrix', 
-                    z = 'numericMatrix', 
+                    y = 'numericMatrix',
+                    z = 'numericMatrix',
                     vectors = 'integer'),
     returnType = 'SVDDecomp'
   )
@@ -683,7 +772,7 @@ test_that("predefined SVDDecomp class works", {
     Cvec = as.numeric(Cres$u[,i])
     Rvec = as.numeric(Rres$u[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
@@ -693,9 +782,9 @@ test_that("predefined SVDDecomp class works", {
     Cvec = as.numeric(Cres$v[,i])
     Rvec = as.numeric(Rres$v[,i])
     expect_true(any(
-      isTRUE(all.equal(Cvec, Rvec)), 
+      isTRUE(all.equal(Cvec, Rvec)),
       isTRUE(all.equal(Cvec, -Rvec))
     ))
   }
-  
+
 })

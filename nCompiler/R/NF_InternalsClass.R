@@ -23,6 +23,7 @@ NF_InternalsClass <- R6::R6Class(
     # needed_nFunctions = list(), ## formerly neededRCfuns
     ADcontent = NULL,
     isAD = FALSE,
+    predefined = FALSE,
     compileInfo = list(),
     R_fun = NULL, #used only if compileInfo$C_fun is provided.
     ## Next two "includes" were only needed for making external calls:
@@ -39,6 +40,7 @@ NF_InternalsClass <- R6::R6Class(
                           enableDerivs = FALSE,
                           control = list(),
                           compileInfo = list(),
+                          predefined = FALSE,
                           ## methodNames, ## used only for nf_checkDSLcode
                           ## setupVarNames = NULL, ## Ditto
                           where = parent.frame()
@@ -58,6 +60,7 @@ NF_InternalsClass <- R6::R6Class(
       self$arguments <- as.list(formals(fun_to_use))
       self$control <- control
       self$compileInfo <- compileInfo
+      self$predefined <- predefined
       self$compileInfo$C_fun <- NULL # Do not retain this because it ends up in code and arguments
       self$where <- where
       if(is.character(refArgs)) {
@@ -117,10 +120,13 @@ NF_InternalsClass <- R6::R6Class(
       ## what this one's cpp function name will be:
       if(!is.null(compileInfo$cpp_code_name))
         self$cpp_code_name <- compileInfo$cpp_code_name
-      else
-        self$cpp_code_name <- paste(Rname2CppName(name),
-                                    nFunctionIDMaker(),
-                                    sep = "_")
+      else {
+        self$cpp_code_name <- Rname2CppName(name)
+        if(isFALSE(predefined))
+          self$cpp_code_name <- paste(self$cpp_code_name,
+                                      nFunctionIDMaker(),
+                                      sep = "_")
+      }
       ## Unpack enableDerivs into AD
       self$isAD <- FALSE
       if(!(isFALSE(enableDerivs) || is.null(enableDerivs))) {

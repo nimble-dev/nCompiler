@@ -21,8 +21,8 @@ cppDefinitionClass <- R6::R6Class(
     CPPpreamble = character(),
     Hpreamble = character(),
     CPPusings = character(),
-    internalCppDefs = list(),
-    externalCppDefs = list(),
+    internalCppDefs = list(), # cppDefs unique to this definition, whose pieces are included in this definition's RcppPacket.
+    externalCppDefs = list(), # cppDefs that may be shared by others, which are checked (and made unique) during nCompile when RcppPackets are generated, and become their own RcppPacket.
     Hincludes = list(),
     CPPincludes = list(),
     compileInfo = list(), # This can be used generically for details about each derived class that are deemed too picayune for a separate member variable
@@ -68,6 +68,23 @@ cppDefinitionClass <- R6::R6Class(
     ## get_post_cpp_compiler is not currently used anywhere.
     ## We keep it in place as a concept in case it is helpful in the future.
     get_post_cpp_compiler = function() NULL)
+)
+
+# cppDefRcppPacket exists for holding an RcppPacket that already exists,
+# which happens through a predefined.
+# The cppDefRcppPacket acts like a proxy so that it can be part of any list
+# of cppDefs during nCompile but then is used only to extract its existing packet.
+cppRcppPacket <- R6::R6Class(
+  'cppRcppPacket',
+  portable = FALSE,
+  inherit = cppDefinitionClass, # This may be used at least for externalCppDefs
+  public = list(
+    RcppPacket = list(),
+    initialize = function(...) {
+      super$initialize(...)
+    },
+    generate = function() {stop("generate() method does not work for an cppDefRcppPacket. Something is wrong.")}
+  )
 )
 
 # cppManualClass is the most rudimentary cppDef that can generate content.

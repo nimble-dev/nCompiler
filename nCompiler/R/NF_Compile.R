@@ -57,24 +57,40 @@ nCompile_nFunction <- function(NF,
 
   if(is.null(compileInfo)) compileInfo <- NFinternals(NF)$compileInfo
 
-  NF_Compiler <- NF_CompilerClass$new(f = NF, 
-                                      useUniqueNameInCpp = 
-                                        controlFull$useUniqueNameInCode,
-                                      compileInfo = compileInfo)
-  NF_Compiler$createCpp(control = controlFull)
-  if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
-                              controlFull)) {
-    if(get_nOption('verbose')) 
-      message(paste0("Returning after stage ",
-                     NF_Compiler$stageCompleted))
-    return(NF_Compiler)
+  is_predefined <- !isFALSE(NFinternals(NF)$predefined)
+  if(is_predefined) {
+    predefined_dir <-  NFinternals(NF)$predefined
+    if(!is.character(predefined_dir))
+      stop("There is a predefined nFunction whose predefined field is not character.  It should give the filename base of the predefined nFunction.")
+    regular_filename <-  NFinternals(NF)$cpp_code_name
   }
-  stageName <- 'makeRcppPacket'
-  if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) 
-    return(NF_Compiler)
+  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
+    RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
+    cppDef <- cppRcppPacket$new(RcppPacket = RcppPacket)
+  } else {
+    NF_Compiler <- NF_CompilerClass$new(f = NF, 
+                                        useUniqueNameInCpp = 
+                                         controlFull$useUniqueNameInCode,
+                                       compileInfo = compileInfo)
+    NF_Compiler$createCpp(control = controlFull)
+    if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
+                                controlFull)) {
+      if(get_nOption('verbose')) 
+        message(paste0("Returning after stage ",
+                       NF_Compiler$stageCompleted))
+      return(NF_Compiler)
+    }
+    if(is_predefined) {
+      RcppPacket <- cppDefs_2_RcppPacket(NF_Compiler$cppDef)
+      saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
+    }
+    stageName <- 'makeRcppPacket'
+    if (logging) logBeforeStage(stageName)
+    if(NFcompilerMaybeStop(stageName, controlFull)) 
+      return(NF_Compiler)
   
-  cppDef <- NF_Compiler$cppDef
+    cppDef <- NF_Compiler$cppDef
+  }
   if(stopAfterCppDef) return(cppDef)
 
   # We might deprecate from here down and make all usages start from nCompile.

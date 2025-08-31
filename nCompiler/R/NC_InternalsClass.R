@@ -76,8 +76,8 @@ NC_InternalsClass <- R6::R6Class(
             stop(paste0('enableDerivs entry ', i, ' is not a method in Cpublic.'))
         }
         self$enableDerivs <- enableDerivs
-        self$predefined <- predefined
       }
+      self$predefined <- predefined
       self$enableSaving <- enableSaving
     }
   )
