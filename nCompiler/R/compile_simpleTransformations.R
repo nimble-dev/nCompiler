@@ -24,9 +24,10 @@ compile_simpleTransformations <- function(code,
       }
     }
     
-    opInfo <- getOperatorDef(code$name) #operatorDefEnv[[code$name]]
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[[opInfoName]]
+    handlingInfo <- getOperatorDef(code$name, opInfoName)
+    # opInfo <- getOperatorDef(code$name) #operatorDefEnv[[code$name]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[[opInfoName]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
         if(!is.null(handler))
@@ -37,7 +38,7 @@ compile_simpleTransformations <- function(code,
                  envir = handlerEnv)
           }
       }
-    }
+    # }
   }
   nErrorEnv$stateInfo <- character()
   invisible(NULL)

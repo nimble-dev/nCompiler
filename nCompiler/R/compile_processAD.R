@@ -52,9 +52,10 @@ compile_processAD <- function(code,
       return(invisible(NULL))
     }
 
-    opInfo <- operatorDefEnv[[code$name]]
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[["processAD"]]
+    handlingInfo <- getOperatorDef(code$name, "processAD")
+    # opInfo <- operatorDefEnv[[code$name]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[["processAD"]]
       if(!is.null(handlingInfo)) {
         beforeHandler <- handlingInfo[['beforeHandler']]
         if(!is.null(beforeHandler)) {
@@ -67,7 +68,7 @@ compile_processAD <- function(code,
                envir = processADEnv)
         }
       }
-    }
+    # }
 
     iArgs <- seq_along(code$args)
     for(i in iArgs) {
@@ -77,8 +78,8 @@ compile_processAD <- function(code,
     }
 
     ## finally, call any special handlers
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[["processAD"]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[["processAD"]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
         if(!is.null(handler)) {
@@ -91,7 +92,7 @@ compile_processAD <- function(code,
                envir = processADEnv)
         }
       }
-    }
+    # }
   }
   invisible(NULL)
 }

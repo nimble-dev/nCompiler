@@ -73,9 +73,10 @@ compile_eigenize <- function(code,
       return(invisible(NULL))
     }
 
-    opInfo <- operatorDefEnv[[code$name]]
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[["eigenImpl"]]
+    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
+    # operatorDefEnv[[code$name]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[["eigenImpl"]]
       if(!is.null(handlingInfo)) {
         beforeHandler <- handlingInfo[['beforeHandler']]
         if(!is.null(beforeHandler)) {
@@ -90,7 +91,7 @@ compile_eigenize <- function(code,
           # return(if(length(setupExprs) == 0) NULL else setupExprs)
         }
       }
-    }
+    # }
 
     iArgs <- seq_along(code$args)
     useArgs <- eigenizeUseArgs[[code$name]]
@@ -104,11 +105,10 @@ compile_eigenize <- function(code,
     }
 
     ## finally, call any special handlers
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[["eigenImpl"]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[["eigenImpl"]]
       if(!is.null(handlingInfo)) {
-        handler <- handlingInfo[['handler']]
-        
+        handler <- handlingInfo[['handler']]       
         if(!is.null(handler)) {
           setupExprs <- c(setupExprs,
                           eval(call(handler,
@@ -120,7 +120,7 @@ compile_eigenize <- function(code,
                                envir = eigenizeEnv))
         }
       }
-    }
+    # }
   }
   return(if(length(setupExprs) == 0) NULL else setupExprs)
 }

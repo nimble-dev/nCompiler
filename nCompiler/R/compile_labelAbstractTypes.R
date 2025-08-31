@@ -98,10 +98,10 @@ compile_labelAbstractTypes <- function(code,
       return(invisible(NULL))
     }
 
-    opInfo <- operatorDefEnv[[code$name]]
-
-    if(!is.null(opInfo)) {
-      handlingInfo <- opInfo[["labelAbstractTypes"]]
+    handlingInfo <- getOperatorDef(code$name, "labelAbstractTypes")
+    # opInfo <- operatorDefEnv[[code$name]]
+    # if(!is.null(opInfo)) {
+    #   handlingInfo <- opInfo[["labelAbstractTypes"]]
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]
         if(!is.null(handler)) {
@@ -117,7 +117,7 @@ compile_labelAbstractTypes <- function(code,
           return(ans)
         }
       }
-    }
+    # }
   }
   nErrorEnv$stateInfo <- character()
   invisible(NULL)

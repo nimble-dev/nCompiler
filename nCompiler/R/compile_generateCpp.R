@@ -85,11 +85,12 @@ compile_generateCpp <- function(code,
       ans[[length(code$args) + 2]] <- paste0(indent, '}')
     return(ans)
   }
-  opInfo <- operatorDefEnv[[code$name]]
-  if(!is.null(opInfo)) {
-    handlingInfo <- opInfo[["cppOutput"]]
-    if(!is.null(handlingInfo)) {
-      handler <- handlingInfo$handler
+  handler <- getOperatorDef(code$name, "cppOutput", "handler")
+  # opInfo <- operatorDefEnv[[code$name]]
+  # if(!is.null(opInfo)) {
+  #   handlingInfo <- opInfo[["cppOutput"]]
+  #   if(!is.null(handlingInfo)) {
+  #     handler <- handlingInfo$handler
       if(!is.null(handler)) {
         if (logging)
           appendToLog(paste('Calling handler', handler, 'for', code$name))
@@ -104,8 +105,8 @@ compile_generateCpp <- function(code,
         }
         return(res)
       }
-    }
-  }
+  #   }
+  # }
   ## default: not yet updated
   return(eval(call("AsIs", code, symTab),
               envir = genCppEnv))

@@ -56,8 +56,7 @@ splitCompileTimeArgs <- function(call, template,
 nParse <- function(code,
                    caller = NULL,
                    callerArgID = numeric(),
-                   recursing = FALSE,
-                   opDefEnv = operatorDefEnv) { ## input code is R parse tree
+                   recursing = FALSE) { ## input code is R parse tree
   if(!recursing) {
     if(is.character(code))
       code <- parse(text = code,
@@ -100,8 +99,9 @@ nParse <- function(code,
     }
     name <- as.character(code[[1]])
     processedCompileArgs <- list()
-    if(!is.null(opDefEnv)) {
-      opDef <- opDefEnv[[name]]
+    opDef <- getOperatorDef(name)
+    # if(!is.null(opDefEnv)) {
+    #   opDef <- opDefEnv[[name]]
       if(!is.null(opDef)) {
         template <- opDef$matchDef
         if(!is.null(template)) {
@@ -112,7 +112,7 @@ nParse <- function(code,
           processedCompileArgs <- processedCall$compileArgs
         }
       }
-    }
+    # }
     isAssign <- name %in% c('<-','=','<<-')
     args <- vector('list', length = length(code)-1)
     ## build the object
@@ -173,8 +173,7 @@ nParse <- function(code,
         ans$args[i-1] <- list(nParse(code[[i]],
                                      caller = ans,
                                      callerArgID = i-1,
-                                     recursing = TRUE,
-                                     opDefEnv=opDefEnv))
+                                     recursing = TRUE))
     }
     return(ans)
   }
