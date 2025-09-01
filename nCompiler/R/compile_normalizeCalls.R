@@ -50,7 +50,10 @@ compile_normalizeCalls <- function(code,
       if(is.null(obj)) {
         obj <- nGet(code$name, where = auxEnv$where)
         ## An nFunction will be transformed to
-        ## have code$name 'NFCALL_'.
+        ## have code$name 'NFCALL_' during simpleTransformations,
+        ## but that hasn't happened yet, so we manually use it here.
+        ## To-do: This could be cleaned up by either making that change here
+        ## when first detected or making a separate compiler stage just for that.
         if(!is.null(obj)) {
           if(isNF(obj)) {
             code$aux$obj_internals <- NFinternals(obj)

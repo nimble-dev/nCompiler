@@ -483,7 +483,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
 })
 
 test_that("Compile one nFunction via nCompile, returning a list (and testing external R name invalid for C++).",
-{ 
+{
   add.Scalars <- nFunction(
     name = 'Cadd.scalars',
     fun = function(x = double(0),
@@ -502,7 +502,7 @@ test_that("Compile one nFunction via nCompile, returning a list (and testing ext
 )
 
 test_that("Compile one nFunction via nCompile, not returning a list (and testing internal name invalid for C++).",
-{ 
+{
   addScalars <- nFunction(
     name = "add.Scalars",
     fun = function(x = double(0),
@@ -517,7 +517,7 @@ test_that("Compile one nFunction via nCompile, not returning a list (and testing
 })
 
 test_that("Compile two nFunctions via nCompile, returning a list.",
-{ 
+{
   addScalars <- nFunction(
     fun = function(x = double(0),
                    y = double(0)) {
@@ -541,7 +541,7 @@ test_that("Compile two nFunctions via nCompile, returning a list.",
 )
 
 test_that("Compile two nFunctions via nCompile provided as a list, returning a list.",
-{ 
+{
   addScalars <- nFunction(
     fun = function(x = double(0),
                    y = double(0)) {
@@ -593,13 +593,13 @@ test_that("nCompile naming and interface choices work in various ways",
       x = 'numericScalar'
     )
   )
-  
+
   nc2 <- nClass(
     Cpublic = list(
       y = 'numericScalar'
     )
   )
-  
+
   nc3 <- nClass(
     Cpublic = list(
       z = 'numericScalar'
@@ -612,7 +612,7 @@ test_that("nCompile naming and interface choices work in various ways",
   expect_identical(names(comp), c("nc1", "nc2"))
   expect_true(inherits(comp$nc1$new(), "nClass"))
   expect_true(inherits(comp$nc2$new(), "nClass"))
- 
+
   # One named element in the ..., and generic interface for ALL
   comp <- nCompile(nc1x = nc1, nc2,
                    interfaces = "generic")
@@ -650,21 +650,21 @@ test_that("nCompile naming and interface choices work in various ways",
   expect_true(class(comp$nc1())=="loadedObjectEnv")
   expect_true(class(comp$nc2())=="loadedObjectEnv")
   expect_true(class(comp$nc3())=="loadedObjectEnv")
-  
-  # Move on to nFunctions  
+
+  # Move on to nFunctions
   nfA <- nFunction(
     name = "nfA_",
     fun = function() {
       return(2)
       returnType('integerScalar')
     })
-  
+
   nfB <- nFunction(
     fun = function() {
       return(nfA())
       returnType('integerScalar')
     })
-  
+
   nfC <- nFunction(
     fun = function() {
       return(nfB())
@@ -694,16 +694,16 @@ test_that("nCompile naming and interface choices work in various ways",
   expect_true(is.function(comp$nfA))
 
   # Error from incompletely named list
-  expect_error(comp <- nCompile(list(f2 = nfB, nfA))) # expected error due to incompletely named list 
+  expect_error(comp <- nCompile(list(f2 = nfB, nfA))) # expected error due to incompletely named list
 
   # Fully named list
-  comp <- nCompile(list(f2 = nfB, f1 = nfA)) 
+  comp <- nCompile(list(f2 = nfB, f1 = nfA))
   expect_identical(names(comp), c("f2", "f1"))
   expect_true(is.function(comp$f2))
   expect_true(is.function(comp$f1))
 
   # Mix of list and individual item, both in ...
-  comp <- nCompile(list(f2 = nfB, f3 = nfC), nfA) 
+  comp <- nCompile(list(f2 = nfB, f3 = nfC), nfA)
   expect_identical(names(comp), c("f2", "f3", "nfA"))
   expect_true(is.function(comp$f2))
   expect_true(is.function(comp$f3))
@@ -846,3 +846,37 @@ test_that("nCompile for nClass with compileInfo$createFromR=FALSE works", {
 
 ## 1. createFromR = FALSE does not have environments set up etc.
 ## 2. createFromR = TRUE (status quo) does not access an inner obj via interface correctly
+
+# build up a test of whether argument mangling and argument ordering work together
+
+foo <- nFunction(
+  fun = function(x, log) {
+    return(dnorm(x,0,1,log=log))
+  },
+  argTypes=list(quote(double(0)), quote(double(0))),
+  returnType = quote(double(0))
+)
+
+bar1 <- nFunction(
+  fun = function(x, log) {
+    return(foo(x, log))
+  },
+  argType = list('numericScalar','numericScalar'),
+  returnType = quote('numericScalar')
+)
+
+comp1 <- nCompile(foo, bar1)
+bar1(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
+comp1$bar1(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
+
+bar2 <- nFunction(
+  fun = function(x, log) {
+    return(foo(log=log, x))
+  },
+  argType = list('numericScalar','numericScalar'),
+  returnType = quote('numericScalar')
+)
+
+comp2 <- nCompile(foo, bar2)
+bar2(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
+comp2$bar2(1.2,TRUE) - dnorm(1.2,0,1,TRUE)

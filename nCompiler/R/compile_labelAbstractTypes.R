@@ -87,6 +87,8 @@ compile_labelAbstractTypes <- function(code,
   }
 
   if(code$isCall) {
+    # Note that nFunction or nClass method calls are already (from simpleTransformations)
+    # embedded in CALL_, for which the opDef is then looked up.
     if(code$name == '{') {
       ## recurse over lines
       for(i in seq_along(code$args)) {

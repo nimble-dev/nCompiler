@@ -40,6 +40,10 @@ test_that("registering a user-defined operator definition (opDef) works", {
     code$name <- 'nArray'
     NULL
   }
+  # This test works by:
+  # providing a handler to relpace "nimArray" with "nArray"
+  # and a handler to replace "nimArray2" with "nArray" to
+  # check on handling multiple cases.
   nCompiler:::registerOpDef(
     list(nimArray =
            list(
