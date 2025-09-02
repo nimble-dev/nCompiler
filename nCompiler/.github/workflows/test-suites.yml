@@ -1,4 +1,4 @@
-# .github/workflows/test-suites.yaml
+# .github/workflows/test-suites.yml
 name: Test Suites
 
 on:
