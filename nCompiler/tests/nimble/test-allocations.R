@@ -3,7 +3,7 @@
 ## tests of numeric, integer, logical, matrix and array
 
 library(nimble)
-library(nCompiler)
+#library(nCompiler)
 
 divert_to_nCompiler <- function(fun, replacements) {
   diversion_env <- list2env(replacements, parent = environment(fun))

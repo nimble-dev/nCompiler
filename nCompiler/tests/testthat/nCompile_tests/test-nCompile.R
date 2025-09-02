@@ -827,7 +827,7 @@ test_that("manual C++ pieces in nFunction work", {
   )
 })
 
-library(nCompiler); library(testthat)
+#library(nCompiler); library(testthat)
 test_that("nCompile for nClass with compileInfo$createFromR=FALSE works", {
   nc_inner <- nClass(
     classname = "nc_inner",

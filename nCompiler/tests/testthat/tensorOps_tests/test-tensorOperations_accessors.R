@@ -1,4 +1,4 @@
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 library(Matrix)
 

@@ -1,6 +1,6 @@
 # Tests of nClasses holding, passing and use each other.
 
-library(nCompiler); library(testthat)
+#library(nCompiler); library(testthat)
 test_that("One nClass holds another and uses it", {
   nc_inner <- nClass(
     classname = "nc_inner",

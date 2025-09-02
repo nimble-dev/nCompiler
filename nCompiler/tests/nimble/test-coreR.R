@@ -1,7 +1,7 @@
 ## Copied and modified from nimble's test-coreR
 
 library(nimble)
-library(nCompiler)
+#library(nCompiler)
 nOptions(nimble=TRUE)
 
 divert_to_nCompiler <- function(fun, replacements) {

@@ -1,4 +1,4 @@
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 
 test_that("nClass constructor works", {

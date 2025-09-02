@@ -3,7 +3,7 @@
 ## The real tests will be running nimble's test suite.
 
 library(nimble)
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 
 test_that("compileNimble bridge works for simple nimbleFunction (RC function)",{

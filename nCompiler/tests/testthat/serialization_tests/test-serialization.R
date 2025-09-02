@@ -1,4 +1,4 @@
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 
 message("There will be a problem with serialization and pre-defined nClasses.\n",

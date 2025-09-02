@@ -1,4 +1,4 @@
-library(nCompiler)
+#library(nCompiler)
 
 message("uncompiled nClass Cpublic variables are not initialized well")
 message("Using inheritance for nClasses with serialization needs fixing.")

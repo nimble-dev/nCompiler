@@ -6,7 +6,7 @@
 ## enter each test as a list, with an informative name, NIMBLE expression to evaluate, vector of input dimensions, value of output dimension, and (if NIMBLE expression cannot be directly evaluated in R) the equivalent pure R expression whose result should match the NIMBLE result
 
 library(nimble)
-library(nCompiler)
+#library(nCompiler)
 
 divert_to_nCompiler <- function(fun, replacements) {
   diversion_env <- list2env(replacements, parent = environment(fun))

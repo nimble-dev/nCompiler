@@ -5,7 +5,7 @@
 # for different kinds of numeric objects
 
 library(testthat)
-library(nCompiler)
+#library(nCompiler)
 
 message("More test coverage of argument passing cases is needed. See comments.")
 # need cases of multiple function call layers
@@ -13,6 +13,22 @@ message("How does/should ref or blockRef work for scalars?")
 message("doing scalar = vector + scalar does not error out if the vector in length>1.")
 message("blockRef error trapping can be more involved -- using dims.")
 message("blockRef cannot cross between scalar types")
+
+# This is a workaround to pkg_name::var.
+# This is necessary because on GitHub Actions for testing, we use
+# `setup-r-dependencies`. This **aggressively** checks **all** directories
+# in the package structure and identifies **all** pkg::var code
+# and then attempts to install a package called "pkg".
+# Here we are dynamically generating packages, e.g. nc1Package,
+# and then checking that they work. So we use access_dynamic_package,
+# which internally uses get(), to avoid the `::` syntax.
+access_dynamic_package <- function(pkg_name, var) {
+  if (!isNamespaceLoaded(pkg_name)) {
+    stop(paste("Dynamic package", pkg_name, "is not loaded"))
+  }
+  ns <- asNamespace(pkg_name)
+  get(var, envir = ns, inherits = FALSE)
+}
 
 # compiled and uncompiled 1D by copy
 # A lot of this is tested elsewhere, so here it is not thorough
@@ -84,8 +100,8 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  test_foo(testpackage::foo)
-  test_foo(testpackage::foo)
+  test_foo(access_dynamic_package("testpackage", "foo"))
+  test_foo(access_dynamic_package("testpackage", "foo"))
 })
 
 test_that("pass 1D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
@@ -140,7 +156,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  Cobj <- testpackage::nc1$new()
+  Cobj <- access_dynamic_package("testpackage", "nc1")$new()
   test_foo(Cobj$foo)
   CppObj <- Cobj$private$CppObj
   test_foo(method(CppObj, "foo"))

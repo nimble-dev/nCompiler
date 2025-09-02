@@ -29,7 +29,7 @@
 # These tests also attempt to cover mixes of needing Eigen or not in one or the other part of
 # the dependency.
 
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 #nOptions(showCompilerOutput=TRUE)
 #nOptions(showCompilerOutput=FALSE)
