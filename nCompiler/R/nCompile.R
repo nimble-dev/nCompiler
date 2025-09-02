@@ -17,7 +17,7 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 # compileCpp_nCompiler calls sourceCpp_nCompiler, which calls Rcpp::sourceCpp
 # compileCpp_nCompiler arranges the results into a named list of the [[Rcpp::export]] functions
 # This will include the SEXPgenerator C++ functtion named  paste0("new_", name)
-# 
+#
 # nFunction
 # Each unit that is an nFunction is passed to nCompile_nFunction to create C++ code
 # The nFunction already has an NFinternals with a name, uniqueName, and cpp_code_name
@@ -194,7 +194,7 @@ get_nCompile_types <- function(units) {
       ans[i] <- if(NFinternals(units[[i]])$compileInfo$callFromR)
                   'nF' else 'nF_noExport'
     } else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
-    else if(isNC(units[[i]])) 
+    else if(isNC(units[[i]]))
       stop(paste0("The #", i, " object to be compiled is an nClass object.\n",
                   "Only nClass generators (the class definition, not an object of the class) should be compiled."),
            call.=FALSE)
@@ -453,6 +453,7 @@ nCompile <- function(...,
   }
 }
 
+#' @export
 writePackage <- function(...,
                          pkgName,
                          dir = ".",

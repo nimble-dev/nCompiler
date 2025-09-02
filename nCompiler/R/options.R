@@ -1,4 +1,4 @@
-nCompilerUserNamespace <- as.environment(list(sessionSpecificDll = NULL)) 
+nCompilerUserNamespace <- as.environment(list(sessionSpecificDll = NULL))
 # new.env() here fails with: Error in as.environment(pos) : using 'as.environment(NULL)' is defunct when testing package loading during INSTALL
 
 updateDefaults <- function(defaults, control) {
@@ -39,11 +39,11 @@ updateDefaults <- function(defaults, control) {
       export = TRUE
     ),
     modifyPackageFiles = "no",
-    localDLL_isLoaded = FALSE, # if TRUE, the localDLL has been loaded.  This will be set TRUE after first compilation.
-    localDLLdir = "nCompLocalLibrary", # directory to be used from the working directory if localDLL needs to be locally built.
-    showLocalDLLoutput = FALSE,
+    # localDLL_isLoaded = FALSE, # if TRUE, the localDLL has been loaded.  This will be set TRUE after first compilation.
+    # localDLLdir = "nCompLocalLibrary", # directory to be used from the working directory if localDLL needs to be locally built.
+    # showLocalDLLoutput = FALSE,
     error_recover = FALSE, # if TRUE, attempt to recover into a browser() after errors caught by nComp's error trapping, similarly to options(error = recover)
-    pause_after_writing_files = FALSE, #if TRUE, enter browser() after generated code files have been written but before the C++ compiler has been called. 
+    pause_after_writing_files = FALSE, #if TRUE, enter browser() after generated code files have been written but before the C++ compiler has been called.
     verbose = FALSE,
     sourceCpp_verbose = FALSE,
     nimble = FALSE, ## ensure all backward compatibility
@@ -55,8 +55,8 @@ updateDefaults <- function(defaults, control) {
 #'
 #' Allow the user to set the value of a global _option_
 #' that affects the way in which nCompiler operates
-#' 
-#' @param x a character string holding an option name 
+#'
+#' @param x a character string holding an option name
 #' @param value the new value of the option
 #' @param listName an optional character string with the name of a list in which to find \code{x}
 #' @export
@@ -77,8 +77,8 @@ set_nOption <- function(x, value, listName = NULL) {
 #'
 #' Allow the user to get the value of a global _option_
 #' that affects the way in which nCompiler operates
-#' 
-#' @param x a character string holding an option name 
+#'
+#' @param x a character string holding an option name
 #' @export
 #' @return The value of the option.
 get_nOption <- function(x) {
@@ -116,5 +116,3 @@ nOptions <- function(...) {
   if(length(out) == 1) out <- out[[1]]
   if(invisibleReturn) return(invisible(out)) else return(out)
 }
-
-

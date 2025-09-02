@@ -18,6 +18,24 @@ message("add test for control$changeKeywords")
 # For C, one needs control of the exported R names, perhaps to be called compiledName and defaulting to name.
 # Return object of nCompile(package = TRUE) needs attention.
 
+
+# This is a workaround to pkg_name::var.
+# This is necessary because on GitHub Actions for testing, we use
+# `setup-r-dependencies`. This **aggressively** checks **all** directories
+# in the package structure and identifies **all** pkg::var code
+# and then attempts to install a package called "pkg".
+# Here we are dynamically generating packages, e.g. nc1Package,
+# and then checking that they work. So we use access_dynamic_package,
+# which internally uses get(), to avoid the `::` syntax.
+access_dynamic_package <- function(pkg_name, var) {
+  if (!isNamespaceLoaded(pkg_name)) {
+    stop(paste("Dynamic package", pkg_name, "is not loaded"))
+  }
+  ns <- asNamespace(pkg_name)
+  get(var, envir = ns, inherits = FALSE)
+}
+
+
 test_that("nCompile direct, package, and writePackage work with Eigen::Tensors", {
   add_vectors <- nFunction(
     fun = function(x = double(1),
@@ -41,7 +59,7 @@ test_that("nCompile direct, package, and writePackage work with Eigen::Tensors",
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  expect_equal(x1+x2, testpackage::add_vectors(x1, x2))
+  expect_equal(x1+x2, access_dynamic_package("testpackage", "add_vectors")(x1, x2)) # testpackage::add_vectors(x1, x2))
   pkgload::unload("testpackage")
 })
 
@@ -91,7 +109,7 @@ test_that("nCompile direct, package, and writePackage work with nClass interface
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::nc$new()
+  obj <- access_dynamic_package("testpackage", "nc")$new() #testpackage::nc$new()
   expect_equal(x1 + x2, obj$add_vectors(x1, x2))
   CppObj <- obj$private$CppObj
   expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
@@ -104,7 +122,7 @@ test_that("nCompile direct, package, and writePackage work with nClass interface
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  CppObj <- testpackage::nc()
+  CppObj <- access_dynamic_package("testpackage", "nc")() # testpackage::nc()
   expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
   obj <- to_full_interface(CppObj)
   expect_equal(x1 + x2, obj$add_vectors(x1, x2))
@@ -164,7 +182,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  expect_equal(testpackage::add.Scalars(2, 3), 5)
+  expect_equal(access_dynamic_package("testpackage", "add.Scalars")(2, 3), 5) #testpackage::add.Scalars(2, 3), 5)
   pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name, package = FALSE, returnList = TRUE)
@@ -179,7 +197,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  expect_equal(testpackage::add.Scalars_name(2, 3), 5)
+  expect_equal(access_dynamic_package("testpackage", "add.Scalars_name")(2, 3), 5) #testpackage::add.Scalars_name(2, 3), 5)
   pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_eName, package = FALSE, returnList = TRUE)
@@ -194,7 +212,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  expect_equal(testpackage::foo1(2, 3), 5)
+  expect_equal(access_dynamic_package("testpackage", "foo1")(2, 3), 5) #testpackage::foo1(2, 3), 5)
   pkgload::unload("testpackage")
 
   test <- nCompile(add.Scalars_name_eName, package = FALSE, returnList = TRUE)
@@ -209,7 +227,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  expect_equal(testpackage::foo2(2, 3), 5)
+  expect_equal(access_dynamic_package("testpackage", "foo2")(2, 3), 5) # testpackage::foo2(2, 3), 5)
   pkgload::unload("testpackage")
 })
 
@@ -310,7 +328,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::nc(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "nc")(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
   rm(obj, objf); gc(); pkgload::unload("testpackage")
 
@@ -323,7 +341,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::nc$new(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "nc")$new(); test_obj(obj)
   objC <- obj$private$CppObj; test_obj(objC)
   rm(obj, objC); gc()
 
@@ -361,7 +379,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::nc_name(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "nc_name")(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
   rm(obj, objf); gc(); pkgload::unload("testpackage")
 
@@ -374,7 +392,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::nc_name$new(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "nc_name")$new(); test_obj(obj)
   objC <- obj$private$CppObj; test_obj(objC)
   rm(obj, objC); gc(); pkgload::unload("testpackage")
 
@@ -413,7 +431,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::exnc1(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "exnc1")(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
   rm(obj, objf); gc(); pkgload::unload("testpackage")
 
@@ -426,7 +444,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::exnc1$new(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "exnc1")$new(); test_obj(obj)
   objC <- obj$private$CppObj; test_obj(objC)
   rm(obj, objC); gc(); pkgload::unload("testpackage")
 
@@ -464,7 +482,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::exnc2(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "exnc2")(); test_obj(obj)
   objf <- to_full_interface(obj); test_obj(objf)
   rm(obj, objf); gc(); pkgload::unload("testpackage")
 
@@ -477,7 +495,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, loadNamespace("testpackage"))
-  obj <- testpackage::exnc2$new(); test_obj(obj)
+  obj <- access_dynamic_package("testpackage", "exnc2")$new(); test_obj(obj)
   objC <- obj$private$CppObj; test_obj(objC)
   rm(obj, objC); gc(); pkgload::unload("testpackage")
 })

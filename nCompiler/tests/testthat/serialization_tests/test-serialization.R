@@ -19,6 +19,22 @@ message('Need to tetst interactions between serialization and nClass inheritance
 old_serialize_option <- get_nOption("serialize")
 set_nOption("serialize", TRUE)
 
+# This is a workaround to pkg_name::var.
+# This is necessary because on GitHub Actions for testing, we use
+# `setup-r-dependencies`. This **aggressively** checks **all** directories
+# in the package structure and identifies **all** pkg::var code
+# and then attempts to install a package called "pkg".
+# Here we are dynamically generating packages, e.g. nc1Package,
+# and then checking that they work. So we use access_dynamic_package,
+# which internally uses get(), to avoid the `::` syntax.
+access_dynamic_package <- function(pkg_name, var) {
+  if (!isNamespaceLoaded(pkg_name)) {
+    stop(paste("Dynamic package", pkg_name, "is not loaded"))
+  }
+  ns <- asNamespace(pkg_name)
+  get(var, envir = ns, inherits = FALSE)
+}
+
 in_new_R_session <- function(code,
                              pkgName,
                              lib,
@@ -39,7 +55,7 @@ in_new_R_session <- function(code,
       dir.create(outdir)
     }
   }
-  
+
   codefile <- file.path(outdir, "testing_code_.R")
   writeLines(deparse(code),
              con = codefile)
@@ -122,7 +138,7 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
 
   ## serialize and deserialize 1 object
   # build and test object
-  obj <- nc1Package::nc1()
+  obj <- access_dynamic_package("nc1Package", "nc1")()
   expect_true(nCompiler:::is.loadedObjectEnv(obj))
   expect_equal(method(obj, "Cfoo")(1.2), 2.2)
   value(obj, "C.v") <- 1.23
@@ -145,10 +161,10 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
   # done
 
   # serialize and deserialize 3 objects
-  obj2 <- nc1Package::nc1()
+  obj2 <- access_dynamic_package("nc1Package","nc1")()
   value(obj2, "C.v") <- -8.5
   value(obj2, "C.x") <- -100
-  obj3 <- nc1Package::nc1()
+  obj3 <- access_dynamic_package("nc1Package","nc1")()
   value(obj3, "C.x") <- 2134
   serialized_objlist <- nSerialize(list(obj, obj2, obj3))
   restored_objlist <- nUnserialize(serialized_objlist, "nc1Package") # alt mode of providing package
@@ -313,7 +329,7 @@ test_that("Basic serialization works (via writePackage, with full interface, for
 
   ## serialize and deserialize 1 object
   # build and test object
-  obj <- nc1PackageB::nc1$new()
+  obj <- access_dynamic_package("nc1PackageB", "nc1")$new() #nc1PackageB::nc1$new()
   expect_true(nCompiler:::is.loadedObjectEnv(obj$private$CppObj))
   expect_equal(obj$Cfoo(1.2), 2.2)
   obj$Cv <- 1.23
@@ -336,10 +352,10 @@ test_that("Basic serialization works (via writePackage, with full interface, for
   # done
 
   # serialize and deserialize 3 objects
-  obj2 <- nc1PackageB::nc1$new()
+  obj2 <- access_dynamic_package("nc1PackageB", "nc1")$new() # nc1PackageB::nc1$new()
   obj2$Cv <- -8.5
   obj2$Cx <- -100
-  obj3 <- nc1PackageB::nc1$new()
+  obj3 <- access_dynamic_package("nc1PackageB", "nc1")$new() # nc1PackageB::nc1$new()
   obj3$Cx <- 2134
   serialized_objlist <- nSerialize(list(obj, obj2, obj3))
   restored_objlist <- nUnserialize(serialized_objlist, "nc1PackageB") # alt mode of providing package
