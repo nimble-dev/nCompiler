@@ -121,7 +121,7 @@ nCompile_nClass <- function(NC,
   # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
   finalFun <- setup_nClass_environments(compiledFuns,
                                         newDLLenv,
-                                        nC_names = NC$classname,
+                                        #nC_names = NC$classname,
                                         R6interfaces = R6interface)
 
   if(length(finalFun) != 1)

@@ -1192,7 +1192,7 @@ inLabelAbstractTypesEnv(
   }
 )
 
-nCompiler:::inLabelAbstractTypesEnv(
+inLabelAbstractTypesEnv(
   Bracket <- function(code, symTab, auxEnv, handlingInfo) {
     # To-Do: Mark "drop" as a compile-time arg in the op entry.
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)

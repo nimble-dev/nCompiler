@@ -3,7 +3,7 @@
 ## tests of numeric, integer, logical, matrix and array
 
 library(nimble)
-library(nCompiler)
+#library(nCompiler)
 
 divert_to_nCompiler <- function(fun, replacements) {
   diversion_env <- list2env(replacements, parent = environment(fun))
@@ -25,9 +25,9 @@ test_coreRfeature_batch <- function(
   })
 }
 test_coreRfeature_batch_internal <-
-  divert_to_nCompiler(test_coreRfeature_batch_internal, list(compileNimble = nCompiler:::compileNimble))
+  divert_to_nCompiler(test_coreRfeature_batch_internal, list(compileNimble = `:::`("nCompiler", "compileNimble")))
 test_coreRfeature_internal <-
-  divert_to_nCompiler(test_coreRfeature_internal, list(compileNimble = nCompiler:::compileNimble))
+  divert_to_nCompiler(test_coreRfeature_internal, list(compileNimble = `:::`("nCompiler", "compileNimble")))
 ## Changes stop
 
 RwarnLevel <- options('warn')$warn

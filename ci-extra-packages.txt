@@ -1,0 +1,10 @@
+devtools
+gh
+nimble
+inline
+numDeriv
+pkgload
+withr
+callr
+rmarkdown
+testthat

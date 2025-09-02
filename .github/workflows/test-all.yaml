@@ -1,0 +1,121 @@
+name: Run all tests
+# Trying to use r2u container, thanks to Dirk at https://dirk.eddelbuettel.com/blog/2023/07/23/
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'Run all tests'
+        required: true
+        default: 'yes'
+      run_tensorOps:
+        description: 'Run tensorOps tests'
+        required: false
+        default: 'yes'
+
+jobs:
+  test-nCompile:
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:latest
+    if: github.event.inputs.run_tests == 'yes'
+    steps:
+      - uses: actions/checkout@v3
+      - name: SessionInfo
+        run: R -q -e 'sessionInfo()'
+      - name: Package Dependencies
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+      - name: Install inline
+        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+      - name: Build Package
+        run: |
+            R CMD build nCompiler
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  test-nClass:
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:latest
+    if: github.event.inputs.run_tests == 'yes'
+    steps:
+      - uses: actions/checkout@v3
+      - name: SessionInfo
+        run: R -q -e 'sessionInfo()'
+      #- name: System Dependencies
+      #  # can be used to install e.g. cmake or other build dependencies
+      #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
+      - name: Package Dependencies
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+      - name: Install inline
+        run: R -q -e 'remotes::install_cran("inline")'
+      - name: Build Package
+        run: |
+            R CMD build nCompiler
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  test-math:
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:latest
+    if: github.event.inputs.run_tests == 'yes'
+    steps:
+      - uses: actions/checkout@v3
+      - name: SessionInfo
+        run: R -q -e 'sessionInfo()'
+      #- name: System Dependencies
+      #  # can be used to install e.g. cmake or other build dependencies
+      #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
+      - name: Package Dependencies
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+      - name: Install inline
+        run: R -q -e 'remotes::install_cran("inline")'
+      - name: Build Package
+        run: |
+            R CMD build nCompiler
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  test-tensorOps:
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:latest
+    if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_tensorOps == 'yes'
+    steps:
+      - uses: actions/checkout@v3
+      - name: SessionInfo
+        run: R -q -e 'sessionInfo()'
+      #- name: System Dependencies
+      #  # can be used to install e.g. cmake or other build dependencies
+      #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
+      - name: Package Dependencies
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+      - name: Install inline
+        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+      - name: Build Package
+        run: |
+            R CMD build nCompiler
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "summary")
+        shell: Rscript {0}

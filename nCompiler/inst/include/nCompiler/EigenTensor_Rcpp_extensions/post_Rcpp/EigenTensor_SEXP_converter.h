@@ -41,7 +41,7 @@ class nCompiler_EigenRef_SEXP_converter {
   typedef typename Eigen::array<Index, nInd> IndexArray;
   nCompiler_EigenRef_SEXP_converter(SEXP Sx) :
     RxList_(Sx) {
-    Rprintf("hello to a tensor ref\n");
+    // Rprintf("hello to a tensor ref\n");
     if(!(RxList_.isUsable()))
       Rcpp::stop("Problem: List was not provided for a ref arg.\n");
     Rcpp::List RxList(RxList_);
@@ -68,7 +68,7 @@ class nCompiler_EigenRef_SEXP_converter {
   operator EigenTensorRefType() {
     //    Rcpp::CharacterVector SobjName = SxList[0];
     //    Rcpp::Environment Renv(SxList[1]);
-    Rprintf("Doing the implicit type conversion operator\n");
+//    Rprintf("Doing the implicit type conversion operator\n");
     SEXP Sobj = PROTECT(Renv.get(objStr)); // equiv to Renv[ <1st arg> ]
     if(Sobj == R_NilValue) {
       Rcpp::stop("Problem: Could not obtain object for a ref arg.\n");
@@ -79,7 +79,7 @@ class nCompiler_EigenRef_SEXP_converter {
     return xCopy; // compiler should use copy elision
   }
   ~nCompiler_EigenRef_SEXP_converter() {
-    Rprintf("goodbye to a tensor ref\n");
+//    Rprintf("goodbye to a tensor ref\n");
     SEXP Sputback = PROTECT(Rcpp::wrap(xCopy));
     Renv.assign(objStr,  Sputback);
     UNPROTECT(1);
@@ -202,7 +202,7 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
     SnextIndex = PROTECT(CDDR(Sexpr)); // See explanation above of CAR, CADR, etc.
   }
   for(int i = 0; i < nDim; ++i) {
-    std::cout<<"i = "<<i<<std::endl;
+   // std::cout<<"i = "<<i<<std::endl;
     if(!useSizeArray) {
       Sind = PROTECT(CAR(SnextIndex));
       if(Rf_isLanguage(Sind)) { // should be `:`(start, end)
@@ -222,7 +222,7 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
           PRINTF("Problem: Last index in a range is too large.  Using size of object instead.\n");
           last = sizeArray[i] - 1;
         }
-        PRINTF("first last\n");
+        // PRINTF("first last\n");
         indexBlockArray[i] = b__(first, last);
         UNPROTECT(3);
       } else { // index entry is a number, a variable, or a blank.
@@ -231,7 +231,7 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
           isBlank = PRINTNAME(Sind) == R_BlankString;
         }
         if(isBlank) {
-          PRINTF("blank\n");
+        //  PRINTF("blank\n");
           indexBlockArray[i] = b__(0, sizeArray[i]-1);
         } else {
           indexBlockArray[i] = b__( SEXP_eval_to_single_int(Sind, Senv) );
@@ -311,11 +311,11 @@ class nCompiler_StridedTensorMap_SEXP_converter {
     indexBlockArray(SEXP_2_indexBlockArray(Sexpr, Senv, indexArray)),
     xMap(Rdataptr<Scalar>::PTR(Sdata), indexArray, indexBlockArray )
       {
-        std::cout<<"hello to a StridedTensorMap"<<std::endl;
+  //      std::cout<<"hello to a StridedTensorMap"<<std::endl;
   }
   operator StridedTensorMapType() {
     //xMap = Eigen::MakeStridedTensorMap<2>::make(ans, indexBlockArray);
-    std::cout<<"handing my StridedTensorMap for function input"<<std::endl;
+  //  std::cout<<"handling my StridedTensorMap for function input"<<std::endl;
     return xMap; // compiler should use copy elision
   }
   ~nCompiler_StridedTensorMap_SEXP_converter() {

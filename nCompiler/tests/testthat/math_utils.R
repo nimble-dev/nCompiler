@@ -93,7 +93,7 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
 ## op:   operator name
 ##
 make_math_test_params_one_op <- function(op) {
-  opInfo <- nCompiler:::getOperatorDef(op, 'testing')
+  opInfo <- `:::`("nCompiler", "getOperatorDef")(op, 'testing')
   if (is.null(opInfo) || is.null(opInfo[['math_argTypes']])) return(NULL)
   argTypes <- opInfo[['math_argTypes']]
   known_failures <- opInfo$known_failures

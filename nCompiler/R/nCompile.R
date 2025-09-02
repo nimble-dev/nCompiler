@@ -17,7 +17,7 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 # compileCpp_nCompiler calls sourceCpp_nCompiler, which calls Rcpp::sourceCpp
 # compileCpp_nCompiler arranges the results into a named list of the [[Rcpp::export]] functions
 # This will include the SEXPgenerator C++ functtion named  paste0("new_", name)
-# 
+#
 # nFunction
 # Each unit that is an nFunction is passed to nCompile_nFunction to create C++ code
 # The nFunction already has an NFinternals with a name, uniqueName, and cpp_code_name
@@ -194,7 +194,7 @@ get_nCompile_types <- function(units) {
       ans[i] <- if(NFinternals(units[[i]])$compileInfo$callFromR)
                   'nF' else 'nF_noExport'
     } else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
-    else if(isNC(units[[i]])) 
+    else if(isNC(units[[i]]))
       stop(paste0("The #", i, " object to be compiled is an nClass object.\n",
                   "Only nClass generators (the class definition, not an object of the class) should be compiled."),
            call.=FALSE)
@@ -258,6 +258,8 @@ nCompile <- function(...,
                      package = FALSE,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   #(1) Put together inputs from ...
+  # cat("starting nCompile\n")
+
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
   if(is.null(names(origList)))
@@ -352,6 +354,7 @@ nCompile <- function(...,
   # after packing up control list (e.g. from interfaces)
 
   # (2) Create cppDefs
+  # cat("making cppDefs\n")
   cppDefs_info <- createCppDefsInfo(units, unitTypes, control, compileInfos)
   cppDefs <- cppDefs_info$cppDefs
   if(isTRUE(control$return_cppDefs)) return(cppDefs)
@@ -379,6 +382,7 @@ nCompile <- function(...,
 
   if(!is.null(from_writePackage)) {
     # .writePackage content was provided, so we were called from writePackage
+    # cat("doing return(writePackage(...))\n")
     return(
       writePackage(pkgName = from_writePackage$pkgName,
                     dir = dir,
@@ -394,6 +398,7 @@ nCompile <- function(...,
 
   # From here on, we were not called from writePackage
   if(package) {
+    # cat("calling writePackage for package mode\n")
     # user requests nCompile use packaging mechanism
     temppkgname <- basename(tempfile("TEMPPKG", ""))
     writePackage(pkgName = temppkgname,
@@ -407,13 +412,15 @@ nCompile <- function(...,
     lib <- file.path(tempdir(), "templib")
     if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
     pkgDir <- file.path(dir, temppkgname)
+    # cat("about to try devtools::install\n")
     ans <- try({
-      withr::with_libpaths(lib, {
+      withr::with_libpaths(lib, action="prefix", code = {
         devtools::install(pkgDir,
                           quick = TRUE,
                           quiet = !isTRUE(get_nOption("showCompilerOutput")),
                           upgrade = "never") # Make quiet follow showCompilerOutput
-        withr::with_libpaths(lib, loadNamespace(temppkgname))
+        withr::with_libpaths(lib, action="prefix",
+                            code = loadNamespace(temppkgname))
       })
       pkgEnv <- getNamespace(temppkgname)
       ans_ <- lapply(returnNames, function(x) {
@@ -424,6 +431,7 @@ nCompile <- function(...,
       names(ans_) <- returnNames
       ans_
     })
+    # cat("done trying devtools::install\n")
     if(inherits(ans, "try-error")) {
       stop("It looks like the package code was generated without stopping,\n",
            "but there was an error installing or loading it.\n",
@@ -436,6 +444,7 @@ nCompile <- function(...,
   } else {
     # We will not use packaging mechanism
     RcppPacket_list <- cppDefsList_2_RcppPacketList(cppDefs)
+    # cat("doing nCompile_finish_nonpackage\n")
     return(
       nCompile_finish_nonpackage(units = units,
                                  cppDefs = cppDefs,
@@ -453,6 +462,7 @@ nCompile <- function(...,
   }
 }
 
+#' @export
 writePackage <- function(...,
                          pkgName,
                          dir = ".",
@@ -462,6 +472,7 @@ writePackage <- function(...,
                          modify = get_nOption("modifyPackageFiles"),
                          memberData = list(),
                          roxygen = list()) {
+  # cat("starting writePackage\n")
   require(Rcpp)
   pkgDir <- file.path(dir, pkgName)
   modify <- match.arg(modify, c("no", "add", "clear"))
@@ -484,6 +495,7 @@ writePackage <- function(...,
   if(is.null(content)) { # this means we are being called directly, not from nCompile
     # We call nCompile with control$.writePackage containing arguments needed for
     #  nCompile to recurse back to writePackage with control$prepared_content filled in.
+    # cat("calling nCompile\n")
     res <- nCompile(...,
               dir = dir,
               env = parent.frame(), # will not be used
@@ -534,6 +546,7 @@ writePackage <- function(...,
   codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
   datDir <- file.path(pkgDir, "data")
 #
+  # cat("starting writePackage writing steps\n")
   WP_check_unit_types(units, unitTypes)
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
   full_interfaces <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
@@ -561,9 +574,11 @@ writePackage <- function(...,
   ##   # message("Deleting ", compiledObjs)
   ##   unlink(compiledObjs)
   ## }
+  # cat("calling compileAttributs\n")
   compileAttributes(pkgdir = pkgDir)
   update_compileAttributes_for_argPassing(Rdir,
                                           units, unitTypes, returnNames)
+  # cat("finished writePackage\n")
   invisible(NULL)
 }
 
@@ -864,14 +879,14 @@ WP_initializePkg <- function(pkgName,
 WP_writeCpp <- function(RcppPacket_list, srcDir, codeDir) {
   for (i in seq_along(RcppPacket_list)) {
     ## We write the code once for the package's DLL...
-    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
+    writeCpp_nCompiler(RcppPacket_list[[i]],
                                     dir = srcDir)
     ## ... and again for other packages that need to
     ## compile against this package's source code.
     ## Otherwise, C++ source code is not present in an installed package.
     ## Compiling against source code is necessary because of
     ## heavy use of C++ templates.
-    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
+    writeCpp_nCompiler(RcppPacket_list[[i]],
                                    dir = codeDir)
   }
 }
@@ -997,6 +1012,9 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "nCompiler", "RcppEigen",
                                          #"RcppEigenAD",
                                          "RcppParallel", "Rcereal", sep = ",")
+    # On Linux RcppParallel might need to be in both LinkingTo and Imports. 
+    # Having it in Imports allows the symbols to be found when the on-the-fly package is loaded.
+    # DESCRIPTION[1, "Imports"] <- paste(DESCRIPTION[1, "Imports"], "RcppParallel", sep = ",")
     # DESCRIPTION$Encoding <- "UTF-8"
     ## It is conceivable that nCompLocal will need to be added to this at some point.
     ## If so, it will need to be installed in R's main library, not some local location.

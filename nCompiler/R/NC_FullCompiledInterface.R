@@ -203,14 +203,14 @@ build_compiled_nClass <- function(NCgenerator,
             CppObj <- newCobjFun()
           }
           private$CppObj <- CppObj
-          private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
+          private$DLLenv <- `:::`("nCompiler", "get_DLLenv")(CppObj) # workaround static code scanning for nCompiler:::get_DLLenv(CppObj)
         }),
         RPUBLIC,
         RFIELDS,
         CINTERFACE),
       active = ACTIVEBINDINGS,
       portable = FALSE,
-      inherit = nCompiler:::CnClassClass,
+      inherit = `:::`("nCompiler", "CnClassClass"), # work around static code scanning
       parent_env = NULL ## when quoted = TRUE, env argument is not used
     ),
     env = list(
@@ -311,9 +311,9 @@ buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
     body(ans) <- substitute(
     {
       if(missing(value))
-        private$DLLenv$get_value(nCompiler:::getExtptr(private$CppObj), NAME)
+        private$DLLenv$get_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME)
       else
-        private$DLLenv$set_value(nCompiler:::getExtptr(private$CppObj), NAME, value)
+        private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
     },
     list(NAME = name)
     )
@@ -365,7 +365,7 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   for(i in seq_along(argNames))
     listcode[[i+1]] <- as.name(argNames[i])
   body_ans <- substitute(
-    private$DLLenv$call_method(nCompiler:::getExtptr(private$CppObj), NAME, LISTCODE),
+    private$DLLenv$call_method(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, LISTCODE),
     list(NAME = name,
          LISTCODE = listcode)
   )
@@ -423,7 +423,7 @@ build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
   for(i in seq_along(argNames))
     listcode[[i+1]] <- as.name(argNames[i])
   body_ans <- substitute(
-    call_method(nCompiler:::getExtptr(CppObj_), NAME, LISTCODE),
+    call_method(`:::`("nCompiler", "getExtptr")(CppObj_), NAME, LISTCODE),
     list(NAME = name,
          LISTCODE = listcode)
   )

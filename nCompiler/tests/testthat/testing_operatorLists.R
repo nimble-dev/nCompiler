@@ -25,7 +25,7 @@
 ##################
 
 ## math only
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('min', 'max', 'all', 'any', 'length'),
   'testing',
   val = list(
@@ -38,7 +38,7 @@ nCompiler:::updateOperatorDef(
   )
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
@@ -107,33 +107,32 @@ input_gen_funs_p1inf <- function(arg_size, type) {
          )
 }
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('log1p'), 'testing', 'input_gen_funs',
   input_gen_funs_m1inf
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('log', 'sqrt'), 'testing', 'input_gen_funs',
   input_gen_funs_zinf
 )
 
-
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('cloglog', 'logit', 'probit'), 'testing', 'input_gen_funs',
   input_gen_funs_zp1
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('asin', 'acos', 'atanh'), 'testing', 'input_gen_funs',
   input_gen_funs_m1p1
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('acosh'), 'testing', 'input_gen_funs',
   input_gen_funs_p1inf
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   'squaredNorm',
   'testing',
   val = list(
@@ -145,7 +144,7 @@ nCompiler:::updateOperatorDef(
   )
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('mean', 'prod', 'squaredNorm', 'sum'),
   'testing', 'reductionOp', TRUE
 )
@@ -175,7 +174,7 @@ binaryOp_argTypes <- c(
                       rhs = c('numericScalar', 'integerScalar', 'logicalScalar'))
 )
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '+', '/', '*'),
   'testing',
   val = list(
@@ -188,7 +187,7 @@ nCompiler:::updateOperatorDef(
 ## will be used, but for arg2 it will use the custom input generation function
 ## we provide.
 ## See make_input() and argType_2_input() in testing_utils.R.
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('/'), 'testing', 'input_gen_funs',
   list(
     arg1 = NULL,
@@ -204,7 +203,7 @@ nCompiler:::updateOperatorDef(
 )
 
 ## add AD_argTypes for a few operators
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('+', '/', '*'),
   'testing', 'AD_argTypes',
   list(c('numericScalar', 'numericScalar'),
@@ -214,24 +213,24 @@ nCompiler:::updateOperatorDef(
 )
 
 ## add descriptive and safe names for gold-file names
-nCompiler:::updateOperatorDef('+', 'testing', 'alpha_name', 'plus')
-nCompiler:::updateOperatorDef('==', 'testing', 'alpha_name', 'eq')
-nCompiler:::updateOperatorDef('!=', 'testing', 'alpha_name', 'neq')
-nCompiler:::updateOperatorDef('<=', 'testing', 'alpha_name', 'le')
-nCompiler:::updateOperatorDef('>=', 'testing', 'alpha_name', 'ge')
-nCompiler:::updateOperatorDef('<', 'testing', 'alpha_name', 'lt')
-nCompiler:::updateOperatorDef('>', 'testing', 'alpha_name', 'gt')
-nCompiler:::updateOperatorDef('&', 'testing', 'alpha_name', 'and')
-nCompiler:::updateOperatorDef('|', 'testing', 'alpha_name', 'or')
-nCompiler:::updateOperatorDef('/', 'testing', 'alpha_name', 'div')
-nCompiler:::updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
+`:::`("nCompiler", "updateOperatorDef")('+', 'testing', 'alpha_name', 'plus')
+`:::`("nCompiler", "updateOperatorDef")('==', 'testing', 'alpha_name', 'eq')
+`:::`("nCompiler", "updateOperatorDef")('!=', 'testing', 'alpha_name', 'neq')
+`:::`("nCompiler", "updateOperatorDef")('<=', 'testing', 'alpha_name', 'le')
+`:::`("nCompiler", "updateOperatorDef")('>=', 'testing', 'alpha_name', 'ge')
+`:::`("nCompiler", "updateOperatorDef")('<', 'testing', 'alpha_name', 'lt')
+`:::`("nCompiler", "updateOperatorDef")('>', 'testing', 'alpha_name', 'gt')
+`:::`("nCompiler", "updateOperatorDef")('&', 'testing', 'alpha_name', 'and')
+`:::`("nCompiler", "updateOperatorDef")('|', 'testing', 'alpha_name', 'or')
+`:::`("nCompiler", "updateOperatorDef")('/', 'testing', 'alpha_name', 'div')
+`:::`("nCompiler", "updateOperatorDef")('*', 'testing', 'alpha_name', 'mult')
 
 #############################
 ## unary and binary operators
 #############################
 
 ## the *_argTypes include both the unary and binary cases
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('-'),
   'testing',
   val = list(
@@ -254,7 +253,7 @@ nCompiler:::updateOperatorDef(
 ## pow (rhs scalar)
 ###################
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   '^',
   'testing',
   val = list(
@@ -279,7 +278,7 @@ nCompiler:::updateOperatorDef(
 ## %% (rhs scalar when lhs Eigen::Tensor)
 #########################################
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   '%%',
   'testing',
   val = list(
@@ -318,7 +317,7 @@ nCompiler:::updateOperatorDef(
 ## matrix mult
 ##############
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   '%*%',
   'testing',
   val = list(matrixMultOp = TRUE, alpha_name = 'matmul')
@@ -328,7 +327,7 @@ nCompiler:::updateOperatorDef(
 ## distribution functions
 #########################
 
-nCompiler:::updateOperatorDef(
+`:::`("nCompiler", "updateOperatorDef")(
   c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
     'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
   'testing',

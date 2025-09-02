@@ -1,0 +1,269 @@
+# .github/workflows/test-suites.yml
+name: Test Suites
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_and_cache:
+        description: 'Run and cache installation steps only'
+        required: true
+        default: 'no'
+      run_tests:
+        description: 'Run all tests (assuming [or after] cache is up-to-date)'
+        required: true
+        default: 'yes'
+
+# env:
+#   RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
+#   R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
+#   R_CALLR_ENV: full
+
+jobs:
+  install-cache:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.install_and_cache == 'yes'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      # - name: Cache R packages
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ${{ env.R_LIBS_USER }}
+      #     key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+      #     restore-keys: ${{ runner.os }}-r-
+
+# setup-r-dependencies gave problems so we are doing the recommended packages manually
+      # - name: Install system dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y \
+      #     build-essential \
+      #     libcurl4-openssl-dev \
+      #     libssl-dev \
+      #     libgit2-dev \
+      #     libxml2-dev \
+      #     libfontconfig1-dev \
+      #     libfreetype6-dev \
+      #     libharfbuzz-dev \
+      #     libfribidi-dev \
+      #     libpng-dev \
+      #     libjpeg-dev \
+      #     libtiff5-dev \
+      #     libglib2.0-dev \
+      #     libpango1.0-dev \
+      #     libicu-dev
+
+      - name: Install R dependencies
+        run: |
+          Rscript -e 'install.packages("remotes")'
+          Rscript -e 'remotes::install_deps("nCompiler", dependencies = TRUE)'
+
+      - name: Install extra packages
+        run: |
+          Rscript -e '
+          pkgs <- readLines("ci-extra-packages.txt")
+          new_pkgs <- pkgs[!pkgs %in% installed.packages()[,"Package"]]
+          if(length(new_pkgs)) {
+          install.packages(new_pkgs)
+          stopifnot(all(pkgs %in% rownames(installed.packages())))
+          }
+          '
+
+  # Job 1: nCompile and specific operator tests
+  test-nCompile:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_tests == 'yes'
+    name: nCompile and specific operator tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Ensure R binary path is first in PATH
+        run: echo "$(Rscript -e 'cat(R.home())')" >> $GITHUB_PATH
+
+      # - name: Add R to PATH
+      #   run: |
+      #     echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            cat(Sys.which("R"), "\n")
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
+      - name: Debug R
+        run: |
+          Rscript -e 'cat("R.home():", R.home(), "\nR.home(bin):", R.home("bin"), "\n")'
+          echo "PATH=$PATH"
+          which R
+          R --version
+
+      - name: Install package
+        run: R CMD INSTALL --install-tests nCompiler
+
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          library(devtools)
+          library(withr)
+          library(callr)
+          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  # Job 2: nClass, types and serialization tests
+  test-nClass:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_tests == 'yes'
+    name: nClass, types and serialization tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Add R to PATH
+        run: |
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            cat(Sys.which("R"), "\n")
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
+      - name: Install package
+        run: R CMD INSTALL --install-tests nCompiler
+
+      - name: Run nClass, types and serialization tests
+        run: |
+          library(nCompiler)
+          library(devtools)
+          library(withr)
+          library(callr)
+          testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  # Job 3: Math tests
+  test-math:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_tests == 'yes'
+    name: Math Tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Add R to PATH
+        run: |
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            cat(Sys.which("R"), "\n")
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
+      - name: Install package
+        run: R CMD INSTALL --install-tests nCompiler
+
+      - name: Run Math tests
+        run: |
+          library(nCompiler)
+          library(devtools)
+          library(withr)
+          library(callr)
+          testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "summary")
+        shell: Rscript {0}
+
+  # Job 4: tensorOps
+  test-tensorOps:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.run_tests == 'yes'
+    name: TensorOps Tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Add R to PATH
+        run: |
+          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            cat(Sys.which("R"), "\n")
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
+      - name: Install package
+        run: R CMD INSTALL --install-tests nCompiler
+
+      - name: Run TensorOps tests
+        run: |
+          library(nCompiler)
+          library(devtools)
+          library(withr)
+          library(callr)
+          testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "summary")
+        shell: Rscript {0}

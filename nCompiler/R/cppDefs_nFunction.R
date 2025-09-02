@@ -8,7 +8,7 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB",
+                        "// #define NCOMPILER_USES_TBB",
                         "#define NCOMPILER_USES_NLIST",
                         "#define USES_NCOMPILER")
   ## handler nList in labelAbstractTypes does record in auxEnv if an
@@ -19,7 +19,7 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
-                          "#define NCOMPILER_USES_TBB",
+                          "// #define NCOMPILER_USES_TBB",
                           "#define NCOMPILER_USES_NLIST",
                           "#define USES_NCOMPILER")
   cppDef$Hincludes <- c(cppDef$Hincludes)#,

@@ -15,7 +15,9 @@ class shared_ptr_holder_base {
     return(0);
   };
   virtual shared_ptr_holder_base* make_shared_ptr_holder()=0;
-  virtual ~shared_ptr_holder_base() {std::cout<<"destructing shared_ptr_holder_base"<<std::endl;};
+  virtual ~shared_ptr_holder_base() {
+   // std::cout<<"destructing shared_ptr_holder_base"<<std::endl;
+  };
   virtual SEXP return_this_nCompiler_object()=0;
 #ifdef NCOMPILER_USES_CEREAL
   template<class Archive>
@@ -43,11 +45,11 @@ class shared_ptr_holder: public shared_ptr_holder_base {
   shared_ptr_holder(std::shared_ptr<T> &sp_other) {sp_=  sp_other;}
   ~shared_ptr_holder() {
 #ifdef SHOW_SHARED_PTR_DESTRUCTORS
-    std::cout<<"Destroying shared_ptr_holder.";
+//    std::cout<<"Destroying shared_ptr_holder.";
     if(sp_.unique()) {
-      std::cout<<" This should destroy the underlying nCompiler object."<<std::endl;
+//      std::cout<<" This should destroy the underlying nCompiler object."<<std::endl;
     } else {
-      std::cout<<" This won't yet destroy the underlying nCompiler object. It is not unique."<<std::endl;
+//      std::cout<<" This won't yet destroy the underlying nCompiler object. It is not unique."<<std::endl;
     }
 #endif
   }
@@ -60,7 +62,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
 };
 
 inline void finalize_shared_ptr_holder(SEXP Xptr) {
-  std::cout<<"Entering finalize_shared_ptr_holder"<<std::endl;
+//  std::cout<<"Entering finalize_shared_ptr_holder"<<std::endl;
   shared_ptr_holder_base *sph = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr));
   if(sph) delete sph;
 }

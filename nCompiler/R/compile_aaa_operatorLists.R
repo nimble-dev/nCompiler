@@ -14,7 +14,7 @@ returnTypeCodes <- list(
 
 returnTypeString2Code <- function(returnTypeString) {
   if(is.character(returnTypeString))
-    do.call('switch', c(list("double"), nCompiler:::returnTypeCodes))
+    do.call('switch', c(list("double"), returnTypeCodes))
   else
     returnTypeString
 }
@@ -364,21 +364,21 @@ assignOperatorDef(
   )
 )
 
-nCompiler:::assignOperatorDef(
+assignOperatorDef(
   c('IndexByScalar'),
   list(
     cppOutput = list(handler = 'IndexByScalar')
   )
 )
 
-nCompiler:::assignOperatorDef(
+assignOperatorDef(
   c('IndexByVec'),
   list(
     cppOutput = list(handler = 'IndexByVec')
   )
 )
 
-nCompiler:::assignOperatorDef(
+assignOperatorDef(
   c('IndexBySeqs'),
   list(
     cppOutput = list(handler = 'IndexBySeqs')

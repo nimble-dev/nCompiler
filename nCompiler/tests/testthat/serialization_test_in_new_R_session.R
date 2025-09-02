@@ -1,4 +1,4 @@
-library(nCompiler)
+#library(nCompiler)
 library(testthat)
 args <- R.utils::cmdArgs()
 if(!is.null(args$pkgName))

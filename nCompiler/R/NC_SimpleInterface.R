@@ -6,7 +6,7 @@
 method <- function(obj, name) {
   if(inherits(obj, "CnClass"))
     obj <- obj$private$CppObj
-  CnCenv <- nCompiler:::get_CnCenv(obj)
+  CnCenv <- get_CnCenv(obj)
   ans <- CnCenv[[name]]
   environment(ans) <- new.env(parent = environment(ans))
   environment(ans)$CppObj_ <- obj
@@ -33,8 +33,8 @@ method <- function(obj, name) {
 value <- function(obj, name) {
   if(inherits(obj, "CnClass"))
     obj <- obj$private$CppObj
-  DLLenv <- nCompiler:::get_DLLenv(obj)
-  extptr <- nCompiler:::getExtptr(obj)
+  DLLenv <- get_DLLenv(obj)
+  extptr <- getExtptr(obj)
   DLLenv$get_value(extptr, name)
 
   ## if(is.null(getExtptr(obj)))
@@ -46,8 +46,8 @@ value <- function(obj, name) {
 `value<-` <- function(obj, name, value) {
   if(inherits(obj, "CnClass"))
     obj <- obj$private$CppObj
-  DLLenv <- nCompiler:::get_DLLenv(obj)
-  extptr <- nCompiler:::getExtptr(obj)
+  DLLenv <- get_DLLenv(obj)
+  extptr <- getExtptr(obj)
   DLLenv$set_value(extptr, name, value)
   obj
   ## if(is.null(getExtptr(obj)))
