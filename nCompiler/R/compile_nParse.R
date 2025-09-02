@@ -15,27 +15,29 @@ embedListInRbracket <- function(code) {
   as.call(c(list(as.name('{')), code))
 }
 
-splitCompileTimeArgs <- function(call, template,
-                                 compileArgs = character()) {
-  # call should be R code, e.g. from quote() or parse()
-  if(!missing(template))
-    call <- match.call(template, call)
-  processedArgs <- list()
-  for(compileArg in compileArgs) {
-    processedArg <- NULL
-    if(!is.null(call[[compileArg]])) {
-      processedArg <- call[[compileArg]]
-    } else if(!nCompiler:::is.blank(formals(template)[[compileArg]])) {
-      processedArg <- formals(template)[[compileArg]]
-    }
-    if(!is.null(processedArg)) {
-      processedArgs[compileArg] <- list(processedArg)
-      call[compileArg] <- list(NULL)
-    }
-  }
-  list(code = call,
-       compileArgs = processedArgs)
-}
+## This has been entirely moved to compile_normalizeCalls
+## because then we can use user-defined matchDef (template) and compileArgs.
+# splitCompileTimeArgs <- function(call, template,
+#                                  compileArgs = character()) {
+#   # call should be R code, e.g. from quote() or parse()
+#   if(!missing(template))
+#     call <- match.call(template, call)
+#   processedArgs <- list()
+#   for(compileArg in compileArgs) {
+#     processedArg <- NULL
+#     if(!is.null(call[[compileArg]])) {
+#       processedArg <- call[[compileArg]]
+#     } else if(!nCompiler:::is.blank(formals(template)[[compileArg]])) {
+#       processedArg <- formals(template)[[compileArg]]
+#     }
+#     if(!is.null(processedArg)) {
+#       processedArgs[compileArg] <- list(processedArg)
+#       call[compileArg] <- list(NULL)
+#     }
+#   }
+#   list(code = call,
+#        compileArgs = processedArgs)
+# }
 
 ## build exprClasses from an R parse tree.
 ## caller and callerArgID are for recursion, not to be used on first entry
@@ -98,21 +100,18 @@ nParse <- function(code,
       code <- as.call(c(list(as.name('chainedCall')), as.list(code))) 
     }
     name <- as.character(code[[1]])
-    processedCompileArgs <- list()
-    opDef <- getOperatorDef(name)
-    # if(!is.null(opDefEnv)) {
-    #   opDef <- opDefEnv[[name]]
-      if(!is.null(opDef)) {
-        template <- opDef$matchDef
-        if(!is.null(template)) {
-          processedCall <- splitCompileTimeArgs(call=code,
-                                                template=template,
-                                                compileArgs=opDef$compileArgs)
-          code <- processedCall$code
-          processedCompileArgs <- processedCall$compileArgs
-        }
-      }
-    # }
+      # processedCompileArgs <- list()
+      # opDef <- getOperatorDef(name)
+      # if(!is.null(opDef)) {
+      #   template <- opDef$matchDef
+      #   if(!is.null(template)) {
+      #     processedCall <- splitCompileTimeArgs(call=code,
+      #                                           template=template,
+      #                                           compileArgs=opDef$compileArgs)
+      #     code <- processedCall$code
+      #     processedCompileArgs <- processedCall$compileArgs
+      #   }
+      # }
     isAssign <- name %in% c('<-','=','<<-')
     args <- vector('list', length = length(code)-1)
     ## build the object
@@ -125,8 +124,8 @@ nParse <- function(code,
                          args = args,
                          caller = caller,
                          callerArgID = callerArgID)
-    if(length(processedCompileArgs))
-      ans$aux$compileArgs <- processedCompileArgs
+      # if(length(processedCompileArgs))
+      #   ans$aux$compileArgs <- processedCompileArgs
     ## Ensure that bodies of for, if, while, switch, and run.time are
     ## in { expressions.
     ## Doing this here reduces special-case checking in later processing.

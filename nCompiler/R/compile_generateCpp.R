@@ -165,8 +165,10 @@ inGenCppEnv(
 
 inGenCppEnv(
   Generic_nFunction <- function(code, symTab) {
-    paste0(compile_generateCpp(code$args[[1]], symTab),
-           '(', paste0(unlist(lapply(code$args[-1],
+    innerCode <- code$args[['call']]
+    cpp_code_name <- code$aux$cpp_code_name
+    paste0(cpp_code_name,
+           '(', paste0(unlist(lapply(innerCode$args,
                                      compile_generateCpp,
                                      symTab,
                                      asArg = TRUE) ),
@@ -182,16 +184,14 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  chainedCall <- function(code, symTab) {
-    firstCall <- compile_generateCpp(code$args[[1]], symTab)
-    paste0(firstCall, 
-           '(',
-           paste0(unlist(lapply(code$args[-1],
-                                compile_generateCpp, 
-                                symTab, 
-                                asArg = TRUE) ),
-                  collapse = ', '), ')' 
-           )
+  ChainedCall <- function(code, symTab) {
+    paste0(compile_generateCpp(code$args[[1]], symTab),
+           '(', paste0(unlist(lapply(code$args[-1],
+                                     compile_generateCpp,
+                                     symTab,
+                                     asArg = TRUE) ),
+                       collapse = ', '),
+           ')' )
   }
 )
 
@@ -469,10 +469,19 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
   Literal <- function(code, symTab) {
-    paste0(code$aux$compileArgs$text, collapse = "\n")
-#    code$args[[1]]$name
+    # For cases that have been in code all the way through compilation,
+    # the text was removed as a compile-time argument as is in compileArgs$text.
+    # But there are also cases such as buildSEXPgenerator where cppLiteral is
+    # parsed but not compile-time args have not been separated (and must be string literals). Therefore we
+    # look for both situations here and just paste them together.
+    part1 <- character()
+    if(length(code$args) > 0) {
+      part1 <- code$args |> lapply(`[[`,'name') |> unlist() |> paste0(collapse="")
+    }
+    part2 <- paste0(code$aux$compileArgs$text, collapse = "\n")
+    paste0(part1, part2, collapse="")
   }
 )
 

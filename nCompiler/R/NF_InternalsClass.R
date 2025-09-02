@@ -15,7 +15,7 @@ NF_InternalsClass <- R6::R6Class(
     isMethod = FALSE,
     uniqueName = character(),
     cpp_code_name = character(),
-    template = NULL,
+    ## template = NULL, replaced with compileInfo$matchDef
     code = NULL,
     RcppPacket = NULL,
     Rwrapper = NULL,
@@ -97,7 +97,12 @@ NF_InternalsClass <- R6::R6Class(
       ##  Either a named "value" or a ... is in all types.
 
       ## not used until much later
-      self$template <- Rarguments_2_function(arguments, body = quote({})) ## generateTemplate()
+      if(is.null(self$compileInfo$opDef))
+        self$compileInfo$opDef <- list()
+      if(is.null(self$compileInfo$opDef$matchDef)) {
+        self$compileInfo$opDef$matchDef <- Rarguments_2_function(arguments, body = quote({}))
+      }
+      # self$template <- Rarguments_2_function(arguments, body = quote({})) ## generateTemplate()
       returnTypeInfo <- nf_extractReturnType(code)
       returnTypeDecl <- returnTypeInfo$returnType
       if(is.null(returnTypeDecl)) {

@@ -85,7 +85,7 @@ compile_normalizeCalls <- function(code,
     if(!is.null(opInfo)) {
       matchDef <- opInfo[["matchDef"]]
       if(!is.null(matchDef)) {
-        matched_code <- exprClass_put_args_in_order(matchDef, code)
+        matched_code <- exprClass_put_args_in_order(matchDef, code, opInfo$compileArgs)
         code <- replaceArgInCaller(code, matched_code)
       }
       handlingInfo <- opInfo[["normalizeCalls"]]
@@ -145,20 +145,23 @@ inNormalizeCallsEnv(
       nFunctionName <- code$name
       obj_internals <- code$aux$obj_internals
       code$aux$obj_internals <- NULL
-      matched_code <- exprClass_put_args_in_order(obj_internals$template, code)
+      opDef <- obj_internals$compileInfo$opDef
+      matched_code <- exprClass_put_args_in_order(def=opDef$matchDef, expr=code, compileArgs = opDef$compileArgs)
       code <- replaceArgInCaller(code, matched_code)
       ## Note that the string `NFCALL_` matches the operatorDef entry.
       ## Therefore the change-of-name here will automatically trigger use of
       ## the 'NFCALL_' operatorDef in later stages.
-      code$name <- 'NFCALL_'
+      newExpr <- wrapInExprClass(code, 'NFCALL_', "call")
+      # code$name <- 'NFCALL_'
       cpp_code_name <- obj_internals$cpp_code_name
-      fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
-                                   isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
-      fxnNameExpr$aux$obj_internals <- obj_internals
-      fxnNameExpr$aux$nFunctionName <- nFunctionName
+      # fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
+      #                             isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      newExpr$aux$obj_internals <- obj_internals
+      # newExpr$aux$nFunctionName <- nFunctionName
+      newExpr$aux$cpp_code_name <- cpp_code_name
       ## We may need to add content to this symbol if
       ## necessary for later processing steps.
-      insertArg(code, 1, fxnNameExpr, "FUN_")
+      ## insertArg(code, 1, fxnNameExpr, "FUN_")
       obj_internals <- NULL
       invisible(NULL)
     }

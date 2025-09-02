@@ -847,36 +847,37 @@ test_that("nCompile for nClass with compileInfo$createFromR=FALSE works", {
 ## 1. createFromR = FALSE does not have environments set up etc.
 ## 2. createFromR = TRUE (status quo) does not access an inner obj via interface correctly
 
-# build up a test of whether argument mangling and argument ordering work together
+# This test could perhaps be removed or superceded by others in the future.
+test_that("argument name mangling and argument ordering work together", {
+  foo <- nFunction(
+    fun = function(x, log) {
+      return(dnorm(x,0,1,log=log))
+    },
+    argTypes=list(quote(double(0)), quote(double(0))),
+    returnType = quote(double(0))
+  )
 
-foo <- nFunction(
-  fun = function(x, log) {
-    return(dnorm(x,0,1,log=log))
-  },
-  argTypes=list(quote(double(0)), quote(double(0))),
-  returnType = quote(double(0))
-)
+  bar1 <- nFunction(
+    fun = function(x, log) {
+      return(foo(x, log))
+    },
+    argType = list('numericScalar','numericScalar'),
+    returnType = quote('numericScalar')
+  )
 
-bar1 <- nFunction(
-  fun = function(x, log) {
-    return(foo(x, log))
-  },
-  argType = list('numericScalar','numericScalar'),
-  returnType = quote('numericScalar')
-)
+  comp1 <- nCompile(foo, bar1)
+  expect_equal(bar1(1.2,TRUE), dnorm(1.2,0,1,TRUE))
+  expect_equal(comp1$bar1(1.2,TRUE), dnorm(1.2,0,1,TRUE))
 
-comp1 <- nCompile(foo, bar1)
-bar1(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
-comp1$bar1(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
+  bar2 <- nFunction(
+    fun = function(x, log) {
+      return(foo(log=log, x))
+    },
+    argType = list('numericScalar','numericScalar'),
+    returnType = quote('numericScalar')
+  )
 
-bar2 <- nFunction(
-  fun = function(x, log) {
-    return(foo(log=log, x))
-  },
-  argType = list('numericScalar','numericScalar'),
-  returnType = quote('numericScalar')
-)
-
-comp2 <- nCompile(foo, bar2)
-bar2(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
-comp2$bar2(1.2,TRUE) - dnorm(1.2,0,1,TRUE)
+  comp2 <- nCompile(foo, bar2)
+  expect_equal(bar2(1.2,TRUE), dnorm(1.2,0,1,TRUE))
+  expect_equal(comp2$bar2(1.2,TRUE), dnorm(1.2,0,1,TRUE))
+})

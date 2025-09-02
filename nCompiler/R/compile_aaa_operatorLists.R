@@ -428,9 +428,9 @@ assignOperatorDef(
   'chainedCall',
   list(
     labelAbstractTypes = list(
+      handler = 'ChainedCall'),
+    cppOutput = list(
       handler = 'ChainedCall')
-    ## , cppOutput = list(
-    ##   handler = 'ChainedCall')
   )
 )
 
@@ -602,7 +602,7 @@ assignOperatorDef(
     matchDef = function(text, types) {},
     compileArgs = c("text","types"),
     help = 'cppLiteral("x = y;") inserts x = y; directly into the C++ output.',
-    simpleTransformations = list(handler = "Literal"),
+    simpleTransformations = list(handler = 'Literal'),
     labelAbstractTypes = list(handler = 'Literal'),
     cppOutput = list(handler = 'Literal')
   )

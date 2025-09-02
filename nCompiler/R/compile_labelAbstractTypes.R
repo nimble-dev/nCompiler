@@ -88,7 +88,7 @@ compile_labelAbstractTypes <- function(code,
 
   if(code$isCall) {
     # Note that nFunction or nClass method calls are already (from simpleTransformations)
-    # embedded in CALL_, for which the opDef is then looked up.
+    # embedded in NFCALL_, for which the opDef is then looked up.
     if(code$name == '{') {
       ## recurse over lines
       for(i in seq_along(code$args)) {
@@ -200,7 +200,7 @@ inLabelAbstractTypesEnv(
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
       ## TO-DO: Add check that first arg is symbolNF
-      code$name <- 'NFCALL_'
+      ## code$name <- 'NFCALL_'
       if(!inherits(code$args[[1]]$type, "symbolNF"))
         stop(exprClassProcessingErrorMsg(
           code,
@@ -406,12 +406,24 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {
-      useArgs <- c(FALSE, rep(TRUE, length(code$args)-1))
-      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo, useArgs)
-      obj_internals <- code$args[[1]]$aux$obj_internals
-      nFunctionName <- code$args[[1]]$aux$nFunctionName
-      code$args[[1]]$type <- symbolNF$new(name = nFunctionName)
+      # We have code = NFCALL_(foo(x, y))
+      # innerCall if foo(x,y)
+      # We'll set innerCall$type to symbolNF
+      # and we'll set code$type to the returnType of foo(x, y)
+      innerCall <- code$args[['call']]
+      if(is.null(innerCall))
+        stop(
+          exprClassProcessingErrorMsg(
+            code, paste('In nFunction_or_method_call: the nFunction (or method) ',
+                        code$name, 
+                        ' has NULL content.')
+          ), call. = FALSE
+        )
+      inserts <- recurse_labelAbstractTypes(innerCall, symTab, auxEnv,
+                                            handlingInfo)
+      obj_internals <- code$aux$obj_internals
+      nFunctionName <- code$aux$nFunctionName
+      innerCall$type <- symbolNF$new(name = nFunctionName)
       returnSym <- obj_internals$returnSym
       if(is.null(returnSym))
         stop(
@@ -422,7 +434,25 @@ inLabelAbstractTypesEnv(
           ), call. = FALSE
         )
       code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
-      invisible(NULL)
+      inserts
+
+      # useArgs <- c(FALSE, rep(TRUE, length(code$args)-1))
+      # inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+      #                                       handlingInfo, useArgs)
+      # obj_internals <- code$args[[1]]$aux$obj_internals
+      # nFunctionName <- code$args[[1]]$aux$nFunctionName
+      # code$args[[1]]$type <- symbolNF$new(name = nFunctionName)
+      # returnSym <- obj_internals$returnSym
+      # if(is.null(returnSym))
+      #   stop(
+      #     exprClassProcessingErrorMsg(
+      #       code, paste('In nFunction_or_method_call: the nFunction (or method) ',
+      #                   code$name,
+      #                   ' does not have a valid returnType.')
+      #     ), call. = FALSE
+      #   )
+      # code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      # invisible(NULL)
     }
 )
 
@@ -1325,12 +1355,6 @@ nCompiler:::inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Literal <- function(code, symTab, auxEnv, handlingInfo) {
-    if (length(code$args) > 2)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'cppLiteral has argument length > 2.'
-      ),
-      call. = FALSE)
     if(!is.null(code$aux$compileArgs)) {
       types <- code$aux$compileArgs$types
       if(!is.null(types)) {
@@ -1339,12 +1363,6 @@ inLabelAbstractTypesEnv(
         for (sym in symbols) symTab$addSymbol(sym)
       }
     }
-    ## if (length(code$args) == 2) {
-    ##   ## Add types that the user specified in their literal C++ code to symTab
-    ##   type_list <- lapply(code$args[[2]]$args, `[[`, 'name')
-    ##   symbols <- argTypeList2symbolTable(type_list)$getSymbols()
-    ##   for (sym in symbols) symTab$addSymbol(sym)
-    ## }
     invisible(NULL)
   }
 )

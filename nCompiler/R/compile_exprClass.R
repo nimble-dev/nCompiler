@@ -195,6 +195,16 @@ insertExprClassLayer <- function(code, argID, funName, isName = FALSE, isCall = 
   newExpr
 }
 
+wrapInExprClass <- function(code, funName, argName=NULL) {
+  caller <- code$caller
+  callerArgID <- code$callerArgID
+  newExpr <- exprClass$new(name=funName, isName=FALSE, isCall=TRUE, isAssign=FALSE)
+  argID <- if(is.null(argName)) 1 else argName
+  setArg(newExpr, argID, code, add=TRUE)
+  setArg(caller, callerArgID, newExpr)
+  newExpr
+}
+
 ## Sometimes we have an expr foo(a, b) and we want to make it g(foo(a, b))
 ## We do that by wrapExprClassOperator(code, 'g'), where code is the 'foo' expClass.
 wrapExprClassOperator <- function(code, funName, isName = FALSE, isCall = TRUE, 
@@ -484,11 +494,14 @@ anyNonScalar <- function(code) {
 exprClass_match_call <- function(def, expr) {
   # This is a version of match.call where def is an R function definition (like for match.call)
   # or a pairlist, and expr is an exprClass, returned by nParse.
+  # However, the returned object contains argument (re-)ordering information only.
   #
   # The strategy will be to create something like
   # match.call(function(a , b , c ){}, call("foo", b = 1, 2, 3))
   # resulting in foo(a = 2, b = 1, c = 3),
-  # from which we can see that the expr arguments need to be re-orded by c(2, 1, 3)
+  # from which we can see that the expr arguments need to be re-orded by c(2, 1, 3).
+  # The object foo(a = 2, b = 1, c = 3) is returned, so that exprClass_put_args_in_order 
+  #   can do the further work needed using the ordering.
   # We can also see what expected arguments are missing and store that information
   #  for potential later handling.
   # The sequential values 1, 2, 3 in the artificial call will reveal argument permutations needed.
@@ -510,7 +523,8 @@ exprClass_match_call <- function(def, expr) {
   result
 }
 
-exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
+exprClass_put_args_in_order <- function(def, expr, 
+                                compileArgs = NULL, insertDefaults = TRUE) {
   match_res <- exprClass_match_call(def, expr)
   # there is a function reorderArgs above which appears to have been written
   # for eigenization of nDiag.
@@ -526,6 +540,8 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
   missing_names <- setdiff(names(formals_def), names(match_res)[-1] )
   expr$aux[["provided_as_missing"]] <- missing_names
   expr$aux[["missing"]] <- missing_names
+  # match.call DOES NOT insert defaults for missing arguments,
+  # but we want to do so.
   if(insertDefaults) {
     new_missing_names <- character()
     for(mname in missing_names) {
@@ -541,6 +557,22 @@ exprClass_put_args_in_order <- function(def, expr, insertDefaults = TRUE) {
       }
     }
     expr$aux[["missing"]] <- new_missing_names
+  }
+  # separate compile-time arguments.
+  # This is done AFTER inserting defaults, so that compile-time args can have defaults.
+  # The nParse-ing of compileTime args was superfluous, so we throw it out in this step.
+  if(length(compileArgs)>0) {
+    aux_compileArgs <- list()
+    iRes <- 1
+    for(CA_name in compileArgs) {
+      if(CA_name %in% names(expr$args)) {
+        aux_compileArgs[[iRes]] <- expr$args[[CA_name]]$Rexpr
+        names(aux_compileArgs)[iRes] <- CA_name
+        iRes <- iRes + 1
+        removeArg(expr, CA_name)
+      }
+    }
+    expr$aux[["compileArgs"]] <- aux_compileArgs
   }
   expr
 }
