@@ -132,7 +132,10 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
   {
     devtools::install(file.path(tempdir(), "nc1Package"), quiet=TRUE,
                       upgrade = "never", quick=TRUE)
-    loadNamespace("nc1Package")
+    # more evasion of setup-r-dependencies used in CI testing.
+    # Write loadNamespace("nc1Package") indirectly so it 
+    # doesn't think nc1Package is a CRAN package
+    eval(call("loadNamespace", "nc1Package"))
   }
   )
 
@@ -323,7 +326,10 @@ test_that("Basic serialization works (via writePackage, with full interface, for
   {
     devtools::install(file.path(tempdir(), "nc1PackageB"), quiet=TRUE,
                       upgrade = "never", quick=TRUE, force=TRUE)
-    loadNamespace("nc1PackageB")
+    # more evasion of setup-r-dependencies used in CI testing.
+    # Write loadNamespace("nc1PackageB") indirectly so it 
+    # doesn't think nc1PackageB is a CRAN package
+    eval(call("loadNamespace", "nc1PackageB"))
   }
   )
 
