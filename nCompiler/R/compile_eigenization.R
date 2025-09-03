@@ -733,7 +733,7 @@ inEigenizeEnv(
   }
 )
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   Bracket_to_StridedTensorMap <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     code$name <- paste0('Eigen::MakeStridedTensorMap<', code$type$nDim, '>::make')
 
@@ -786,7 +786,7 @@ nCompiler:::inEigenizeEnv(
   })
 
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   MakeIndexByScalarCall <- function(index_slot, index_value, x) {
     ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
                           name = "IndexByScalar")
@@ -797,7 +797,7 @@ nCompiler:::inEigenizeEnv(
   }
   )
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   MakeIndexByVecCall <- function(index_slot, index_value, x) {
     ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
                           name = "IndexByVec")
@@ -808,7 +808,7 @@ nCompiler:::inEigenizeEnv(
   }
   )
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   MakeIndexBySeqsCall <- function(index_slots, index_value, x) {
     ans <-  exprClass$new(isName = FALSE, isCall = TRUE, isAssign = FALSE,
                           name = "IndexBySeqs")
@@ -825,7 +825,7 @@ nCompiler:::inEigenizeEnv(
   }
   )
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if (code$type$nDim == 0) {
       # Either we're indexing a vector and we keep '[' in the AST, or we're
@@ -1221,7 +1221,7 @@ inEigenizeEnv(
   }
 )
 
-nCompiler:::inEigenizeEnv(
+inEigenizeEnv(
   
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     

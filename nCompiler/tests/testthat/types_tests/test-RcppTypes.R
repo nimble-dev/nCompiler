@@ -282,8 +282,8 @@ test_that("RcppFunction works", {
   result1_Correct <- rnorm(10)
   expect_equal(result1, result1_Correct)
   
-  result2 <- nffnC(nCompiler::logit, 0.4)
-  result2_correct <- nCompiler::logit(0.4)
+  result2 <- nffnC(logit, 0.4)
+  result2_correct <- logit(0.4)
   expect_equal(result2, result2_correct)
 })
 
