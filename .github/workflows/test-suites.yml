@@ -84,10 +84,10 @@ jobs:
       - name: Run nCompile and other tests
         run: |
           library(nCompiler)
-          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "progress")
-          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "progress")
-          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "progress")
-          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
         shell: Rscript {0}
 
   # Job 2: nClass, types and serialization tests
@@ -116,9 +116,9 @@ jobs:
       - name: Run nClass, types and serialization tests
         run: |
           library(nCompiler)
-          testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "progress")
-          testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "progress")
-          testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
         shell: Rscript {0}
 
   # Job 3: Math tests
@@ -147,7 +147,7 @@ jobs:
       - name: Run Math tests
         run: |
           library(nCompiler)
-          testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "summary")
         shell: Rscript {0}
 
   # Job 4: tensorOps
@@ -176,5 +176,5 @@ jobs:
       - name: Run TensorOps tests
         run: |
           library(nCompiler)
-          testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "summary")
         shell: Rscript {0}
