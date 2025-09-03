@@ -2,51 +2,25 @@
 name: Test Suites
 
 on:
-  push:
-    branches: [ main, master, devel ]
-  pull_request:
-    branches: [ main, master, devel ]
+  workflow_dispatch:
+    inputs:
+      run_cache_only:
+        description: 'Run and cache dependency installations only'
+        required: true
+        default: 'no'
+
+env:
+  RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
+    R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
+
 
 jobs:
-  # Job 1: nCompile and specific operator tests
-  test-nCompile:
+  install-cache:
     runs-on: ubuntu-latest
-    name: nCompile and specific operator tests
-
+    if: github.event.inputs.run_cache_only == 'yes' || github.event.inputs.run_cache_only == 'no'
     steps:
       - uses: actions/checkout@v4
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcurl4-openssl-dev \
-            libssl-dev
-
-      - name: Run nCompile and other tests
-        run: |
-          testthat::test_dir("tests/testthat/uncompiled_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/nCompile_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/cpp_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/specificOp_tests", reporter = "progress")
-        shell: Rscript {0}
-
-  # Job 2: nClass, types and serialization tests
-  test-nClass:
-    runs-on: ubuntu-latest
-    name: nClass, types and serialization tests
-
-    env:
-      RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
-      R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
-
-    steps:
-      - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: 'release'
@@ -82,6 +56,56 @@ jobs:
 
       - name: Install package
         run: R CMD INSTALL nCompiler
+ 
+  # Job 1: nCompile and specific operator tests
+  test-nCompile:
+    runs-on: ubuntu-latest
+    needs: install_cache
+    if: github.event.inputs.run_cache_only == 'no'
+    name: nCompile and specific operator tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
+      - name: Run nCompile and other tests
+        run: |
+          testthat::test_dir("tests/testthat/uncompiled_tests", reporter = "progress")
+          testthat::test_dir("tests/testthat/nCompile_tests", reporter = "progress")
+          testthat::test_dir("tests/testthat/cpp_tests", reporter = "progress")
+          testthat::test_dir("tests/testthat/specificOp_tests", reporter = "progress")
+        shell: Rscript {0}
+
+  # Job 2: nClass, types and serialization tests
+  test-nClass:
+    runs-on: ubuntu-latest
+    needs: install_cache
+    if: github.event.inputs.run_cache_only == 'no'
+    name: nClass, types and serialization tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
       
       - name: Run nClass, types and serialization tests
         run: |
@@ -93,22 +117,23 @@ jobs:
   # Job 3: Math tests
   test-math:
     runs-on: ubuntu-latest
+    needs: install_cache
+    if: github.event.inputs.run_cache_only == 'no'
     name: Math Tests
 
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
+          r-version: 'release'
           use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcurl4-openssl-dev \
-            libssl-dev
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
 
       - name: Run Math tests
         run: |
@@ -118,22 +143,23 @@ jobs:
   # Job 4: tensorOps
   test-tensorOps:
     runs-on: ubuntu-latest
+    needs: install_cache
+    if: github.event.inputs.run_cache_only == 'no'
     name: TensorOps Tests
 
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2
         with:
+          r-version: 'release'
           use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcurl4-openssl-dev \
-            libssl-dev
+      - name: Restore cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
 
       - name: Run TensorOps tests
         run: |
