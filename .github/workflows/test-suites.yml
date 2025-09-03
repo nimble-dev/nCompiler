@@ -63,12 +63,15 @@ jobs:
       - name: Install R dependencies
         run: |
           Rscript -e 'install.packages("remotes")'
-          Rscript -e 'remotes::install_deps(dependencies = TRUE)'
+          Rscript -e 'remotes::install_deps("nCompiler", dependencies = TRUE)'
 
       - name: Install extra packages
         run: |
           Rscript -e 'install.packages(c("devtools","gh","nimble","inline","numDeriv","pkgload","withr","rmarkdown","testthat"))'
 
+      - name: Install package
+        run: R CMD INSTALL nCompiler
+      
       - name: Run nClass, types and serialization tests
         run: |
           testthat::test_dir("tests/testthat/nClass_tests", reporter = "progress")
