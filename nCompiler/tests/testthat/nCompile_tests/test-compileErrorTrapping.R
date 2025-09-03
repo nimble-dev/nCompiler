@@ -7,7 +7,7 @@ test_that("nCompiler's error handler works",
     }
     
     go <- function() {
-        nCompiler:::NFtry({
+        `:::`("nCompiler", "NFtry")({
             doSomething(5)
         })
     }

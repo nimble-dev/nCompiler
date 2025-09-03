@@ -214,7 +214,7 @@ setup_wrt_internal <- function(wrt, fxnArgs, fxnName, dropArgs = NA) {
   if (inherits(fxnArgs[[1]], 'symbolBase'))
     arg_symbols <- fxnArgs
   else {
-    arg_symbols <- lapply(fxnArgs, nCompiler:::argType2symbol)
+    arg_symbols <- lapply(fxnArgs, argType2symbol)
   }
   nameCheck <- sapply(wrtMatchArgs, function(i) class(arg_symbols[[i]]))
   if (any(nameCheck == 'name')) stop('Derivatives of ', fxnName, ' being taken 

@@ -1,7 +1,7 @@
 
 test_that("basics",
           {
-            cpp1 <- nCompiler:::Rcpp_nCompilerPacket(
+            cpp1 <- `:::`("nCompiler", "Rcpp_nCompilerPacket")(
               filebase = "cpp1",
               cppContent = list(opener = "",
                                 body = paste(

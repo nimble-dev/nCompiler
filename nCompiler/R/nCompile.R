@@ -865,14 +865,14 @@ WP_initializePkg <- function(pkgName,
 WP_writeCpp <- function(RcppPacket_list, srcDir, codeDir) {
   for (i in seq_along(RcppPacket_list)) {
     ## We write the code once for the package's DLL...
-    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
+    writeCpp_nCompiler(RcppPacket_list[[i]],
                                     dir = srcDir)
     ## ... and again for other packages that need to
     ## compile against this package's source code.
     ## Otherwise, C++ source code is not present in an installed package.
     ## Compiling against source code is necessary because of
     ## heavy use of C++ templates.
-    nCompiler:::writeCpp_nCompiler(RcppPacket_list[[i]],
+    writeCpp_nCompiler(RcppPacket_list[[i]],
                                    dir = codeDir)
   }
 }

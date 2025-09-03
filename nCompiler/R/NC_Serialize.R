@@ -19,12 +19,12 @@ nSerialize <- function(obj) {
     # is not serializing them.
     # Then R's serialize will call the refhook again with the externalptr
     # which we WILL serialize.
-    if(isTRUE(nCompiler:::is.loadedObjectEnv(ref_obj))) {
+    if(isTRUE(is.loadedObjectEnv(ref_obj))) {
       # First time that we get a loadedObjectEnv, we'll use it for the DLLenv
       # to get the serialization-related calls to C++.
       # Future extension: Allow multiple DLLenvs in one nSerialize call.
       if(is.null(ser_mgr)) {
-        DLLenv <<- nCompiler:::get_DLLenv(ref_obj)
+        DLLenv <<- get_DLLenv(ref_obj)
         new_smgr_fn <- DLLenv$new_serialization_mgr
         if(!is.function(new_smgr_fn)) stop("nCompiler serialization manager not found.")
         ser_mgr <<- new_smgr_fn()
@@ -60,7 +60,7 @@ nSerialize <- function(obj) {
     #     serialize the serialization_mgr, which will include the pointed-to objects
     ser_fn <- DLLenv$nComp_serialize_
     if(!is.function(ser_fn)) stop("nCompiler serialization function not found")
-    CPPside <- ser_fn(nCompiler:::getExtptr(ser_mgr))
+    CPPside <- ser_fn(getExtptr(ser_mgr))
     # 2b. Clear the serialization_mgr of its pointers (underlying objects are still fine)
     (\() DLLenv$call_method(ser_mgr$extptr, "clear", list()))()
   }

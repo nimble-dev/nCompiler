@@ -147,7 +147,7 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
   ## serialize and deserialize 1 object
   # build and test object
   obj <- access_dynamic_package("nc1Package", "nc1")()
-  expect_true(nCompiler:::is.loadedObjectEnv(obj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(obj))
   expect_equal(method(obj, "Cfoo")(1.2), 2.2)
   value(obj, "C.v") <- 1.23
   expect_equal(value(obj, "C.v"), 1.23)
@@ -160,7 +160,7 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
   restored_obj <- nUnserialize(serialized_obj)
 
   # test the restored objected
-  expect_true(nCompiler:::is.loadedObjectEnv(restored_obj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(restored_obj))
   expect_equal(method(restored_obj, "Cfoo")(1.2), 2.2)
   expect_equal(value(restored_obj, "C.v"), 1.23)
   value(restored_obj, "C.v") <- 2.34
@@ -234,7 +234,7 @@ test_that("Basic serialization works (via nCompile(package=TRUE), with generic i
   ## serialize and deserialize 1 object
   # build and test object
   obj <- nc1gen()
-  expect_true(nCompiler:::is.loadedObjectEnv(obj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(obj))
   expect_equal(method(obj, "Cfoo")(1.2), 2.2)
   value(obj, "Cv") <- 1.23
   expect_equal(value(obj, "Cv"), 1.23)
@@ -247,7 +247,7 @@ test_that("Basic serialization works (via nCompile(package=TRUE), with generic i
   restored_obj <- nUnserialize(serialized_obj)
 
   # test the restored objected
-  expect_true(nCompiler:::is.loadedObjectEnv(restored_obj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(restored_obj))
   expect_equal(method(restored_obj, "Cfoo")(1.2), 2.2)
   expect_equal(value(restored_obj, "Cv"), 1.23)
   value(restored_obj, "Cv") <- 2.34
@@ -341,7 +341,7 @@ test_that("Basic serialization works (via writePackage, with full interface, for
   ## serialize and deserialize 1 object
   # build and test object
   obj <- access_dynamic_package("nc1PackageB", "nc1")$new() #nc1PackageB::nc1$new()
-  expect_true(nCompiler:::is.loadedObjectEnv(obj$private$CppObj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(obj$private$CppObj))
   expect_equal(obj$Cfoo(1.2), 2.2)
   obj$Cv <- 1.23
   expect_equal(obj$Cv, 1.23)
@@ -354,7 +354,7 @@ test_that("Basic serialization works (via writePackage, with full interface, for
   restored_obj <- nUnserialize(serialized_obj)
 
   # test the restored objected
-  expect_true(nCompiler:::is.loadedObjectEnv(restored_obj$private$CppObj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(restored_obj$private$CppObj))
   expect_equal(restored_obj$Cfoo(1.2), 2.2)
   expect_equal(restored_obj$Cv, 1.23)
   restored_obj$Cv <- 2.34
@@ -428,7 +428,7 @@ test_that("Basic serialization works (via nCompile(package=TRUE), with full inte
   ## serialize and deserialize 1 object
   # build and test object
   obj <- nc1gen$new()
-  expect_true(nCompiler:::is.loadedObjectEnv(obj$private$CppObj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(obj$private$CppObj))
   expect_equal(obj$Cfoo(1.2), 2.2)
   obj$Cv <- 1.23
   expect_equal(obj$Cv, 1.23)
@@ -441,7 +441,7 @@ test_that("Basic serialization works (via nCompile(package=TRUE), with full inte
   restored_obj <- nUnserialize(serialized_obj)
 
   # test the restored objected
-  expect_true(nCompiler:::is.loadedObjectEnv(restored_obj$private$CppObj))
+  expect_true(`:::`("nCompiler", "is.loadedObjectEnv")(restored_obj$private$CppObj))
   expect_equal(restored_obj$Cfoo(1.2), 2.2)
   expect_equal(restored_obj$Cv, 1.23)
   restored_obj$Cv <- 2.34

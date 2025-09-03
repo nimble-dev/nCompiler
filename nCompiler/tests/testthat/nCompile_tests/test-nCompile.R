@@ -289,7 +289,7 @@ test_that("nCompile works for nClass with classname and/or exportName and either
   )
 
   test_obj <- function(obj) {
-    if(nCompiler:::is.loadedObjectEnv(obj)) {
+    if(`:::`("nCompiler", "is.loadedObjectEnv")(obj)) {
       value(obj, "v.1") <- 1:3
       expect_equal(value(obj, "v.1"), 1:3)
       expect_identical(method(obj, "go.1")(10), 10 * (1:3))

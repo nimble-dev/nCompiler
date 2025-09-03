@@ -8,7 +8,7 @@ test_that("NF_CompilerClass steps",
       returnType(numericScalar())
     }
   )
-  NFC <- nCompiler:::NF_CompilerClass$new(f = foo)
+  NFC <- `:::`("nCompiler", "NF_CompilerClass")$new(f = foo)
   expect_equal(NFC$origRcode,
                quote({
                  return(a+1)

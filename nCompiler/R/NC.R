@@ -174,7 +174,7 @@ nClass <- function(classname,
     ),
     list(INHERIT =
            if(!is.null(inherit)) quote(.inherit_obj)
-         else quote(nCompiler:::nClassClass))
+         else quote(nClassClass))
     ))
   ## 2. in the generator
   result$.nCompiler <- internals

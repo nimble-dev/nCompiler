@@ -72,7 +72,7 @@ add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4),
 
 argType_2_input <- function(argType, input_gen_fun = NULL) {
   argSymbol <- add_missing_size(
-    nCompiler:::argType2symbol(argType)
+    `:::`("nCompiler", "argType2symbol")(argType)
   )
   type <- argSymbol$type
   nDim <- argSymbol$nDim
@@ -189,7 +189,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
   ##  are unloaded, giving a crash.
   ## That is also the reason for the defensive gc() at the end of this function.
   if(gold_test)
-    nCompiler:::resetLabelFunctionCreators()
+    `:::`("nCompiler", "resetLabelFunctionCreators")()
 
   nFuns <- lapply(compiles, gen_nFunction)
 
@@ -288,16 +288,16 @@ modifyBatchOnMatch <-
 get_matching_ops <- function(field, subfield = NULL, test = isTRUE) {
   ## Returns vector of operator names where the value in a given field (or its
   ## subfield) returns TRUE when the test function is applied to it.
-  ops <- ls(nCompiler:::operatorDefEnv)
-  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield)
+  ops <- ls(`:::`("nCompiler", "operatorDefEnv"))
+  values <- sapply(ops, `:::`("nCompiler", "getOperatorDef"), field, subfield)
   if (is.null(values)) return(character(0))
   names(values)[sapply(values, test)]
 }
 
 get_ops_values <- function(field, subfield = NULL) {
   ## Return a named (by operator) list of the values found in field/subfield.
-  ops <- ls(nCompiler:::operatorDefEnv)
-  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield,
+  ops <- ls(`:::`("nCompiler", "operatorDefEnv"))
+  values <- sapply(ops, `:::`("nCompiler", "getOperatorDef"), field, subfield,
                    simplify = FALSE)
   non_null <- sapply(values, function(x) !is.null(x))
   return(values[non_null])
@@ -311,16 +311,16 @@ get_ops_values <- function(field, subfield = NULL) {
 ##
 return_type_string <- function(op, argTypes) {
 
-  returnTypeCode <- nCompiler:::getOperatorDef(op, 'labelAbstractTypes',
+  returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'labelAbstractTypes',
                                                'returnTypeCode')
-  recycling_rule_op <- nCompiler:::getOperatorDef(op, 'testing',
+  recycling_rule_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing',
                                                   'recyclingRuleOp')
 
   if (is.null(returnTypeCode))
     if (!isTRUE(recycling_rule_op)) return(argTypes[1])
   else returnTypeCode <- 1
 
-  scalarTypeString <- nCompiler:::returnTypeCode2String(returnTypeCode)
+  scalarTypeString <- `:::`("nCompiler", "returnTypeCode2String")(returnTypeCode)
 
   ## scalarTypeString <- switch(
   ##   returnTypeCode,
@@ -331,13 +331,13 @@ return_type_string <- function(op, argTypes) {
 
   args <- lapply(
     argTypes, function(argType)
-      nCompiler:::argType2symbol(argType)
+      `:::`("nCompiler", "argType2symbol")(argType)
   )
 
   scalarTypeString <-
-    if (length(argTypes) == 1) nCompiler:::arithmeticOutputType(args[[1]]$type,
+    if (length(argTypes) == 1) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type,
                                                                 returnTypeCode = returnTypeCode)
-    else if(length(argTypes) == 2) nCompiler:::arithmeticOutputType(args[[1]]$type, args[[2]]$type,
+    else if(length(argTypes) == 2) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type, args[[2]]$type,
                                                                     returnTypeCode = returnTypeCode)
     else stop(
            paste0(
@@ -350,7 +350,7 @@ return_type_string <- function(op, argTypes) {
   ## arithmeticOutputType might return 'double'
   if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
 
-  reduction_op <- nCompiler:::getOperatorDef(op, 'testing', 'reductionOp')
+  reduction_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'reductionOp')
 
   nDim <- if (isTRUE(reduction_op)) 0 else max(sapply(args, `[[`, 'nDim'))
 
@@ -360,7 +360,7 @@ return_type_string <- function(op, argTypes) {
       call. = FALSE
     )
 
-  matrix_mult_op <- nCompiler:::getOperatorDef(op, 'testing', 'matrixMultOp')
+  matrix_mult_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'matrixMultOp')
 
   # if arg sizes weren't provided this will just be NULL
   sizes <- if (nDim == 0) NULL
@@ -481,7 +481,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
   if (isNF(uncompiled)) {
     RcppPacket <- NFinternals(uncompiled)$RcppPacket
   } else if (inherits(uncompiled, 'cpp_nClassClass'))
-    RcppPacket <- nCompiler:::cppDefs_2_RcppPacket(
+    RcppPacket <- `:::`("nCompiler", "cppDefs_2_RcppPacket")(
       uncompiled, filebase = '.'
       ## filebase won't be used since we provide 'con' to writeCpp_nCompiler
     )
@@ -489,7 +489,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
     RcppPacket <- uncompiled
   if (isTRUE(write_gold_file)) { ## either create or overwrite gold_file
     con <- file(filepath, open = "w")
-    nCompiler:::writeCpp_nCompiler(
+    `:::`("nCompiler", "writeCpp_nCompiler")(
       RcppPacket, con = con
     )
     close(con)
@@ -497,7 +497,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
     ## read the existing gold file and compare to the current RcppPacket
     temp_file <- paste0(filepath, 'tmp')
     con <- file(temp_file, open = "w")
-    nCompiler:::writeCpp_nCompiler(
+    `:::`("nCompiler", "writeCpp_nCompiler")(
       RcppPacket, con = con
     )
     close(con)

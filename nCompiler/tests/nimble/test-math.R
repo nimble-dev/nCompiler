@@ -18,7 +18,7 @@ source(system.file(file.path('tests', 'testthat', 'test_utils.R'), package = 'ni
 
 ## Changes start
 test_math_internal <-
-  divert_to_nCompiler(test_math_internal, list(compileNimble = nCompiler:::compileNimble))
+  divert_to_nCompiler(test_math_internal, list(compileNimble = `:::`("nCompiler", "compileNimble")))
 ## Changes stop
 
 #debug(nCompiler:::compileNimble)

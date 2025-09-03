@@ -4,7 +4,7 @@ message("Need to add a test of creating a tensor initialized from a refBlock (St
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
-  test <- nCompiler:::QuietSourceCpp(cppfile)
+  test <- `:::`("nCompiler", "QuietSourceCpp")(cppfile)
   expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
   expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
   expect_equal(tensorCreation3(1:12), array(1:12, c(2, 3, 2)))

@@ -14,7 +14,7 @@ test_that("compileNimble bridge works for simple nimbleFunction (RC function)",{
       returnType(double())
     }
   )
-  CRCF1 <- nCompiler:::compileNimble(RCF1)
+  CRCF1 <- `:::`("nCompiler", "compileNimble")(RCF1)
   expect_equal(CRCF1(1:3), 6)
 })
 
@@ -44,7 +44,7 @@ test_that("registering a user-defined operator definition (opDef) works", {
   # providing a handler to relpace "nimArray" with "nArray"
   # and a handler to replace "nimArray2" with "nArray" to
   # check on handling multiple cases.
-  nCompiler:::registerOpDef(
+  registerOpDef(
     list(nimArray =
            list(
              matchDef = function(value=0, dim=c(1,1), init=TRUE,
@@ -52,9 +52,9 @@ test_that("registering a user-defined operator definition (opDef) works", {
                                  type="double") {},
              #    normalizeCalls=list(handler='skip'),
              simpleTransformations=list(handler = nimArrayHandler))))
-  expect_equal(ls(nCompiler:::operatorDefUserEnv), "nimArray")
+  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), "nimArray")
 
-  nCompiler:::registerOpDef(
+  registerOpDef(
     list(nimArray2 =
            list(
              matchDef = function(value=0, dim=c(1,1), init=TRUE,
@@ -62,7 +62,7 @@ test_that("registering a user-defined operator definition (opDef) works", {
                                  type="double") {},
              simpleTransformations=list(handler = 'replace',
                                         replacement = 'nArray'))))
-  expect_equal(ls(nCompiler:::operatorDefUserEnv), c("nimArray", "nimArray2"))
+  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), c("nimArray", "nimArray2"))
 
   nc <- nClass(
     Cpublic = list(
@@ -87,7 +87,7 @@ test_that("registering a user-defined operator definition (opDef) works", {
   expect_identical(obj$foo2(), c(3, 3))
   rm(obj); gc()
   #
-  nCompiler:::deregisterOpDef("nimArray")
-  nCompiler:::deregisterOpDef("nimArray2")
-  expect_equal(length(ls(nCompiler:::operatorDefUserEnv)), 0)
+  deregisterOpDef("nimArray")
+  deregisterOpDef("nimArray2")
+  expect_equal(length(ls(`:::`("nCompiler", "operatorDefUserEnv"))), 0)
 })
