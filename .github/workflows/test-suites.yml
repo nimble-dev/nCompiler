@@ -43,7 +43,9 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             libcurl4-openssl-dev \
-            libssl-dev
+            libssl-dev \
+            libgit2-dev \
+            libxml2-dev
 
       - name: Install R dependencies
         run: |
@@ -55,7 +57,10 @@ jobs:
           Rscript -e '
           pkgs <- readLines("ci-extra-packages.txt")
           new_pkgs <- pkgs[!pkgs %in% installed.packages()[,"Package"]]
-          if(length(new_pkgs)) install.packages(new_pkgs)
+          if(length(new_pkgs)) {
+          install.packages(new_pkgs)
+          stopifnot(all(pkgs %in% rownames(installed.packages())))
+          }
           '
  
   # Job 1: nCompile and specific operator tests
