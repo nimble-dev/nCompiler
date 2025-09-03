@@ -4,10 +4,14 @@ name: Test Suites
 on:
   workflow_dispatch:
     inputs:
-      run_cache_only:
-        description: 'Run and cache dependency installations only'
+      install_and_cache:
+        description: 'Run and cache installation steps only'
         required: true
         default: 'no'
+      run_tests:
+        description: 'Run all tests (assuming [or after] cache is up-to-date)'
+        required: true
+        default: 'yes'
 
 env:
   RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
@@ -17,7 +21,7 @@ env:
 jobs:
   install-cache:
     runs-on: ubuntu-latest
-    if: github.event.inputs.run_cache_only == 'yes' || github.event.inputs.run_cache_only == 'no'
+    if: github.event.inputs.install_and_cache == 'yes'
     steps:
       - uses: actions/checkout@v4
 
@@ -57,8 +61,7 @@ jobs:
   # Job 1: nCompile and specific operator tests
   test-nCompile:
     runs-on: ubuntu-latest
-    needs: install-cache
-    if: github.event.inputs.run_cache_only == 'no'
+    if: github.event.inputs.run_tests == 'yes'
     name: nCompile and specific operator tests
 
     steps:
@@ -80,6 +83,7 @@ jobs:
 
       - name: Run nCompile and other tests
         run: |
+          library(nCompiler)
           testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "progress")
           testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "progress")
           testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "progress")
@@ -89,8 +93,7 @@ jobs:
   # Job 2: nClass, types and serialization tests
   test-nClass:
     runs-on: ubuntu-latest
-    needs: install-cache
-    if: github.event.inputs.run_cache_only == 'no'
+    if: github.event.inputs.run_tests == 'yes'
     name: nClass, types and serialization tests
 
     steps:
@@ -112,6 +115,7 @@ jobs:
 
       - name: Run nClass, types and serialization tests
         run: |
+          library(nCompiler)
           testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "progress")
           testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "progress")
           testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "progress")
@@ -120,8 +124,7 @@ jobs:
   # Job 3: Math tests
   test-math:
     runs-on: ubuntu-latest
-    needs: install-cache
-    if: github.event.inputs.run_cache_only == 'no'
+    if: github.event.inputs.run_tests == 'yes'
     name: Math Tests
 
     steps:
@@ -143,14 +146,14 @@ jobs:
 
       - name: Run Math tests
         run: |
+          library(nCompiler)
           testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "progress")
         shell: Rscript {0}
 
   # Job 4: tensorOps
   test-tensorOps:
     runs-on: ubuntu-latest
-    needs: install-cache
-    if: github.event.inputs.run_cache_only == 'no'
+    if: github.event.inputs.run_tests == 'yes'
     name: TensorOps Tests
 
     steps:
@@ -172,5 +175,6 @@ jobs:
 
       - name: Run TensorOps tests
         run: |
+          library(nCompiler)
           testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "progress")
         shell: Rscript {0}
