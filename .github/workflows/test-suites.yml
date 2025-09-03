@@ -52,6 +52,13 @@ jobs:
           r-version: 'release'
           use-public-rspm: true
 
+      - name: Cache R packages
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
+          restore-keys: ${{ runner.os }}-r-
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -67,7 +74,11 @@ jobs:
 
       - name: Install extra packages
         run: |
-          Rscript -e 'install.packages(c("devtools","gh","nimble","inline","numDeriv","pkgload","withr","rmarkdown","testthat"))'
+          Rscript -e '
+          pkgs <- readLines("ci-extra-packages.txt")
+          new_pkgs <- pkgs[!pkgs %in% installed.packages()[,"Package"]]
+          if(length(new_pkgs)) install.packages(new_pkgs)
+          '
 
       - name: Install package
         run: R CMD INSTALL nCompiler
