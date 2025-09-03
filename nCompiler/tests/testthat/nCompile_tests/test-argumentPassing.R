@@ -30,6 +30,11 @@ access_dynamic_package <- function(pkg_name, var) {
   get(var, envir = ns, inherits = FALSE)
 }
 
+# Same rationale as above:
+load_dynamic_namespace <- function(pkg_name) {
+  eval(call("loadNamespace", pkg_name))
+}
+
 # compiled and uncompiled 1D by copy
 # A lot of this is tested elsewhere, so here it is not thorough
 # and is more of a warm-up test.
@@ -99,7 +104,7 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   test_foo(access_dynamic_package("testpackage", "foo"))
   test_foo(access_dynamic_package("testpackage", "foo"))
 })
@@ -155,7 +160,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   Cobj <- access_dynamic_package("testpackage", "nc1")$new()
   test_foo(Cobj$foo)
   CppObj <- Cobj$private$CppObj
@@ -209,7 +214,7 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   test_foo(testpackage::foo)
   test_foo(testpackage::foo)
 })
@@ -271,7 +276,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   Cobj <- testpackage::nc1$new()
   test_foo(Cobj$foo)
   CppObj <- Cobj$private$CppObj
@@ -325,7 +330,7 @@ test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompi
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   test_foo(testpackage::foo)
   test_foo(testpackage::foo)
 })
@@ -388,7 +393,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, loadNamespace("testpackage"))
+  withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
   Cobj <- testpackage::nc1$new()
   test_foo(Cobj$foo)
   CppObj <- Cobj$private$CppObj

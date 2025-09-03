@@ -35,6 +35,11 @@ access_dynamic_package <- function(pkg_name, var) {
   get(var, envir = ns, inherits = FALSE)
 }
 
+# Same rationale as above:
+load_dynamic_namespace <- function(pkg_name) {
+  eval(call("loadNamespace", pkg_name))
+}
+
 in_new_R_session <- function(code,
                              pkgName,
                              lib,
@@ -135,7 +140,7 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
     # more evasion of setup-r-dependencies used in CI testing.
     # Write loadNamespace("nc1Package") indirectly so it 
     # doesn't think nc1Package is a CRAN package
-    eval(call("loadNamespace", "nc1Package"))
+    load_dynamic_namespace("nc1Package")
   }
   )
 
@@ -329,7 +334,7 @@ test_that("Basic serialization works (via writePackage, with full interface, for
     # more evasion of setup-r-dependencies used in CI testing.
     # Write loadNamespace("nc1PackageB") indirectly so it 
     # doesn't think nc1PackageB is a CRAN package
-    eval(call("loadNamespace", "nc1PackageB"))
+    load_dynamic_namespace("nc1PackageB")
   }
   )
 
