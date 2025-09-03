@@ -60,7 +60,7 @@ jobs:
   # Job 1: nCompile and specific operator tests
   test-nCompile:
     runs-on: ubuntu-latest
-    needs: install_cache
+    needs: install-cache
     if: github.event.inputs.run_cache_only == 'no'
     name: nCompile and specific operator tests
 
@@ -89,7 +89,7 @@ jobs:
   # Job 2: nClass, types and serialization tests
   test-nClass:
     runs-on: ubuntu-latest
-    needs: install_cache
+    needs: install-cache
     if: github.event.inputs.run_cache_only == 'no'
     name: nClass, types and serialization tests
 
@@ -117,7 +117,7 @@ jobs:
   # Job 3: Math tests
   test-math:
     runs-on: ubuntu-latest
-    needs: install_cache
+    needs: install-cache
     if: github.event.inputs.run_cache_only == 'no'
     name: Math Tests
 
@@ -143,7 +143,7 @@ jobs:
   # Job 4: tensorOps
   test-tensorOps:
     runs-on: ubuntu-latest
-    needs: install_cache
+    needs: install-cache
     if: github.event.inputs.run_cache_only == 'no'
     name: TensorOps Tests
 
