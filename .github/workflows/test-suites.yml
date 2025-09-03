@@ -45,8 +45,10 @@ jobs:
             libcurl4-openssl-dev \
             libssl-dev \
             libgit2-dev \
-            libxml2-dev
-
+            libxml2-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev
+            
       - name: Install R dependencies
         run: |
           Rscript -e 'install.packages("remotes")'
