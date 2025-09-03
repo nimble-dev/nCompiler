@@ -41,13 +41,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            libcurl4-openssl-dev \
-            libssl-dev \
-            libgit2-dev \
-            libxml2-dev \
-            libfontconfig1-dev \
-            libfreetype6-dev
+          build-essential \
+          libcurl4-openssl-dev \
+          libssl-dev \
+          libgit2-dev \
+          libxml2-dev \
+          libfontconfig1-dev \
+          libfreetype6-dev \
+          libharfbuzz-dev \
+          libfribidi-dev \
+          libpng-dev \
+          libjpeg-dev \
+          libtiff5-dev \
+          libglib2.0-dev \
+          libpango1.0-dev \
+          libicu-dev
             
       - name: Install R dependencies
         run: |
