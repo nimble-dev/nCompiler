@@ -78,6 +78,16 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
       - name: Install package
         run: R CMD INSTALL nCompiler
 
@@ -109,7 +119,17 @@ jobs:
           path: ${{ env.R_LIBS_USER }}
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
-      
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
       - name: Install package
         run: R CMD INSTALL nCompiler
 
@@ -141,6 +161,16 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
       - name: Install package
         run: R CMD INSTALL nCompiler
 
@@ -169,6 +199,16 @@ jobs:
           path: ${{ env.R_LIBS_USER }}
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
+
+      - name: Check cache contents
+        run: |
+          Rscript -e '
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+            print(.libPaths());
+            installed <- installed.packages()[,1];
+            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
       - name: Install package
         run: R CMD INSTALL nCompiler
