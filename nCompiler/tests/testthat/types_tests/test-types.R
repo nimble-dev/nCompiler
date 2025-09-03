@@ -2,7 +2,7 @@ test_that("numericVector(5)",
 {
   ## as if `a = numericVector(5)` declared in function argument
   a <- quote(numericVector(5))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE)
@@ -17,7 +17,7 @@ test_that("ref(numericVector(5))",
 {
   ## as if `a = ref(numericVector(5))` declared in function-argument
   a <- quote(ref(numericVector(5)))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE)
@@ -33,7 +33,7 @@ test_that("numericVector(5) isRef=TRUE",
   ## as if `a = numericVector(5)` declared in function-argument
   ## and isRef=TRUE used to indicate reference
   a <- quote(numericVector(5))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE,
@@ -51,8 +51,8 @@ test_that("ref(numericVector(5) via explicitType)",
   ## with argType = `ref(numericVector(5))`
   a <- NULL
   aExplicit <- quote(ref(numericVector(5)))
-  
-  aSym <- nCompiler:::argType2symbol(a,
+
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE,
@@ -70,7 +70,7 @@ test_that("numericVector(5) via explicitType",
   ## with argType = `numericVector(5)`
   a <- NULL
   aExplicit <- quote(numericVector(5))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE,
@@ -88,7 +88,7 @@ test_that("numericVector(5) isRef = TRUE via explicitType",
   ## with argType = `numericVector(5)`
   a <- NULL
   aExplicit <- quote(numericVector(5))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE,
@@ -107,7 +107,7 @@ test_that("ref(numericVector(5)) via explicitType with default value to ignore",
   ## with argType = `ref(numericVector(5))`
   a <- quote(rnorm(5)) ## ignored
   aExplicit <- quote(ref(numericVector(5)))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE,
@@ -123,7 +123,7 @@ test_that("infer type from evaluating default",
 {
   ## infer type of `a` from default
   a <- quote(rnorm(5))
-  aSym <- nCompiler:::argType2symbol(a,
+  aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                      name = "a",
                                      origName = "orig_a",
                                      isArg = TRUE
@@ -142,7 +142,7 @@ test_that("infer type from evaluating default, with scoping needed",
   fun1 <- function() {
     fun2 <- function(n) rnorm(n)
     a <- quote(fun2(5))
-    aSym <- nCompiler:::argType2symbol(a,
+    aSym <- `:::`("nCompiler", "argType2symbol")(a,
                                        name = "a",
                                        origName = "orig_a",
                                        isArg = TRUE
@@ -163,7 +163,7 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   ## Duplicate setting of ref
   a <- quote(ref(numericVector(5)))
   expect_error(
-    nCompiler:::argType2symbol(a,
+    `:::`("nCompiler", "argType2symbol")(a,
                                name = "a",
                                origName = "orig_a",
                                isArg = TRUE,
@@ -175,7 +175,7 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   a <- quote(matrix(1:4, nrow = 2, ncol = 2))
   aExplicit <- quote(numericVector())
   expect_error(suppressWarnings( # this gives a warning and an error, so for testing we suppress the warning
-    nCompiler:::argType2symbol(a,
+    `:::`("nCompiler", "argType2symbol")(a,
                                name = "a",
                                origName = "orig_a",
                                isArg = TRUE,
@@ -192,7 +192,7 @@ test_that("nMatrix(type = \"integer\")",
   b <- quote(nMatrix(type = "integer",
                      nrow = 3,
                      ncol = 5))
-  bSym <- nCompiler:::argType2symbol(b,
+  bSym <- `:::`("nCompiler", "argType2symbol")(b,
                                      name = "b",
                                      origName = "orig_b",
                                      isArg = TRUE)
@@ -206,7 +206,7 @@ test_that("nMatrix(type = \"integer\")",
 test_that("list type works",
 {
   l <- "RcppList"
-  lSym <- nCompiler:::argType2symbol(l, name = "l", isArg = TRUE)
+  lSym <- `:::`("nCompiler", "argType2symbol")(l, name = "l", isArg = TRUE)
   expect_identical(lSym$name, "l")
   expect_identical(lSym$type, "Rcpp::List")
   expect_identical(lSym$isRef, FALSE)
@@ -221,7 +221,7 @@ test_that("list arguments handled correctly",
   bExplicit = quote(nMatrix(type = "integer"))
   aRef <- TRUE
   bRef <- FALSE
-  symTab <- nCompiler:::argTypeList2symbolTable(
+  symTab <- `:::`("nCompiler", "argTypeList2symbolTable")(
     argTypeList = list(a = a,
                        b = b),
     origNames = c("orig_a", "orig_b"),
@@ -245,21 +245,21 @@ test_that("list arguments handled correctly",
   expect_identical(bSym$isArg, FALSE)
 
   ## void() (return type default)
-  vSym <- nCompiler:::argType2symbol(quote(void()))
+  vSym <- `:::`("nCompiler", "argType2symbol")(quote(void()))
   expect_identical(vSym$type, "void")
   expect_identical(vSym$nDim, 0)
 })
 
 test_that("symbolTBD works",
 {
-  nCompiler:::resetLabelFunctionCreators()
+  `:::`("nCompiler", "resetLabelFunctionCreators")()
   nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
   )
-  sym_nc1 <- nCompiler:::argType2symbol('nc1', 'nc1obj')
-  symTab <- nCompiler:::symbolTableClass$new()
+  sym_nc1 <- `:::`("nCompiler", "argType2symbol")('nc1', 'nc1obj')
+  symTab <- `:::`("nCompiler", "symbolTableClass")$new()
   symTab$addSymbol(sym_nc1)
-  nCompiler:::resolveTBDsymbols(symTab)  
+  `:::`("nCompiler", "resolveTBDsymbols")(symTab)
   expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
                "std::shared_ptr<nClass_1> nc1obj")
 })

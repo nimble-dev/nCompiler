@@ -395,7 +395,7 @@ inGenCppEnv(
   }
 )
 
-nCompiler:::inGenCppEnv(
+inGenCppEnv(
   IndexByScalar <- function(code, symTab) {
     paste0("ISINGLE_(",
            compile_generateCpp(code$args[[1]], symTab), ",",
@@ -412,7 +412,7 @@ nCompiler:::inGenCppEnv(
   }
 )
 
-nCompiler:::inGenCppEnv(
+inGenCppEnv(
   IndexByVec <- function(code, symTab) {
     paste0("IVEC_(",
            compile_generateCpp(code$args[[1]], symTab), ",",
@@ -430,7 +430,7 @@ nCompiler:::inGenCppEnv(
   }
 )
 
-nCompiler:::inGenCppEnv(
+inGenCppEnv(
   IndexBySeqs <- function(code, symTab) {
     midpieces <- list()
     NumSeqs <- compile_generateCpp(code$args[[1]], symTab)
@@ -457,7 +457,7 @@ nCompiler:::inGenCppEnv(
       iArg <- iArg + 3
     }
     piece2 <- paste0(unlist(midpieces), collapse=", \n ")
-    piece3 <- paste0( nCompiler:::compile_generateCpp(code$args[[iArg]], symTab))
+    piece3 <- paste0( compile_generateCpp(code$args[[iArg]], symTab))
     ans <- paste0(piece1, "\n ", piece2, "),\n (", piece3, "))")
     ans
   }
@@ -469,7 +469,7 @@ inGenCppEnv(
   }
 )
 
-nCompiler:::inGenCppEnv(
+inGenCppEnv(
   Literal <- function(code, symTab) {
     # For cases that have been in code all the way through compilation,
     # the text was removed as a compile-time argument as is in compileArgs$text.
