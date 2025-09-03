@@ -53,9 +53,6 @@ jobs:
           new_pkgs <- pkgs[!pkgs %in% installed.packages()[,"Package"]]
           if(length(new_pkgs)) install.packages(new_pkgs)
           '
-
-      - name: Install package
-        run: R CMD INSTALL nCompiler
  
   # Job 1: nCompile and specific operator tests
   test-nCompile:
@@ -78,12 +75,15 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Install package
+        run: R CMD INSTALL nCompiler
+
       - name: Run nCompile and other tests
         run: |
-          testthat::test_dir("tests/testthat/uncompiled_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/nCompile_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/cpp_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/specificOp_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "progress")
         shell: Rscript {0}
 
   # Job 2: nClass, types and serialization tests
@@ -107,11 +107,14 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
       
+      - name: Install package
+        run: R CMD INSTALL nCompiler
+
       - name: Run nClass, types and serialization tests
         run: |
-          testthat::test_dir("tests/testthat/nClass_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/types_tests", reporter = "progress")
-          testthat::test_dir("tests/testthat/serialization_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "progress")
         shell: Rscript {0}
 
   # Job 3: Math tests
@@ -135,9 +138,12 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Install package
+        run: R CMD INSTALL nCompiler
+
       - name: Run Math tests
         run: |
-          testthat::test_dir("tests/testthat/math_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "progress")
         shell: Rscript {0}
 
   # Job 4: tensorOps
@@ -161,7 +167,10 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Install package
+        run: R CMD INSTALL nCompiler
+
       - name: Run TensorOps tests
         run: |
-          testthat::test_dir("tests/testthat/tensorOps_tests", reporter = "progress")
+          testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "progress")
         shell: Rscript {0}
