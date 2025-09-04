@@ -16,7 +16,8 @@ on:
 env:
   RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
   R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
-
+  R_HOME: /usr/local/lib/R
+  PATH: /usr/local/bin:${{ env.PATH }}
 
 jobs:
   install-cache:
@@ -105,6 +106,12 @@ jobs:
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
+
+      - name: Debug R
+        run: |
+          echo "PATH=$PATH"
+          which R
+          R --version
 
       - name: Install package
         run: R CMD INSTALL --install-tests nCompiler
