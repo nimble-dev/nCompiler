@@ -108,6 +108,8 @@ jobs:
         run: |
           library(nCompiler)
           library(devtools)
+          library(withr)
+          library(callr)
           testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
@@ -148,6 +150,8 @@ jobs:
         run: |
           library(nCompiler)
           library(devtools)
+          library(withr)
+          library(callr)
           testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
@@ -187,6 +191,8 @@ jobs:
         run: |
           library(nCompiler)
           library(devtools)
+          library(withr)
+          library(callr)
           testthat::test_dir("nCompiler/tests/testthat/math_tests", reporter = "summary")
         shell: Rscript {0}
 
@@ -224,5 +230,7 @@ jobs:
         run: |
           library(nCompiler)
           library(devtools)
+          library(withr)
+          library(callr)
           testthat::test_dir("nCompiler/tests/testthat/tensorOps_tests", reporter = "summary")
         shell: Rscript {0}
