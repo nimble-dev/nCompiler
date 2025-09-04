@@ -94,10 +94,14 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Add R to PATH
+        run: |
+          echo "/opt/R/${{ matrix.r }} /usr/local/bin" >> $GITHUB_PATH
+
       - name: Check cache contents
         run: |
           Rscript -e '
-            print(.libPaths());
+            cat(Sys.which("Rscript"), "\n")print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
@@ -136,10 +140,14 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Add R to PATH
+        run: |
+          echo "/opt/R/${{ matrix.r }} /usr/local/bin" >> $GITHUB_PATH
+
       - name: Check cache contents
         run: |
           Rscript -e '
-            print(.libPaths());
+            cat(Sys.which("Rscript"), "\n")print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
@@ -177,9 +185,14 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Add R to PATH
+        run: |
+          echo "/opt/R/${{ matrix.r }} /usr/local/bin" >> $GITHUB_PATH
+
       - name: Check cache contents
         run: |
           Rscript -e '
+            cat(Sys.which("Rscript"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
@@ -216,9 +229,14 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+      - name: Add R to PATH
+        run: |
+          echo "/opt/R/${{ matrix.r }} /usr/local/bin" >> $GITHUB_PATH
+
       - name: Check cache contents
         run: |
           Rscript -e '
+            cat(Sys.which("Rscript"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
