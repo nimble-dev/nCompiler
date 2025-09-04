@@ -101,7 +101,7 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            cat(Sys.which("Rscript"), "\n")
+            cat(Sys.which("R"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
@@ -148,7 +148,7 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            cat(Sys.which("Rscript"), "\n")
+            cat(Sys.which("R"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
@@ -194,7 +194,7 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            cat(Sys.which("Rscript"), "\n")
+            cat(Sys.which("R"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
@@ -238,7 +238,7 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            cat(Sys.which("Rscript"), "\n")
+            cat(Sys.which("R"), "\n")
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
