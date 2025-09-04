@@ -108,6 +108,7 @@ jobs:
 
       - name: Debug R
         run: |
+          Rscript -e 'cat("R.home():", R.home(), "\nR.home(bin):", R.home("bin"), "\n")'
           echo "PATH=$PATH"
           which R
           R --version
