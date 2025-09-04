@@ -148,7 +148,8 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            cat(Sys.which("Rscript"), "\n")print(.libPaths());
+            cat(Sys.which("Rscript"), "\n")
+            print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
