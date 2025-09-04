@@ -37,6 +37,7 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
+# setup-r-dependencies gave problems so we are doing the recommended packages manually
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -99,9 +100,6 @@ jobs:
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
-            print(.libPaths());
-            installed <- installed.packages()[,1];
-            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
       - name: Install package
         run: R CMD INSTALL nCompiler
@@ -138,9 +136,6 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            print(.libPaths());
-            installed <- installed.packages()[,1];
-            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
@@ -182,9 +177,6 @@ jobs:
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
-            print(.libPaths());
-            installed <- installed.packages()[,1];
-            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
 
       - name: Install package
         run: R CMD INSTALL nCompiler
@@ -218,9 +210,6 @@ jobs:
       - name: Check cache contents
         run: |
           Rscript -e '
-            print(.libPaths());
-            installed <- installed.packages()[,1];
-            cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
             print(.libPaths());
             installed <- installed.packages()[,1];
             cat("Installed packages:\n", paste(installed, collapse=", "), "\n")'
