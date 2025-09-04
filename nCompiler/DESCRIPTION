@@ -10,7 +10,7 @@ Depends: R (>= 3.3.0)
 Imports:
     methods,R6,Rcpp,pkgKitten,roxygen2
 Suggests:
-    Matrix, spam, SparseM, testthat
+    Matrix, spam, SparseM, testthat, devtools
 LinkingTo: Rcpp,Rcereal,RcppEigen,RcppParallel
 License: BSD_3_clause + file LICENSE | GPL (>= 2)
 Encoding: UTF-8
