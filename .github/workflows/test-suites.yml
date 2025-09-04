@@ -16,7 +16,6 @@ on:
 env:
   RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
   R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
-  R_HOME: /usr/local/lib/R
 
 jobs:
   install-cache:
@@ -94,9 +93,12 @@ jobs:
           key: ${{ runner.os }}-r-${{ hashFiles('nCompiler/DESCRIPTION', 'ci-extra-packages.txt') }}
           restore-keys: ${{ runner.os }}-r-
 
-      - name: Add R to PATH
-        run: |
-          echo "/usr/local/bin" >> $GITHUB_PATH
+      - name: Ensure R binary path is first in PATH
+        run: echo "$(Rscript -e 'cat(R.home("bin"))')" >> $GITHUB_PATH
+
+      # - name: Add R to PATH
+      #   run: |
+      #     echo "/usr/local/bin" >> $GITHUB_PATH
 
       - name: Check cache contents
         run: |
