@@ -17,7 +17,6 @@ env:
   RSPM: https://packagemanager.posit.co/cran/latest  # Enables Linux binaries from Posit
   R_KEEP_PKG_SOURCE: yes  # Keeps sources for debugging if needed
   R_HOME: /usr/local/lib/R
-  PATH: /usr/local/bin:${{ env.PATH }}
 
 jobs:
   install-cache:
