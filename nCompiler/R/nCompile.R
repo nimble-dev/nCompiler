@@ -258,6 +258,8 @@ nCompile <- function(...,
                      package = FALSE,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   #(1) Put together inputs from ...
+  message("starting nCompile")
+
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
   if(is.null(names(origList)))
@@ -407,6 +409,7 @@ nCompile <- function(...,
     lib <- file.path(tempdir(), "templib")
     if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
     pkgDir <- file.path(dir, temppkgname)
+    message("about to try devtools::install")
     ans <- try({
       withr::with_libpaths(lib, {
         devtools::install(pkgDir,
@@ -424,6 +427,7 @@ nCompile <- function(...,
       names(ans_) <- returnNames
       ans_
     })
+    message("done tryng devtools::install")
     if(inherits(ans, "try-error")) {
       stop("It looks like the package code was generated without stopping,\n",
            "but there was an error installing or loading it.\n",
