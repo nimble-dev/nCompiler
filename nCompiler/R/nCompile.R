@@ -258,7 +258,7 @@ nCompile <- function(...,
                      package = FALSE,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
   #(1) Put together inputs from ...
-  message("starting nCompile")
+  cat("starting nCompile\n")
 
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   origList <- list(...)
@@ -354,6 +354,7 @@ nCompile <- function(...,
   # after packing up control list (e.g. from interfaces)
 
   # (2) Create cppDefs
+  cat("making cppDefs\n")
   cppDefs_info <- createCppDefsInfo(units, unitTypes, control, compileInfos)
   cppDefs <- cppDefs_info$cppDefs
   if(isTRUE(control$return_cppDefs)) return(cppDefs)
@@ -381,6 +382,7 @@ nCompile <- function(...,
 
   if(!is.null(from_writePackage)) {
     # .writePackage content was provided, so we were called from writePackage
+    cat("doing return(writePackage(...))\n")
     return(
       writePackage(pkgName = from_writePackage$pkgName,
                     dir = dir,
@@ -396,6 +398,7 @@ nCompile <- function(...,
 
   # From here on, we were not called from writePackage
   if(package) {
+    cat("calling writePackage for package mode\n")
     # user requests nCompile use packaging mechanism
     temppkgname <- basename(tempfile("TEMPPKG", ""))
     writePackage(pkgName = temppkgname,
@@ -409,7 +412,7 @@ nCompile <- function(...,
     lib <- file.path(tempdir(), "templib")
     if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
     pkgDir <- file.path(dir, temppkgname)
-    message("about to try devtools::install")
+    cat("about to try devtools::install\n")
     ans <- try({
       withr::with_libpaths(lib, {
         devtools::install(pkgDir,
@@ -427,7 +430,7 @@ nCompile <- function(...,
       names(ans_) <- returnNames
       ans_
     })
-    message("done tryng devtools::install")
+    cat("done trying devtools::install\n")
     if(inherits(ans, "try-error")) {
       stop("It looks like the package code was generated without stopping,\n",
            "but there was an error installing or loading it.\n",
@@ -440,6 +443,7 @@ nCompile <- function(...,
   } else {
     # We will not use packaging mechanism
     RcppPacket_list <- cppDefsList_2_RcppPacketList(cppDefs)
+    cat("doing nCompile_finish_nonpackage\n")
     return(
       nCompile_finish_nonpackage(units = units,
                                  cppDefs = cppDefs,
@@ -467,6 +471,7 @@ writePackage <- function(...,
                          modify = get_nOption("modifyPackageFiles"),
                          memberData = list(),
                          roxygen = list()) {
+  cat("starting writePackage\n")
   require(Rcpp)
   pkgDir <- file.path(dir, pkgName)
   modify <- match.arg(modify, c("no", "add", "clear"))
@@ -489,6 +494,7 @@ writePackage <- function(...,
   if(is.null(content)) { # this means we are being called directly, not from nCompile
     # We call nCompile with control$.writePackage containing arguments needed for
     #  nCompile to recurse back to writePackage with control$prepared_content filled in.
+    cat("calling nCompile\n")
     res <- nCompile(...,
               dir = dir,
               env = parent.frame(), # will not be used
@@ -539,6 +545,7 @@ writePackage <- function(...,
   codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
   datDir <- file.path(pkgDir, "data")
 #
+  cat("starting writePackage writing steps\n")
   WP_check_unit_types(units, unitTypes)
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
   full_interfaces <- WP_build_full_interfaces(units, unitTypes, interfaces, exportNames)
@@ -566,9 +573,11 @@ writePackage <- function(...,
   ##   # message("Deleting ", compiledObjs)
   ##   unlink(compiledObjs)
   ## }
+  cat("calling compileAttributs\n")
   compileAttributes(pkgdir = pkgDir)
   update_compileAttributes_for_argPassing(Rdir,
                                           units, unitTypes, returnNames)
+  cat("finished writePackage\n")
   invisible(NULL)
 }
 
