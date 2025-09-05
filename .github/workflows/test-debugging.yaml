@@ -27,7 +27,7 @@ jobs:
       - name: Build Package
         run: |
             R CMD build nCompiler
-            R CMD install --install-tests nCompiler_*.tar.gz
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
       - name: Check Package
         run: |
             echo "got this far"
