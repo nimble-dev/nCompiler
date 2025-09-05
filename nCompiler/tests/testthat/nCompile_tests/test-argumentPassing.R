@@ -14,6 +14,8 @@ message("doing scalar = vector + scalar does not error out if the vector in leng
 message("blockRef error trapping can be more involved -- using dims.")
 message("blockRef cannot cross between scalar types")
 
+cat("startig test-argumentPassing\n")
+
 # This is a workaround to pkg_name::var.
 # This is necessary because on GitHub Actions for testing, we use
 # `setup-r-dependencies`. This **aggressively** checks **all** directories
@@ -57,6 +59,8 @@ test_that("pass 1D by copy works (compiled & uncompiled)", {
 
 ####################
 ## 1D tests
+
+cat("starting 1D tests\n")
 
 # compiled and uncompiled 1D by ref
 test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompiled) in nFunction", {
@@ -108,6 +112,9 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(access_dynamic_package("testpackage", "foo"))
   test_foo(access_dynamic_package("testpackage", "foo"))
 })
+
+cat("starting 1D ref and blockRef tests\n")
+
 
 test_that("pass 1D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
   message("This test has four trapped errors.")

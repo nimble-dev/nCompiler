@@ -397,7 +397,7 @@ namespace nCompiler {
     template<typename T, typename IV>
     Eigen::TensorIndexByVecOp<DimId, T, IV, Rindexing>
     op(const IV& iv, T& x) const {
-      std::cout<<"got non-const version of IndexByVec"<<std::endl;
+//      std::cout<<"got non-const version of IndexByVec"<<std::endl;
       return Eigen::TensorIndexByVecOp<DimId, T, IV, Rindexing>(x,
                                                                 iv);
     }
