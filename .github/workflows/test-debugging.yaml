@@ -28,6 +28,15 @@ jobs:
         run: |
             R CMD build nCompiler
             R CMD INSTALL --install-tests nCompiler_*.tar.gz
+      - name: Run nCompile and other tests
+        run: |
+          library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
+        shell: Rscript {0}
+
       - name: Check Package
         run: |
             echo "got this far"
