@@ -65,6 +65,7 @@ cat("starting 1D tests\n")
 # compiled and uncompiled 1D by ref
 test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompiled) in nFunction", {
   message("This test has many trapped errors.")
+  cat("A\n")
   foo <- nFunction(
     function(x = numericVector(), xRef = numericVector(), xBlockRef = numericVector()) {
       xRef <- x[1:2] + 10
@@ -76,6 +77,7 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
     blockRefArgs = 'xBlockRef',
     returnType = 'numericVector'
   )
+  cat("B\n")
   test_foo <- function(fn) {
     x <- as.numeric(1:3)
     xRef <- as.numeric(11:13)
@@ -88,7 +90,9 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
     expect_equal(xRef, x[1:2] + 10)
     expect_equal(xBlockRef, c(21, 1:2 + 10 + 1000))
   }
+  cat("C\n")
   cfoo <- nCompile(foo)
+  cat("D\n")
   test_foo(foo)
   test_foo(cfoo)
   test_foo(cfoo) # Do twice to invoke byte-compiled version.
@@ -99,16 +103,21 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   # and our then our tricky code failed. So we stopped being tricky in C++
   # and took another approach. However we still have
   # second-calls as regression tests on this problem.
+  cat("E\n")
   cfoo <- nCompile(foo, package=TRUE)
+  cat("F\n")
   test_foo(cfoo)
   test_foo(cfoo)
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
   test <- writePackage(foo, pkgName = "testpackage", dir = dir, modify="clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  cat("G\n")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
+  cat("H\n")
   withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
+  cat("I\n")
   test_foo(access_dynamic_package("testpackage", "foo"))
   test_foo(access_dynamic_package("testpackage", "foo"))
 })

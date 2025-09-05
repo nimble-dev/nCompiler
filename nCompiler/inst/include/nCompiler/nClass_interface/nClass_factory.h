@@ -47,9 +47,9 @@ class shared_ptr_holder: public shared_ptr_holder_base {
 #ifdef SHOW_SHARED_PTR_DESTRUCTORS
 //    std::cout<<"Destroying shared_ptr_holder.";
     if(sp_.unique()) {
-      std::cout<<" This should destroy the underlying nCompiler object."<<std::endl;
+//      std::cout<<" This should destroy the underlying nCompiler object."<<std::endl;
     } else {
-      std::cout<<" This won't yet destroy the underlying nCompiler object. It is not unique."<<std::endl;
+//      std::cout<<" This won't yet destroy the underlying nCompiler object. It is not unique."<<std::endl;
     }
 #endif
   }
@@ -62,7 +62,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
 };
 
 inline void finalize_shared_ptr_holder(SEXP Xptr) {
-  std::cout<<"Entering finalize_shared_ptr_holder"<<std::endl;
+//  std::cout<<"Entering finalize_shared_ptr_holder"<<std::endl;
   shared_ptr_holder_base *sph = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr));
   if(sph) delete sph;
 }
