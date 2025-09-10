@@ -169,7 +169,7 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
   if(is.null(opDef)) {
     ## At this point, we have not found an nFunction or nClass method.
     if(is_NCgenerator) {
-      opDef <- where$compileInfo$opDefs[[code$name]]
+      opDef <- NCinternals(where)$compileInfo$opDefs[[code$name]]
       if(!is.null(opDef)) {
         cachedOpInfo$case <- "nClass method" # this could be a pure keyword or an nFunction with opDef provided at the nClass level
         # a pure keyword will have obj_internals == NULL, providing a way to 

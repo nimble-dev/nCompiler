@@ -112,8 +112,11 @@ compile_labelAbstractTypes <- function(code,
         if(!is.null(handler)) {
           if (logging)
             appendToLog(paste('Calling handler', handler, 'for', code$name))
-          ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                      envir = labelAbstractTypesEnv)
+          if(is.function(handler))
+            ans <- handler(code, symTab,  auxEnv, handlingInfo)
+          else
+            ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
+                        envir = labelAbstractTypesEnv)
           nErrorEnv$stateInfo <- character()
           if (logging) {
             appendToLog(paste('Finished handling', handler, 'for', code$name))

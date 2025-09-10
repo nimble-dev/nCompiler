@@ -105,10 +105,13 @@ compile_generateCpp <- function(code,
       if(!is.null(handler)) {
         if (logging)
           appendToLog(paste('Calling handler', handler, 'for', code$name))
-        res <- eval(call(handler,
-                         code,
-                         symTab),
-                    envir = genCppEnv)
+        if(is.function(handler))
+          res <- handler(code, symTab)
+        else
+          res <- eval(call(handler,
+                          code,
+                          symTab),
+                      envir = genCppEnv)
         if (logging) {
           appendToLog(paste('Finished handling', handler, 'for',
                             code$name, 'with result:'))
