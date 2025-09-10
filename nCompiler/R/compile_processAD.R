@@ -52,7 +52,9 @@ compile_processAD <- function(code,
       return(invisible(NULL))
     }
 
-    handlingInfo <- getOperatorDef(code$name, "processAD")
+    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    handlingInfo <- getOperatorField(opInfo$opDef, "processAD")
+#    handlingInfo <- getOperatorDef(code$name, "processAD")
     # opInfo <- operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["processAD"]]

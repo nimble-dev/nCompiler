@@ -85,7 +85,18 @@ compile_generateCpp <- function(code,
       ans[[length(code$args) + 2]] <- paste0(indent, '}')
     return(ans)
   }
-  handler <- getOperatorDef(code$name, "cppOutput", "handler")
+  # All calls must have valid opInfo or be a core DSL operator
+  # This compiler stage is called from cppDefs' generate() methods,
+  # so where$auxEnv is not available.
+  # This means that any penultimate compiler stages that changed the 
+  # call name to something non-core (and hence potentially the handler) 
+  # must update the cachedOpInfo.
+  # or we must add a final pass to do so.
+  # An example is changes made in eigenization, such as inserting `index[`.
+  # This is a core operator so it will be found in the check_cachedOpInfo with update=TRUE.
+  opInfo <- check_cachedOpInfo(code, where=baseenv(), update=TRUE, allowFail = TRUE)
+  handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
+  #  handler <- getOperatorDef(code$name, "cppOutput", "handler")
   # opInfo <- operatorDefEnv[[code$name]]
   # if(!is.null(opInfo)) {
   #   handlingInfo <- opInfo[["cppOutput"]]
@@ -165,10 +176,9 @@ inGenCppEnv(
 
 inGenCppEnv(
   Generic_nFunction <- function(code, symTab) {
-    innerCode <- code$args[['call']]
-    cpp_code_name <- code$aux$cpp_code_name
+    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$cpp_code_name
     paste0(cpp_code_name,
-           '(', paste0(unlist(lapply(innerCode$args,
+           '(', paste0(unlist(lapply(code$args,
                                      compile_generateCpp,
                                      symTab,
                                      asArg = TRUE) ),

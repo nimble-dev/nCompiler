@@ -100,7 +100,10 @@ compile_labelAbstractTypes <- function(code,
       return(invisible(NULL))
     }
 
-    handlingInfo <- getOperatorDef(code$name, "labelAbstractTypes")
+    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    handlingInfo <- getOperatorField(opInfo$opDef, "labelAbstractTypes")
+
+#    handlingInfo <- getOperatorDef(code$name, "labelAbstractTypes")
     # opInfo <- operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["labelAbstractTypes"]]
@@ -406,24 +409,11 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {
-      # We have code = NFCALL_(foo(x, y))
-      # innerCall if foo(x,y)
-      # We'll set innerCall$type to symbolNF
-      # and we'll set code$type to the returnType of foo(x, y)
-      innerCall <- code$args[['call']]
-      if(is.null(innerCall))
-        stop(
-          exprClassProcessingErrorMsg(
-            code, paste('In nFunction_or_method_call: the nFunction (or method) ',
-                        code$name, 
-                        ' has NULL content.')
-          ), call. = FALSE
-        )
-      inserts <- recurse_labelAbstractTypes(innerCall, symTab, auxEnv,
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
-      obj_internals <- code$aux$obj_internals
-      nFunctionName <- code$aux$nFunctionName
-      innerCall$type <- symbolNF$new(name = nFunctionName)
+      obj_internals <- code$aux$cachedOpInfo$obj_internals
+#      nFunctionName <- obj_internals$nFunctionName
+#      code$aux$symbolNF <- symbolNF$new(name = nFunctionName)
       returnSym <- obj_internals$returnSym
       if(is.null(returnSym))
         stop(
@@ -435,24 +425,6 @@ inLabelAbstractTypesEnv(
         )
       code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
       inserts
-
-      # useArgs <- c(FALSE, rep(TRUE, length(code$args)-1))
-      # inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-      #                                       handlingInfo, useArgs)
-      # obj_internals <- code$args[[1]]$aux$obj_internals
-      # nFunctionName <- code$args[[1]]$aux$nFunctionName
-      # code$args[[1]]$type <- symbolNF$new(name = nFunctionName)
-      # returnSym <- obj_internals$returnSym
-      # if(is.null(returnSym))
-      #   stop(
-      #     exprClassProcessingErrorMsg(
-      #       code, paste('In nFunction_or_method_call: the nFunction (or method) ',
-      #                   code$name,
-      #                   ' does not have a valid returnType.')
-      #     ), call. = FALSE
-      #   )
-      # code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
-      # invisible(NULL)
     }
 )
 

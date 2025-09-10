@@ -50,8 +50,9 @@ nGet <- function(name, where) {
     ## switch where to be the generator's parent_env
     where <- where$parent_env
   }
-  if(exists(name, envir = where, inherits = TRUE))
-    get(name, envir = where, inherits = TRUE)
-  else
-    NULL
+  get0(name, envir = where)
+  # if(exists(name, envir = where, inherits = TRUE))
+  #   get(name, envir = where, inherits = TRUE)
+  # else
+  #   NULL
 }

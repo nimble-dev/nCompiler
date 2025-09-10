@@ -94,12 +94,19 @@ updateOperatorDef <- function(ops, field, subfield = NULL, val) {
   }
 }
 
+getOperatorField <- function(opDef, field = NULL, subfield = NULL) {
+  if (is.null(opDef)) return(NULL)
+  if (is.null(field)) return(opDef)
+  if (is.null(opDef[[field]])) return(NULL)
+  if (is.null(subfield)) return(opDef[[field]])
+  opDef[[field]][[subfield]]
+}
+
 getOperatorDef <- function(op, field = NULL, subfield = NULL) {
-  opInfo <- get0(op, envir=operatorDefUserEnv)
-#  opInfo <- operatorDefEnv[[op]]
-  if (is.null(opInfo) || is.null(field)) return(opInfo)
-  if (is.null(opInfo[[field]]) || is.null(subfield)) return(opInfo[[field]])
-  return(opInfo[[field]][[subfield]])
+  opDef <- get0(op, envir=operatorDefUserEnv)
+#  opDef <- operatorDefEnv[[op]]
+  if(is.null(opDef)) return(NULL)
+  getOperatorField(opDef, field, subfield)
 }
 
 assignOperatorDef(
@@ -122,7 +129,7 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'NFCALL_', # This is used for non-method nFunctions in normalizeCalls and for any (including method) nFunctions after normalizeCalls
+  'nFunction_default', # This is used for non-method nFunctions in normalizeCalls and for any (including method) nFunctions after normalizeCalls
   list(
     labelAbstractTypes = list(
       handler = 'nFunction_or_method_call'),
@@ -133,17 +140,17 @@ assignOperatorDef(
   )
 )
 
-assignOperatorDef(
-  'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
-  list(
-    ## labelAbstractTypes = list(
-    ##   handler = 'nFunction_or_method_call'),
-    normalizeCalls = list(
-      handler = 'nFunction_or_method_call')#, # becomes NFCALL_
-    ## cppOutput = list(
-    ##   handler = 'Generic_nFunction')
-  )
-)
+# assignOperatorDef(
+#   'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
+#   list(
+#     ## labelAbstractTypes = list(
+#     ##   handler = 'nFunction_or_method_call'),
+#     normalizeCalls = list(
+#       handler = 'nFunction_or_method_call')#, # becomes NFCALL_
+#     ## cppOutput = list(
+#     ##   handler = 'Generic_nFunction')
+#   )
+# )
 
 assignOperatorDef(
   c('dim'),

@@ -24,7 +24,9 @@ compile_simpleTransformations <- function(code,
       }
     }
     
-    handlingInfo <- getOperatorDef(code$name, opInfoName)
+    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE, allowFail = TRUE)
+    handlingInfo <- getOperatorField(opInfo$opDef, opInfoName)
+    # handlingInfo <- getOperatorDef(code$name, opInfoName)
     # opInfo <- getOperatorDef(code$name) #operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[[opInfoName]]

@@ -73,7 +73,9 @@ compile_eigenize <- function(code,
       return(invisible(NULL))
     }
 
-    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
+    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    handlingInfo <- getOperatorField(opInfo$opDef, "eigenImpl")
+#    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
     # operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["eigenImpl"]]
