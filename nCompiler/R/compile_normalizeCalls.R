@@ -69,8 +69,6 @@ compile_normalizeCalls <- function(code,
       }
     }
 
-    normalizeCallsEnv$recurse_normalizeCalls(code, symTab, auxEnv, handlingInfo)
-
     opDef <- cachedOpInfo$opDef
     matchDef <- opDef[["matchDef"]]
     if(is.null(matchDef))
@@ -79,6 +77,7 @@ compile_normalizeCalls <- function(code,
       exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
       # code <- replaceArgInCaller(code, matched_code)
     }
+    normalizeCallsEnv$recurse_normalizeCalls(code, symTab, auxEnv, handlingInfo)
   }
   nErrorEnv$stateInfo <- character()
   invisible(NULL)
