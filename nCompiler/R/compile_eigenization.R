@@ -73,21 +73,27 @@ compile_eigenize <- function(code,
       return(invisible(NULL))
     }
 
-    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
+    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    handlingInfo <- getOperatorField(opInfo$opDef, "eigenImpl")
+#    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
     # operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["eigenImpl"]]
       if(!is.null(handlingInfo)) {
         beforeHandler <- handlingInfo[['beforeHandler']]
         if(!is.null(beforeHandler)) {
-          setupExprs <- c(setupExprs,
-                          eval(call(beforeHandler,
-                                    code,
-                                    symTab,
-                                    auxEnv,
-                                    workEnv,
-                                    handlingInfo),
-                               envir = eigenizeEnv))
+          if(is.function(beforeHandler))
+            setupExprs <- c(setupExprs,
+                            beforeHandler(code, symTab, auxEnv, workEnv, handlingInfo))
+          else
+            setupExprs <- c(setupExprs,
+                            eval(call(beforeHandler,
+                                      code,
+                                      symTab,
+                                      auxEnv,
+                                      workEnv,
+                                      handlingInfo),
+                                envir = eigenizeEnv))
           # return(if(length(setupExprs) == 0) NULL else setupExprs)
         }
       }
@@ -110,14 +116,18 @@ compile_eigenize <- function(code,
       if(!is.null(handlingInfo)) {
         handler <- handlingInfo[['handler']]       
         if(!is.null(handler)) {
-          setupExprs <- c(setupExprs,
-                          eval(call(handler,
-                                    code,
-                                    symTab,
-                                    auxEnv,
-                                    workEnv,
-                                    handlingInfo),
-                               envir = eigenizeEnv))
+          if(is.function(handler))
+            setupExprs <- c(setupExprs,
+                            handler(code, symTab, auxEnv, workEnv, handlingInfo))
+          else
+            setupExprs <- c(setupExprs,
+                            eval(call(handler,
+                                      code,
+                                      symTab,
+                                      auxEnv,
+                                      workEnv,
+                                      handlingInfo),
+                                envir = eigenizeEnv))
         }
       }
     # }
