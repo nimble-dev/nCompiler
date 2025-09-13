@@ -14,7 +14,7 @@
 #  duplication. internalCppDefs are assumed to be unique.)
 # cppDefinitionClass has getter methods but no generate method.
 cppDefinitionClass <- R6::R6Class(
-  classname = 'cppDefinitionClass', 
+  classname = 'cppDefinitionClass',
   portable = FALSE,
   public = list(
     filename = character(),
@@ -132,10 +132,10 @@ cppGlobalObjectClass <- R6::R6Class(
       ## For globals for class static members, we want no declaration
       ## Otherwise we want a declaration and put extern in front
       if(staticMembers & declaration) return(character())
-      output <- paste0(generateAll(symbolTable$getSymbols(), 
+      output <- paste0(generateAll(symbolTable$getSymbols(),
                                    declaration = declaration),
                        ';')
-      if(declaration) 
+      if(declaration)
         output <- paste("extern ", output)
       output
     }
@@ -186,7 +186,7 @@ cppNamespaceClass <- R6::R6Class(
 
 ## C++ class object.
 ## A class is like a namespace with inheritance
-## At the moment everything is public. 
+## At the moment everything is public.
 ## This class can build cppFunction objects for a generator function and a finalizer function
 ## The generator can be called via .Call to return an external pointer to a new object of the class
 ## The finalizer is the finalizer assigned to the object when the external pointer is made
@@ -206,7 +206,7 @@ buildSEXPgenerator_impl <- function(self) {
       substitute(cppLiteral(RETURNLINE),
                  list(RETURNLINE = as.character(returnLine)))
     )
-  
+
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
   self$internalCppDefs[["SEXPgenerator"]] <-
@@ -236,7 +236,7 @@ build_set_nClass_env_impl <- function(self) {
       substitute(cppLiteral(SETTERLINE),
                  list(SETTERLINE = as.character(setterLine)))
     )
-  
+
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
   args <- symbolTableClass$new()
@@ -582,7 +582,7 @@ cppClassClass <- R6::R6Class(
     addInheritance = function(newI) {
       inheritance <<- c(inheritance, newI)
     },
-    ##addAncestors = function(newI) ancestors <<- c(ancestors, newI), 
+    ##addAncestors = function(newI) ancestors <<- c(ancestors, newI),
     ##setPrivate = function(name) private[[name]] <<- TRUE,
     generate = function(declaration = FALSE, ...) {
       if(declaration) {
@@ -610,7 +610,7 @@ cppClassClass <- R6::R6Class(
         if(length(memberCppDefs) > 0) {
           output <- generateAll(memberCppDefs, scopes = name)
         } else {
-          output <- ""  
+          output <- ""
         }
       }
       unlist(output)
@@ -729,7 +729,7 @@ cppCodeBlockClass <- R6::R6Class(
           } else
             useSymTab <- self$symbolTable
         if(isTRUE(self$cppADCode))
-          recurseSetCppADExprs(self$code, TRUE) 
+          recurseSetCppADExprs(self$code, TRUE)
         outputCppCode <- c(outputCppCode,
                            compile_generateCpp(self$code,
                                                useSymTab,
@@ -737,7 +737,7 @@ cppCodeBlockClass <- R6::R6Class(
                                                showBracket = FALSE)
                            )
         if(isTRUE(self$cppADCode))
-          recurseSetCppADExprs(self$code, FALSE) 
+          recurseSetCppADExprs(self$code, FALSE)
       } else {
         stop('code in generate() is not of the right type.',
              call. = FALSE)
@@ -963,8 +963,13 @@ generateFunctionHeader <- function(self,
   abstract_text <- character()
   externC_text <- character()
   if(declaration) {
-    virtual_text <- compileInfo$virtual
-    if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
+    virtual_text <- character()
+    if(is.character(compileInfo$virtual))
+      virtual_text <- compileInfo$virtual
+    else if(isTRUE(self$virtual))
+      virtual_text <- 'virtual '
+    # virtual_text <- compileInfo$virtual
+    # if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
 
     isAbstract <- compileInfo$abstract
     if(is.null(isAbstract)) isAbstract <- self$abstract
@@ -1017,6 +1022,7 @@ generateFunctionHeader <- function(self,
       externC_text,
       template_text,
       static_text,
+      virtual_text,
       returnType_text,
       scopes_name_text,
       args_text,
