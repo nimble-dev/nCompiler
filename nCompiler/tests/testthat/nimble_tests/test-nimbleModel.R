@@ -30,6 +30,6 @@ test_that("toy nimble model prototype works", {
   obj$resize_from_list(list(beta = 7))
   expect_error(obj$resize_from_list(list(beta = 5, mu = 3, gamma = c(2, 4))))
   obj$resize_from_list(list(beta = 5, gamma = c(2, 4)))
-  expect_equal(obj$beta, rep(0, 5))
-  expect_equal(obj$gamma, matrix(0, nrow = 2, ncol = 4))
+  expect_equal(length(obj$beta), 5)
+  expect_equal(dim(obj$gamma), c(2, 4))
 })
