@@ -63,6 +63,7 @@ jobs:
       - name: Run nCompile and other tests
         run: |
           library(nCompiler)
+          testthat::test_dir("nCompiler/tests/testthat/nimble_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")

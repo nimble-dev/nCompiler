@@ -70,6 +70,7 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
+    nimbleModels.R
     nList.R
     nTry.R
     packaging.R

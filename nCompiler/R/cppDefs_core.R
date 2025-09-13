@@ -314,8 +314,13 @@ addGenericInterface_impl <- function(self) {
   self$addInheritance(paste0("public genericInterfaceC<",
                              name,
                              ">"))
-#  self$Hincludes <- c(self$Hincludes,
-#                      nCompilerIncludeFile("nCompiler_class_interface.h"))
+  # It is ok to have multiple virtual inheritance from genericInterfaceBaseC,
+  # but we clean it up here for slightly simpler code.
+  if("virtual public genericInterfaceBaseC" %in% self$inherit) {
+    self$inherit <- self$inherit[-which(self$inherit == "virtual public genericInterfaceBaseC")]
+  }
+  #  self$Hincludes <- c(self$Hincludes,
+  #                      nCompilerIncludeFile("nCompiler_class_interface.h"))
   self$Hpreamble <- c(self$Hpreamble,
                       "#define NCOMPILER_USES_NCLASS_INTERFACE",
                        "#define USES_NCOMPILER")
@@ -624,6 +629,21 @@ cppClassClass <- R6::R6Class(
       if(interface) {
         addGenericInterface_impl(self)
         add_obj_hooks_impl(self)
+      } else {
+        # Ensure inheritance from genericInterfaceBaseC so our custom Exporter in C++
+        # can always dynamic_pointer_cast to shared_ptr<genericInterfaceBaseC>.
+        if(!("virtual public genericInterfaceBaseC" %in% self$inherit)) {
+          self$addInheritance("virtual public genericInterfaceBaseC")
+        }
+        # These will always end up included and possibly multiple times,
+        # so it's a bit sloppy but not worth cleaning up for now.
+        self$Hpreamble <- c(self$Hpreamble,
+                       "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
+        self$CPPpreamble <- c(self$CPPpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                      "#define USES_NCOMPILER")
+
       }
       # The only case that would omit interface calls is generated predefined code.
       if(interfaceCalls)

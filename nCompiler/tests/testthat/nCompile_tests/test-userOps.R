@@ -10,6 +10,8 @@
 #   e.g. if an nFunction has an opDef list, that takes precedence over
 #     an opDef list provided to the nClass that contains the nFunction.
 
+cat("add userOps test for custom_default opDef\n")
+
 test_that("registering a global user-defined operator definition (opDef) works", {
   ## first version: provide a function
   nimArrayHandler <- function(code,...) {

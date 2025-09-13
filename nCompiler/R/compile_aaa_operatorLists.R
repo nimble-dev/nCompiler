@@ -140,6 +140,18 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'custom_default',
+  list(
+    labelAbstractTypes = list(
+      handler = 'custom_call'
+      # May use nFunction field.
+    ),
+    cppOutput = list(
+      handler = 'AsIs')
+  )
+)
+
 # assignOperatorDef(
 #   'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
 #   list(

@@ -232,6 +232,8 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
 
 ##############
 
+cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
+
 test_that("inheriting-only classes in 3-level hierarchy works", {
   ncBase <- nClass(
     classname = "ncBase",
@@ -260,11 +262,29 @@ test_that("inheriting-only classes in 3-level hierarchy works", {
     Cpublic = list(x3 = 'numericScalar')
   )
 
-  comp <- nCompile(ncBase, ncMid, ncDer) # check if order still matters
+  ncUseBase <- nClass(
+    classname = "ncUseBase",
+    Cpublic = list(
+      myBase = 'ncBase',
+      call_add_x = nFunction(
+        fun = function(v = 'numericScalar') {
+          return(myBase$add_x(v)); returnType('numericScalar')
+        }
+      )
+    )
+  )
 
+  comp <- nCompile(ncUseBase, ncBase, ncMid, ncDer) # check if order still matters
   Cobj <- comp$ncDer$new()
   Cobj$x <- 10
   expect_equal(Cobj$add_x(15), 25)
   expect_equal(method(Cobj$private$CppObj, "add_x")(15), 25)
   expect_equal(Cobj$add_2x_virt(15), 35)
+
+  Cobj2 <- comp$ncUseBase$new()
+  expect_true(is.null(Cobj2$myBase))
+  Cobj2$myBase <- Cobj
+  expect_equal(Cobj2$call_add_x(15), 25)
+
+  rm(Cobj, Cobj2); gc()
 })

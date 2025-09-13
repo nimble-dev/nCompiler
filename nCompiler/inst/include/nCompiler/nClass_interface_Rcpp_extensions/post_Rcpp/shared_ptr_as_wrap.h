@@ -33,6 +33,8 @@ namespace Rcpp {
     template <typename T>
     class Exporter< std::shared_ptr< T > > {
     public:
+      static constexpr bool T_is_polymorphic = std::is_polymorphic_v<T>;
+
       std::shared_ptr<T> sp_;
       Exporter(SEXP Sx) {
         Rcpp::Environment Sx_env(Sx); // Sx is an environment, so initialize an Rcpp:Environment from it.
@@ -51,7 +53,13 @@ namespace Rcpp {
                 ok=true;}}}
         }
         if(!ok) {stop("An argument that should be an nClass object is not valid.");}
-        sp_ = dynamic_cast<shared_ptr_holder<T>* >(static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr)))->sp();
+        std::shared_ptr<genericInterfaceBaseC> spbase = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr))->get_interfaceBase_shared_ptr();
+        if constexpr (T_is_polymorphic) {
+          sp_ = std::dynamic_pointer_cast<T>(spbase);
+        } else {
+          sp_ = std::static_pointer_cast<T>(spbase);
+        }
+        // sp_ = dynamic_cast<shared_ptr_holder<T>* >(static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr)))->sp();
         UNPROTECT(1);
       }
       inline std::shared_ptr< T > get(){
