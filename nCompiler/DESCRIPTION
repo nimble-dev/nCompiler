@@ -49,6 +49,10 @@ Collate:
     cppDefs_TBB.R
     cppDefs_variables.R
     developerTools.R
+    symbolTable.R
+    symbolTableClass.R
+    symbolTable_utils.R
+    typeDeclarations.R
     NC.R
     NC_Compile.R
     NC_CompilerClass.R
@@ -79,11 +83,7 @@ Collate:
     Rcpp_nCompiler.R
     Rexecution.R
     Rhooks.R
-    symbolTable.R
-    symbolTableClass.R
-    symbolTable_utils.R
     testingTools.R
-    typeDeclarations.R
     compile_zzz_operatorLists.R
     zzz_NC_Predefined.R
 RoxygenNote: 7.3.2

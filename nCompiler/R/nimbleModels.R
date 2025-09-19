@@ -3,20 +3,23 @@
 #
 # see test-nimbleModel too.
 
-# modelBase_nClass <- nClass(
-#   name = "modelBase_nClass",
-#   Cpublic = list(
-#     hw = nFunction(
-#         name = "hw",
-#         function() {cppLiteral('Rprintf("modelBase_nClass hw (should not see this)\\n");')},
-#         compileInfo = list(virtual=TRUE)
-#     )
-#     bye = nFunction(
-#         name = "bye",
-#         function() {cppLiteral('Rprintf("modelBase_nClass hw (should not see this)\\n");')},
-#         compileInfo = list(virtual=TRUE)
-# )
-# )
+modelBase_nClass <- nClass(
+  classname = "modelBase_nClass",
+  Cpublic = list(
+    hw = nFunction(
+        name = "hw",
+        function() {cppLiteral('Rprintf("modelBase_nClass hw (should not see this)\\n");')},
+        compileInfo = list(virtual=TRUE)
+    ),
+    bye = nFunction(
+        name = "bye",
+        function() {cppLiteral('Rprintf("modelBase_nClass hw (should not see this)\\n");')},
+        compileInfo = list(virtual=TRUE)
+    )
+  ),
+  compileInfo=list(interface="none",
+                   createFromR = FALSE)
+)
 
 makeModel_nClass <- function(varInfo) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
@@ -70,7 +73,7 @@ makeModel_nClass <- function(varInfo) {
   ans <- substitute(
     nClass(
       classname = "mymodel",
-      inherit = modelBase_nClass,
+ #     inherit = modelBase_nClass,
       compileInfo = list(opDefs = OPDEFS,
                         inherit = list(base = "public modelClass_<mymodel>"),
                         Hincludes = "<nCompiler/nClass_interface/post_Rcpp/nCompiler_model_base_devel.h>"),

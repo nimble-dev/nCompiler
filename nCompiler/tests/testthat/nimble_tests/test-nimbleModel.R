@@ -15,7 +15,7 @@ test_that("toy nimble model prototype works", {
                   list(name = "sd", nDim = 0))
   node_dnorm <- make_node_fun(varInfo)
 
-  Cncm1 <- nCompile(ncm1, node_dnorm)
+  Cncm1 <- nCompile(modelBase_nClass, ncm1, node_dnorm)
 
   obj <- Cncm1$ncm1$new()
   obj$call_setup_node_mgmt()
