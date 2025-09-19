@@ -23,9 +23,7 @@ jobs:
     
     steps:
       - name: Setup GitHub CLI
-        uses: cli/cli-action@v1
-        with:
-          version: 'latest' # You can specify a version or use 'latest'
+        uses: actions/setup-gh@v2
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
