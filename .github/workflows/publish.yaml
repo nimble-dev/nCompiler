@@ -1,0 +1,50 @@
+# Thanks to Gemini for starting this yaml file, which I then edited.
+
+# This workflow is for a Quarto project that is published as a website
+# to GitHub Pages. The workflow is triggered on pushes to the 'main' branch
+# and manually by a workflow_dispatch event.
+
+name: Publish Quarto Site
+
+on:
+  push:
+    branches:
+      - main
+      - user-manual-updates  # Trigger on pushes to main or user-manual-updates
+  workflow_dispatch:  # Allow manual triggering from the GitHub UI
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    container:
+      image: rocker/r2u:latest
+    permissions:
+      contents: write  # The workflow needs permission to push content to the repository
+    
+    steps:
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - uses: actions/checkout@v3
+      - name: SessionInfo
+        run: R -q -e 'sessionInfo()'
+      - name: Package Dependencies
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+      - name: Install inline
+        run: R -q -e 'remotes::install_cran("inline")'
+      - name: Build Package
+        run: |
+            R CMD build nCompiler
+            R CMD INSTALL --install-tests nCompiler_*.tar.gz
+
+      - name: Render Quarto project
+        run: |
+          quarto render
+
+      - name: Deploy to GitHub Pages
+        uses: quarto-dev/quarto-actions/publish@v2
+        with:
+          target-url: ${{ github.repositoryUrl }}
+          # The publish action will automatically create a gh-pages branch
+          # and force-push to it, overwriting history. This is the recommended
+          # and efficient way to deploy a static site.

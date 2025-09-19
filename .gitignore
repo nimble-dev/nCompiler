@@ -1,3 +1,7 @@
+# Quarto output directories
+_site/
+_book/
+docs/
 # History files
 .Rhistory
 .Rapp.history

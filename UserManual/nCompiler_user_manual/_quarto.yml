@@ -32,7 +32,7 @@ bibliography: references.bib
 
 format:
   html:
-    theme: cosmo
+    theme: pandoc #cosmo generates bigger css files
   pdf:
     documentclass: scrreprt
 
