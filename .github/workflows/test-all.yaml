@@ -7,18 +7,30 @@ on:
       run_tests:
         description: 'Run all tests'
         required: true
+        default: 'no'
+      run_nCompile:
+        description: 'Run nCompile tests'
+        required: false
         default: 'yes'
+      run_nClass:
+        description: 'Run nClass tests'
+        required: false
+        default: 'yes'
+      run_math:
+        description: 'Run math tests'
+        required: false
+        default: 'no'
       run_tensorOps:
         description: 'Run tensorOps tests'
         required: false
-        default: 'yes'
+        default: 'no'
 
 jobs:
   test-nCompile:
     runs-on: ubuntu-latest
     container:
       image: rocker/r2u:latest
-    if: github.event.inputs.run_tests == 'yes'
+    if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_nCompile == 'yes'
     steps:
       - uses: actions/checkout@v3
       - name: SessionInfo
@@ -26,7 +38,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran("inline")'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -44,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rocker/r2u:latest
-    if: github.event.inputs.run_tests == 'yes'
+    if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_nClass == 'yes'
     steps:
       - uses: actions/checkout@v3
       - name: SessionInfo
@@ -55,7 +67,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran("inline")'
+        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -73,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rocker/r2u:latest
-    if: github.event.inputs.run_tests == 'yes'
+    if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_math == 'yes'
     steps:
       - uses: actions/checkout@v3
       - name: SessionInfo

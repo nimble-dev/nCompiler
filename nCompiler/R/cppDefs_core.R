@@ -388,8 +388,8 @@ addGenericInterface_impl <- function(self) {
     fieldClassNames <- c(fieldClassNames,
                          rep(NCint$cpp_classname, length(new_cpp_fieldNames)))
     #
-    current_NCgen <- current_NCgen$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
-    done <- is.null(current_NCgen)
+    current_NCgen <- current_NCgen$get_inherit() #$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+    done <- !isNCgenerator(current_NCgen)
   }
   if(iOut > 1) {
     methodsContent <- paste0("method(\"",

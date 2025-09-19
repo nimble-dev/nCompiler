@@ -96,8 +96,8 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
       done <- TRUE
     } else {
       if(inherits)  {
-        current_NCgen <- current_NCgen$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
-        done <- is.null(current_NCgen)
+        current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+        done <- !isNCgenerator(current_NCgen)
       } else
         done <- TRUE
     }
