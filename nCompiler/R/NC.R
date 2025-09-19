@@ -142,12 +142,15 @@ nClass <- function(classname,
       stop("In nFunction 'initialize', use 'compileInfo = list(constructor=TRUE)'.")
   }
 
+  inheritQ <- substitute(inherit)
+  inherit_provided <- !is.null(inheritQ)
+
   internals = NC_InternalsClass$new(classname = classname,
                                     Cpublic = Cpublic,
                                     isOnlyC = length(Rpublic) == 0,
                                     enableDerivs = enableDerivs,
                                     enableSaving = enableSaving,
-                                    inherit = inherit,
+                                    inheritQ = inheritQ,
                                  #   control = control,
                                     compileInfo = compileInfo,
                                     predefined = predefined,
@@ -159,7 +162,10 @@ nClass <- function(classname,
   # "captured as an unevaluated expression which is evaluated in parent_env each time an object is instantiated."
   # so if provided in the nClass call, we stick it in new_env.
   # (That is not the only reason for new_env.)
-  if(!is.null(inherit)) new_env$.inherit_obj <- inherit
+  # Also note that the inherit arg is for nClass inheritance. The compileInfo$inherit element is for hard-coded C++ inheritance statements.
+  inheritQ <- substitute(inherit)
+  inherit_provided <- !is.null(inheritQ)
+  #if(!is.null(inherit)) new_env$.inherit_obj <- inherit
   new_env$.NCinternals <- internals
   # Uncompiled behavior for Cpublic fields needs to be handled.
   # Right now a type string like 'numericScalar' just becomes a
@@ -173,7 +179,7 @@ nClass <- function(classname,
       parent_env = new_env
     ),
     list(INHERIT =
-           if(!is.null(inherit)) quote(.inherit_obj)
+           if(inherit_provided) inheritQ
          else quote(nClassClass))
     ))
   ## 2. in the generator

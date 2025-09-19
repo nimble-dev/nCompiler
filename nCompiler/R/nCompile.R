@@ -306,6 +306,18 @@ nCompile <- function(...,
   interfaces <- interfaces[names(units)]
 
   unitTypes <- get_nCompile_types(units)
+
+  # We defer processing of nClass inheritance until compile time to allow nClass 
+  # to be called with inherit = some_nClass before some_nClass is defined.
+  for(i in seq_along(units)) {
+    if(unitTypes[i] == "nCgen")
+      NCinternals(units[[i]])$connect_inherit()
+  }
+  for(i in seq_along(units)) {
+    if(unitTypes[i] == "nCgen")
+      NCinternals(units[[i]])$process_inherit()
+  }
+
   # set up exportNames and returnNames
   # exportNames will be from names(units) if named in the call or there is no exportName in the NF or NC compileInfo
   # Otherwise (i.e. no name provided in call and there is an exportName in the object def), use the exportName in the object def (compileInfo)

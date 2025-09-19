@@ -14,7 +14,7 @@
 #  duplication. internalCppDefs are assumed to be unique.)
 # cppDefinitionClass has getter methods but no generate method.
 cppDefinitionClass <- R6::R6Class(
-  classname = 'cppDefinitionClass', 
+  classname = 'cppDefinitionClass',
   portable = FALSE,
   public = list(
     filename = character(),
@@ -132,10 +132,10 @@ cppGlobalObjectClass <- R6::R6Class(
       ## For globals for class static members, we want no declaration
       ## Otherwise we want a declaration and put extern in front
       if(staticMembers & declaration) return(character())
-      output <- paste0(generateAll(symbolTable$getSymbols(), 
+      output <- paste0(generateAll(symbolTable$getSymbols(),
                                    declaration = declaration),
                        ';')
-      if(declaration) 
+      if(declaration)
         output <- paste("extern ", output)
       output
     }
@@ -186,7 +186,7 @@ cppNamespaceClass <- R6::R6Class(
 
 ## C++ class object.
 ## A class is like a namespace with inheritance
-## At the moment everything is public. 
+## At the moment everything is public.
 ## This class can build cppFunction objects for a generator function and a finalizer function
 ## The generator can be called via .Call to return an external pointer to a new object of the class
 ## The finalizer is the finalizer assigned to the object when the external pointer is made
@@ -206,7 +206,7 @@ buildSEXPgenerator_impl <- function(self) {
       substitute(cppLiteral(RETURNLINE),
                  list(RETURNLINE = as.character(returnLine)))
     )
-  
+
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
   self$internalCppDefs[["SEXPgenerator"]] <-
@@ -236,7 +236,7 @@ build_set_nClass_env_impl <- function(self) {
       substitute(cppLiteral(SETTERLINE),
                  list(SETTERLINE = as.character(setterLine)))
     )
-  
+
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
   args <- symbolTableClass$new()
@@ -314,8 +314,13 @@ addGenericInterface_impl <- function(self) {
   self$addInheritance(paste0("public genericInterfaceC<",
                              name,
                              ">"))
-#  self$Hincludes <- c(self$Hincludes,
-#                      nCompilerIncludeFile("nCompiler_class_interface.h"))
+  # It is ok to have multiple virtual inheritance from genericInterfaceBaseC,
+  # but we clean it up here for slightly simpler code.
+  if("virtual public genericInterfaceBaseC" %in% self$inherit) {
+    self$inherit <- self$inherit[-which(self$inherit == "virtual public genericInterfaceBaseC")]
+  }
+  #  self$Hincludes <- c(self$Hincludes,
+  #                      nCompilerIncludeFile("nCompiler_class_interface.h"))
   self$Hpreamble <- c(self$Hpreamble,
                       "#define NCOMPILER_USES_NCLASS_INTERFACE",
                        "#define USES_NCOMPILER")
@@ -383,8 +388,8 @@ addGenericInterface_impl <- function(self) {
     fieldClassNames <- c(fieldClassNames,
                          rep(NCint$cpp_classname, length(new_cpp_fieldNames)))
     #
-    current_NCgen <- current_NCgen$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
-    done <- is.null(current_NCgen)
+    current_NCgen <- current_NCgen$get_inherit() #$parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+    done <- !isNCgenerator(current_NCgen)
   }
   if(iOut > 1) {
     methodsContent <- paste0("method(\"",
@@ -577,7 +582,7 @@ cppClassClass <- R6::R6Class(
     addInheritance = function(newI) {
       inheritance <<- c(inheritance, newI)
     },
-    ##addAncestors = function(newI) ancestors <<- c(ancestors, newI), 
+    ##addAncestors = function(newI) ancestors <<- c(ancestors, newI),
     ##setPrivate = function(name) private[[name]] <<- TRUE,
     generate = function(declaration = FALSE, ...) {
       if(declaration) {
@@ -605,7 +610,7 @@ cppClassClass <- R6::R6Class(
         if(length(memberCppDefs) > 0) {
           output <- generateAll(memberCppDefs, scopes = name)
         } else {
-          output <- ""  
+          output <- ""
         }
       }
       unlist(output)
@@ -624,6 +629,21 @@ cppClassClass <- R6::R6Class(
       if(interface) {
         addGenericInterface_impl(self)
         add_obj_hooks_impl(self)
+      } else {
+        # Ensure inheritance from genericInterfaceBaseC so our custom Exporter in C++
+        # can always dynamic_pointer_cast to shared_ptr<genericInterfaceBaseC>.
+        if(!("virtual public genericInterfaceBaseC" %in% self$inherit)) {
+          self$addInheritance("virtual public genericInterfaceBaseC")
+        }
+        # These will always end up included and possibly multiple times,
+        # so it's a bit sloppy but not worth cleaning up for now.
+        self$Hpreamble <- c(self$Hpreamble,
+                       "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                       "#define USES_NCOMPILER")
+        self$CPPpreamble <- c(self$CPPpreamble,
+                      "#define NCOMPILER_USES_NCLASS_INTERFACE",
+                      "#define USES_NCOMPILER")
+
       }
       # The only case that would omit interface calls is generated predefined code.
       if(interfaceCalls)
@@ -709,7 +729,7 @@ cppCodeBlockClass <- R6::R6Class(
           } else
             useSymTab <- self$symbolTable
         if(isTRUE(self$cppADCode))
-          recurseSetCppADExprs(self$code, TRUE) 
+          recurseSetCppADExprs(self$code, TRUE)
         outputCppCode <- c(outputCppCode,
                            compile_generateCpp(self$code,
                                                useSymTab,
@@ -717,7 +737,7 @@ cppCodeBlockClass <- R6::R6Class(
                                                showBracket = FALSE)
                            )
         if(isTRUE(self$cppADCode))
-          recurseSetCppADExprs(self$code, FALSE) 
+          recurseSetCppADExprs(self$code, FALSE)
       } else {
         stop('code in generate() is not of the right type.',
              call. = FALSE)
@@ -943,8 +963,13 @@ generateFunctionHeader <- function(self,
   abstract_text <- character()
   externC_text <- character()
   if(declaration) {
-    virtual_text <- compileInfo$virtual
-    if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
+    virtual_text <- character()
+    if(is.character(compileInfo$virtual))
+      virtual_text <- compileInfo$virtual
+    else if(isTRUE(self$virtual))
+      virtual_text <- 'virtual '
+    # virtual_text <- compileInfo$virtual
+    # if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
 
     isAbstract <- compileInfo$abstract
     if(is.null(isAbstract)) isAbstract <- self$abstract
@@ -997,6 +1022,7 @@ generateFunctionHeader <- function(self,
       externC_text,
       template_text,
       static_text,
+      virtual_text,
       returnType_text,
       scopes_name_text,
       args_text,

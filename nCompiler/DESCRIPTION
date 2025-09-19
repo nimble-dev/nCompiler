@@ -6,7 +6,7 @@ Authors@R: c(person("Perry", "de Valpine", email = "pdevalpine@berkeley.edu", ro
              person("Christopher", "Paciorek", role = "ctb"),
              person("James", "Duncan", role = "ctr"))
 Description: Provides nFunction and nClass for function and class definitions for which C++ can be automatically generated, or used in combination with other C++.  Supports linear algebra by code-generating C++ that uses the Eigen library. Supports automatic differentiation by code-generating C++ that uses the CppAD library.  Support for parallelization is planned by code-generating C++ that uses Intel Threading Building Blocks (TBB).
-Depends: R (>= 3.3.0)
+Depends: R (>= 4.1.0)
 Imports:
     methods,R6,Rcpp,pkgKitten,roxygen2
 Suggests:
@@ -49,6 +49,10 @@ Collate:
     cppDefs_TBB.R
     cppDefs_variables.R
     developerTools.R
+    symbolTable.R
+    symbolTableClass.R
+    symbolTable_utils.R
+    typeDeclarations.R
     NC.R
     NC_Compile.R
     NC_CompilerClass.R
@@ -70,6 +74,7 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
+    nimbleModels.R
     nList.R
     nTry.R
     packaging.R
@@ -78,11 +83,7 @@ Collate:
     Rcpp_nCompiler.R
     Rexecution.R
     Rhooks.R
-    symbolTable.R
-    symbolTableClass.R
-    symbolTable_utils.R
     testingTools.R
-    typeDeclarations.R
     compile_zzz_operatorLists.R
     zzz_NC_Predefined.R
 RoxygenNote: 7.3.2

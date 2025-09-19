@@ -140,6 +140,18 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'custom_default',
+  list(
+    labelAbstractTypes = list(
+      handler = 'custom_call'
+      # May use nFunction field.
+    ),
+    cppOutput = list(
+      handler = 'AsIs')
+  )
+)
+
 # assignOperatorDef(
 #   'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
 #   list(
@@ -908,10 +920,10 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$promoteNoLogical),
     eigenImpl = list(
       ## Eigen::Tensor requires the rhs of % to be scalar
-      handler = 'cWiseByScalar', 
+      handler = 'cWiseByScalar',
       ## Backwards compatibility with nimble functionality
       allScalar = TRUE
-    ), 
+    ),
     cppOutput = list(
       handler = 'AsIs',
       cppString = 'nc_mod')
@@ -928,10 +940,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  # Note: besselK is not a distribution, but its usage has nearly identical 
+  # Note: besselK is not a distribution, but its usage has nearly identical
   # functional needs as density functions
-  c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm', 
-    'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK', 
+  c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm',
+    'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK',
     'dlogis', 'dpois', 'dchisq'),
   list(
     labelAbstractTypes = list(
@@ -978,14 +990,14 @@ updateOperatorDef(
   'dnorm', 'matchDef', val = function(x, mean = 0, sd = 1, log = FALSE) {}
 )
 updateOperatorDef(
-  'dlogis', 'matchDef', 
+  'dlogis', 'matchDef',
   val = function(x, location = 0, scale = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dt', 'matchDef', val = function(x, df, log = FALSE) {}
 )
 updateOperatorDef(
-  'dt_nonstandard', 'matchDef', 
+  'dt_nonstandard', 'matchDef',
   val = function(x, df = 1, mu = 0, sigma = 1, log = FALSE) {}
 )
 updateOperatorDef(
@@ -999,7 +1011,7 @@ updateOperatorDef(
 )
 
 assignOperatorDef(
-  c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm', 
+  c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm',
     'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis',
     'rpois', 'rchisq'),
   list(

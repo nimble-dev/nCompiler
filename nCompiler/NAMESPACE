@@ -55,7 +55,10 @@ export(isUserDefined)
 export(logfact)
 export(loggam)
 export(logit)
+export(makeModel_nClass)
+export(make_node_fun)
 export(method)
+export(modelBase_nClass)
 export(new.loadedObjectEnv) ## needed for Rcpp::Function access in loadedObjectEnv.h
 export(new.loadedObjectEnv_full) ## ditto
 export(nBacksolve)

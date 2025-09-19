@@ -14,6 +14,10 @@ class shared_ptr_holder_base {
    std::cout<<"Error: you should be in a derived shared_ptr_holder class get_ptr().  This is the base class."<<std::endl;
     return(0);
   };
+  virtual std::shared_ptr<genericInterfaceBaseC> get_interfaceBase_shared_ptr() const {
+   std::cout<<"Error: you should be in a derived shared_ptr_holder class get_interfaceBase_shared_ptr().  This is the base class."<<std::endl;
+    return(std::shared_ptr<genericInterfaceBaseC>());
+  };
   virtual shared_ptr_holder_base* make_shared_ptr_holder()=0;
   virtual ~shared_ptr_holder_base() {
    // std::cout<<"destructing shared_ptr_holder_base"<<std::endl;
@@ -31,6 +35,9 @@ class shared_ptr_holder: public shared_ptr_holder_base {
   std::shared_ptr<T> sp_;
   void *get_ptr() const {
     return static_cast<void*>(dynamic_cast<genericInterfaceBaseC*>(sp_.get()));
+  }
+  std::shared_ptr<genericInterfaceBaseC> get_interfaceBase_shared_ptr() const {
+    return std::static_pointer_cast<genericInterfaceBaseC>(sp_);
   }
   shared_ptr_holder_base* make_shared_ptr_holder() {
     std::cout<<"making new shared_ptr_holder_base"<<std::endl;

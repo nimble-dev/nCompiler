@@ -44,9 +44,22 @@
     methods\
  ;
 
+class accessor_base;
+
 // Base class for interfaces to nimble classes
 class genericInterfaceBaseC {
  public:
+  typedef std::map<std::string,int> name2index_type;
+  typedef std::map<std::string, std::shared_ptr<accessor_base> > name2access_type;
+  typedef std::pair<std::string, std::shared_ptr<accessor_base> > name_access_pair;
+
+  virtual const name2access_type& get_name2access() const{
+    std::cout<<"Error: you should be in a derived genericInterfaceC class for get_name2access"<<std::endl;
+    // return something to avoid compiler warning
+    static name2access_type dummy;
+    return dummy;
+  };
+
   // return a named member converted to a SEXP.
   // Derived classes should provide valid implementations.
   virtual SEXP get_value(const std::string &name) const {
@@ -117,6 +130,9 @@ class accessor_base {
   };
   virtual std::unique_ptr<ETaccessorBase> ETaccess(genericInterfaceBaseC *) {
     std::cout<<"Error: you should be in access for a derived accessor class"<<std::endl;
+  }
+  virtual std::shared_ptr<genericInterfaceBaseC> getInterfacePtr(genericInterfaceBaseC *intBasePtr) {
+    return nullptr;
   }
   virtual ~accessor_base(){}
 };

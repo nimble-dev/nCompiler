@@ -119,7 +119,7 @@ nFunction <- function(fun,
   #   in the R function.
   control <- updateDefaults(
     list(returnInternals=FALSE, check=get_nOption('check_nFunction'),
-         changeKeywords = is.null(compileInfo$C_fun),
+         changeKeywords = is.null(compileInfo$C_fun), # by default, if C_fun is provided, don't change it, but user can override.
          updateArgPassing = TRUE),
     control
   )

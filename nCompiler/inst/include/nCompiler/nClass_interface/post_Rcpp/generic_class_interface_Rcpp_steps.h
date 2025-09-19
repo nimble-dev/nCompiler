@@ -283,12 +283,23 @@
 //   return ETaccessor<T>(x);
 // }
 
+// maybe put these inside the class or namespace.
+template<typename T>
+struct is_shared_ptr : std::false_type {};
 
+template<typename U>
+struct is_shared_ptr<std::shared_ptr<U>> : std::true_type {};
 // // end ETaccess
+
+template<typename T>
+struct shared_ptr_element_type {using type = void;};
+
+template<typename U>
+struct shared_ptr_element_type<std::shared_ptr<U>> {using type = U;};
 
 // Interface to class T.
 template<class T>
-class genericInterfaceC : public genericInterfaceBaseC {
+class genericInterfaceC : virtual public genericInterfaceBaseC {
  public:
   ~genericInterfaceC() {
 #ifdef SHOW_DESTRUCTORS
@@ -299,10 +310,13 @@ class genericInterfaceC : public genericInterfaceBaseC {
   template<typename P, typename T2>
     class accessor_class : public accessor_base {
   public:
-   typedef P T2::*ptrtype;
+   typedef P T2::*ptrtype; // T2 will only be T or a base class of T.
     ptrtype ptr;
- accessor_class(ptrtype ptr) : ptr(ptr) {};
+    static constexpr bool P_is_shared_ptr = is_shared_ptr<P>::value;
+    using shared_ptr_element = typename shared_ptr_element_type<P>::type;
+    static constexpr bool shared_ptr_element_is_polymorphic = std::is_polymorphic_v<shared_ptr_element>;
 
+    accessor_class(ptrtype ptr) : ptr(ptr) {};
     SEXP get(const genericInterfaceBaseC *intBasePtr) const {
 #ifdef SHOW_FIELDS
       std::cout<<"in derived get"<<std::endl;
@@ -324,16 +338,30 @@ class genericInterfaceC : public genericInterfaceBaseC {
       std::unique_ptr<ETaccessorBase> ans( new ETaccessor<P>( dynamic_cast<T*>(intBasePtr)->*ptr ) );
       return ans;
     }
+    std::shared_ptr<genericInterfaceBaseC> getInterfacePtr(genericInterfaceBaseC *intBasePtr) {
+      if constexpr(P_is_shared_ptr) {
+        if constexpr (shared_ptr_element_is_polymorphic) {
+          return std::dynamic_pointer_cast<genericInterfaceBaseC>(dynamic_cast<T*>(intBasePtr)->*ptr);
+        } else {
+          return std::static_pointer_cast<genericInterfaceBaseC>(dynamic_cast<T*>(intBasePtr)->*ptr);
+        }
+      }
+      return nullptr;
+    }
   };
 
  // static maps from character names
  static int name_count;
- typedef std::map<std::string,int> name2index_type;
+// typedef std::map<std::string,int> name2index_type;
  static name2index_type name2index;
 
-  typedef std::map<std::string, std::shared_ptr<accessor_base> > name2access_type;
-  typedef std::pair<std::string, std::shared_ptr<accessor_base> > name_access_pair;
+  // typedef std::map<std::string, std::shared_ptr<accessor_base> > name2access_type;
+  // typedef std::pair<std::string, std::shared_ptr<accessor_base> > name_access_pair;
   static name2access_type name2access;
+
+  const name2access_type& get_name2access() const{
+    return name2access;
+  }
 
   // Enter a new (name, member ptr) pair to static maps.
   template<typename P, typename T2>

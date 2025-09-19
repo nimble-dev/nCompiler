@@ -409,6 +409,20 @@ inLabelAbstractTypesEnv(
     }
 )
 
+nCompiler:::inLabelAbstractTypesEnv(
+  custom_call <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      recurse <- isTRUE(handlingInfo[['recurse']])
+      if(recurse) {
+        inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                              handlingInfo)
+      }
+      returnType <- handlingInfo[['returnType']]
+      code$type <- returnType$clone(deep = TRUE)
+      if(length(inserts) == 0) NULL else inserts
+    }
+)
+
 inLabelAbstractTypesEnv(
   nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {

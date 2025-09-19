@@ -65,7 +65,7 @@ cpp_nClassBaseClass <- R6::R6Class(
     ## SEXPmemberInterfaceFuns = 'ANY', ## List of SEXP interface functions, one for each member function
     Compiler = NULL,
     ##nimCompProc = 'ANY', ## nfProcessing or nlProcessing object, needed to get the member data symbol table post-compilation
-    
+
     ##Rgenerator = 'ANY' , ## function to generate and wrap a new object from an R object
     ##CmultiInterface = 'ANY', ## object for interfacing multiple C instances when a top-level interface is not needed
     built = NULL,
@@ -140,7 +140,7 @@ cpp_nClassClass <- R6::R6Class(
   public = list(
 #    ctor_names = character(),
 #    dtor_names = character(),
-    ##NC_Compiler = NULL, 
+    ##NC_Compiler = NULL,
     ##parentsSizeAndDims = 'ANY',
     getInternalDefs = function() {
       super$getInternalDefs()
@@ -274,7 +274,7 @@ cpp_nClassClass <- R6::R6Class(
       #self$compileInfo$interface controls whether to inherit from base classes for interfacing
       #It would be wierd to do the former without the latter,
       # so unless/until we get a case where that behavior is needed
-      # we will prevent it. 
+      # we will prevent it.
       # The option interface=FALSE will be called in the case of a predefined,
       # when building the predefined, when first we do buildAll(interfaceCalls=FALSE).
       # This might build the interface but will not build the calls.

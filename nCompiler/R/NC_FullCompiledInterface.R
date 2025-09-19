@@ -77,9 +77,10 @@ build_compiled_nClass <- function(NCgenerator,
     interfaceMethods <-  mapply(buildMethod_for_compiled_nClass,
                                 NCgenerator$public_methods[CmethodNames],
                                 CmethodNames)
-    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+    inherit_obj <- NCgenerator$get_inherit()
+    if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, CmethodNames)
-      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseNCgen <- inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
       # Note: baseCmethodNames could be empty but we still need to
@@ -98,9 +99,10 @@ build_compiled_nClass <- function(NCgenerator,
   recurse_make_Rmethods <- function(NCgenerator, RmethodNames,
                                     derivedNames = character()) {
     interfaceMethods <- NCgenerator$public_methods[RmethodNames]
-    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+    inherit_obj <- NCgenerator$get_inherit()
+    if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, RmethodNames)
-      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseNCgen <- inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseRmethodNames <- setdiff(names(baseNCgen$public_methods),
                                   c(baseCmethodNames, 'clone'))
@@ -142,9 +144,10 @@ build_compiled_nClass <- function(NCgenerator,
     NCint <- NCinternals(NCgenerator)
     activeBindingResults <-
       buildActiveBinding_for_compiled_nClass(NCint, CfieldNames)
-    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+    inherit_obj <- NCgenerator$get_inherit()
+    if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, CfieldNames)
-      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseNCgen <- inherit_obj
       baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
       baseCfieldNames <- setdiff(baseCfieldNames, derivedNames)
       baseActiveBindingResults <-
@@ -166,9 +169,10 @@ build_compiled_nClass <- function(NCgenerator,
   recurse_make_Rfields <- function(NCgenerator, RfieldNames,
                                     derivedNames = character()) {
     interfaceFields <- NCgenerator$public_fields[RfieldNames]
-    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+    inherit_obj <- NCgenerator$get_inherit()
+    if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, RfieldNames)
-      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseNCgen <- inherit_obj
       baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
       baseRfieldNames <- setdiff(names(baseNCgen$public_fields),
                                   c(baseCfieldNames, 'clone'))
@@ -388,9 +392,10 @@ build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
     interfaceFns <-  mapply(build_generic_fn_for_compiled_nClass_method,
                                 NCgenerator$public_methods[CmethodNames],
                                 CmethodNames)
-    if(!is.null(NCgenerator$parent_env$.inherit_obj)) {
+    inherit_obj <- NCgenerator$get_inherit()
+    if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, CmethodNames)
-      baseNCgen <- NCgenerator$parent_env$.inherit_obj
+      baseNCgen <- inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
       baseInterfaceFns <- recurse_make_Cmethods(baseNCgen,

@@ -54,7 +54,7 @@ NF_CompilerClass <- R6::R6Class(
         if(is.null(compileInfo))
           self$compileInfo <- NFinternals$compileInfo
       }
-      if(length(compileInfo$exportName) == 0)
+      if(length(compileInfo$exportName) == 0) # should this be self$compileInfo$exportName?
         self$compileInfo$exportName <- name
       # possibly swap const and compileInfo$isConst, keeping the latter only
       ##self$const <- const || isTRUE(compileInfo$isConst)
@@ -347,9 +347,9 @@ processNFstages <- function(NFcompiler,
     NFtry({
       compilerStage_labelAbstractTypes(NFcompiler,
                                        debug)
-      
+
       # This will only collect nClasses from classGenerator$new()
-      # Other nClasses will end up in the symbolTable and be 
+      # Other nClasses will end up in the symbolTable and be
       # collected later.
       ## NFcompiler$needed_nClasses <-
       ##   c(NFcompiler$needed_nClasses,
@@ -392,7 +392,7 @@ processNFstages <- function(NFcompiler,
       logAfterStage(stageName)
     }
   }
-  
+
   ## insert new lines created by size processing
   stageName <- 'addInsertions'
   if (logging) logBeforeStage(stageName)
