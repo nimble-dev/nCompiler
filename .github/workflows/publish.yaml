@@ -22,8 +22,10 @@ jobs:
       contents: write  # The workflow needs permission to push content to the repository
     
     steps:
-      - name: Setup GitHub CLI
-        uses: actions/setup-gh@v2
+      - name: Install GitHub CLI
+        uses: cli/cli@v2
+        with:
+          version: latest
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
