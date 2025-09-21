@@ -12,13 +12,65 @@ editor: visual
 
 Types of variables created in a function will be automatically determined from the code. For example:
 
-## The type of a variable can't be changed
+```{r}
+#| eval: true
+f <- nFunction(
+  function(x, y) {
+    ans <- x + y
+    ans <- ans > 0
+    return(ans)
+  },
+  argTypes = list(x='numericVector', y='numericScalar'),
+  returnType = 'numericVector'
+)
+Cf <- nCompile(f)
+Cf(-3:3, 1)
+```
 
-Once a variable is created, its type can't later be changed.
+Here the type of `ans` is automatically deduced to be `'numericVector'`. However, at this time, the `returnType` must always be declared, which in this case is also the type of `ans`.
+
+## The one-type rule: the type of a variable can't be changed
+
+Once a variable is created, its type can't later be changed. The type for a variable is deduced the first time it appears in code.
+
+## The type-casting rule: types will be converted ("cast") on assignment when possible
+
+For example, if we assign a `'logicalVector'` to a variable that is a `'numericVector'`, the result will use `0` for `FALSE` and `1` for `TRUE`.
+
+Putting together the one-type rule and the type-casting rule, consider adding to the above code the line `ans <- ans > 0`. By the one-type rule, since `ans` has already been created as a `numericVector`, it will remain a `numericVector`. By the type-casting rule, the result of the logical operation `ans > 0` will be converted to `0`s and `1`s for assignment to `ans`.
+
+The type-casting rule actually covers two cases: casting element types (i.e. between `numeric`, `integer`, and `logical`) and casting between number of dimensions.
+
+### Casting between number of dimensions
+
+-   When a lower dimensional object is assigned to a higher-dimensional variable, the extra dimensions will be set to have sizes of 1.
+
+-   When a higher dimensional object is assigned to a lower-dimensional variable, dimensions of length 1 will be dropped. If there are too many dimensions with length \> 1, there will be a run-time error.
+
+-   **This example is not currently working.**
+
+```{r}
+#| eval: false
+f <- nFunction(
+  function(x = 'numericVector', y = 'numericMatrix') {
+    x <- y
+    return(x)
+    returnType('numericVector')
+  }
+)
+Cf <- nCompile(f)
+Cf(-3:3, 1)
+```
+
+-   More advanced needs for converting dimensionality are described later.
 
 ## The mimic-R rule
 
-To the extent possible, nCompiler mimics R's output types based on input types. There are cases where this is impossible.
+To the extent possible, nCompiler mimics R's output types based on input types for basic operations. For example, the sum of an `integer` and a `double` is a `double`. There are cases where there are exceptions, sometimes because R's output types can only be determined based on run-time values of inputs. For example:
+
+-   `sum(x)` returns a true scalar in `nCompiler`, whereas in R it returns a length-1 vector.
+
+-   Consider the return type of `dnorm(x, mu)`, when `x` is a vector and `mu` is a matrix. In R, the return type will be a matrix if `mu` has more elements than `x` but otherwise it will be a vector. In nCompiler, the output type must be determined at compile-time (i.e. when calling `nCompile`), not run-time. In the case, the output type will always be a vector.
 
 ## Surprises and manual control over types
 
@@ -33,10 +85,6 @@ Sometimes you may be surprised by the deduced type of a variable.
 -   Dimensions
 
 -   `nCpp`
-
-### Automatic conversions among types when possible
-
-Tip: Sometimes types will differ from R
 
 ## To-do:
 

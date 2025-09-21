@@ -1,0 +1,7 @@
+---
+title: "Controlling compilation"
+---
+
+Compilation in nClasses can be controlled at both the nClass level and the nFunction level of individual methods.
+
+

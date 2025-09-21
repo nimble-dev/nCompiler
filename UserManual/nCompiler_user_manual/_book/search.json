@@ -4,7 +4,10 @@
     "href": "index.html",
     "title": "nCompiler User Manual",
     "section": "",
-    "text": "Introduction"
+    "text": "Introduction",
+    "crumbs": [
+      "Introduction"
+    ]
   },
   {
     "objectID": "nFunctions.html#quick-summary",

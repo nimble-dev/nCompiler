@@ -16,7 +16,7 @@ library(nCompiler)
 
 ## Introduction to `nFunction`
 
-An `nFunction` is a function in R that can be compiled via C++. You do not need to know C++ to create and use an `nFunction`. If you do know some C++, including Rcpp, you can include your own chunks of C++.
+An `nFunction` is a function in R that can be compiled via C++. You do not need to know C++ to create and use an `nFunction`. If you do know some C++, including Rcpp, you can include your own chunks of C++ and manage details of how your function is converted to C++.
 
 ### Quick example
 
