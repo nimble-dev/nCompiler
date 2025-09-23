@@ -36,24 +36,19 @@ cppDefs_2_RcppPacket <- function(cppDef,
 
   allCppDefs <- cppDef$getInternalDefs()
 
-  Hincludes <- allCppDefs |> lapply(\(x) x$getHincludes()) |> unlist(use.names=FALSE)
-  CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> unlist(use.names=FALSE)
-  Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> unlist(use.names=FALSE)
-  CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> unlist(use.names=FALSE)
-  CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> unlist(use.names=FALSE)
+  prep <- function(x) x |> unlist(use.names=FALSE) |> unique()
+
+  Hincludes <- allCppDefs |> lapply(\(x) x$getHincludes()) |> prep()
+  CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> prep()
+  Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> prep()
+  CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> prep()
+  CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> prep()
   compileInfos <- allCppDefs |> lapply(\(x) x$getCompileInfo())
 
   ## Fields like copyFiles can be extracted directly from the compileInfos
   ## because they are never modified by the cppDef internally.
   ## (Whereas fields like Hincludes etc. may be modified by cppDef.)
   copyFiles <- compileInfos |> lapply(\(x) x$copyFiles) |> unlist(use.names=FALSE) |> unique()
-
-  ## These unique()s could be moved to the piping workflows above.
-  Hincludes <- unique(Hincludes)
-  CPPincludes <- unique(CPPincludes)
-  Hpreamble <- unique(Hpreamble)
-  CPPpreamble <- unique(CPPpreamble)
-  CPPusings <- unique(CPPusings)
 
   selfCPP <- paste0('"', filebase, '.cpp"')
   CPPincludes <- CPPincludes[ CPPincludes != selfCPP ]
@@ -71,7 +66,8 @@ cppDefs_2_RcppPacket <- function(cppDef,
                  writeLines("")
                  writeCode(x$generate())
                }, split = debugCpp) ## for debugging to send handler output to console
-             )
+             ),
+      use.names = FALSE
     )
 
   hCode <-
@@ -82,7 +78,8 @@ cppDefs_2_RcppPacket <- function(cppDef,
                  writeLines("")
                  writeCode(x$generate(declaration=TRUE))
                })
-             )
+             ),
+      use.names = FALSE
     )
 
   preamble <- unique(c(Hpreamble, CPPpreamble))
@@ -149,8 +146,8 @@ collate_nCompiler_CppCode <- function(preamble = character(),
                      )
 
     ## usings are included as is
-    ## code is included as is    
-    
+    ## code is included as is
+
     ## close ifndef
     closeifndefOut <- if(length(ifndefName) > 0) {
                           '#endif'
@@ -181,10 +178,10 @@ collate_nCompiler_CppCode <- function(preamble = character(),
 ## We make a copy of Rcpp::sourceCpp and replace its closure
 ## with a new environment that has a custom version of system()
 ## that provides the arguments we need.
-## The parent environment of that one is Rcpp's namespace, 
+## The parent environment of that one is Rcpp's namespace,
 ## so that non-exported functions will be found.
-## 
-## (Although a namespace is closed, we can still set it as a 
+##
+## (Although a namespace is closed, we can still set it as a
 ## closure or parent environment.)
 sourceCppEnv <- new.env()
 parent.env(sourceCppEnv) <- environment(Rcpp::sourceCpp)
@@ -193,7 +190,7 @@ environment(QuietSourceCpp) <- sourceCppEnv
 sourceCppEnv$system <- function(...) {
   sourceCpp_verbose <- isTRUE(nOptions("sourceCpp_verbose"))
   # We would want to use system2, but Rcpp::sourceCpp uses system
-  system(..., ignore.stderr = !sourceCpp_verbose, ignore.stdout = !sourceCpp_verbose)  
+  system(..., ignore.stderr = !sourceCpp_verbose, ignore.stdout = !sourceCpp_verbose)
 }
 
 ## Manage a call to Rcpp's sourceCpp()
@@ -343,7 +340,7 @@ writeCpp_nCompiler <- function(Rcpp_packet,
   makeStandardFiles <- is.null(con)
   if(is.null(Rcpp_packet$preamble))
     Rcpp_packet$preamble <- ""
-  if(include_cpp) { 
+  if(include_cpp) {
     if(makeStandardFiles) {
       dir.create(dir, showWarnings = FALSE)
       cppfile <- paste0(Rcpp_packet$filebase,
@@ -364,7 +361,7 @@ writeCpp_nCompiler <- function(Rcpp_packet,
     writeLines(Rcpp_packet$cppContent$body, con)
     if(makeStandardFiles)
       close(con)
-  } 
+  }
   if(include_h) {
     if(makeStandardFiles) {
       if(header.dir != dir)
@@ -405,7 +402,7 @@ compileCpp_nCompiler <- function(Rcpp_packet,
                                  packetList = FALSE,
                                  returnList = FALSE, ## force result list even for a singleton
                                  ...) {
-  if(!dir.exists(dir)) 
+  if(!dir.exists(dir))
     stop(paste0("directory ", dir, " does not exist."))
   if(is.character(Rcpp_packet)) { # backward compatibility, to be deprecated perhaps
     cppfile <- Rcpp_packet
@@ -415,7 +412,7 @@ compileCpp_nCompiler <- function(Rcpp_packet,
                         ".cpp")
   }
   cppfilepath <- file.path(dir, cppfile)
-  
+
   exported <- sourceCpp_nCompiler(file = cppfilepath,
                                   cacheDir = cacheDir,
                                   env = env,
@@ -472,13 +469,13 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
       stop("RcppPacket must have a filebase element or name must be provided")
     }
   }
-  
+
   # Normalize the directory path for platform independence
   dir <- normalizePath(dir, mustWork = FALSE)
-  
+
   # Create directory if it doesn't exist
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
-  
+
   # Helper function to write content safely
   writePacketElement <- function(content, filename) {
     filepath <- normalizePath(file.path(dir, filename), mustWork = FALSE)
@@ -510,7 +507,7 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
       dput(content, file = filepath)
     }
   }
-  
+
   # Write each element to its own file
   writePacketElement(RcppPacket$preamble, paste0(name, "_preamble.txt"))
   writePacketElement(RcppPacket$cppContent, paste0(name, "_cppContent.txt"))
@@ -518,7 +515,7 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
   writePacketElement(RcppPacket$filebase, paste0(name, "_filebase.txt"))
   writePacketElement(RcppPacket$post_cpp_compiler, paste0(name, "_post_cpp_compiler.txt"))
   writePacketElement(RcppPacket$copyFiles, paste0(name, "_copyFiles.txt"))
-  
+
   # Write a manifest file listing what was saved
   manifest <- list(
     saved_at = Sys.time(),
@@ -533,10 +530,10 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
       copyFiles = paste0(name, "_copyFiles.txt")
     )
   )
-  
+
   manifest_path <- normalizePath(file.path(dir, paste0(name, "_manifest.txt")), mustWork = FALSE)
   dput(manifest, file = manifest_path)
-  
+
   invisible(normalizePath(dir))
 }
 
@@ -549,7 +546,20 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
 loadRcppPacket <- function(dir, name) {
   # Normalize and check if directory exists
   dir <- normalizePath(dir, mustWork = TRUE)
-  
+
+  # If name is missing, try to find a manifest file and use its base name
+  if (missing(name)) {
+    manifest_files <- list.files(dir, pattern = "_manifest\\.txt$", full.names = FALSE)
+    if (length(manifest_files) == 0) {
+      stop("No manifest files (from saved RcppPackets) found in directory: ", dir)
+    }
+    if (length(manifest_files) > 1) {
+      stop("More than one manifest files (from saved RcppPackets) found in directory: ", dir, ". Provide a name argument to choose one.")
+    }
+    # Use the first manifest file found
+    name <- sub("_manifest\\.txt$", "", manifest_files[1])
+  }
+
   # Load manifest first to check what files should exist
   manifest_file <- normalizePath(file.path(dir, paste0(name, "_manifest.txt")), mustWork = FALSE)
   if (file.exists(manifest_file)) {
@@ -566,49 +576,48 @@ loadRcppPacket <- function(dir, name) {
       copyFiles = paste0(name, "_copyFiles.txt")
     ))
   }
-  
+
   # Helper function to read content safely
   readPacketElement <- function(filename) {
     filepath <- normalizePath(file.path(dir, filename), mustWork = FALSE)
     if (!file.exists(filepath)) {
       return(NULL)
     }
-    
+
     # Check if file is empty
     if (file.size(filepath) == 0) {
-      return(character(0))
+      return(NULL)
     }
-    
+
     # Try to detect the content type
     first_line <- readLines(filepath, n = 1, warn = FALSE)
-    
+
     if (length(first_line) == 0) {
       return(character(0))
     }
-    
+
     # Check if it's a structured file (cppContent/hContent)
     if (first_line == "### OPENER ###") {
       lines <- readLines(filepath, warn = FALSE)
       opener_start <- which(lines == "### OPENER ###")
       body_start <- which(lines == "### BODY ###")
-      
+
       if (length(opener_start) == 1 && length(body_start) == 1) {
         opener_lines <- if (body_start > opener_start + 1) {
           lines[(opener_start + 1):(body_start - 1)]
         } else {
           character(0)
         }
-        
+
         body_lines <- if (length(lines) > body_start) {
           lines[(body_start + 1):length(lines)]
         } else {
           character(0)
         }
-        
         return(list(opener = opener_lines, body = body_lines))
       }
     }
-    
+
     # Check if it looks like dput output
     if (grepl("^(list|c|character|NULL|[0-9])", first_line)) {
       tryCatch({
@@ -618,11 +627,11 @@ loadRcppPacket <- function(dir, name) {
         return(readLines(filepath, warn = FALSE))
       })
     }
-    
+
     # Default: read as character lines
     return(readLines(filepath, warn = FALSE))
   }
-  
+
   # Load each element
   RcppPacket <- Rcpp_nCompilerPacket(
     preamble = readPacketElement(manifest$files$preamble),
@@ -632,7 +641,7 @@ loadRcppPacket <- function(dir, name) {
     post_cpp_compiler = readPacketElement(manifest$files$post_cpp_compiler),
     copyFiles = readPacketElement(manifest$files$copyFiles)
   )
-  
+
   return(RcppPacket)
 }
 
@@ -644,13 +653,13 @@ loadRcppPacket <- function(dir, name) {
 listRcppPackets <- function(dir) {
   # Normalize path, but allow non-existent directories
   dir <- normalizePath(dir, mustWork = FALSE)
-  
+
   if (!dir.exists(dir)) {
     return(character(0))
   }
-  
+
   manifest_files <- list.files(dir, pattern = "_manifest\\.txt$", full.names = FALSE)
   packet_names <- sub("_manifest\\.txt$", "", manifest_files)
-  
+
   return(packet_names)
 }

@@ -1,10 +1,12 @@
-# predefined classes can be included as compilation objection in a call
+# predefined classes can be included as compilation object in a call
 # to nCompile just like others.
 # The difference is that pre-existing C++ code will be used to implement them.
-# Include control list element generate_predefined = TRUE to
-# use newly generated code instead of the pre-existing code.
-# However, code in the C++ headers that uses the predefined might then break.
-
+# Include control list element generate_predefined = <directory> or quoted expression to evaluate to get the directory.
+# This is the directory of the saved RcppPacket
+# saved by saveRcppPacket when nCompile is called with control element generate_predefined=TRUE
+#
+# Futher work is needed on how built-in features will use predefined classes.
+# The current idea is that the feature, or a wrapper to it, will also live in a predefined.
 ##
 #' @export
 test_predefined <- nClass(

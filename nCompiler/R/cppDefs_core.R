@@ -316,8 +316,8 @@ addGenericInterface_impl <- function(self) {
                              ">"))
   # It is ok to have multiple virtual inheritance from genericInterfaceBaseC,
   # but we clean it up here for slightly simpler code.
-  if("virtual public genericInterfaceBaseC" %in% self$inherit) {
-    self$inherit <- self$inherit[-which(self$inherit == "virtual public genericInterfaceBaseC")]
+  if("virtual public genericInterfaceBaseC" %in% self$inheritance) {
+    self$inheritance <- self$inheritance[-which(self$inheritance == "virtual public genericInterfaceBaseC")]
   }
   #  self$Hincludes <- c(self$Hincludes,
   #                      nCompilerIncludeFile("nCompiler_class_interface.h"))
@@ -632,7 +632,7 @@ cppClassClass <- R6::R6Class(
       } else {
         # Ensure inheritance from genericInterfaceBaseC so our custom Exporter in C++
         # can always dynamic_pointer_cast to shared_ptr<genericInterfaceBaseC>.
-        if(!("virtual public genericInterfaceBaseC" %in% self$inherit)) {
+        if(!("virtual public genericInterfaceBaseC" %in% self$inheritance)) {
           self$addInheritance("virtual public genericInterfaceBaseC")
         }
         # These will always end up included and possibly multiple times,

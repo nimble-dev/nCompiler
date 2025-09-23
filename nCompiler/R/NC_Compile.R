@@ -49,8 +49,10 @@ nCompile_nClass <- function(NC,
   if(is_predefined) {
     predefined_dir <-  NCinternals(NC)$predefined
     if(!is.character(predefined_dir))
-      stop("There is a predefined nClass whose predefined field is not character.  It should give the filename base of the predefined nClass.")
-    regular_filename <-  NCinternals(NC)$cpp_classname
+      stop("There is a predefined nClass whose predefined field is not character. ",
+       "It should give the directory path of the predefined nClass. ",
+       "The classname argument to nClass gives the base for filenames in that directory.")
+     regular_filename <-  NCinternals(NC)$cpp_classname
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
