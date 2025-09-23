@@ -42,7 +42,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran("inline")'
+        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -53,7 +53,6 @@ jobs:
           testthat::test_dir("nCompiler/tests/testthat/uncompiled_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/nCompile_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/cpp_tests", reporter = "summary")
-          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
         shell: Rscript {0}
 
   test-nCompile-features:
@@ -77,6 +76,7 @@ jobs:
         run: |
           library(nCompiler)
           testthat::test_dir("nCompiler/tests/testthat/predefined_tests", reporter = "summary")
+          testthat::test_dir("nCompiler/tests/testthat/specificOp_tests", reporter = "summary")
         shell: Rscript {0}
 
   test-nClass:
