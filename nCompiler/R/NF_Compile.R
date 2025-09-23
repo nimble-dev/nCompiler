@@ -61,7 +61,9 @@ nCompile_nFunction <- function(NF,
   if(is_predefined) {
     predefined_dir <-  NFinternals(NF)$predefined
     if(!is.character(predefined_dir))
-      stop("There is a predefined nFunction whose predefined field is not character.  It should give the filename base of the predefined nFunction.")
+      stop("There is a predefined nFunction whose predefined field is not character. ",
+       "It should give the directory path of the predefined nFunction. ",
+       "The name argument to nFunction gives the base for filenames in that directory.")
     regular_filename <-  NFinternals(NF)$cpp_code_name
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
