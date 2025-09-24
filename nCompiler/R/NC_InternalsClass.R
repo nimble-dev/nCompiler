@@ -65,9 +65,10 @@ NC_InternalsClass <- R6::R6Class(
         self$fieldNames <- names(Cpublic)[!isMethod]
         self$allFieldNames_self <- fieldNames
         self$allFieldNames <- fieldNames
-        if(!is.null(self$compileInfo$inherit$base))
-          self$inherit_base_provided <- TRUE
       }
+      # An over-riding base class can be provided either through inherit or nClass_inherit.
+      if(!is.null(self$compileInfo$inherit$base) || !is.null(self$compileInfo$nClass_inherit$base))
+          self$inherit_base_provided <- TRUE
       if(!is.null(enableDerivs)) {
         if(!is.list(enableDerivs))
           enableDerivs <- as.list(enableDerivs)
@@ -89,9 +90,9 @@ NC_InternalsClass <- R6::R6Class(
           stop("An inherit argument that was provided to nClass is not nClass generator.")
         self$inheritNCinternals <- NCinternals(inherit_obj)
         message("add check that base class has interface 'none'")
-        if(!self$inherit_base_provided)
-          self$compileInfo$inherit$base <- paste("public",
-                                            self$inheritNCinternals$cpp_classname)
+        if(!self$inherit_base_provided) {
+          self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
+        }
         process_inherit_done <- FALSE
       } else {
         process_inherit_done <- TRUE

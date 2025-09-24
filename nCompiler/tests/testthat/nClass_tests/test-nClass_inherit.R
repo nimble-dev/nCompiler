@@ -227,12 +227,11 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
     rm(objB, CobjB)
     gc()
   }
-
 })
 
 ##############
 
-cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
+# cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
 
 test_that("inheriting-only classes in 3-level hierarchy works", {
   ncBase <- nClass(
@@ -287,4 +286,174 @@ test_that("inheriting-only classes in 3-level hierarchy works", {
   expect_equal(Cobj2$call_add_x(15), 25)
 
   rm(Cobj, Cobj2); gc()
+})
+
+cat("Add inline checking of validity of shared_ptr's in generated code.\n")
+
+test_that("inheritance with interfaces at multiple levels", {
+  ncBase <- nClass(
+    classname = "ncBase",
+    Cpublic = list(
+      base_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_base_x = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+    # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "full",createFromR=TRUE)
+  )
+
+  ncMid <- nClass(
+    inherit = ncBase,
+    classname = "ncMid",
+    Cpublic = list(
+      mid_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_mid_x = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_der_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+      # get_base_x_from_mid will be non-virtual and access base class member
+      get_base_x_from_mid = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x_from_mid"),
+
+      # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "none",createFromR=TRUE)
+  )
+
+  ncDer <- nClass(
+    inherit = ncMid,
+    Cpublic = list(
+      der_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_der_x = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_der_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+      # get_base_x_from_mid will be non-virtual and access base class member
+      get_base_x_from_der = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x_from_der"),
+      get_mid_x_from_der = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_mid_x_from_der"),
+
+      # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "full",createFromR=TRUE)
+  )
+
+  useClasses <- nClass(
+    classname = "useClasses",
+    Cpublic = list(
+      myBase = 'ncBase',
+      myMid = 'ncMid',
+      myDer = 'ncDer',
+      useBase = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myBase$get_x_virt())
+          if(i == 2) return(myBase$get_base_x())
+          if(i == 3) return(myBase$get_x())
+        },
+        name = "useBase"),
+      useMid = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myMid$get_x_virt())
+          if(i == 2) return(myMid$get_base_x_from_mid())
+          if(i == 3) return(myMid$get_mid_x())
+          if(i == 4) return(myMid$get_x())
+        }
+      ),
+      useDer = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myDer$get_x_virt())
+          if(i == 2) return(myDer$get_base_x_from_der())
+          if(i == 3) return(myDer$get_mid_x_from_der())
+          if(i == 4) return(myDer$get_der_x())
+          if(i == 5) return(myDer$get_x())
+        }
+      )
+    )
+  )
+
+  comp <- nCompile(ncBase, ncMid, ncDer, useClasses)
+  Cder <- comp$ncDer$new()
+  Cder$base_x <- 1
+  Cder$base_x
+  Cder$get_base_x()
+  Cder$get_base_x_from_mid()
+  Cder$get_base_x_from_der()
+
+  Cder$mid_x <- 2
+  Cder$mid_x
+  Cder$get_mid_x()
+  Cder$get_mid_x_from_der()
+
+  Cder$der_x <- 3
+  Cder$der_x
+  Cder$get_der_x()
+
+  Cder$get_x()
+  Cder$get_x_virt()
+
+  expect_error(Cmid <- comp$ncMid$new())
+
+  Cbase <- comp$ncBase$new()
+  Cbase$base_x <- 1
+  Cbase$get_x_virt()
+  expect_error(Cbase$get_der_x())
+
+  rm(Cder, Cbase); gc()
 })

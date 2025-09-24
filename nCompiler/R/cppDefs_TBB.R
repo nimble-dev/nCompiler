@@ -28,7 +28,7 @@ cppParallelBodyClass <- R6::R6Class(
         else
           list()
         
-        output <- c(generateClassHeader(name, inheritance),
+        output <- c(generateClassHeader(name, inheritance, nClass_inheritance),
                     list('public:'), ## In the future we can separate public and private
                     lapply(generateObjectDefs(symbolsToUse),
                            function(x)
@@ -176,7 +176,7 @@ cppParallelReduceBodyClass <- R6::R6Class(
         else
           list()
 
-        output <- c(generateClassHeader(name, inheritance),
+        output <- c(generateClassHeader(name, inheritance, nClass_inheritance),
                     list('public:'), ## In the future we can separate public and private
                     lapply(generateObjectDefs(symbolsToUse),
                            function(x)

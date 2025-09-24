@@ -311,14 +311,14 @@ add_obj_hooks_impl <- function(self) {
 
 addGenericInterface_impl <- function(self) {
   name <- self$name
-  self$addInheritance(paste0("public genericInterfaceC<",
+  self$add_nClass_inheritance(paste0("genericInterfaceC<",
                              name,
-                             ">"))
+                             ">"), first=TRUE)
   # It is ok to have multiple virtual inheritance from genericInterfaceBaseC,
   # but we clean it up here for slightly simpler code.
-  if("virtual public genericInterfaceBaseC" %in% self$inheritance) {
-    self$inheritance <- self$inheritance[-which(self$inheritance == "virtual public genericInterfaceBaseC")]
-  }
+  # if("virtual public genericInterfaceBaseC" %in% self$inheritance) {
+  #   self$inheritance <- self$inheritance[-which(self$inheritance == "virtual public genericInterfaceBaseC")]
+  # }
   #  self$Hincludes <- c(self$Hincludes,
   #                      nCompilerIncludeFile("nCompiler_class_interface.h"))
   self$Hpreamble <- c(self$Hpreamble,
@@ -508,7 +508,13 @@ cppClassClass <- R6::R6Class(
     name = character(),
     symbolTable = NULL, ## list or symbolTable
     memberCppDefs = list(), # formerly cppFunctionDefs
-    inheritance = list(),           ## classes to be declared as public
+    inheritance = list(),           ## direct inheritance code, e.g. "public baseClass"
+    nClass_inheritance = list(), ## classes to be inherited via interface_resolver<>, which resolves
+                  ## final implementations of "diamond" issues by setting the first as the implementer,
+                  ## also adds the "virtual public genericInterfaceBaseC" inheritance if needed.
+                  ## It is harmless to include an arbitrary class in here, if it is not first
+                  ## and should be inherited as "public".
+                  ## Entries here should be "genericInterfaceBaseC<A>" or just "B", but omit the "public" etc.
     ## ancestors = 'list',             ## classes inherited by inherited classes, needed to make all cast pointers
     ##extPtrTypes = 'ANY',
     ##private = 'list',     # 'list'. This field is a placeholder for future functionality.  Currently everything is generated as public
@@ -582,6 +588,12 @@ cppClassClass <- R6::R6Class(
     addInheritance = function(newI) {
       inheritance <<- c(inheritance, newI)
     },
+    add_nClass_inheritance = function(newI, first = FALSE) {
+      if(first)
+        nClass_inheritance <<- c(newI, nClass_inheritance)
+      else
+        nClass_inheritance <<- c(nClass_inheritance, newI)
+    },
     ##addAncestors = function(newI) ancestors <<- c(ancestors, newI),
     ##setPrivate = function(name) private[[name]] <<- TRUE,
     generate = function(declaration = FALSE, ...) {
@@ -591,7 +603,7 @@ cppClassClass <- R6::R6Class(
         else {
           list()
         }
-        output <- c(generateClassHeader(name, inheritance),
+        output <- c(generateClassHeader(name, inheritance, nClass_inheritance),
                     list('public:'), ## In the future we can separate public and private
                     generateAll(memberCppDefs, declaration = TRUE),
                     # it is important to declare methods before variables
@@ -632,9 +644,10 @@ cppClassClass <- R6::R6Class(
       } else {
         # Ensure inheritance from genericInterfaceBaseC so our custom Exporter in C++
         # can always dynamic_pointer_cast to shared_ptr<genericInterfaceBaseC>.
-        if(!("virtual public genericInterfaceBaseC" %in% self$inheritance)) {
-          self$addInheritance("virtual public genericInterfaceBaseC")
-        }
+        # if(!("virtual public genericInterfaceBaseC" %in% self$inheritance)) {
+        #   if(length(self$genericInterfaceInheritance) > 0) 
+        #     self$addInheritance("virtual public genericInterfaceBaseC")
+        # }
         # These will always end up included and possibly multiple times,
         # so it's a bit sloppy but not worth cleaning up for now.
         self$Hpreamble <- c(self$Hpreamble,
@@ -643,7 +656,6 @@ cppClassClass <- R6::R6Class(
         self$CPPpreamble <- c(self$CPPpreamble,
                       "#define NCOMPILER_USES_NCLASS_INTERFACE",
                       "#define USES_NCOMPILER")
-
       }
       # The only case that would omit interface calls is generated predefined code.
       if(interfaceCalls)
@@ -1059,7 +1071,14 @@ generateFunctionHeader <- function(self,
 ##   )
 ## }
 
-generateClassHeader <- function(ns, inheritance) {
+generateClassHeader <- function(ns, inheritance, nClass_inheritance=character()) {
+  # We do want an empty public interface_resolver<> if there is no nClass_inheritance.
+  # It will ensure virtual public genericInterfaceBaseC inheritance.
+  resolver_inheritance <- paste('public interface_resolver<',
+                              paste(nClass_inheritance,
+                                    collapse = ', '),
+                              '>')
+  inheritance <- c(resolver_inheritance, inheritance)
   inheritancePart <-
     if(length(inheritance) > 0) {
       paste(':',

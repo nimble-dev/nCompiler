@@ -107,10 +107,78 @@ class genericInterfaceBaseC {
   };
 };
 
+// FirstDerived and interface_resolver<> designed with help from Google Gemini
+// Helper template to find the first type that inherits from Base
+template <typename T, typename... Rest>
+struct FirstGenericDerived {
+  using type = std::conditional_t<
+      std::is_base_of_v<genericInterfaceBaseC, T>,
+      T,
+      typename FirstGenericDerived<Rest...>::type
+  >;
+};
+
+// Base case for the recursive helper template
+template <typename T>
+struct FirstGenericDerived<T> {
+  using type = std::conditional_t<
+      std::is_base_of_v<genericInterfaceBaseC, T>,
+      T,
+      genericInterfaceBaseC
+  >;
+};
+
+template <typename... Bases>
+class interface_resolver : public Bases..., virtual public genericInterfaceBaseC 
+{
+private:
+  using FirstFound = typename FirstGenericDerived<Bases...>::type;
+
+public:
+  const name2access_type& get_name2access() const override {
+      return FirstFound::get_name2access();
+  }
+  SEXP get_value(const std::string &name) const override {
+      return FirstFound::get_value(name);
+  }
+  void set_value(const std::string &name, SEXP Svalue) override {
+      FirstFound::set_value(name, Svalue);
+  }
+  SEXP call_method(const std::string &name, SEXP Sargs) override {
+      return FirstFound::call_method(name, Sargs);
+  }
+  SEXP make_deserialized_return_SEXP() override {
+      return FirstFound::make_deserialized_return_SEXP();
+  }
+};
+
+template<>
+class interface_resolver<> : virtual public genericInterfaceBaseC 
+{
+private:
+  using FirstFound = genericInterfaceBaseC;
+
+public:
+  const name2access_type& get_name2access() const override {
+      return FirstFound::get_name2access();
+  }
+  SEXP get_value(const std::string &name) const override {
+      return FirstFound::get_value(name);
+  }
+  void set_value(const std::string &name, SEXP Svalue) override {
+      FirstFound::set_value(name, Svalue);
+  }
+  SEXP call_method(const std::string &name, SEXP Sargs) override {
+      return FirstFound::call_method(name, Sargs);
+  }
+  SEXP make_deserialized_return_SEXP() override {
+      return FirstFound::make_deserialized_return_SEXP();
+  }
+};
+
 // A forward declaration. (This is being disabled and a new approach is being used.)
 //SEXP process_call_args(const genericInterfaceBaseC::args::argVectorT &argVector,
 //                       SEXP Sargs);
-
 // Base class for accessing a single member from a nimble class,
 // converted to SEXP.
 //
