@@ -117,7 +117,14 @@ NF_InternalsClass <- R6::R6Class(
                                        evalEnv = where)
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
-      ## what this one's cpp function name will be:
+      ## what this one's cpp function name will be.
+      ## However, if this nFunction is used as a method of a nClass,
+      ## and if that nClass inherits from another nClass and this
+      ## nFunction is actually virtual, then the base class's
+      ## cpp_code_name will be used instead.
+      ## However, we do not modify it in this NFinternals because
+      ## it is permitted to use this elsewhere, e.g. on its own
+      ## or to provide a method to a different nClass.
       if(!is.null(compileInfo$cpp_code_name))
         self$cpp_code_name <- compileInfo$cpp_code_name
       else {

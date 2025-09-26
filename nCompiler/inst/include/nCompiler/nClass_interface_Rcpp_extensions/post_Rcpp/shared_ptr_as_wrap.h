@@ -98,7 +98,7 @@ template<typename T>
 struct wrap_shared_ptr_to_R< T,
                              typename std::enable_if<std::is_base_of<loadedObjectHookC<T>, T >::value>::type > {
   static SEXP go(std::shared_ptr< T > obj) {
-    SEXP Sans = PROTECT(T::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
+    SEXP Sans = PROTECT(loadedObjectHookC<T>::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
     UNPROTECT(2);
     return Sans;
   }

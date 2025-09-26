@@ -13,6 +13,8 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 #   - The SEXPgenerator C++ function in the cppDef is named paste0("new_", name)
 #   - This then is used to create an RcppPacket.
 #   - In nCompile, the cpp_name for that unitResult is the class name for the nClass generator
+#   - Note that cpp_code_name of methods may be intercepted later to match base class
+#     cpp_code_name if the method is virtual and inherited.
 #
 # compileCpp_nCompiler calls sourceCpp_nCompiler, which calls Rcpp::sourceCpp
 # compileCpp_nCompiler arranges the results into a named list of the [[Rcpp::export]] functions

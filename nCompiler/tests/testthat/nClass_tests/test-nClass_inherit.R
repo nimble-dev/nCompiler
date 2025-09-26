@@ -404,6 +404,7 @@ test_that("inheritance with interfaces at multiple levels", {
           if(i == 1) return(myBase$get_x_virt())
           if(i == 2) return(myBase$get_base_x())
           if(i == 3) return(myBase$get_x())
+          return(-1)
         },
         name = "useBase"),
       useMid = nFunction(
@@ -413,6 +414,7 @@ test_that("inheritance with interfaces at multiple levels", {
           if(i == 2) return(myMid$get_base_x_from_mid())
           if(i == 3) return(myMid$get_mid_x())
           if(i == 4) return(myMid$get_x())
+          return(-1)
         }
       ),
       useDer = nFunction(
@@ -423,12 +425,14 @@ test_that("inheritance with interfaces at multiple levels", {
           if(i == 3) return(myDer$get_mid_x_from_der())
           if(i == 4) return(myDer$get_der_x())
           if(i == 5) return(myDer$get_x())
+          return(-1)
         }
       )
     )
   )
 
   comp <- nCompile(ncBase, ncMid, ncDer, useClasses)
+
   Cder <- comp$ncDer$new()
   Cder$base_x <- 1
   Cder$base_x
@@ -451,9 +455,30 @@ test_that("inheritance with interfaces at multiple levels", {
   expect_error(Cmid <- comp$ncMid$new())
 
   Cbase <- comp$ncBase$new()
-  Cbase$base_x <- 1
+  Cbase$base_x <- 11
   Cbase$get_x_virt()
   expect_error(Cbase$get_der_x())
+
+  obj <- comp$useClasses$new()
+  obj$myBase <- Cbase
+  obj$myDer <- Cder
+
+  obj$useBase(1)
+  obj$useBase(2)
+  obj$useBase(3)
+  obj$useBase(4)
+
+  obj$useDer(1)
+  obj$useDer(2)
+  obj$useDer(3)
+  obj$useDer(4)
+  obj$useDer(5)
+
+  obj$myBase <- Cder
+  obj$useBase(1) # SHOULD BE 3
+  obj$useBase(2)
+  obj$useBase(3)
+  obj$useBase(4)
 
   rm(Cder, Cbase); gc()
 })
