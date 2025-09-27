@@ -223,7 +223,7 @@ createCppDefsInfo <- function(units,
                                              env = env,
                                              compileInfo = compileInfo,
                                              control = control)
-      cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
+      cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name2
 #      RcppPacket_list[[i]] <- NFinternals(unitResults[[i]])$RcppPacket
     } else if(unitTypes[i] == "nCgen") {
       unitResults[[i]] <- nCompile_nClass(units[[i]],

@@ -52,7 +52,7 @@ compile_normalizeCalls <- function(code,
     #   We defer: uniqueName, cpp_code_name
     cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
     if(cachedOpInfo$case == "nFunction") {
-      uniqueName <- cachedOpInfo$obj_internals$uniqueName
+      uniqueName <- cachedOpInfo$obj_internals$uniqueName2
       if(length(uniqueName)==0)
           stop(
             exprClassProcessingErrorMsg(

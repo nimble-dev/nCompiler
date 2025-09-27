@@ -338,6 +338,7 @@ addGenericInterface_impl <- function(self) {
   cpp_fieldNames <- character()
   done <- FALSE
   current_NCgen <- self$Compiler$NCgenerator
+  my_NCgen <- current_NCgen
   while(!done) {
     NCint <- NCinternals(current_NCgen)
     NCcompInfo <- NCint$compileInfo
@@ -369,7 +370,9 @@ addGenericInterface_impl <- function(self) {
       step4 <- paste0('args({', step3, '})')
       cppArgInfos[iOut] <- step4
       outputMethodNames[iOut] <- mName
-      outputCppMethodNames[iOut] <- NFint$cpp_code_name
+      # This line should give the same result as the next line.
+      # outputCppMethodNames[iOut] <- NFint$cpp_code_name2
+      outputCppMethodNames[iOut] <- NCint$all_methodName_to_cpp_code_name[[mName]]
       outputMethodClassNames[iOut] <- NCint$cpp_classname
       iOut <- iOut + 1
     }

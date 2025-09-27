@@ -53,6 +53,7 @@ NC_CompilerClass <- R6::R6Class(
         thisMethod <- NCgenerator$public_methods[[m]]
         if(isConstructor(thisMethod)) {
           NFinternals(thisMethod)$cpp_code_name <- self$name
+          NFinternals(thisMethod)$cpp_code_name2 <- self$name
         }
         NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod)
       }
