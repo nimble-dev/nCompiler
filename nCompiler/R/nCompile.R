@@ -223,7 +223,7 @@ createCppDefsInfo <- function(units,
                                              env = env,
                                              compileInfo = compileInfo,
                                              control = control)
-      cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name2
+      cpp_names[i] <- NFinternals(units[[i]])$CPPCODENAME2
 #      RcppPacket_list[[i]] <- NFinternals(unitResults[[i]])$RcppPacket
     } else if(unitTypes[i] == "nCgen") {
       unitResults[[i]] <- nCompile_nClass(units[[i]],
@@ -319,7 +319,10 @@ nCompile <- function(...,
     if(unitTypes[i] == "nCgen")
       NCinternals(units[[i]])$process_inherit()
   }
-
+  for(i in seq_along(units)) {
+    if(unitTypes[i] == "nCgen")
+      NC_check_inheritance(units[[i]])
+  }
   # set up exportNames and returnNames
   # exportNames will be from names(units) if named in the call or there is no exportName in the NF or NC compileInfo
   # Otherwise (i.e. no name provided in call and there is an exportName in the object def), use the exportName in the object def (compileInfo)

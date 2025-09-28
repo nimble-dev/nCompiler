@@ -27,8 +27,7 @@ NF_CompilerClass <- R6::R6Class(
     derivsContent = list(),
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
-                          ## funName,
-                          # const = FALSE,
+                          name = NULL, # Allow an nClass to set the name of its method.
                           useUniqueNameInCpp = FALSE,
                           compileInfo = NULL) {
       self$auxEnv <- new.env()
@@ -46,9 +45,13 @@ NF_CompilerClass <- R6::R6Class(
           self$NFinternals <- NFinternals(f)
         }
         self$origName <- NFinternals$uniqueName2
-        if (useUniqueNameInCpp) self$name <- NFinternals$uniqueName2
-        # NB If this is a method of a nClass, its cpp_code_name may be intercepted later but will not be changed here.
-        else self$name <- NFinternals$cpp_code_name2
+        if(!is.null(name)) {
+          self$name <- name
+        } else {
+          if (useUniqueNameInCpp) self$name <- NFinternals$uniqueName2
+          # NB If this is a method of a nClass, its cpp_code_name may be intercepted later but will not be changed here.
+          else self$name <- NFinternals$CPPCODENAME2
+        }
         self$origRcode <- NFinternals$code
         self$newRcode <- NFinternals$code
         self$isAD <- NFinternals$isAD

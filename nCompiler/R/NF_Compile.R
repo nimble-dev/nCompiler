@@ -64,7 +64,7 @@ nCompile_nFunction <- function(NF,
       stop("There is a predefined nFunction whose predefined field is not character. ",
        "It should give the directory path of the predefined nFunction. ",
        "The name argument to nFunction gives the base for filenames in that directory.")
-    regular_filename <-  NFinternals(NF)$cpp_code_name2
+    regular_filename <-  NFinternals(NF)$CPPCODENAME2
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)

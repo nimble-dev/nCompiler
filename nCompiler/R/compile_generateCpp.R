@@ -179,7 +179,7 @@ inGenCppEnv(
 
 inGenCppEnv(
   Generic_nFunction <- function(code, symTab) {
-    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$cpp_code_name2
+    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$CPPCODENAME2
     paste0(cpp_code_name,
            '(', paste0(unlist(lapply(code$args,
                                      compile_generateCpp,

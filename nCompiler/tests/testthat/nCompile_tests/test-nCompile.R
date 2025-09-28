@@ -67,7 +67,6 @@ test_that("nCompile direct, package, and writePackage work with Eigen::Tensors",
   pkgload::unload("testpackage")
 })
 
-
 test_that("nCompile direct, package, and writePackage work with nClass interfaces", {
   nc <- nClass(
     Cpublic = list(

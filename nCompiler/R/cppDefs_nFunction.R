@@ -164,7 +164,7 @@ cpp_include_needed_nFunctions <- function(cppDef,
                                           NF_Compiler) {
   needed_cpp_code_names <- lapply(NF_Compiler$auxEnv$needed_nFunctions,
                                   function(x)
-                                    NFinternals(nGet(x[[1]], where = x[[2]]))$cpp_code_name2)
+                                    NFinternals(nGet(x[[1]], where = x[[2]]))$CPPCODENAME2)
   if(length(needed_cpp_code_names)) {
     needed_filebases <- make_cpp_filebase(unlist(needed_cpp_code_names))
     cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"',needed_filebases, '.h\"'))

@@ -12,11 +12,11 @@ NF_InternalsClass <- R6::R6Class(
     returnSym = NULL,
     control = list(),
     where = NULL,
-    isMethod = FALSE,
+    #isMethod = FALSE,
     uniqueName = character(),
     uniqueName2 = character(),
-    cpp_code_name = character(),
-    cpp_code_name2 = character(),
+    #cpp_code_name = character(),
+    CPPCODENAME2 = character(),
     ## template = NULL, replaced with default_matchDef
     default_matchDef = NULL,
     code = NULL,
@@ -95,8 +95,6 @@ NF_InternalsClass <- R6::R6Class(
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
       self$code <- body(fun_to_use)
-      if(isTRUE(control$changeKeywords))
-        self$code <- nf_changeKeywords(self$code)
       if(code[[1]] != '{')
         self$code <- substitute({CODE}, list(CODE=code))
       ## check all code except.nCompiler package nFunctions
@@ -125,6 +123,12 @@ NF_InternalsClass <- R6::R6Class(
       self$returnSym <- argType2symbol(returnTypeDecl,
                                        origName = "returnType",
                                        evalEnv = where)
+
+      # It is important to do this after getting the returnType info
+      # because this will change integer to nInteger, even in returnType
+      if(isTRUE(control$changeKeywords))
+        self$code <- nf_changeKeywords(self$code)
+
       ## We set the cpp_code_name here so that other nFunctions
       ## that call this one can determine, during compilation,
       ## what this one's cpp function name will be.
@@ -136,16 +140,16 @@ NF_InternalsClass <- R6::R6Class(
       ## it is permitted to use this elsewhere, e.g. on its own
       ## or to provide a method to a different nClass.
       if(!is.null(compileInfo$cpp_code_name)) {
-        self$cpp_code_name <- compileInfo$cpp_code_name
-        self$cpp_code_name2 <- compileInfo$cpp_code_name
+        #self$cpp_code_name <- compileInfo$cpp_code_name
+        self$CPPCODENAME2 <- compileInfo$cpp_code_name
       } else {
-        self$cpp_code_name <- Rname2CppName(name)
-        self$cpp_code_name2 <- Rname2CppName(name)
-        # do not uniquify cpp_code_name2
-        if(isFALSE(predefined))
-          self$cpp_code_name <- paste(self$cpp_code_name,
-                                      nFunctionIDMaker(),
-                                      sep = "_")
+        #self$cpp_code_name <- Rname2CppName(name)
+        self$CPPCODENAME2 <- Rname2CppName(name)
+        # do not uniquify CPPCODENAME2
+        # if(isFALSE(predefined))
+        #   self$cpp_code_name <- paste(self$cpp_code_name,
+        #                               nFunctionIDMaker(),
+        #                               sep = "_")
       }
       ## Unpack enableDerivs into AD
       self$isAD <- FALSE

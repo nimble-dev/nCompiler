@@ -56,3 +56,27 @@ nGet <- function(name, where) {
   # else
   #   NULL
 }
+
+NF_types_match <- function(f1, f2) {
+  if(!isNF(f1) || !isNF(f2)) stop("Arguments to NF_types_match must be nFunctions")
+  match <- TRUE
+  NFint1 <- NFinternals(f1)
+  NFint2 <- NFinternals(f2)
+
+  if(match) {
+   match <- isTRUE(all.equal(NFint1$returnSym, NFint2$returnSym))
+  }
+  if(match) {
+    NF1args <- NFint1$argSymTab$getSymbolNames()
+    NF2args <- NFint2$argSymTab$getSymbolNames()
+    match <- isTRUE(all.equal(NF1args, NF2args))
+  }
+  if(match) {
+    for(symName in NF1args) {
+      if(match)
+        match <- isTRUE(all.equal(NFint1$argSymTab$getSymbol(symName),
+                                 NFint2$argSymTab$getSymbol(symName)))
+    }
+  }
+  match
+}

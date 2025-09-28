@@ -346,7 +346,7 @@ addGenericInterface_impl <- function(self) {
     useIM <- !is.null(interfaceMembers)
     methodNames <- NCint$methodNames
     for(mName in methodNames) {
-      if(mName %in% names(cppArgInfos)) next
+      if(mName %in% outputMethodNames) next
       if(useIM && !(mName %in% interfaceMembers)) next
       NFint <- NFinternals(current_NCgen$public_methods[[mName]])
       NFcompInfo <- NFint$compileInfo
@@ -371,7 +371,7 @@ addGenericInterface_impl <- function(self) {
       cppArgInfos[iOut] <- step4
       outputMethodNames[iOut] <- mName
       # This line should give the same result as the next line.
-      # outputCppMethodNames[iOut] <- NFint$cpp_code_name2
+      # outputCppMethodNames[iOut] <- NFint$CPPCODENAME2
       outputCppMethodNames[iOut] <- NCint$all_methodName_to_cpp_code_name[[mName]]
       outputMethodClassNames[iOut] <- NCint$cpp_classname
       iOut <- iOut + 1
