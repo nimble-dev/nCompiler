@@ -16,7 +16,7 @@ NF_InternalsClass <- R6::R6Class(
     uniqueName = character(),
     uniqueName2 = character(),
     #cpp_code_name = character(),
-    CPPCODENAME2 = character(),
+    cpp_code_name = character(),
     ## template = NULL, replaced with default_matchDef
     default_matchDef = NULL,
     code = NULL,
@@ -141,11 +141,11 @@ NF_InternalsClass <- R6::R6Class(
       ## or to provide a method to a different nClass.
       if(!is.null(compileInfo$cpp_code_name)) {
         #self$cpp_code_name <- compileInfo$cpp_code_name
-        self$CPPCODENAME2 <- compileInfo$cpp_code_name
+        self$cpp_code_name <- compileInfo$cpp_code_name
       } else {
         #self$cpp_code_name <- Rname2CppName(name)
-        self$CPPCODENAME2 <- Rname2CppName(name)
-        # do not uniquify CPPCODENAME2
+        self$cpp_code_name <- Rname2CppName(name)
+        # do not uniquify cpp_code_name
         # if(isFALSE(predefined))
         #   self$cpp_code_name <- paste(self$cpp_code_name,
         #                               nFunctionIDMaker(),

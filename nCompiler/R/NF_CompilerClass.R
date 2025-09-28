@@ -50,7 +50,7 @@ NF_CompilerClass <- R6::R6Class(
         } else {
           if (useUniqueNameInCpp) self$name <- NFinternals$uniqueName2
           # NB If this is a method of a nClass, its cpp_code_name may be intercepted later but will not be changed here.
-          else self$name <- NFinternals$CPPCODENAME2
+          else self$name <- NFinternals$cpp_code_name
         }
         self$origRcode <- NFinternals$code
         self$newRcode <- NFinternals$code

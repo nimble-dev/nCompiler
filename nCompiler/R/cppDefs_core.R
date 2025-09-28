@@ -371,7 +371,7 @@ addGenericInterface_impl <- function(self) {
       cppArgInfos[iOut] <- step4
       outputMethodNames[iOut] <- mName
       # This line should give the same result as the next line.
-      # outputCppMethodNames[iOut] <- NFint$CPPCODENAME2
+      # outputCppMethodNames[iOut] <- NFint$cpp_code_name
       outputCppMethodNames[iOut] <- NCint$all_methodName_to_cpp_code_name[[mName]]
       outputMethodClassNames[iOut] <- NCint$cpp_classname
       iOut <- iOut + 1

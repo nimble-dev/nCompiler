@@ -15,7 +15,6 @@ updateDefaults <- function(defaults, control) {
     debugSizeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
     enableDerivs = FALSE,
-    generate_predefined = FALSE,
     allow_method_overloading = FALSE,
     allow_inherited_field_duplicates = FALSE,
     compilerOptions = list(
@@ -35,7 +34,8 @@ updateDefaults <- function(defaults, control) {
       endDebugStage = 'end',
       writeCpp = TRUE,
       compileCpp = TRUE,
-      useUniqueNameInCode = FALSE
+      useUniqueNameInCode = FALSE,
+      generate_predefined = FALSE
     ),
     packagingOptions = list(
       export = TRUE

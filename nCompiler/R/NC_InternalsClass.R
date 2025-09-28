@@ -77,7 +77,7 @@ NC_InternalsClass <- R6::R6Class(
         self$orig_methodName_to_cpp_code_name <- structure(vector("list", length=length(methodNames)),
                                                        names = methodNames)
         for(mN in methodNames) {
-          self$orig_methodName_to_cpp_code_name[[mN]] <- NFinternals(Cpublic[[mN]])$CPPCODENAME2
+          self$orig_methodName_to_cpp_code_name[[mN]] <- NFinternals(Cpublic[[mN]])$cpp_code_name
         }
       }
       # An over-riding base class can be provided either through inherit or nClass_inherit.
