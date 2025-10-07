@@ -3,6 +3,17 @@
 #
 # see test-nimbleModel too.
 
+## modelBase_nClass will be a base class with methods that
+## have separate Rfun and Cfun contents and are predefined.
+## 
+## model_nClass will inherit from modelBase_nClass and in C++ will
+## use CRTP for a derived model.
+## It will also split Rfun and Cfun and provide a custom inheritance statement
+## It may provide different sets of calculate modes.
+## It will also be predefined (will it get an interface?)
+
+## a model will inherit from model_nClass
+
 modelBase_nClass <- nClass(
   classname = "modelBase_nClass",
   Cpublic = list(
@@ -17,7 +28,7 @@ modelBase_nClass <- nClass(
         compileInfo = list(virtual=TRUE)
     )
   ),
-  compileInfo=list(interface="none",
+  compileInfo=list(interface="full",
                    createFromR = FALSE)
 )
 
@@ -48,7 +59,7 @@ makeModel_nClass <- function(varInfo) {
       function() {base_hw()}
     ),
     call_setup_node_mgmt = nFunction(
-      name = "setup_node_mgmt",
+      name = "call_setup_node_mgmt",
       function() {setup_node_mgmt()}
     ),
     set_from_list = nFunction(
