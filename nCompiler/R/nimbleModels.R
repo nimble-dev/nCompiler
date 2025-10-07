@@ -14,6 +14,15 @@
 
 ## a model will inherit from model_nClass
 
+# This wrapper to system.file is important because without it
+# (if we had system.file directory in the nClass calls below),
+# then system.file would be evaluated at build time in the temporary build directory
+# and could become hard-coded there and then invalid in the installation
+# directory. This triggered an error when R CMD INSTALL was used on
+# github actions testing.
+get_system_file <- function(...) {
+  system.file(..., package = "nCompiler")
+}
 
 nodeFxnBase_nClass <- nClass(
   classname = "nodeFxnBase_nClass",
@@ -31,8 +40,7 @@ nodeFxnBase_nClass <- nClass(
   ),
   # We haven't dealt with ensuring a virtual destructor when any method is virtual
   # For now I did it manually by editing the .h and .cpp
-  predefined = system.file(file.path("include","nCompiler", "predefined_nClasses"),
-                           package = "nCompiler") |> file.path("nodeFxnBase_nClass"),
+  predefined = get_system_file(file.path("include","nCompiler", "predefined_nClasses")) |> file.path("nodeFxnBase_nClass"),
   compileInfo=list(interface="full",
                    createFromR = FALSE)
 )
@@ -54,8 +62,7 @@ modelBase_nClass <- nClass(
     )
   ),
   # See comment above about needing to ensure a virtual destructor
-  predefined = system.file(file.path("include","nCompiler", "predefined_nClasses"),
-                           package = "nCompiler") |> file.path("modelBase_nClass"),
+  predefined = get_system_file(file.path("include","nCompiler", "predefined_nClasses")) |> file.path("modelBase_nClass"),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
                    Hincludes = "<nodeFxnBase_nClass_c_.h>")
