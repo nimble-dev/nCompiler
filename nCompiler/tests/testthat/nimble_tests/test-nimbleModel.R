@@ -15,15 +15,16 @@ test_that("toy nimble model prototype works", {
                   list(name = "sd", nDim = 0))
   node_dnorm <- make_node_fun(varInfo)
 
-  Cncm1 <- nCompile(modelBase_nClass, ncm1, node_dnorm)
+  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, ncm1, node_dnorm)
 
   obj <- Cncm1$ncm1$new()
-  obj$call_setup_node_mgmt()
+  obj$do_setup_node_mgmt()
   nodeObj <- obj$beta_node
   obj$beta <- 1:3
   expect_equal(obj$beta, 1:3)
 
   obj$set_from_list(list(beta = 10:11))
+  # expect Problem msg:
   obj$set_from_list(list(mu = 110, beta = 11:20, alpha = 101))
   obj$mu
 

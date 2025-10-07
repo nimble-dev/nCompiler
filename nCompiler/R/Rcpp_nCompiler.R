@@ -489,11 +489,11 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
       if (all(c("opener", "body") %in% names(content))) {
         # Write as separate sections
         con <- file(filepath, "w")
-        writeLines("### OPENER ###", con)
+        writeLines("/* OPENER (Do not edit this comment) */", con)
         if (length(content$opener) > 0) {
           writeLines(content$opener, con)
         }
-        writeLines("### BODY ###", con)
+        writeLines("/* BODY (Do not edit this comment) */", con)
         if (length(content$body) > 0) {
           writeLines(content$body, con)
         }
@@ -509,9 +509,9 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
   }
 
   # Write each element to its own file
-  writePacketElement(RcppPacket$preamble, paste0(name, "_preamble.txt"))
-  writePacketElement(RcppPacket$cppContent, paste0(name, "_cppContent.txt"))
-  writePacketElement(RcppPacket$hContent, paste0(name, "_hContent.txt"))
+  writePacketElement(RcppPacket$preamble, paste0(name, "_preamble.cpp"))
+  writePacketElement(RcppPacket$cppContent, paste0(name, "_cppContent.cpp"))
+  writePacketElement(RcppPacket$hContent, paste0(name, "_hContent.h"))
   writePacketElement(RcppPacket$filebase, paste0(name, "_filebase.txt"))
   writePacketElement(RcppPacket$post_cpp_compiler, paste0(name, "_post_cpp_compiler.txt"))
   writePacketElement(RcppPacket$copyFiles, paste0(name, "_copyFiles.txt"))
@@ -522,9 +522,9 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
     packet_name = name,
     elements = names(RcppPacket),
     files = list(
-      preamble = paste0(name, "_preamble.txt"),
-      cppContent = paste0(name, "_cppContent.txt"),
-      hContent = paste0(name, "_hContent.txt"),
+      preamble = paste0(name, "_preamble.cpp"),
+      cppContent = paste0(name, "_cppContent.cpp"),
+      hContent = paste0(name, "_hContent.h"),
       filebase = paste0(name, "_filebase.txt"),
       post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
       copyFiles = paste0(name, "_copyFiles.txt")
@@ -568,9 +568,9 @@ loadRcppPacket <- function(dir, name) {
   } else {
     warning("No manifest file found. Attempting to load standard files.")
     manifest <- list(files = list(
-      preamble = paste0(name, "_preamble.txt"),
-      cppContent = paste0(name, "_cppContent.txt"),
-      hContent = paste0(name, "_hContent.txt"),
+      preamble = paste0(name, "_preamble.cpp"),
+      cppContent = paste0(name, "_cppContent.cpp"),
+      hContent = paste0(name, "_hContent.h"),
       filebase = paste0(name, "_filebase.txt"),
       post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
       copyFiles = paste0(name, "_copyFiles.txt")
@@ -597,10 +597,10 @@ loadRcppPacket <- function(dir, name) {
     }
 
     # Check if it's a structured file (cppContent/hContent)
-    if (first_line == "### OPENER ###") {
+    if (first_line == "/* OPENER (Do not edit this comment) */") {
       lines <- readLines(filepath, warn = FALSE)
-      opener_start <- which(lines == "### OPENER ###")
-      body_start <- which(lines == "### BODY ###")
+      opener_start <- which(lines == "/* OPENER (Do not edit this comment) */")
+      body_start <- which(lines == "/* BODY (Do not edit this comment) */")
 
       if (length(opener_start) == 1 && length(body_start) == 1) {
         opener_lines <- if (body_start > opener_start + 1) {

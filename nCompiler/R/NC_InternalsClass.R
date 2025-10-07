@@ -24,7 +24,7 @@ NC_InternalsClass <- R6::R6Class(
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
     enableDerivs = NULL,
     enableSaving = NULL,
-    predefined = FALSE,
+    predefined = FALSE, # directory for reading and (default) writing predefined nClass saved RcppPacket. Writing location can be over-ridden by compileInfo$predefined_output_dir
     inheritNCinternals = NULL,
     env = NULL,
     inheritQ = NULL,

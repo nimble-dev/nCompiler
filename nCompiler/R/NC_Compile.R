@@ -71,8 +71,11 @@ nCompile_nClass <- function(NC,
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     if(is_predefined) {
+      predefined_gen_dir <- NCinternals(NC)$compileInfo$predefined_output_dir
+      if(is.null(predefined_gen_dir))
+        predefined_gen_dir <- predefined_dir      
       RcppPacket <- cppDefs_2_RcppPacket(cppDef)
-      saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
+      saveRcppPacket(RcppPacket, predefined_gen_dir, regular_filename)
       # Now add interface calls if necessary for this live compilation, having
       # kept them out of the written packet code.
       cppDef$buildGenericInterface(interfaceCalls=TRUE, interface=FALSE)

@@ -83,6 +83,9 @@ nCompile_nFunction <- function(NF,
       return(NF_Compiler)
     }
     if(is_predefined) {
+      predefined_gen_dir <- NFinternals(NF)$compileInfo$predefined_output_dir
+      if(is.null(predefined_gen_dir))
+        predefined_gen_dir <- predefined_dir
       RcppPacket <- cppDefs_2_RcppPacket(NF_Compiler$cppDef)
       saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
     }
