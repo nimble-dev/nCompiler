@@ -117,7 +117,8 @@ nClass <- function(classname,
     list(exportName = NULL, interface = "full",
          interfaceMembers = NULL,
          depends = list(),
-         inherit = list()),
+         inherit = list(),
+         nClass_inherit = list()),
     compileInfo
   )
   if(missing(classname))
@@ -163,8 +164,6 @@ nClass <- function(classname,
   # so if provided in the nClass call, we stick it in new_env.
   # (That is not the only reason for new_env.)
   # Also note that the inherit arg is for nClass inheritance. The compileInfo$inherit element is for hard-coded C++ inheritance statements.
-  inheritQ <- substitute(inherit)
-  inherit_provided <- !is.null(inheritQ)
   #if(!is.null(inherit)) new_env$.inherit_obj <- inherit
   new_env$.NCinternals <- internals
   # Uncompiled behavior for Cpublic fields needs to be handled.

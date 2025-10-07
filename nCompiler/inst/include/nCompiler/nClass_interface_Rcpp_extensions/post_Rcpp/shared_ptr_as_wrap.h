@@ -35,7 +35,7 @@ namespace Rcpp {
     public:
       static constexpr bool T_is_polymorphic = std::is_polymorphic_v<T>;
 
-      std::shared_ptr<T> sp_;
+      std::shared_ptr<T> sp_, spnew_;
       Exporter(SEXP Sx) {
         Rcpp::Environment Sx_env(Sx); // Sx is an environment, so initialize an Rcpp:Environment from it.
         SEXP Xptr = PROTECT(Sx_env["extptr"]); // Get the extptr element of it.
@@ -55,7 +55,12 @@ namespace Rcpp {
         if(!ok) {stop("An argument that should be an nClass object is not valid.");}
         std::shared_ptr<genericInterfaceBaseC> spbase = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr))->get_interfaceBase_shared_ptr();
         if constexpr (T_is_polymorphic) {
-          sp_ = std::dynamic_pointer_cast<T>(spbase);
+          spnew_ = std::dynamic_pointer_cast<T>(spbase);
+          if(!spnew_) {
+            UNPROTECT(1);
+            stop("Invalid nClass assignment: check that the assigned object is of the expected class (or derived from it).");
+          }
+          sp_ = spnew_;
         } else {
           sp_ = std::static_pointer_cast<T>(spbase);
         }
@@ -93,7 +98,7 @@ template<typename T>
 struct wrap_shared_ptr_to_R< T,
                              typename std::enable_if<std::is_base_of<loadedObjectHookC<T>, T >::value>::type > {
   static SEXP go(std::shared_ptr< T > obj) {
-    SEXP Sans = PROTECT(T::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
+    SEXP Sans = PROTECT(loadedObjectHookC<T>::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
     UNPROTECT(2);
     return Sans;
   }

@@ -13,6 +13,8 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 #   - The SEXPgenerator C++ function in the cppDef is named paste0("new_", name)
 #   - This then is used to create an RcppPacket.
 #   - In nCompile, the cpp_name for that unitResult is the class name for the nClass generator
+#   - Note that cpp_code_name of methods may be intercepted later to match base class
+#     cpp_code_name if the method is virtual and inherited.
 #
 # compileCpp_nCompiler calls sourceCpp_nCompiler, which calls Rcpp::sourceCpp
 # compileCpp_nCompiler arranges the results into a named list of the [[Rcpp::export]] functions
@@ -317,7 +319,10 @@ nCompile <- function(...,
     if(unitTypes[i] == "nCgen")
       NCinternals(units[[i]])$process_inherit()
   }
-
+  for(i in seq_along(units)) {
+    if(unitTypes[i] == "nCgen")
+      NC_check_inheritance(units[[i]])
+  }
   # set up exportNames and returnNames
   # exportNames will be from names(units) if named in the call or there is no exportName in the NF or NC compileInfo
   # Otherwise (i.e. no name provided in call and there is an exportName in the object def), use the exportName in the object def (compileInfo)

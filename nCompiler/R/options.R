@@ -15,6 +15,8 @@ updateDefaults <- function(defaults, control) {
     debugSizeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
     enableDerivs = FALSE,
+    allow_method_overloading = FALSE,
+    allow_inherited_field_duplicates = FALSE,
     compilerOptions = list(
       use_nCompiler_error_handling = TRUE,
       rebuild = FALSE,

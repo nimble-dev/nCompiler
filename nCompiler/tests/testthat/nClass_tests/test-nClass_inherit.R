@@ -6,61 +6,189 @@ message("See comments in test-nClass_inherit.R for more notes.")
 
 ## See also test-nClass_nested
 
-# With inheritcance, we DO NOT support interfacing to both base class and derived class.
-# Only the most derived class should have interface = "generic" or "base".
-# Any class to be used as a base class should have interface = "none".
-# If one wants a pure object of that class, make an inherited class solely
-# for the purpose of having an interface.
-# This limitation would appear to be quite tricky to work around in C++,
-#  so there are no immediate plans to do so.
+# The `inherit` argument to nClass can take a single argument, similar to R6
+# It is captured as an expression that returns a single nClass generator.
+# (This must always be the same object, so the expression can't generate a new one each time it is evaluated.)
 
-# Making R6 and C++ inheritance behavior match comes reasonably close but is
-# not perfect.
+# We use the inheritance semantics of R6 classes to set the default rules for
+# nClasses.
+#
+# For fields: If two R6 classes have fields of the same name, they seem to 
+#. become one field. Therefore we disallow this in nClasses in order to 
+#  avoid generating C++ classes that actually have two distinct members
+#. of the same name and then getting different compiled vs. uncompiled behavior.
+#  This is checked in NC_check_inheritance.
+#. nOptions(allow_inherited_field_duplicates=TRUE) disables this rule and
+#. checking, and allows nCompile to happily generate C++ classes with
+#  distinct members of the same name. This is fine if a user doesn't care
+#.  about uncompiled behavior or discrepancies.
+#
+# For methods: In two R6 classes have methods of the same name, that works
+#  fine and a base class method can be accessed by super$foo().
+#. However, R6 has no notion of virtual vs. non-virtual inheritance, no
+#. notion of signatures (argument and return types) being required to match
+#. for virtual inheritance, and no notion of base class pointers. In effect, 
+#  R6 objects are just passed as objects and a method call will always use
+#  the most derived version. To match that, we require nClass inherited methods
+#. of the same name to have exactly matching argument names, types, and return type.
+#  And we require that the first base class with a method must mark it with
+#. compileInfo=list(virtual=TRUE) (in the nFunction call). The last requirement
+#  is a bit like the use of "override" in C++ in that it shouldn't be strictly
+#  necessary but can allow us during compilation to catch potentially nasty bugs
+#  by giving the programmer a way to declare their intention. We require that
+#. (whereas C++ override is optional).  Error-trapping happens in NC_check_inheritance.
+#. nOptions(allow_method_overloading=TRUE) removes these rules and allows
+#. the compiler to generate C++ classes with overloaded versions of the same
+#  name and to have even the same name and signature be not virtual. This
+# only makes sense if the user doesn't care about uncompiled behavior matching.
 
-# We support a compileInfo element for nFunction methods of nClasses that is
+# As just noted, we support a compileInfo element for nFunction methods of nClasses that is
 # `virtual` set to TRUE or FALSE. This is what is sounds like: whether to make
 # the C++ method virtual.
 
-# R6 semantics are natively like "virtual": There is no notion of having a
-# pointer to either base or derived. You just have an object, so if there
-# is a method of the same name as in a base class, the derived method will be called.
-# One can access base class methods as super$method(). We currently do not
-# support that syntax but could potentially consider it.
-
-# In our C++, only the most derived class should have an interface, so
-# in effect we have the same system: the most derived version will be called.
-
-# It appears that in R6, if a base and derived class have a member variable (not method)
-# of the same name, there is only ever one copy of it, not one for each level
-# of the class hierarchy.
-
 # Finding inheritance in R6 was tricky because
 #  the generator retains an unevaluated expression for inherits.
-#  We resolve that once an put it in NCinternals.
+#  We now keep it that way as `inheritQ` (for "quoted")
+# This allows an nClass call to inherit from a method that isn't defined yet.
 
-# Here is a summary of cases where compiled and uncompiled behavior will differ:
-#
-# 1. Base class and derived class both have member variable ("x"):
-#    - In uncompiled, there is only ever one "x".
-#    - In compiled, only the derived "x" is accessed by the interface.
-#    - If one provided get/set methods for changing "x" in the base class
-#      and if there are base class methods that use "x", then uncompiled and
-#      compiled could use different values of "x".
-#
-# 2. No "super" in compiled code. Currently there is no compilation support for using
-#    "self$super$method" to access base class methods.
-#
-# 3. cppLiteral coding of base class methods or use of inheritance:
-#    Well, anything in cppLiteral is not supported for uncompiled execution.
-#    Here in particular it stands out that harnessing virtual method dispatch is
-#    not something that can be mimicked in uncompiled R6.
-#
-# Hence the following recommendations if one wants uncompiled and compiled to have
-#  the same behavior:
-# - Do not use the same variable name in base and derived classes.
-# - Do not use "super".
+# We do not currently support "super$" in compilation, so there is no 
+# way to call a base class method (yet).
 
-test_that("nClass hierarchies work as expected (including uncompiled vs compiled discrepancies)", {
+test_that("nClass hierarchy traps lack of virtual declaration", {
+  ncA <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  ncB <- nClass(
+    inherit = ncA,
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  expect_error(
+    comp <- nCompile(ncA, ncB)
+  )
+})
+
+
+test_that("nClass hierarchy traps mismatched argument names", {
+  ncA <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function(z=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=TRUE)
+      )
+    )
+  )
+  ncB <- nClass(
+    inherit = ncA,
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  expect_error(
+    comp <- nCompile(ncA, ncB)
+  )
+})
+
+test_that("nClass hierarchy traps mismatched argument types", {
+  ncA <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(0)) {returnType(integer(1))},
+        compileInfo=list(virtual=TRUE)
+      )
+    )
+  )
+  ncB <- nClass(
+    inherit = ncA,
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  expect_error(
+    comp <- nCompile(ncA, ncB)
+  )
+})
+
+test_that("nClass hierarchy traps mismatched return types", {
+  ncA <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=TRUE)
+      )
+    )
+  )
+  ncB <- nClass(
+    inherit = ncA,
+    Cpublic = list(
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(0))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  expect_error(
+    comp <- nCompile(ncA, ncB)
+  )
+})
+
+test_that("nClass hierarchy traps inherited field duplicate names", {
+  ncA <- nClass(
+    Cpublic = list(
+      x = 'numericVector',
+      y = 'numericVector',
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=TRUE)
+      )
+    )
+  )
+  ncB <- nClass(
+    inherit = ncA,
+    Cpublic = list(
+      x = 'numericVector',
+      z = 'numericVector',
+      foo = nFunction(
+        function(x=double(1)) {returnType(integer(1))},
+        compileInfo=list(virtual=FALSE)
+      )
+    )
+  )
+  expect_error(
+    comp <- nCompile(ncA, ncB)
+  )
+})
+
+
+test_that("nClass hierarchies work as expected (including uncompiled vs compiled discrepancies)",
+{
+  # This was written before all the error-trapping above.
+  # I am going to disable the error-trapping. I think this is good
+  # because now we also test the more general compilation, but
+  # I may not be thinking about cases we're missing.
+  oldOpt1 <- nOptions("allow_method_overloading")
+  oldOpt2 <- nOptions("allow_inherited_field_duplicates")
+  nOptions(allow_method_overloading = TRUE)
+  nOptions(allow_inherited_field_duplicates = TRUE)
+  on.exit({
+    nOptions(allow_method_overloading = oldOpt1)
+    nOptions(allow_inherited_field_duplicates = oldOpt2)
+  })
   ncA <- nClass(
     Rpublic = list(
       fooRA = function() v.A
@@ -227,14 +355,25 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
     rm(objB, CobjB)
     gc()
   }
-
 })
 
 ##############
 
-cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
+# cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
 
 test_that("inheriting-only classes in 3-level hierarchy works", {
+  # This was written before all the error-trapping above.
+  # I am going to disable the error-trapping. I think this is good
+  # because now we also test the more general compilation, but
+  # I may not be thinking about cases we're missing.
+  oldOpt1 <- nOptions("allow_method_overloading")
+  oldOpt2 <- nOptions("allow_inherited_field_duplicates")
+  nOptions(allow_method_overloading = TRUE)
+  nOptions(allow_inherited_field_duplicates = TRUE)
+  on.exit({
+    nOptions(allow_method_overloading = oldOpt1)
+    nOptions(allow_inherited_field_duplicates = oldOpt2)
+  })
   ncBase <- nClass(
     classname = "ncBase",
     Cpublic = list(
@@ -287,4 +426,281 @@ test_that("inheriting-only classes in 3-level hierarchy works", {
   expect_equal(Cobj2$call_add_x(15), 25)
 
   rm(Cobj, Cobj2); gc()
+})
+
+cat("Add inline checking of validity of shared_ptr's in generated code.\n")
+
+test_that("inheritance with interfaces at multiple levels", {
+  # This was written before all the error-trapping above.
+  # I am going to disable the error-trapping. I think this is good
+  # because now we also test the more general compilation, but
+  # I may not be thinking about cases we're missing.
+  oldOpt1 <- nOptions("allow_method_overloading")
+  oldOpt2 <- nOptions("allow_inherited_field_duplicates")
+  nOptions(allow_method_overloading = TRUE)
+  nOptions(allow_inherited_field_duplicates = TRUE)
+  on.exit({
+    nOptions(allow_method_overloading = oldOpt1)
+    nOptions(allow_inherited_field_duplicates = oldOpt2)
+  })
+  ncBase <- nClass(
+    classname = "ncBase",
+    Cpublic = list(
+      base_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_base_x = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+    # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "full",createFromR=TRUE)
+  )
+
+  ncMid <- nClass(
+    inherit = ncBase,
+    classname = "ncMid",
+    Cpublic = list(
+      mid_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_mid_x = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_mid_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+      # get_base_x_from_mid will be non-virtual and access base class member
+      get_base_x_from_mid = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x_from_mid"),
+
+      # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "full",createFromR=FALSE)
+  )
+
+  ncDer <- nClass(
+    inherit = ncMid,
+    Cpublic = list(
+      make_mid = nFunction(
+        function() {return(ncMid$new()); returnType('ncMid')}
+      ),
+      der_x = 'numericScalar',
+      # get_base_x will be non-virtual and uniquely named
+      get_der_x = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_der_x"),
+      # get_x will be non-virtual and non uniquely named
+      get_x = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_x"),
+      # get_base_x_from_mid will be non-virtual and access base class member
+      get_base_x_from_der = nFunction(
+        function() {
+          return(base_x); returnType('numericScalar')
+        },
+        name = "get_base_x_from_der"),
+      get_mid_x_from_der = nFunction(
+        function() {
+          return(mid_x); returnType('numericScalar')
+        },
+        name = "get_mid_x_from_der"),
+
+      # get_x_virt will be virtual
+      get_x_virt = nFunction(
+        function() {
+          return(der_x); returnType('numericScalar')
+        },
+        name = "get_x_virt",
+        compileInfo=list(virtual=TRUE))
+    ),
+    compileInfo = list(interface = "full",createFromR=TRUE)
+  )
+
+  useClasses <- nClass(
+    classname = "useClasses",
+    Cpublic = list(
+      myBase = 'ncBase',
+      myMid = 'ncMid',
+      myDer = 'ncDer',
+      useBase = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myBase$get_x_virt())
+          if(i == 2) return(myBase$get_base_x())
+          if(i == 3) return(myBase$get_x())
+          if(i == 4) return(myBase$base_x)
+          return(-1)
+        },
+        name = "useBase"),
+      useMid = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myMid$get_x_virt())
+          if(i == 2) return(myMid$get_base_x())
+          if(i == 3) return(myMid$get_x())
+          if(i == 4) return(myMid$base_x)
+
+          if(i == 5) return(myMid$get_base_x_from_mid())
+          if(i == 6) return(myMid$get_mid_x())
+          if(i == 7) return(myMid$mid_x)
+          return(-1)
+        }
+      ),
+      useDer = nFunction(
+        function(i = integer()) {
+          returnType(double())
+          if(i == 1) return(myDer$get_x_virt())
+          if(i == 2) return(myDer$get_base_x())
+          if(i == 3) return(myDer$get_x())
+          if(i == 4) return(myDer$base_x)
+
+          if(i == 5) return(myDer$get_base_x_from_mid())
+          if(i == 6) return(myDer$get_mid_x())
+          if(i == 7) return(myDer$mid_x)
+
+          if(i == 8) return(myDer$get_base_x_from_der())
+          if(i == 9) return(myDer$get_mid_x_from_der())
+          if(i == 10) return(myDer$get_der_x())
+          if(i == 11) return(myDer$der_x)
+          return(-1)
+        }
+      )
+    )
+  )
+
+  comp <- nCompile(ncBase, ncMid, ncDer, useClasses)
+
+  # der obj works on its own
+  Cder <- comp$ncDer$new()
+  Cder$base_x <- 1
+  expect_equal(Cder$base_x, 1)
+  expect_equal(Cder$get_base_x(), 1)
+  expect_equal( Cder$get_base_x_from_mid(),1)
+  expect_equal( Cder$get_base_x_from_der(),1)
+
+  Cder$mid_x <- 2
+  expect_equal( Cder$mid_x, 2)
+  expect_equal( Cder$get_mid_x(), 2)
+  expect_equal( Cder$get_mid_x_from_der(), 2)
+
+  Cder$der_x <- 3
+  expect_equal (Cder$der_x, 3)
+  expect_equal (Cder$get_der_x(), 3)
+
+  expect_equal (Cder$get_x(), 3)
+  expect_equal (Cder$get_x_virt(), 3)
+
+  expect_error(Cmid <- comp$ncMid$new())
+
+  # mid object works on its own (even though can't be created from R)
+  Cmid <- Cder$make_mid()
+  Cmid$base_x <- 111
+  Cmid$mid_x <- 222
+  expect_equal(c(
+    Cmid$base_x
+  , Cmid$get_base_x()
+  , Cmid$get_base_x_from_mid()), rep(111, 3))
+
+  expect_equal(c(
+    Cmid$mid_x
+  , Cmid$get_mid_x()
+  , Cmid$get_x()), rep(222, 3))
+
+  # base object works on its own
+  Cbase <- comp$ncBase$new()
+  Cbase$base_x <- 11
+  expect_equal(Cbase$get_x_virt(), 11)
+  expect_error(Cbase$get_der_x())
+
+  obj <- comp$useClasses$new()
+  obj$myBase <- Cbase
+  obj$myDer <- Cder
+
+  # base accessing an actual base
+  expect_equal(c(
+    obj$useBase(1)
+    ,obj$useBase(2)
+    ,obj$useBase(3)
+    ,obj$useBase(4)), rep(11, 4))
+
+  # der accessing an actual der
+  expect_equal(c(
+    obj$useDer(1)
+    ,obj$useDer(2)
+    ,obj$useDer(3)
+    ,obj$useDer(4)), c(3, 1, 3, 1))
+
+  expect_equal(c(
+    obj$useDer(5)
+    ,obj$useDer(6)
+    ,obj$useDer(7)), c(1, 2, 2))
+
+  expect_equal(c(
+    obj$useDer(8)
+   ,obj$useDer(9)
+   ,obj$useDer(10)
+   ,obj$useDer(11)), c(1, 2, 3, 3))
+
+  # base pointing to a der
+  obj$myBase <- Cder
+  expect_equal(c(
+    obj$useBase(1)
+    ,obj$useBase(2)
+    ,obj$useBase(3)
+    ,obj$useBase(4)), c(3,1,1,1))
+
+
+  # base pointing to a mid
+  obj$myBase <- Cmid
+  expect_equal(c(
+    obj$useBase(1)
+   ,obj$useBase(2)
+   ,obj$useBase(3)
+   ,obj$useBase(4)), c(222,111,111,111))
+
+  # mid pointing to a der
+  obj$myMid <- Cder
+  expect_equal(c(
+    obj$useMid(1)
+   ,obj$useMid(2)
+   ,obj$useMid(3)
+   ,obj$useMid(4)), c(3,1,2,1))
+
+  expect_equal(c(
+    obj$useMid(5)
+   ,obj$useMid(6)
+   ,obj$useMid(7)), c(1, 2, 2))
+
+  rm(Cder, Cmid, Cbase); gc()
 })

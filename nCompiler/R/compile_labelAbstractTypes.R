@@ -297,7 +297,9 @@ inLabelAbstractTypesEnv(
         code$name <- '->member'
         code$args[[2]]$aux$obj_internals <- obj_internals
         code$args[[2]]$aux$nFunctionName <- innerName
-        code$args[[2]]$name <- NFinternals(method)$cpp_code_name
+        #code$args[[2]]$name <- NFinternals(method)$cpp_code_name
+        code$args[[2]]$name <- NCinternals(code$args[[1]]$type$NCgenerator)$all_methodName_to_cpp_code_name[[innerName]]
+        
         obj_internals <- NULL
       } else {  ## Is RHS a field?
         symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
@@ -380,7 +382,8 @@ inLabelAbstractTypesEnv(
     wrapExprClassOperator(code = code, funName = 'nFunctionRef')
     
     # name substitution
-    cpp_code_name <- tgt$cpp_code_name
+    # cpp_code_name <- tgt$cpp_code_name
+    cpp_code_name <- NCinternals(obj)$all_methodName_to_cpp_code_name[[code$name]]
     code$name <- cpp_code_name
     
     # class in which function is defined

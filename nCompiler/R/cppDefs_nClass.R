@@ -204,6 +204,10 @@ cpp_nClassClass <- R6::R6Class(
       for(oneInheritance in Compiler$compileInfo$inherit) {
         self$addInheritance(oneInheritance)
       }
+      # This may not get used much or at all but here it is if needed.
+      for(oneInheritance in Compiler$compileInfo$nClass_inherit) {
+        self$add_nClass_inheritance(oneInheritance)
+      }
       inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals
       if(!is.null(inheritNCinternals)) {
         include_filebase <- make_cpp_filebase(inheritNCinternals$cpp_classname)

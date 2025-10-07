@@ -51,10 +51,15 @@ NC_CompilerClass <- R6::R6Class(
       methodNames <- myNCinternals$methodNames
       for(m in methodNames) {
         thisMethod <- NCgenerator$public_methods[[m]]
+        thisName <- NULL
         if(isConstructor(thisMethod)) {
+          #NFinternals(thisMethod)$cpp_code_name <- self$name
           NFinternals(thisMethod)$cpp_code_name <- self$name
+        } else {
+          thisName <- myNCinternals$all_methodName_to_cpp_code_name[[m]]
         }
-        NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod)
+        NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod,
+                                                  name = thisName)
       }
     },
     setupMethodSymbolTables = function() {
