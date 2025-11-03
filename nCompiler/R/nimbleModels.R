@@ -14,16 +14,6 @@
 
 ## a model will inherit from model_nClass
 
-# This wrapper to system.file is important because without it
-# (if we had system.file directory in the nClass calls below),
-# then system.file would be evaluated at build time in the temporary build directory
-# and could become hard-coded there and then invalid in the installation
-# directory. This triggered an error when R CMD INSTALL was used on
-# github actions testing.
-get_system_file <- function(...) {
-  system.file(..., package = "nCompiler")
-}
-
 nodeFxnBase_nClass <- nClass(
   classname = "nodeFxnBase_nClass",
   Cpublic = list(
@@ -40,7 +30,8 @@ nodeFxnBase_nClass <- nClass(
   ),
   # We haven't dealt with ensuring a virtual destructor when any method is virtual
   # For now I did it manually by editing the .h and .cpp
-  predefined = get_system_file(file.path("include","nCompiler", "predefined_nClasses")) |> file.path("nodeFxnBase_nClass"),
+  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |> 
+               file.path("nodeFxnBase_nClass")),
   compileInfo=list(interface="full",
                    createFromR = FALSE)
 )
@@ -62,7 +53,7 @@ modelBase_nClass <- nClass(
     )
   ),
   # See comment above about needing to ensure a virtual destructor
-  predefined = get_system_file(file.path("include","nCompiler", "predefined_nClasses")) |> file.path("modelBase_nClass"),
+  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |> file.path("modelBase_nClass")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
                    Hincludes = "<nodeFxnBase_nClass_c_.h>")
@@ -87,9 +78,9 @@ modelBase_nClass <- nClass(
 
 make_node_fun <- function(varInfo) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
-  foo <- \(x) nCompiler:::symbolCppVar$new(baseType = nCompiler:::symbolBasic$new(type="double", nDim=x$nDim, name="")$genCppVar()$generate(),
+  varInfo_2_cppVar <- \(x) nCompiler:::symbolCppVar$new(baseType = nCompiler:::symbolBasic$new(type="double", nDim=x$nDim, name="")$genCppVar()$generate(),
                                            ref=TRUE, const=TRUE)
-  typeList <- varInfo |> lapply(foo)
+  typeList <- varInfo |> lapply(varInfo_2_cppVar)
   names(typeList) <- varInfo |> lapply(\(x) x$name) |> unlist()
 
   CpublicVars <- names(typeList) |> lapply(\(x) eval(substitute(quote(T(typeList$NAME)),
@@ -108,7 +99,7 @@ make_node_fun <- function(varInfo) {
       Cpublic = CPUBLIC,
       compileInfo = list(
         createFromR = FALSE, # Without a default constructor (which we've disabled here), createFromR is impossible
-        nClass_inherit = list(base = "nodeFxnClass_<node_dnorm>"))
+        nClass_inherit = list(base = "nodeFxnClass_<node_dnorm>")) # Ideally this line would be obtained from a base nClass, but we insert it directly for now
     ),
     list(CPUBLIC = c(
       list(

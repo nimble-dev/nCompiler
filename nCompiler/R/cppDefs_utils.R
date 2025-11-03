@@ -29,7 +29,7 @@ putCodeLinesInBrackets <- function(codeLines) {
 
 # This is the location of the RcppUtils.cpp, etc. files.
 IncludeCodeDir <- character()
-NimbleCodeDir <- system.file("CppCode", package = "nCompiler")
+# NimbleCodeDir <- system.file("CppCode", package = "nCompiler")
 
 nCompilerIncludeFile <- function(file, path = IncludeCodeDir)
 {
