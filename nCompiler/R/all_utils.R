@@ -43,6 +43,8 @@ resetLabelFunctionCreators <- function() {
 }
 
 ADtapeMgrLabelCreator <- labelFunctionCreator("ADtapeMgr")
+nodeFxnLabelCreator <- labelFunctionCreator("nodeFxn")
+modelLabelCreator <- labelFunctionCreator("model")
 
 # no longer documented in Rd
 # Generates a valid C++ name from an R Name

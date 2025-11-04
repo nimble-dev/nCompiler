@@ -60,6 +60,7 @@ public:
         for(size_t i = 0; i < len; ++i) {
             // explicit cast is needed because even though Rnames[i] can cast to a string,
             // set_value takes a const string& so we need an object in place here.
+            // set_value fails safely if a name is not found.
             static_cast<Derived*>(this)->set_value(std::string(Rnames[i]), Rlist[i]);
         }
     }
@@ -74,27 +75,30 @@ public:
             vs = Rlist[i];
             vec_len = vs.length();
             std::unique_ptr<ETaccessorBase> ETA = static_cast<Derived*>(this)->access(std::string(Rnames[i]));
-            switch(vec_len) {
-            case 0 :
-                break;
-            case 1 :
-                ETA->template ref<1>().resize(vs[0]);
-                break;
-            case 2 :
-                ETA->template ref<2>().resize(vs[0], vs[1]);
-                break;
-            case 3 :
-                ETA->template ref<3>().resize(vs[0], vs[1], vs[2]);
-                break;
-            case 4 :
-                ETA->template ref<4>().resize(vs[0], vs[1], vs[2], vs[3]);
-                break;
-            case 5 :
-                ETA->template ref<5>().resize(vs[0], vs[1], vs[2], vs[3], vs[4]);
-                break;
-            case 6 :
-                ETA->template ref<6>().resize(vs[0], vs[1], vs[2], vs[3], vs[4], vs[5]);
-                break;
+            // if the name was not found, a "Problem:" message was emitted, and we skip using it here.
+            if(ETA) {
+                switch(vec_len) {
+                    case 0 :
+                    break;
+                    case 1 :
+                    ETA->template ref<1>().resize(vs[0]);
+                    break;
+                    case 2 :
+                    ETA->template ref<2>().resize(vs[0], vs[1]);
+                    break;
+                    case 3 :
+                    ETA->template ref<3>().resize(vs[0], vs[1], vs[2]);
+                    break;
+                    case 4 :
+                    ETA->template ref<4>().resize(vs[0], vs[1], vs[2], vs[3]);
+                    break;
+                    case 5 :
+                    ETA->template ref<5>().resize(vs[0], vs[1], vs[2], vs[3], vs[4]);
+                    break;
+                    case 6 :
+                    ETA->template ref<6>().resize(vs[0], vs[1], vs[2], vs[3], vs[4], vs[5]);
+                    break;
+                }
             }
         }
     }
