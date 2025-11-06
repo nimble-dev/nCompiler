@@ -7,11 +7,12 @@
 #endif
 #include <Rinternals.h>
 #include <nodeFxnBase_nClass_c_.h>
+#include "calcInstr_nClass_c_.h"
 
 class modelBase_nClass : public interface_resolver< genericInterfaceC<modelBase_nClass> >, public loadedObjectHookC<modelBase_nClass> {
 public:
    virtual  bool  ping (  ) ;
-   virtual  void  calculate ( SEXP nodes ) ;
+   virtual  double  calculate ( std::shared_ptr<calcInstr_nClass> calcInstr ) ;
       modelBase_nClass (  ) ;
     virtual ~modelBase_nClass();
 };
@@ -23,11 +24,15 @@ public:
 template<class Derived>
 class modelClass_ : public modelBase_nClass {
 public:
-    void calculate(SEXP nodes) {
-        Rprintf("In CRTP calculate\n");
-    }
     modelClass_() {};
     std::vector< std::shared_ptr<nodeFxnBase_nClass> > nodeFxnPtrs;
+    double calculate(std::shared_ptr<calcInstr_nClass> calcInstr) override {
+        double logProb(0.0);
+        int nodeIndex = calcInstr->nodeIndex;
+        const auto& nodeInstrVec = calcInstr->nodeInstrVec;
+        logProb += nodeFxnPtrs[nodeIndex-1]->calculate(nodeInstrVec[0]);
+        return(logProb);
+    }
     void setup_node_mgmt() {
         Derived *self = static_cast<Derived*>(this);
         const auto& name2access = self->get_name2access();

@@ -189,7 +189,7 @@ symbolTBD <- R6::R6Class(
       stop("Trying to generate a C++ type from a TBD type ('",
            self$name,
            "' of type '",
-           self$type, "'.")
+           self$type, "').")
     }
   )
 )

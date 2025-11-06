@@ -1,4 +1,3 @@
-
 ## each entry in the typeDeclarationList
 ## gives a function to convert the arguments of a
 ## type declaration into a symbol object.
@@ -237,7 +236,7 @@ typeDeclarationList <- list(
   RcppFunction = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::Function", ...)
   },
-  
+
   ## RcppEigen RcppTypes
   RcppEigenMatrixXd = function(...) {
     symbolRcppType$new(RcppType = "Eigen::MatrixXd", ...)
@@ -257,7 +256,7 @@ typeDeclarationList <- list(
   RcppEigenVectorXcd = function(...) {
     symbolRcppType$new(RcppType = "Eigen::VectorXcd", ...)
   },
-  
+
   ## Sparse types
   nSparseMatrix = function(value,
                            ...,
@@ -290,7 +289,7 @@ typeDeclarationList <- list(
            nDim <= 6))
       stop(paste0("Invalid number of dimensions used to declare a.nCompiler ",
                   "argument.  Dimensions from 0-6 are allowed."),
-           call. = FALSE)  
+           call. = FALSE)
     nType(scalarType, nDim)
   },
   CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
@@ -351,12 +350,12 @@ argType2symbol <- function(argType,
   ## allow e.g. 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse))
     typeToUse <- as.call(list(typeToUse))
-  
+
   ## argType could be a blank
   if(is.name(argType))
     if(as.character(argType)=="")
       argType <- NULL
-  
+
   ans <- try({
     ## TO-DO: Case 1: It is a nType object
     ##    To be implemented
@@ -427,8 +426,8 @@ argType2symbol <- function(argType,
       ## Case 3: It is a nClass type or possibly other "to-be-determined" type.
       ## We defer type lookup until compiler stage labelAbstractTypes
       if(inputAsCharacter) {
-        symbol <- symbolTBD$new(name = name, 
-                                type = funName, 
+        symbol <- symbolTBD$new(name = name,
+                                type = funName,
                                 isArg = isArg)
       } else {
         ## Case 4: Type can be determined by evaluating the default
@@ -461,7 +460,7 @@ argType2symbol <- function(argType,
          call.=FALSE)
   }
   if(isTRUE(symbol$isRef)) {
-    
+
   }
   nErrorEnv$.isRef_has_been_set <- FALSE
   nErrorEnv$.isBlockRef_has_been_set <- FALSE
@@ -515,7 +514,7 @@ argTypeList2symbolTable <- function(argTypeList,
   }
   if(is.null(names(isArg)))
     names(isArg) <- names(argTypeList)
-  
+
   ## Check that isRef is valid
   if(!is.list(isRef)) {
     ok <- FALSE
@@ -617,11 +616,19 @@ resolveOneTBDsymbol <- function(symbol, env = parent.frame()) {
                              NCgenerator = candidate)
       return(newSym)
     }
+  } else if(inherits(symbol, "symbolNlist")) {
+    elementSym <- symbol$elementSym
+    if(inherits(elementSym, "symbolTBD")) {
+      elementSym <- resolveOneTBDsymbol(elementSym, env)
+      newSym <- symbol$clone(deep=TRUE)
+      newSym$elementSym <- elementSym
+      return(newSym)
+    }
   }
   symbol #return unmodified symbol if nothing to do
 }
 
-resolveTBDsymbols <- function(symTab, 
+resolveTBDsymbols <- function(symTab,
                               env = parent.frame()) {
   for(i in seq_along(symTab$symbols)) {
     symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env)

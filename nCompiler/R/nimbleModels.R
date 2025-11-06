@@ -14,6 +14,34 @@
 
 ## a model will inherit from model_nClass
 
+nodeInstr_nClass <- nClass(
+  classname = "nodeInstr_nClass",
+  Cpublic = list(
+    methodInstr = 'integerVector',
+    indsInstrVec = "nList('integerVector')"
+  ),
+  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+               file.path("nodeInstr_nClass")),
+  compileInfo=list(interface="full",
+                   createFromR = TRUE#,
+                   #predefined_output_dir = "nodeInstr_nClass"
+                   )
+)
+
+calcInstr_nClass <- nClass(
+  classname = "calcInstr_nClass",
+  Cpublic = list(
+    nodeIndex = 'integerScalar',
+    nodeInstrVec = "nList('nodeInstr_nClass')"
+  ),
+  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+               file.path("calcInstr_nClass")),
+  compileInfo=list(interface="full",
+                   createFromR = TRUE#,
+                   #predefined_output_dir = "calcInstr_nClass"
+                   )
+)
+
 nodeFxnBase_nClass <- nClass(
   classname = "nodeFxnBase_nClass",
   Cpublic = list(
@@ -24,7 +52,7 @@ nodeFxnBase_nClass <- nClass(
     ),
     calculate = nFunction(
       name = "calculate",
-      function(to_do = integer(1)) {return(0); returnType(double())},
+      function(nodeInstr = 'nodeInstr_nClass') {return(0); returnType(double())},
       compileInfo = list(virtual=TRUE)
     )
   ),
@@ -48,7 +76,8 @@ modelBase_nClass <- nClass(
     ),
     calculate = nFunction(
         name = "calculate",
-        function(nodes=SEXP()) {cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");')},
+        function(calcInstr='calcInstr_nClass') {cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
+        returnType = 'numericScalar',
         compileInfo = list(virtual=TRUE)
     )
   ),

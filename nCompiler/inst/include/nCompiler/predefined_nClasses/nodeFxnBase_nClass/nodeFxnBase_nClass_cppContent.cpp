@@ -17,7 +17,7 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 return(true);
 }
-    double  nodeFxnBase_nClass::calculate ( Eigen::Tensor<int, 1> to_do ) {
+    double  nodeFxnBase_nClass::calculate ( std::shared_ptr<nodeInstr_nClass> nodeInstr ) {
 RESET_EIGEN_ERRORS
 return(0.0);
 }
@@ -45,7 +45,7 @@ nodeFxnBase_nClass,
 NCOMPILER_FIELDS(),
 NCOMPILER_METHODS(
 method("ping", &nodeFxnBase_nClass::ping, args({{}})),
-method("calculate", &nodeFxnBase_nClass::calculate, args({{arg("to_do",copy)}}))
+method("calculate", &nodeFxnBase_nClass::calculate, args({{arg("nodeInstr",copy)}}))
 )
 )
 #endif

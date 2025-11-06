@@ -17,9 +17,10 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 return(true);
 }
-    void  modelBase_nClass::calculate ( SEXP nodes ) {
+    double  modelBase_nClass::calculate ( std::shared_ptr<calcInstr_nClass> calcInstr ) {
 RESET_EIGEN_ERRORS
 Rprintf("modelBase_nClass calculate (should not see this)\n");;
+return(0.0);
 }
       modelBase_nClass::modelBase_nClass (  ) {
 RESET_EIGEN_ERRORS
@@ -44,7 +45,7 @@ modelBase_nClass,
 NCOMPILER_FIELDS(),
 NCOMPILER_METHODS(
 method("ping", &modelBase_nClass::ping, args({{}})),
-method("calculate", &modelBase_nClass::calculate, args({{arg("nodes",copy)}}))
+method("calculate", &modelBase_nClass::calculate, args({{arg("calcInstr",copy)}}))
 )
 )
 

@@ -8,6 +8,7 @@ test_that("nimble model prototype works", {
   nodeVarInfo <- list(list(name = "x", nDim  = 1), list(name = "mu", nDim = 1),
                   list(name = "sd", nDim = 0))
   calc_one <- nFunction(
+    name = "calc_one",
     fun = function(inds = 'integerVector') {
       returnType('numericScalar')
       ans <- x[inds[1]]
@@ -24,7 +25,8 @@ test_that("nimble model prototype works", {
   #debug(makeModel_nClass)
   ncm1 <- makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model")
   #undebug(nCompiler:::addGenericInterface_impl)
-  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, ncm1, my_nodeFxn)
+  #undebug(nCompiler:::nCompile_finish_nonpackage)
+  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, my_nodeFxn)
   obj <- Cncm1$ncm1$new()
 
   obj$do_setup_node_mgmt()
@@ -48,4 +50,22 @@ test_that("nimble model prototype works", {
 
   obj$x <- 11:15
   expect_equal(nodeObj$calc_one(c(3)), 13)
+  rm(obj, nodeObj); gc()
+})
+
+test_that("nodeInstr_nClass and calcInstr_nClass basics work", {
+  test <- nCompile(nodeInstr_nClass, calcInstr_nClass, control=list(generate_predefined=TRUE))
+  obj <- test$calcInstr_nClass$new()
+  expect_equal(obj$nodeInstrVec, list())
+  ni1 <- test$nodeInstr_nClass$new()
+  ni2 <- test$nodeInstr_nClass$new()
+  ni1$methodInstr <- 1
+  ni2$methodInstr <- 2
+  ni1$indsInstrVec <- list(1:2, 3:4)
+  ni2$indsInstrVec <- list(11:12, 13:14)
+  obj$nodeInstrVec <- list(ni1, ni2)
+  expect_true(length(obj$nodeInstrVec)==2)
+  expect_identical(obj$nodeInstrVec[[1]]$indsInstrVec, list(1:2, 3:4))
+  expect_identical(obj$nodeInstrVec[[2]]$indsInstrVec, list(11:12, 13:14))
+  rm(obj, ni1, ni2); gc()
 })

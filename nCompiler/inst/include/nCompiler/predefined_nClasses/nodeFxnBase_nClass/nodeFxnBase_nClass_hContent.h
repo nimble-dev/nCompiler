@@ -6,11 +6,12 @@
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
+#include "nodeInstr_nClass_c_.h"
 
 class nodeFxnBase_nClass : public interface_resolver< genericInterfaceC<nodeFxnBase_nClass> >, public loadedObjectHookC<nodeFxnBase_nClass> {
 public:
    virtual  bool  ping (  ) ;
-   virtual  double  calculate ( Eigen::Tensor<int, 1> to_do ) ;
+   virtual  double  calculate ( std::shared_ptr<nodeInstr_nClass> nodeInstr ) ;
       nodeFxnBase_nClass (  ) ;
     virtual ~nodeFxnBase_nClass();
 };
@@ -25,6 +26,16 @@ class nodeFxnClass_ : public nodeFxnBase_nClass {
 public:
     double v;
     nodeFxnClass_() {};
+
+    double  calculate ( std::shared_ptr<nodeInstr_nClass> nodeInstr ) override {
+RESET_EIGEN_ERRORS
+double logProb(0.0);
+const auto& methodInstr = nodeInstr->methodInstr;
+const auto& indsInstrVec = nodeInstr->indsInstrVec;
+logProb += static_cast<Derived*>(this)->calc_one(indsInstrVec[0]);
+return(logProb);
+    }
+
     virtual ~nodeFxnClass_() {};
 };
 
