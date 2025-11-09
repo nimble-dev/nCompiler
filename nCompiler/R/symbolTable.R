@@ -46,14 +46,17 @@ symbolBasic <-
       size = NULL,
       knownSize = NULL,
       isBlockRef = FALSE,
+      isConst = FALSE,
       initialize = function(...,
                             nDim = 0,
                             size = if(nDim == 0) 1 else NA,
-                            isBlockRef = FALSE) {
+                            isBlockRef = FALSE,
+                            isConst = FALSE) {
         super$initialize(...)
         self$nDim <- nDim
         self$size <- size
         self$isBlockRef <- isBlockRef
+        self$isConst <- isConst
         self
       },
       shortPrint = function() {
@@ -93,32 +96,40 @@ symbolBasic <-
                            "type", type,"unrecognized\n"),
                      FALSE)
         if(self$nDim == 0) {
-          return(if(!(identical(self$name, "pi")))
-            cppVarClass$new(baseType = cType,
-                            name = self$name,
-                            ptr = 0,
-                            ref = FALSE)
-            else
-              cppVarFullClass$new(baseType = cType,
+          if(identical(self$name, "pi"))
+            return(cppVarFullClass$new(baseType = cType,
                                   name = self$name,
                                   ptr = 0,
                                   ref = FALSE,
-                                  constructor = "(M_PI)")
-            )
+                                  constructor = "(M_PI)"))
+          if(isTRUE(self$isConst))
+            return(cppVarFullClass$new(baseType = cType,
+                            name = self$name,
+                            ptr = FALSE,
+                            ref = self$isRef,
+                            const = self$isConst))
+          return(cppVarClass$new(baseType = cType,
+                            name = self$name,
+                            ptr = 0,
+                            ref = self$isRef))
         }
         if(self$isBlockRef) {
-          return(cppStridedTensorMapRef(name = self$name,
-                                             nDim = self$nDim,
-                                             scalarType = cType))
+          ans <- cppStridedTensorMapRef(name = self$name,
+                                        nDim = self$nDim,
+                                        scalarType = cType)
         } else if(self$isRef) {
-          return(cppEigenTensorRef(name = self$name,
+          ans <- cppEigenTensorRef(name = self$name,
                                    nDim = self$nDim,
-                                   scalarType = cType))
+                                   scalarType = cType)
         } else {
-          return(cppEigenTensor(name = self$name,
+          ans <- cppEigenTensor(name = self$name,
                                 nDim = self$nDim,
-                                scalarType = cType))
+                                scalarType = cType)
         }
+        if(self$isConst) {
+          ans$const <- TRUE
+        }
+        ans
       }
     )
   )
@@ -178,7 +189,7 @@ symbolTBD <- R6::R6Class(
       stop("Trying to generate a C++ type from a TBD type ('",
            self$name,
            "' of type '",
-           self$type, "'.")
+           self$type, "').")
     }
   )
 )

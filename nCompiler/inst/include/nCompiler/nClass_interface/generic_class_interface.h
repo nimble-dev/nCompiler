@@ -60,6 +60,11 @@ class genericInterfaceBaseC {
     return dummy;
   };
 
+  virtual std::unique_ptr<ETaccessorBase> access(const std::string &name) {
+    std::cout<<"Error: you should be in a derived genericInterfaceC class for access"<<std::endl;
+    return std::unique_ptr<ETaccessorBase>(nullptr);
+  }
+
   // return a named member converted to a SEXP.
   // Derived classes should provide valid implementations.
   virtual SEXP get_value(const std::string &name) const {
@@ -129,7 +134,7 @@ struct FirstGenericDerived<T> {
 };
 
 template <typename... Bases>
-class interface_resolver : public Bases..., virtual public genericInterfaceBaseC 
+class interface_resolver : public Bases..., virtual public genericInterfaceBaseC
 {
 private:
   using FirstFound = typename FirstGenericDerived<Bases...>::type;
@@ -137,6 +142,9 @@ private:
 public:
   const name2access_type& get_name2access() const override {
       return FirstFound::get_name2access();
+  }
+  std::unique_ptr<ETaccessorBase> access(const std::string &name) override {
+      return FirstFound::access(name);
   }
   SEXP get_value(const std::string &name) const override {
       return FirstFound::get_value(name);
@@ -153,7 +161,7 @@ public:
 };
 
 template<>
-class interface_resolver<> : virtual public genericInterfaceBaseC 
+class interface_resolver<> : virtual public genericInterfaceBaseC
 {
 private:
   using FirstFound = genericInterfaceBaseC;

@@ -48,8 +48,18 @@ nCompile_nClass <- function(NC,
   is_predefined <- !isFALSE(NCinternals(NC)$predefined)
   if(is_predefined) {
     predefined_dir <-  NCinternals(NC)$predefined
+    # predefined can be character, quoted expression, or function.
+    # The latter two allow delayed evaluation, useful if an nClass is defined
+    # in an R package and the predefined argument should not get build-system
+    # paths baked in but rather delay until evaluation on the when running.
+    if(is.call(predefined_dir)) {
+      predefined_dir <- eval(predefined_dir, envir = NCinternals(NC)$env)
+    }
+    if(is.function(predefined_dir)) {
+      predefined_dir <- predefined_dir()
+    }
     if(!is.character(predefined_dir))
-      stop("There is a predefined nClass whose predefined field is not character. ",
+      stop("There is a predefined nClass whose predefined field is not (and does not evaluate to) character. ",
        "It should give the directory path of the predefined nClass. ",
        "The classname argument to nClass gives the base for filenames in that directory.")
      regular_filename <-  NCinternals(NC)$cpp_classname
@@ -71,8 +81,11 @@ nCompile_nClass <- function(NC,
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     if(is_predefined) {
+      predefined_gen_dir <- NCinternals(NC)$compileInfo$predefined_output_dir
+      if(is.null(predefined_gen_dir))
+        predefined_gen_dir <- predefined_dir      
       RcppPacket <- cppDefs_2_RcppPacket(cppDef)
-      saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
+      saveRcppPacket(RcppPacket, predefined_gen_dir, regular_filename)
       # Now add interface calls if necessary for this live compilation, having
       # kept them out of the written packet code.
       cppDef$buildGenericInterface(interfaceCalls=TRUE, interface=FALSE)

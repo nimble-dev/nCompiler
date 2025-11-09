@@ -26,7 +26,7 @@ NF_InternalsClass <- R6::R6Class(
     # needed_nFunctions = list(), ## formerly neededRCfuns
     ADcontent = NULL,
     isAD = FALSE,
-    predefined = FALSE,
+    predefined = FALSE, # Location for reading and (default) writing predefined nFunction saved RcppPacket. Writing location can be over-ridden by compileInfo$predefined_output_dir
     compileInfo = list(),
     R_fun = NULL, #used only if compileInfo$C_fun is provided.
     ## Next two "includes" were only needed for making external calls:

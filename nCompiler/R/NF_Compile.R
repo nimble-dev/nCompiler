@@ -60,8 +60,18 @@ nCompile_nFunction <- function(NF,
   is_predefined <- !isFALSE(NFinternals(NF)$predefined)
   if(is_predefined) {
     predefined_dir <-  NFinternals(NF)$predefined
+    # predefined can be character, quoted expression, or function.
+    # The latter two allow delayed evaluation, useful if an nClass is defined
+    # in an R package and the predefined argument should not get build-system
+    # paths baked in but rather delay until evaluation on the when running.
+    if(is.call(predefined_dir)) {
+      predefined_dir <- eval(predefined_dir, envir = NFinternals(NF)$where)
+    }
+    if(is.function(predefined_dir)) {
+      predefined_dir <- predefined_dir()
+    }
     if(!is.character(predefined_dir))
-      stop("There is a predefined nFunction whose predefined field is not character. ",
+      stop("There is a predefined nFunction whose predefined field is not (and does not evaluate to) character. ",
        "It should give the directory path of the predefined nFunction. ",
        "The name argument to nFunction gives the base for filenames in that directory.")
     regular_filename <-  NFinternals(NF)$cpp_code_name
@@ -83,6 +93,9 @@ nCompile_nFunction <- function(NF,
       return(NF_Compiler)
     }
     if(is_predefined) {
+      predefined_gen_dir <- NFinternals(NF)$compileInfo$predefined_output_dir
+      if(is.null(predefined_gen_dir))
+        predefined_gen_dir <- predefined_dir
       RcppPacket <- cppDefs_2_RcppPacket(NF_Compiler$cppDef)
       saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
     }

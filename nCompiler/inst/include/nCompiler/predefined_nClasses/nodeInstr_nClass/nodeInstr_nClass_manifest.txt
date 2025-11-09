@@ -1,0 +1,7 @@
+list(saved_at = structure(1762351302.257, class = c("POSIXct", 
+"POSIXt")), packet_name = "nodeInstr_nClass", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "nodeInstr_nClass_preamble.cpp", cppContent = "nodeInstr_nClass_cppContent.cpp", 
+    hContent = "nodeInstr_nClass_hContent.h", filebase = "nodeInstr_nClass_filebase.txt", 
+    post_cpp_compiler = "nodeInstr_nClass_post_cpp_compiler.txt", 
+    copyFiles = "nodeInstr_nClass_copyFiles.txt"))

@@ -411,6 +411,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
     name2access_type::iterator access = name2access.find(name);
     if(access == name2access.end()) {
       std::cout<<"Problem: \""<<name<<"\" is not a field in this nClass."<<std::endl;
+      return nullptr;
     }
     return (access->second->ETaccess(this));
   }
