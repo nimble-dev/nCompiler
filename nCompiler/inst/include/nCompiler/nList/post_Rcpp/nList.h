@@ -9,10 +9,10 @@ private:
   std::vector< T  > contents;
 public:
   std::vector< T > &get() {return contents;}
-  std::vector< T >::iterator begin() {return contents.begin();}
-  std::vector< T >::const_iterator cbegin() {return contents.cbegin();}
-  std::vector< T >::iterator end() {return contents.end();}
-  std::vector< T >::const_iterator cend() {return contents.cend();}
+  typename std::vector< T >::iterator begin() {return contents.begin();}
+  typename std::vector< T >::const_iterator cbegin() {return contents.cbegin();}
+  typename std::vector< T >::iterator end() {return contents.end();}
+  typename std::vector< T >::const_iterator cend() {return contents.cend();}
   T get(size_t i) const {return contents[i];}
   T set(size_t i, const T& value) {return contents[i] = value;}
   void resize(size_t m) {contents.resize(m);}
