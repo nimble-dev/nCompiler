@@ -17,7 +17,7 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 return(true);
 }
-    double  modelBase_nClass::calculate ( std::shared_ptr<calcInstr_nClass> calcInstr ) {
+    double  modelBase_nClass::calculate ( std::shared_ptr<calcInstrList_nClass> calcInstr ) {
 RESET_EIGEN_ERRORS
 Rprintf("modelBase_nClass calculate (should not see this)\n");;
 return(0.0);

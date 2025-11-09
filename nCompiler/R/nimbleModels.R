@@ -37,9 +37,22 @@ calcInstr_nClass <- nClass(
   predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
                file.path("calcInstr_nClass")),
   compileInfo=list(interface="full",
-                   createFromR = TRUE#,
+                   createFromR = TRUE,
+                   Hincludes = "<nodeInstr_nClass_c_.h>"
                    #predefined_output_dir = "calcInstr_nClass"
                    )
+)
+
+calcInstrList_nClass <- nClass(
+  classname = "calcInstrList_nClass",
+  Cpublic = list(
+    calcInstrList = "nList('calcInstr_nClass')"
+  ),
+  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+               file.path("calcInstrList_nClass")),
+  compileInfo=list(interface="full",
+                   createFromR = TRUE,
+                   Hincludes = "<calcInstr_nClass_c_.h>")
 )
 
 nodeFxnBase_nClass <- nClass(
@@ -76,16 +89,20 @@ modelBase_nClass <- nClass(
     ),
     calculate = nFunction(
         name = "calculate",
-        function(calcInstr='calcInstr_nClass') {cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
+        function(calcInstrList) {cat("In uncompiled calculate\n")},
         returnType = 'numericScalar',
-        compileInfo = list(virtual=TRUE)
-    )
+        compileInfo = list(
+          C_fun = function(calcInstrList='calcInstrList_nClass') {
+            cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
+          virtual=TRUE
+        )
+    )  
   ),
   # See comment above about needing to ensure a virtual destructor
   predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |> file.path("modelBase_nClass")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   Hincludes = "<nodeFxnBase_nClass_c_.h>")
+                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nClass_c_.h>"))
 )
 
 # nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
@@ -198,15 +215,29 @@ makeModel_nClass <- function(varInfo,
   CpublicMethods <- list(
     do_setup_node_mgmt = nFunction(
       name = "call_setup_node_mgmt",
-      function() {setup_node_mgmt()}
+      function() {},
+      compileInfo=list(
+        C_fun = function() {setup_node_mgmt()})
+    ),
+    print_nodes = nFunction(
+      name = "print_nodes",
+      function() {},
+      compileInfo=list(
+        C_fun = function() {cppLiteral('modelClass_::c_print_nodes();')})
     ),
     set_from_list = nFunction(
       name = "set_from_list",
-      function(Rlist = 'RcppList') {cppLiteral('modelClass_::set_from_list(Rlist);')}
+      function(Rlist) {for(v in names(Rlist))
+        if(exists(v, self, inherits=FALSE)) self[[v]] <- Rlist[[v]]},
+      compileInfo=list(
+        C_fun=function(Rlist = 'RcppList') {cppLiteral('modelClass_::set_from_list(Rlist);')})
     ),
     resize_from_list = nFunction(
       name = "resize_from_list",
-      function(Rlist = 'RcppList') {cppLiteral('modelClass_::resize_from_list(Rlist);')}
+      function(Rlist) {for(v in names(Rlist))
+        if(exists(v, self, inherits=FALSE)) self[[v]] <- nArray(dim=Rlist[[v]])},
+      compileInfo = list(
+        C_fun=function(Rlist = 'RcppList') {cppLiteral('modelClass_::resize_from_list(Rlist);')})
     )
   )
   # nodes will be a list of membername, nodeFxnName, (node) classname, ctorArgs (list)
@@ -249,4 +280,116 @@ makeModel_nClass <- function(varInfo,
         BASECLASS = baseclass)
   )
   eval(ans, envir = parent.frame())
+}
+
+## Get varInfo from new nimbleModel
+get_varInfo_from_nimbleModel <- function(model) {
+  mDef <- m$modelDef
+  extract <- \(x) x |> lapply(\(x) list(name = x$varName, nDim = x$nDim))
+  vars <- mDef$varInfo |> extract()
+  logProbVars <- mDef$logProbVarInfo |> extract()
+  # The resize_from_list method will error out if a scalar is included.
+  # The maxs is empty for scalars, so they are automatically omitted from the sizes result here.
+  extract_sizes <- \(x) x|> lapply(\(x) x$maxs)
+  sizes <- mDef$varInfo |> extract_sizes()
+  logProb_sizes <- mDef$logProbVarInfo |> extract_sizes()
+  list(
+    vars = c(vars, logProbVars),
+    sizes = c(sizes, logProb_sizes)
+  )
+}
+
+make_nodeFxn_from_declInfo <- function(declInfo) {
+  modelCode <- declInfo$calculateCode
+  LHS <- modelCode[[2]]
+  RHS <- modelCode[[3]]
+  type <- if(modelCode[[1]]=="~") "stoch" else "determ" # or use declInfo$stoch (logical)
+  logProbExpr <- declInfo$genLogProbExpr()
+  context <- declInfo$declRule$context
+  replacements <- sapply(seq_along(context$singleContexts),
+                         function(i) parse(text = paste0('idx[',i,']'))[[1]])
+  names(replacements) <- context$indexVarNames
+  LHSrep <- eval(substitute(substitute(e, replacements), list(e = LHS)))
+  RHSrep <- eval(substitute(substitute(e, replacements), list(e = RHS)))
+  logProbExprRep <- eval(substitute(substitute(e, replacements), list(e = logProbExpr)))
+  lenRHS <- length(RHSrep)
+  if(length(RHS) > 1) {
+    RHSrep[3:(lenRHS+1)] <- RHSrep[2:lenRHS]
+    names(RHSrep)[3:(lenRHS+1)] <- names(RHSrep)[2:lenRHS]
+  }
+  RHSrep[[2]] <- LHSrep
+  names(RHSrep)[2] <- ""
+  RHSrep[[lenRHS+2]] <- 1
+  names(RHSrep)[lenRHS+2] <- "log"
+  calc1fun <- substitute(
+    function(idx) {LHS <- RHS; return(LHS)},
+    list(LHS = logProbExprRep, RHS = RHSrep)
+  ) |> eval()
+  calc_one <- nFunction(
+    name = "calc_one",
+    fun = calc1fun,
+    compileInfo=list(C_fun=calc1fun),
+    argTypes = list(idx = 'integerVector'),
+    returnType = 'numericScalar')
+  nodeVars <- all.vars(body(calc1fun)) |> setdiff("idx")
+  list(calc_one = calc_one, nodeVars = nodeVars)
+}
+
+make_model_from_nimbleModel <- function(m) {
+  mDef <- m$modelDef
+  allVarInfo <- get_varInfo_from_nimbleModel(m)
+  modelVarInfo <- allVarInfo$vars
+  nodeFxnNames <- character()
+  nodeInfoList <- list()
+  for(i in seq_along(mDef$declInfo)) {
+    declInfo <- mDef$declInfo[[i]]
+    nodeFxn <- make_nodeFxn_from_declInfo(declInfo)
+    nodeVars <- nodeFxn$nodeVars
+    calc_one <- nodeFxn$calc_one
+    SLN <- declInfo$sourceLineNumber
+    node_classname <- paste0("nodeClass_", SLN)
+    nodeFxnName <- paste0("nodeFxn_", SLN)
+    node_membername <- paste0("node_", SLN)
+    nodeVarInfo <- modelVarInfo[nodeVars]
+    # Currently, we can't just make a list of these but need them as named objects in the environment
+    assign(nodeFxnName,
+      make_node_fun(nodeVarInfo, list(calc_one=calc_one), node_classname)
+    )
+    nodeInfoList[[i]] <- nCompiler:::make_node_info(node_membername, nodeFxnName, node_classname, nodeVarInfo)
+    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
+  }
+  model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model")
+  # Currently we must compile from here because here is where we know the nodeFxnName[s].
+  # We have a situation where order matters: model needs to come after the utility classes. Fix me.
+  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nClass", "calcInstr_nClass", "nodeInstr_nClass", "model")
+  argList <- c(argList, as.list(nodeFxnNames))
+  argList <- argList |> lapply(as.name)
+  Cmodel <- do.call("nCompile", argList)
+  #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, nodeFxn_3)
+}
+
+calcInputList_to_calcInstrList <- function(calcInputList, comp) {
+  message("need to set up nodeFxn_2_nodeIndex")
+  if(missing(comp))
+    stop("comp should be a list returned from nCompile including calcInstr_nClass and nodeInstr_nClass")
+  calcInstrList <- vector(length = length(calcInputList), mode='list')
+  for(iCalc in seq_along(calcInputList)) {
+    calcInstr <- comp$calcInstr_nClass$new()
+    calcInput <- calcInputList[[iCalc]]
+    calcInstr$nodeIndex <- nodeFxn_2_nodeIndex[ calcInput[[1]] ] #$nodeFxn]
+    nodeInputVec <- calcInput[[2]]#$nodeInputVec
+    nodeInstrVec <- vector(length=length(nodeInputVec), mode='list')
+    for(iMethod in seq_along(nodeInputVec)) {
+      nodeInstr <- comp$nodeInstr_nClass$new()
+      nodeInput <- nodeInputVec[[iMethod]]
+      nodeInstr$methodInstr <- nodeInput[[1]]#$methodInput
+      nodeInstr$indsInstrVec <- nodeInput[[2]]#$indsInputVec
+      nodeInstrVec[[iMethod]] <- nodeInstr
+    }
+  calcInstr$nodeInstrVec <- nodeInstrVec
+  calcInstrList[[iCalc]] <- calcInstr
+  }
+  calcInstrListObj <- comp$calcInstrList_nClass$new()
+  calcInstrListObj$calcInstrList <- calcInstrList
+  return(calcInstrListObj)
 }

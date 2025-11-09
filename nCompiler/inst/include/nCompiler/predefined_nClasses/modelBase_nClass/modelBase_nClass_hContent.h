@@ -7,12 +7,12 @@
 #endif
 #include <Rinternals.h>
 #include <nodeFxnBase_nClass_c_.h>
-#include "calcInstr_nClass_c_.h"
+#include "calcInstrList_nClass_c_.h"
 
 class modelBase_nClass : public interface_resolver< genericInterfaceC<modelBase_nClass> >, public loadedObjectHookC<modelBase_nClass> {
 public:
    virtual  bool  ping (  ) ;
-   virtual  double  calculate ( std::shared_ptr<calcInstr_nClass> calcInstr ) ;
+   virtual  double  calculate ( std::shared_ptr<calcInstrList_nClass> calcInstr ) ;
       modelBase_nClass (  ) ;
     virtual ~modelBase_nClass();
 };
@@ -21,16 +21,27 @@ public:
 
     Rcpp::Environment  get_CnClass_env_modelBase_nClass (  ) ;
 
+
 template<class Derived>
 class modelClass_ : public modelBase_nClass {
 public:
     modelClass_() {};
     std::vector< std::shared_ptr<nodeFxnBase_nClass> > nodeFxnPtrs;
-    double calculate(std::shared_ptr<calcInstr_nClass> calcInstr) override {
+    std::map<std::string, size_t> name2index_map;
+    double calculate(std::shared_ptr<calcInstrList_nClass> calcInstrList) override {
         double logProb(0.0);
-        int nodeIndex = calcInstr->nodeIndex;
-        const auto& nodeInstrVec = calcInstr->nodeInstrVec;
-        logProb += nodeFxnPtrs[nodeIndex-1]->calculate(nodeInstrVec[0]);
+        const auto& calcInstrVec = calcInstrList->calcInstrList.get();
+        auto calcInstr = calcInstrVec.cbegin();
+        auto calcInstrEnd = calcInstrVec.cend();
+        for( ; calcInstr != calcInstrEnd; ++calcInstr) {
+            auto nodeFxnPtr = nodeFxnPtrs[(*calcInstr)->nodeIndex-1];
+            const auto& nodeInstrVec = (*calcInstr)->nodeInstrVec.get();
+            auto nodeInstr = nodeInstrVec.cbegin();
+            auto nodeInstrEnd = nodeInstrVec.cend();
+            for( ; nodeInstr != nodeInstrEnd; ) {
+                logProb += nodeFxnPtr->calculate(*nodeInstr++);
+            }
+        }
         return(logProb);
     }
     void setup_node_mgmt() {
@@ -41,6 +52,8 @@ public:
         auto i_n2a = name2access.begin();
         auto end_n2a = name2access.end();
         nodeFxnPtrs.clear();
+        name2index_map.clear();
+        size_t index = 0;
         for(; i_n2a != end_n2a; ++i_n2a) {
             std::shared_ptr<genericInterfaceBaseC> ptr = i_n2a->second->getInterfacePtr(dynamic_cast<genericInterfaceBaseC*>(self));
             bool got_one = (ptr != nullptr);
@@ -51,12 +64,21 @@ public:
                 if(step_two) {
                     Rprintf("AND IT IS A NODEFXN PTR!\n");
                     nodeFxnPtrs.push_back(ptr2);
+                    name2index_map.emplace(i_n2a->first, index++);
                 } else {
                     Rprintf("but it is not a nodefxn ptr\n");
                 }
             }
             else
                 Rprintf("field %s is NOT a genericInterfaceBaseC\n", i_n2a->first.c_str());
+        }
+    }
+    void c_print_nodes() {
+        auto i_n2i = name2index_map.begin();
+        auto end_n2i = name2index_map.end();
+        Rprintf("0-based index: name\n");
+        for(; i_n2i != end_n2i; ++i_n2i) {
+            Rprintf("%d: %s\n", i_n2i->first.c_str(), (int)i_n2i->second);
         }
     }
     void set_from_list(Rcpp::List Rlist) {
@@ -108,5 +130,4 @@ public:
         }
     }
 };
-
 #endif
