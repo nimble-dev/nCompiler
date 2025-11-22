@@ -72,3 +72,161 @@ test_that("nClass replacing default constructor works", {
 #  rm(obj)
 #  gc()
 })
+
+test_that("manual initialize works and Cpp ctor call is inserted", {
+  nc <- nClass(
+    classname = "methods_test",
+    Rpublic = list(
+      Ra = 0,
+      initialize = function() {
+        print("calling initialize")
+        self$Ra <- 1
+      },
+      get_Ra = function() {
+        self$Ra
+      },
+      get_Ca = function() {
+        self$Ca
+      }
+    ),
+    Cpublic = list(
+      Ca = 'numericScalar',
+      methods_test = nFunction(
+        function() {
+          nCpp('Rprintf("calling c++ constructor\\n")')
+          Ca <- 2
+        },
+        compileInfo = list(constructor=TRUE)
+      )
+    )
+  )
+
+  obj <- nc$new()
+  expect_equal(obj$Ra, 1)
+  expect_equal(obj$get_Ra(), 1)
+  #obj$Ca
+  #obj$get_Ca()
+  # Need initialization of uncompiled Cpublic variables?
+
+  Cnc <- nCompile(nc)
+  out <- capture_output(Cobj <- Cnc$new())
+  # the C++ initializer output should appear BEFORE the R initializer msg
+  expect_true(regexpr("initialize", out) > regexpr("constructor", out))
+
+  expect_equal(Cobj$Ra, 1)
+  expect_equal(Cobj$get_Ra(), 1)
+  expect_equal(Cobj$Ca, 2)
+  expect_equal(Cobj$get_Ca(), 2)
+  rm(Cobj); gc()
+})
+
+
+test_that("manual initialize with hand-coded C++ initialization works", {
+  nc <- nClass(
+    classname = "methods_test",
+    Rpublic = list(
+      Ra = 0,
+      initialize = function() {
+        print("calling initialize")
+        if(isCompiled()) initializeCpp()
+        self$Ra <- 1
+      },
+      get_Ra = function() {
+        self$Ra
+      },
+      get_Ca = function() {
+        self$Ca
+      }
+    ),
+    Cpublic = list(
+      Ca = 'numericScalar',
+      methods_test = nFunction(
+        function() {
+          nCpp('Rprintf("calling c++ constructor\\n")')
+          Ca <- 2
+        },
+        compileInfo = list(constructor=TRUE)
+      )
+    ),
+    compileInfo=list(omit_automatic_Cpp_construction=TRUE)
+  )
+
+  obj <- nc$new()
+  expect_equal(obj$Ra, 1)
+  expect_equal(obj$get_Ra(), 1)
+  expect_true(isFALSE(obj$isCompiled()))
+  #obj$Ca
+  #obj$get_Ca()
+  # Need initialization of uncompiled Cpublic variables?
+
+  Cnc <- nCompile(nc)
+  out <- capture_output(Cobj <- Cnc$new())
+  # the C++ initializer output should now appear AFTER the R initializer msg
+  expect_true(regexpr("initialize", out) < regexpr("constructor", out))
+  expect_true(isTRUE(Cobj$isCompiled()))
+  expect_equal(Cobj$Ra, 1)
+  expect_equal(Cobj$get_Ra(), 1)
+  expect_equal(Cobj$Ca, 2)
+  expect_equal(Cobj$get_Ca(), 2)
+  rm(Cobj); gc()
+})
+
+
+test_that("manual initialize OMITTED with hand-coded C++ initialization compiles but is correctly broken", {
+  nc <- nClass(
+    classname = "methods_test",
+    Rpublic = list(
+      Ra = 0,
+      initialize = function() {
+        print("calling initialize")
+        # if(isCompiled()) initializeCpp() # OMITTED!
+        self$Ra <- 1
+      },
+      get_Ra = function() {
+        self$Ra
+      },
+      get_Ca = function() {
+        self$Ca
+      }
+    ),
+    Cpublic = list(
+      Ca = 'numericScalar',
+      methods_test = nFunction(
+        function() {
+          nCpp('Rprintf("calling c++ constructor\\n")')
+          Ca <- 2
+        },
+        compileInfo = list(constructor=TRUE)
+      )
+    ),
+    compileInfo=list(omit_automatic_Cpp_construction=TRUE)
+  )
+
+  obj <- nc$new()
+  expect_equal(obj$Ra, 1)
+  expect_equal(obj$get_Ra(), 1)
+  expect_true(isFALSE(obj$isCompiled()))
+  #obj$Ca
+  #obj$get_Ca()
+  # Need initialization of uncompiled Cpublic variables?
+
+  Cnc <- nCompile(nc)
+  out <- capture_output(Cobj <- Cnc$new())
+  # the C++ initializer output should now appear AFTER the R initializer msg
+  expect_true(regexpr("constructor", out)==-1)
+  expect_true(isTRUE(Cobj$isCompiled()))
+  expect_equal(Cobj$Ra, 1)
+  expect_equal(Cobj$get_Ra(), 1)
+  expect_error(Cobj$Ca)
+  expect_error(Cobj$get_Ca())
+
+  out2 <- capture_output(Cobj$initializeCpp())
+  expect_true(regexpr("constructor", out2)>0)
+  expect_true(isTRUE(Cobj$isCompiled()))
+  expect_equal(Cobj$Ra, 1)
+  expect_equal(Cobj$get_Ra(), 1)
+  expect_equal(Cobj$Ca, 2)
+  expect_equal(Cobj$get_Ca(), 2)
+
+  rm(Cobj); gc()
+})
