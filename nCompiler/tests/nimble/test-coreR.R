@@ -1090,6 +1090,7 @@ test_that('seq_along works in nimbleFunctions', {
 })
 
 ## Some tests of using coreR features in BUGS models
+require(nimbleModel)
 
 test_that('c(a, 1.1) in BUGS works', {
   mc <- nimbleCode({
