@@ -40,8 +40,7 @@ jobs:
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       - name: Install nimbleModel
-        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel",
-                                         auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
+        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel", auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
         env: GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
