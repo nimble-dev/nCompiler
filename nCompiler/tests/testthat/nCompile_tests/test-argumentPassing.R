@@ -14,7 +14,7 @@ message("doing scalar = vector + scalar does not error out if the vector in leng
 message("blockRef error trapping can be more involved -- using dims.")
 message("blockRef cannot cross between scalar types")
 
-cat("startig test-argumentPassing\n")
+cat("starting test-argumentPassing\n")
 
 # This is a workaround to pkg_name::var.
 # This is necessary because on GitHub Actions for testing, we use
