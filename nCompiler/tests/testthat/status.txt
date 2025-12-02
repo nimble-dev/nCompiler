@@ -24,7 +24,7 @@ Some to-do notes:
 - Serialization testing is for mechanics but needs testing of core types and also membership networks.
 - stacktrace system could use the exportName for greater interpretability
 - test-indexing error-trapping tests are disabled and need attetion
-- There is a note in test-nClass_interface that they don't work via test_package.
+- There is a note in test-nC_inter that they don't work via test_package.
 - nDeparse of for loops needs to be fixed.
 
 

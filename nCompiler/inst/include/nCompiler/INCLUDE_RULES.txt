@@ -14,7 +14,7 @@ Here is the scheme and associated rules:
 5. Generated .cpp files will (normally) have
    "#include "nCompiler_omnibus_first_cpp.h"
    This will use previously stated  #define flags to decide what to include further. It also has what should be the **ONLY** statement of "#include <Rcpp.h>".
-6. In general, headers for each of the components (Rcpp, nClass_interfaces, Eigen, Cereal, and TBB) are in separate directories. There are also directories for some "interaction" components like nClass_interfaces+Eigen and others.
+6. In general, headers for each of the components (Rcpp, nC_inters, Eigen, Cereal, and TBB) are in separate directories. There are also directories for some "interaction" components like nC_inters+Eigen and others.
 7. There is inclusion across directories because it is necessary.
 8. Each component's directory has a "<name>_pre_Rcpp.h" and "<name>_post_Rcpp.h" which contain simple collections of other #include statements. These are generally what is included from "nCompiler_omnibus_first_h.h" and "nCompiler_omnibus_first_cpp.h", respectively. These should NEVER be included from other files, because they don't have their own #ifndef protection and so in theory could recurse infinitely. Inclusion from other files should directly target specific files.
 9. Files that have "post_Rcpp" status (i.e. should never be included from a pathway stemming from "nCompiler_omnibus_first_h.h") are placed in subdirectories called post_Rcpp within each component directory. This helps us avoid accidentally including something pre_Rcpp that should be post_Rcpp. They can only be included if the directory path explicitly includes "/post_Rcpp/" so that it sticks out.
