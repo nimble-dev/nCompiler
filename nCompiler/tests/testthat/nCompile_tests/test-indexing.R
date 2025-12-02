@@ -19,8 +19,8 @@ test_that("indexing by numeric vector works", {
   cobj <- nCompile(nC)$new()
   x <- matrix(1:20, nrow = 4)
   iv <- c(2,3,2,1,5)
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x, iv)
     outR <- nC$public_methods[[test_i]](x, iv)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -91,8 +91,8 @@ test_that("drop arg variations give correct results, 3D input", {
 #  cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:105, c(3, 5, 7))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -142,8 +142,8 @@ test_that("indexing arg variations give correct results, 3D input", {
   #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:105, c(3, 5, 7))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -176,8 +176,8 @@ test_that("assignment involving indexing give correct results, 3D input", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:105, c(3, 5, 7))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -209,8 +209,8 @@ test_that("expressions involving indexing give correct results, 3D input", {
   #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:105, c(3, 8, 7))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -234,8 +234,8 @@ test_that("scalar input gives correct results", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- 3
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     expect_equal(
       nC$public_methods[[test_i]](x), ## R
       cobj[[test_i]](x)               ## C++
@@ -265,8 +265,8 @@ test_that("vector input gives correct results", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- 1:11
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -304,8 +304,8 @@ test_that("matrix input gives correct results", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- matrix(1:21, c(7, 3))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -343,8 +343,8 @@ test_that("3-dimensional input array gives correct results", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:84, c(3, 4, 7))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -396,8 +396,8 @@ test_that("4-dimensional input array gives correct results", {
   #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:924, c(3, 7, 4, 11))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
@@ -421,8 +421,8 @@ test_that("5-dimensional input array gives correct results", {
   # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   x <- array(1:2310, c(2, 3, 7, 5, 11))
-  for (i in seq_along(ls(nC$public_methods)[-1])) {
-    test_i  <- paste0('test', i)
+  method_names <- ls(nC$public_methods)
+  for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- nC$public_methods[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)

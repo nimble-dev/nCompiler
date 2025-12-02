@@ -128,10 +128,7 @@ make_node_fun <- function(varInfo = list(),
                           classname) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
   varInfo_2_cppVar <- \(x) nCompiler:::symbolBasic$new(
-    type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # We could in future make some isConst=TRUE, but it might not matter much
-  # varInfo_2_cppVar <- \(x) nCompiler:::symbolCppVar$new(
-  #   baseType = nCompiler:::symbolBasic$new(type="double", nDim=x$nDim, name="")$genCppVar()$generate(),
-  #   ref=TRUE, const=TRUE)
+    type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # In future maybe isConst=TRUE, but it might not matter much
   typeList <- varInfo |> lapply(varInfo_2_cppVar)
   names(typeList) <- varInfo |> lapply(\(x) x$name) |> unlist()
 

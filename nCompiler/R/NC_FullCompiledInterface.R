@@ -191,6 +191,52 @@ build_compiled_nClass <- function(NCgenerator,
 
   classname <- paste0(NCgenerator$classname, '_compiled')
 
+  if("isCompiled" %in% names(RinterfaceMethods))
+    RinterfaceMethods[["isCompiled"]] <- function() TRUE
+
+  ## How the initialize scheme works:
+  ## If a user has not provided an Rpublic method called initialize,
+  ## then we insert a default initialize, which takes CppObj and calls initializeCpp(CppObj),
+  ##   which builds a new Cpp object in the usual case that CppObj is missing or
+  ##   inserts it as the private$CppObj if provided.
+  ## If a user has provided an Rpublic method called initialize,
+  ##   then if compileInfo$omit_automatic_Cpp_construction is not TRUE,
+  ##   we modify the body of that initialize to call initializeCpp() at the start.
+  ##.  In that case, there is no option to pass in a CppObj; the C++ object is always constructed.
+  ## If a user wants to write an initialize AND allow the use of an existing CppObj,
+  ##   they must set compileInfo=list(omit_automatic_Cpp_construction=TRUE)
+  ##.  AND write the call to initializeCpp(CppObj) themselves, which should normally check 
+  ##   if the object is compiled: `if(isCompiled()) initializeCpp(CppObj)`.
+
+  if("initializeCpp" %in% names(RinterfaceMethods))
+    stop("Rpublic method name 'initializeCpp' is reserved for nCompiler use.")
+
+  RinterfaceMethods[["initializeCpp"]] <- substitute(
+    function(CppObj) {
+      if(missing(CppObj)) {
+        newCobjFun <- NEWCOBJFUN
+        if(is.null(newCobjFun))
+          stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+        CppObj <- newCobjFun()
+      }
+      private$CppObj <- CppObj
+      private$DLLenv <- `:::`("nCompiler", "get_DLLenv")(CppObj) # workaround static code scanning for nCompiler:::get_DLLenv(CppObj)
+    },
+    list(
+      NEWCOBJFUN = if(quoted) as.name(newCobjFun)
+                   else quote(parent.env(parent.env(self))$.newCobjFun)
+    )
+  )
+  omit_automatic_Cpp_construction <- isTRUE(NCI$compileInfo$omit_automatic_Cpp_construction)
+  if("initialize" %in% names(RinterfaceMethods)) {
+    if(!omit_automatic_Cpp_construction) {
+      body(RinterfaceMethods[["initialize"]]) <- 
+        substitute({initializeCpp(); OLDBODY}, list(OLDBODY = body(RinterfaceMethods[["initialize"]])))
+    }
+  } else {
+    if(!omit_automatic_Cpp_construction)
+       RinterfaceMethods[["initialize"]] <- function(CppObj) {initializeCpp(CppObj)} 
+  }
   ans <- substitute(
     expr = R6::R6Class(
       classname = CLASSNAME,
@@ -199,16 +245,6 @@ build_compiled_nClass <- function(NCgenerator,
         DLLenv = NULL
       ),
       public = c(
-        list(initialize = function(CppObj) {
-          if(missing(CppObj)) {
-            newCobjFun <- NEWCOBJFUN
-            if(is.null(newCobjFun))
-              stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
-            CppObj <- newCobjFun()
-          }
-          private$CppObj <- CppObj
-          private$DLLenv <- `:::`("nCompiler", "get_DLLenv")(CppObj) # workaround static code scanning for nCompiler:::get_DLLenv(CppObj)
-        }),
         RPUBLIC,
         RFIELDS,
         CINTERFACE),
@@ -219,10 +255,6 @@ build_compiled_nClass <- function(NCgenerator,
     ),
     env = list(
       CLASSNAME = classname,
-      NEWCOBJFUN = if(quoted) as.name(newCobjFun)
-                   else quote(parent.env(parent.env(self))$.newCobjFun),
-                     #parse(text = paste0('new_', NCgenerator$classname),
-                     #         keep.source = FALSE)[[1]],
       RPUBLIC = parse(text = deparse(
         RinterfaceMethods #NCgenerator$public_methods[RmethodNames]
       ), keep.source = FALSE)[[1]],

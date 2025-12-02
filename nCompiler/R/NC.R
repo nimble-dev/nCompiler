@@ -169,10 +169,11 @@ nClass <- function(classname,
   # Uncompiled behavior for Cpublic fields needs to be handled.
   # Right now a type string like 'numericScalar' just becomes a
   # default value.
+  builtIn <- list(isCompiled=function() FALSE)
   eval(substitute(
     result <- R6::R6Class(
       classname = classname,
-      public = c(Rpublic, Cpublic),
+      public = c(Rpublic, Cpublic, builtIn),
       portable = FALSE,
       inherit = INHERIT,
       parent_env = new_env
