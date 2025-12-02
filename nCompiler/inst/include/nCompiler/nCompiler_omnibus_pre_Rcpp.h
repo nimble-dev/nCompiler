@@ -49,8 +49,8 @@
     #endif
 
     #include <RcppEigenForward.h>
-    #include <nCompiler/EigenTensor_extensions/EigenTensor_extensions_pre_Rcpp.h>
-    #include <nCompiler/EigenTensor_Rcpp_extensions/EigenTensor_Rcpp_extensions_pre_Rcpp.h>
+    #include <nCompiler/ET_ext/ET_ext_pre_Rcpp.h>
+    #include <nCompiler/ET_Rcpp_ext/ET_Rcpp_ext_pre_Rcpp.h>
 
     #ifdef NCOMPILER_EIGEN_NDEBUG_DISABLED
       # define NDEBUG
@@ -62,12 +62,12 @@
 // END EIGEN_FIRST
 
 #ifdef NCOMPILER_USES_CEREAL
-#include <nCompiler/nClass_cereal/nClass_cereal_pre_Rcpp.h>
+#include <nCompiler/nC_cereal/nC_cereal_pre_Rcpp.h>
 #endif
 
 #ifdef NCOMPILER_USES_NCLASS_INTERFACE
-#include <nCompiler/nClass_interface_Rcpp_extensions/nClass_interface_Rcpp_extensions_pre_Rcpp.h>
-#include <nCompiler/nClass_interface/nClass_interface_pre_Rcpp.h>
+#include <nCompiler/nC_inter_Rcpp_ext/nC_inter_Rcpp_ext_pre_Rcpp.h>
+#include <nCompiler/nC_inter/nC_inter_pre_Rcpp.h>
 #endif
 
 #ifdef NCOMPILER_USES_NLIST

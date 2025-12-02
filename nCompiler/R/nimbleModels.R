@@ -20,7 +20,7 @@ nodeInstr_nClass <- nClass(
     methodInstr = 'integerVector',
     indsInstrVec = "nList('integerVector')"
   ),
-  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("nodeInstr_nClass")),
   compileInfo=list(interface="full",
                    createFromR = TRUE#,
@@ -34,7 +34,7 @@ calcInstr_nClass <- nClass(
     nodeIndex = 'integerScalar',
     nodeInstrVec = "nList('nodeInstr_nClass')"
   ),
-  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("calcInstr_nClass")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
@@ -43,13 +43,13 @@ calcInstr_nClass <- nClass(
                    )
 )
 
-calcInstrList_nClass <- nClass(
-  classname = "calcInstrList_nClass",
+calcInstrList_nC <- nClass(
+  classname = "calcInstrList_nC",
   Cpublic = list(
     calcInstrList = "nList('calcInstr_nClass')"
   ),
-  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
-               file.path("calcInstrList_nClass")),
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+               file.path("calcInstrList_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
                    Hincludes = "<calcInstr_nClass_c_.h>")
@@ -71,7 +71,7 @@ nodeFxnBase_nClass <- nClass(
   ),
   # We haven't dealt with ensuring a virtual destructor when any method is virtual
   # For now I did it manually by editing the .h and .cpp
-  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |>
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("nodeFxnBase_nClass")),
   compileInfo=list(interface="full",
                    createFromR = FALSE)
@@ -92,17 +92,17 @@ modelBase_nClass <- nClass(
         function(calcInstrList) {cat("In uncompiled calculate\n")},
         returnType = 'numericScalar',
         compileInfo = list(
-          C_fun = function(calcInstrList='calcInstrList_nClass') {
+          C_fun = function(calcInstrList='calcInstrList_nC') {
             cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
           virtual=TRUE
         )
     )  
   ),
   # See comment above about needing to ensure a virtual destructor
-  predefined = quote(system.file(file.path("include","nCompiler", "predefined_nClasses"), package="nCompiler") |> file.path("modelBase_nClass")),
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nClass")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nClass_c_.h>"))
+                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nC_c_.h>"))
 )
 
 # nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
@@ -267,7 +267,7 @@ makeModel_nClass <- function(varInfo,
       compileInfo = list(opDefs = OPDEFS,
                          nClass_inherit = list(base=BASECLASS)
                          #inherit = list(base = "public modelClass_<mymodel>"),
-                         #Hincludes = "<nCompiler/nClass_interface/post_Rcpp/nCompiler_model_base_devel.h>"
+                         #Hincludes = "<nCompiler/nC_inter/post_Rcpp/nCompiler_model_base_devel.h>"
                          ),
       Cpublic = CPUBLIC
     ),
@@ -358,7 +358,7 @@ make_model_from_nimbleModel <- function(m) {
   model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model")
   # Currently we must compile from here because here is where we know the nodeFxnName[s].
   # We have a situation where order matters: model needs to come after the utility classes. Fix me.
-  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nClass", "calcInstr_nClass", "nodeInstr_nClass", "model")
+  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nC", "calcInstr_nClass", "nodeInstr_nClass", "model")
   argList <- c(argList, as.list(nodeFxnNames))
   argList <- argList |> lapply(as.name)
   Cmodel <- do.call("nCompile", argList)
@@ -386,7 +386,7 @@ calcInputList_to_calcInstrList <- function(calcInputList, comp) {
   calcInstr$nodeInstrVec <- nodeInstrVec
   calcInstrList[[iCalc]] <- calcInstr
   }
-  calcInstrListObj <- comp$calcInstrList_nClass$new()
+  calcInstrListObj <- comp$calcInstrList_nC$new()
   calcInstrListObj$calcInstrList <- calcInstrList
   return(calcInstrListObj)
 }

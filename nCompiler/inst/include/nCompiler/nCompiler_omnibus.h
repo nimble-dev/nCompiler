@@ -48,8 +48,8 @@ using namespace Rcpp;
  #endif
 
 #ifdef NCOMPILER_USES_EIGEN
-#include <nCompiler/EigenTensor_extensions/EigenTensor_extensions_post_Rcpp.h>
-#include <nCompiler/EigenTensor_Rcpp_extensions/EigenTensor_Rcpp_extensions_post_Rcpp.h>
+#include <nCompiler/ET_ext/ET_ext_post_Rcpp.h>
+#include <nCompiler/ET_Rcpp_ext/ET_Rcpp_ext_post_Rcpp.h>
 #endif
 
 
@@ -64,12 +64,12 @@ using namespace Rcpp;
 #include "omnibus_fxns.h" // What everything should see or need.
 
 #ifdef NCOMPILER_USES_CEREAL
-#include <nCompiler/nClass_cereal/nClass_cereal_post_Rcpp.h>
+#include <nCompiler/nC_cereal/nC_cereal_post_Rcpp.h>
 #endif
 
 #ifdef NCOMPILER_USES_NCLASS_INTERFACE
-#include <nCompiler/nClass_interface/nClass_interface_post_Rcpp.h>
-#include <nCompiler/nClass_interface_Rcpp_extensions/nClass_interface_Rcpp_extensions_post_Rcpp.h>
+#include <nCompiler/nC_inter/nC_inter_post_Rcpp.h>
+#include <nCompiler/nC_inter_Rcpp_ext/nC_inter_Rcpp_ext_post_Rcpp.h>
 #endif
 
 #ifdef NCOMPILER_USES_NLIST

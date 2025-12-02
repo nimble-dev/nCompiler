@@ -5,7 +5,7 @@ global_R_interface_cppDef <-
     #                                    ),
     #                      Hincludes = nCompilerIncludeFile("nCompiler_omnibus_first_h.h"),
     #CPPincludes = c(nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
-    #  nCompilerIncludeFile("nClass_interface/post_Rcpp/process_call_args.h")),
+    #  nCompilerIncludeFile("nC_inter/post_Rcpp/process_call_args.h")),
     Hpreamble = c("#define NCOMPILER_USES_NCLASS_INTERFACE",
                   "#define USES_NCOMPILER"),
     CPPpreamble = c("#define NCOMPILER_USES_NCLASS_INTERFACE",

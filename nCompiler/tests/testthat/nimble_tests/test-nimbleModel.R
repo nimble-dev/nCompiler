@@ -5,7 +5,7 @@ library(nCompiler)
 library(testthat)
 
 #nCompile(nodeFxnBase_nClass, nodeInstr_nClass, control=list(generate_predefined=TRUE))
-#nCompile(nodeInstr_nClass, calcInstr_nClass, modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, control=list(generate_predefined=TRUE))
+#nCompile(nodeInstr_nClass, calcInstr_nClass, modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, control=list(generate_predefined=TRUE))
 
 test_that("nimble model prototype works", {
   nodeVarInfo <- list(list(name = "x", nDim  = 1), list(name = "mu", nDim = 1),
@@ -29,7 +29,7 @@ test_that("nimble model prototype works", {
   ncm1 <- makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model")
   #undebug(nCompiler:::addGenericInterface_impl)
   #undebug(nCompiler:::nCompile_finish_nonpackage)
-  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, my_nodeFxn)
+  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1, my_nodeFxn)
   obj <- Cncm1$ncm1$new()
 
   obj$do_setup_node_mgmt()
@@ -57,8 +57,8 @@ test_that("nimble model prototype works", {
 })
 
 test_that("nodeInstr_nClass and calcInstr_nClass basics work", {
-  test <- nCompile(nodeInstr_nClass, calcInstr_nClass, calcInstrList_nClass, control=list(generate_predefined=TRUE))
-  calcInstrList <- test$calcInstrList_nClass$new()
+  test <- nCompile(nodeInstr_nClass, calcInstr_nClass, calcInstrList_nC, control=list(generate_predefined=TRUE))
+  calcInstrList <- test$calcInstrList_nC$new()
   calcInstr <- test$calcInstr_nClass$new()
   expect_equal(calcInstr$nodeInstrVec, list())
   ni1 <- test$nodeInstr_nClass$new()
@@ -93,7 +93,7 @@ varInfo <- nCompiler:::get_varInfo_from_nimbleModel(m)
 modelVars <- varInfo$vars
 # Try making a model with no nodeFxns
 ncm1 <- makeModel_nClass(modelVars, list(), classname = "my_model")
-Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1)
+Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1)
 obj <- Cncm1$ncm1$new()
 obj$resize_from_list(varInfo$sizes)
 expect_equal(length(obj$x), 6)

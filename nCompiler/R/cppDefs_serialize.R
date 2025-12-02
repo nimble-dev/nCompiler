@@ -19,7 +19,7 @@ global_serialization_cppDef <-
     # This is done here because it must be done once and only once to avoid
     # duplicate symbols when compiling as a package.
     CPPincludes = c(#nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
-                    nCompilerIncludeFile("nClass_cereal/post_Rcpp/serialization_mgr.h")),
+                    nCompilerIncludeFile("nC_cereal/post_Rcpp/serialization_mgr.h")),
     CPPusings = c("using namespace Rcpp;",
                   "// [[Rcpp::plugins(nCompiler_plugin)]]",
                   "// [[Rcpp::depends(nCompiler)]]",

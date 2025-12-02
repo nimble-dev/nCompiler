@@ -68,7 +68,7 @@ labelAbstractTypes: [ FAIL 0 | WARN 0 | SKIP 1 | PASS 25 ]
 
 math:
 
-nClass_interface: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
+nC_inter: [ FAIL 2 | WARN 0 | SKIP 0 | PASS 4 ]
 `check` not equal to array(c(2.3, 3.4, 4.5)).
 Attributes: < target is NULL, current is list >
 vector set and get from a full interface
