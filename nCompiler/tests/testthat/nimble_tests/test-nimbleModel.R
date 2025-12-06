@@ -78,28 +78,27 @@ test_that("nodeInstr_nClass and calcInstr_nClass basics work", {
 
 ######
 
-## This test works but is disabled b/c we don't have nimbleModel
 ## in the testing setup yet.
-if(FALSE) {
-library(nimbleModel)
-code <- quote({
-  sd ~ dunif(0, 10)
-  for(i in 1:5) {
-    y[i] ~ dnorm(x[i+1], sd = sd)
-  }
+test_that("nimble model variables are set up", {
+  library(nimbleModel)
+  code <- quote({
+    sd ~ dunif(0, 10)
+    for(i in 1:5) {
+      y[i] ~ dnorm(x[i+1], sd = sd)
+    }
+  })
+  m <- modelClass$new(code)
+  varInfo <- nCompiler:::get_varInfo_from_nimbleModel(m)
+  modelVars <- varInfo$vars
+  # Try making a model with no nodeFxns
+  ncm1 <- makeModel_nClass(modelVars, list(), classname = "my_model")
+  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1)
+  obj <- Cncm1$ncm1$new()
+  obj$resize_from_list(varInfo$sizes)
+  expect_equal(length(obj$x), 6)
+  expect_equal(length(obj$y), 5)
+  expect_equal(length(obj$logProb_y), 5)
 })
-m <- modelClass$new(code)
-varInfo <- nCompiler:::get_varInfo_from_nimbleModel(m)
-modelVars <- varInfo$vars
-# Try making a model with no nodeFxns
-ncm1 <- makeModel_nClass(modelVars, list(), classname = "my_model")
-Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1)
-obj <- Cncm1$ncm1$new()
-obj$resize_from_list(varInfo$sizes)
-expect_equal(length(obj$x), 6)
-expect_equal(length(obj$y), 5)
-expect_equal(length(obj$logProb_y), 5)
-}
 ########
 # nOptions(pause_after_writing_files=TRUE)
 # Try automating the whole model creation including nodeFxns
@@ -113,7 +112,22 @@ if(FALSE) {
     }
   })
   m <- modelClass$new(code)
-test <- nCompiler:::make_model_from_nimbleModel(m)
+
+  ## Check that a separate R implementation was created
+  mDef_ <- m$modelDef
+  dI <- mDef_$declInfo[[2]]
+  nFxn <- nCompiler:::make_nodeFxn_from_declInfo(dI)
+  expect_true(!is.null(NFinternals(nFxn[[1]])$R_fun))
+
+  # uncompiled
+  test <- nCompiler:::make_model_from_nimbleModel(m, compile=FALSE)
+  Robj <- test$new()
+
+  NULL
+  ## Compile
+  debugonce(nCompiler:::make_model_from_nimbleModel)
+  test <- nCompiler:::make_model_from_nimbleModel(m)
+
 
 obj <- test$model$new()
 obj$do_setup_node_mgmt()

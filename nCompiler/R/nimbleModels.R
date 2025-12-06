@@ -107,6 +107,32 @@ modelBase_nClass <- nClass(
 
 # nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
 
+## The two "addModelDollarSign" functions are borrowed directly from nimble.
+## This should add model$ in front of any names that are not already part of a '$' expression
+nm_addModelDollarSign <- function(expr, exceptionNames = character(0)) {
+    if(is.numeric(expr)) return(expr)
+    if(is(expr, 'srcref')) return(expr)
+    if(is.name(expr)) {
+        if((as.character(expr) %in% exceptionNames) || (as.character(expr) == ''))    return(expr)
+        proto <- quote(model$a)
+        proto[[3]] <- expr
+        return(proto)
+    }
+    if(is.call(expr)) {
+        if(expr[[1]] == '$'){
+            expr[2] <- lapply(expr[2], function(listElement) nm_addModelDollarSign(listElement, exceptionNames))
+            return(expr)
+        } 
+        if(expr[[1]] == 'returnType')
+            return(expr)
+        if(length(expr) > 1) {
+            expr[2:length(expr)] <- lapply(expr[-1], function(listElement) nm_addModelDollarSign(listElement, exceptionNames))
+            return(expr)
+        }
+    }
+    return(expr)
+}
+
 ## test <- nClass(
 ##   inherit = modelBase_nClass,
 ##   classname = "my_model",
@@ -146,25 +172,36 @@ make_node_fun <- function(varInfo = list(),
 
   baseclass <- paste0("nodeFxnClass_<", classname, ">")
 
+  setModel <- function(model) {
+    if(!isCompiled())
+      self$model <- model
+    else
+       warning("setModel called on compiled object; no action taken")
+  }
+
 #  This was a prototype
   node_nClass <- substitute(
     nClass(
       classname = CLASSNAME,
+      Rpublic = RPUBLIC,
       Cpublic = CPUBLIC,
       compileInfo = list(
         createFromR = FALSE, # Without a default constructor (which we've disabled here), createFromR is impossible
         nClass_inherit = list(base = BASECLASS))  # Ideally this line would be obtained from a base nClass, but we insert it directly for now
     ),
-    list(CPUBLIC = c(
-      list(
-        nFunction(
-          initFun,
-          compileInfo = list(constructor=TRUE, initializers = initializersList)
-        )
-      ) |> structure(names = classname),
-      CpublicVars,
-      methods
+    list(
+      CPUBLIC = c(
+        list(
+          nFunction(
+            initFun,
+            compileInfo = list(constructor=TRUE, initializers = initializersList)
+          )
+        ) |> structure(names = classname),
+        CpublicVars,
+        methods
       ),
+      RPUBLIC = list(model = NULL,
+                     setModel = setModel),
       CLASSNAME = classname,
       BASECLASS = baseclass
     ))
@@ -246,8 +283,8 @@ makeModel_nClass <- function(varInfo,
          init_string = init_string,
          membername = x$membername)
   })
-  membernames <- node_pieces |> lapply(\(x) x$membername) |> unlist()
-  CpublicNodeFuns <- node_pieces |> lapply(\(x) x$nClass_type) |> setNames(membernames)
+  nodeObjNames <- node_pieces |> lapply(\(x) x$membername) |> unlist()
+  CpublicNodeFuns <- node_pieces |> lapply(\(x) x$nClass_type) |> setNames(nodeObjNames)
   # CpublicNodeFuns <- list(
   #   beta_node = 'node_dnorm()'
   # )
@@ -259,7 +296,22 @@ makeModel_nClass <- function(varInfo,
                          initializers = node_pieces |> lapply(\(x) x$init_string) |> unlist())
     )
   ) |> structure(names = classname)
+  initialize <- function(sizes, inits) {
+    browser()
+    if(isCompiled())
+      self$do_setup_node_mgmt()
+    if(!isCompiled()) {
+      for(nodeObj in self$nodeObjNames) {
+        self[[nodeObj]] <- CpublicNodeFuns[[nodeObj]]$new()
+        self[[nodeObj]]$setModel(self)
+      }
+    }
+    if(length(inits)) init_from_list(inits)
+    else if(length(sizes)) resize_from_list(sizes)
+  }
   baseclass <- paste0("modelClass_<", classname, ">")
+  env <- new.env(parent = parent.frame())
+  env$CpublicNodeFuns <- CpublicNodeFuns
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
@@ -269,14 +321,17 @@ makeModel_nClass <- function(varInfo,
                          #inherit = list(base = "public modelClass_<mymodel>"),
                          #Hincludes = "<nCompiler/nC_inter/post_Rcpp/nCompiler_model_base_devel.h>"
                          ),
-      Cpublic = CPUBLIC
+      Rpublic = RPUBLIC,
+      Cpublic = CPUBLIC,
+      env = env
     ),
     list(OPDEFS = opDefs,
+        RPUBLIC = list(initialize=initialize, nodeObjNames = nodeObjNames),
         CPUBLIC = c(CpublicNodeFuns, CpublicModelVars, CpublicCtor, CpublicMethods),
         CLASSNAME = classname,
         BASECLASS = baseclass)
   )
-  eval(ans, envir = parent.frame())
+  eval(ans)
 }
 
 ## Get varInfo from new nimbleModel
@@ -318,26 +373,29 @@ make_nodeFxn_from_declInfo <- function(declInfo) {
   names(RHSrep)[2] <- ""
   RHSrep[[lenRHS+2]] <- 1
   names(RHSrep)[lenRHS+2] <- "log"
-  calc1fun <- substitute(
+  calc1Cfun <- substitute(
     function(idx) {LHS <- RHS; return(LHS)},
     list(LHS = logProbExprRep, RHS = RHSrep)
   ) |> eval()
+  calc1Rfun <- calc1Cfun
+  body(calc1Rfun) <- nm_addModelDollarSign(body(calc1Cfun), exceptionNames = c("idx"))
   calc_one <- nFunction(
     name = "calc_one",
-    fun = calc1fun,
-    compileInfo=list(C_fun=calc1fun),
+    fun = calc1Rfun,
+    compileInfo=list(C_fun=calc1Cfun),
     argTypes = list(idx = 'integerVector'),
     returnType = 'numericScalar')
-  nodeVars <- all.vars(body(calc1fun)) |> setdiff("idx")
+  nodeVars <- all.vars(body(calc1Cfun)) |> setdiff("idx")
   list(calc_one = calc_one, nodeVars = nodeVars)
 }
 
-make_model_from_nimbleModel <- function(m) {
+make_model_from_nimbleModel <- function(m, compile=TRUE) {
   mDef <- m$modelDef
   allVarInfo <- get_varInfo_from_nimbleModel(m)
   modelVarInfo <- allVarInfo$vars
   nodeFxnNames <- character()
   nodeInfoList <- list()
+  nodeFxnList <- list()
   for(i in seq_along(mDef$declInfo)) {
     declInfo <- mDef$declInfo[[i]]
     nodeFxn <- make_nodeFxn_from_declInfo(declInfo)
@@ -349,17 +407,21 @@ make_model_from_nimbleModel <- function(m) {
     node_membername <- paste0("node_", SLN)
     nodeVarInfo <- modelVarInfo[nodeVars]
     # Currently, we can't just make a list of these but need them as named objects in the environment
+    nodeFxnList[[nodeFxnName]] <- make_node_fun(nodeVarInfo, list(calc_one=calc_one), node_classname)
     assign(nodeFxnName,
-      make_node_fun(nodeVarInfo, list(calc_one=calc_one), node_classname)
+      nodeFxnList[[nodeFxnName]]
     )
     nodeInfoList[[i]] <- nCompiler:::make_node_info(node_membername, nodeFxnName, node_classname, nodeVarInfo)
-    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
+#    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
+
   }
   model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model")
   # Currently we must compile from here because here is where we know the nodeFxnName[s].
   # We have a situation where order matters: model needs to come after the utility classes. Fix me.
+  if(!compile)
+    return(model)
   argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nC", "calcInstr_nClass", "nodeInstr_nClass", "model")
-  argList <- c(argList, as.list(nodeFxnNames))
+  argList <- c(argList, "nodeFxnList")
   argList <- argList |> lapply(as.name)
   Cmodel <- do.call("nCompile", argList)
   #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, nodeFxn_3)
