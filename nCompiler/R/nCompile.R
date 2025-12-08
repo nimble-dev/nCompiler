@@ -217,6 +217,7 @@ nCompile_createCppDefsInfo <- function(units,
   needed_nFunctions <- vector("list", length(units))
   for(i in seq_along(units)) {
     compileInfo <- compileInfos[[i]]
+    needed_nFunctions[[i]] <- list()
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       oneResult <- nCompile_nFunction(units[[i]],
                                       stopAfterCppDef = TRUE,
@@ -224,6 +225,7 @@ nCompile_createCppDefsInfo <- function(units,
                                       compileInfo = compileInfo,
                                       control = control)
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
+      needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
     } else if(unitTypes[i] == "nCgen") {
       oneResult <- nCompile_nClass(units[[i]],
                                   stopAfterCppDef = TRUE,
@@ -235,7 +237,6 @@ nCompile_createCppDefsInfo <- function(units,
     if(!is.list(oneResult)) stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
     unitResults[[i]] <- oneResult$cppDef
     needed_nClasses[[i]] <- oneResult$needed_units$needed_nClasses
-    needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
   }
   list(cppDefs = unitResults,
        cpp_names = cpp_names,
@@ -253,7 +254,7 @@ cppDefsList_2_RcppPacketList <- function(cppDefs) {
 
 # prepare information for compilation units:
 #.  names, interface type, unit types, inherits.
-# previously this was done inside nCompile, but 
+# previously this was done inside nCompile, but
 # now we separate it so we can recurse on units
 # that need other units that then need prepared
 # information
@@ -316,7 +317,7 @@ nCompile_prepare_units <- function(...,
 
   unitTypes <- get_nCompile_types(units)
 
-  # We defer processing of nClass inheritance until compile time to allow nClass 
+  # We defer processing of nClass inheritance until compile time to allow nClass
   # to be called with inherit = some_nClass before some_nClass is defined.
   for(i in seq_along(units)) {
     if(unitTypes[i] == "nCgen")
@@ -402,7 +403,7 @@ nCompile <- function(...,
   controlFull$always_include_units <- TRUE # Do this even if auto_include_units is FALSE, so we can error-trap
 
   unit_info <- nCompile_prepare_units(...,
-                                      interfaces = interfaces)  
+                                      interfaces = interfaces)
   new_units <- unit_info$units
   new_unitTypes <- unit_info$unitTypes
   new_interfaces <- unit_info$interfaces
@@ -425,6 +426,7 @@ nCompile <- function(...,
   cpp_names <- character()
 
   while(!done_finding_units) {
+    browser()
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
@@ -1122,7 +1124,7 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "nCompiler", "RcppEigen",
                                          #"RcppEigenAD",
                                          "RcppParallel", "Rcereal", sep = ",")
-    # On Linux RcppParallel might need to be in both LinkingTo and Imports. 
+    # On Linux RcppParallel might need to be in both LinkingTo and Imports.
     # Having it in Imports allows the symbols to be found when the on-the-fly package is loaded.
     # DESCRIPTION[1, "Imports"] <- paste(DESCRIPTION[1, "Imports"], "RcppParallel", sep = ",")
     # DESCRIPTION$Encoding <- "UTF-8"
