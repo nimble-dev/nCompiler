@@ -426,7 +426,6 @@ nCompile <- function(...,
   cpp_names <- character()
 
   while(!done_finding_units) {
-    browser()
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
