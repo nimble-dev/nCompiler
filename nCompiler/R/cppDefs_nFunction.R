@@ -199,7 +199,7 @@ cpp_include_needed_nClasses <- function(cppDef,
     }
   }
   new_Hincludes <- unique(new_Hincludes)  
-  cppDef$Hincludes <- c(cppDef$Hincludes, new_Hincludes)
+  cppDef$Hincludes <- unique(c(cppDef$Hincludes, new_Hincludes))
   invisible(NULL)
 }
 

@@ -46,6 +46,8 @@ nCompile_nClass <- function(NC,
     control
   )
   is_predefined <- !isFALSE(NCinternals(NC)$predefined)
+  gather_needed_units <- isTRUE(controlFull$always_include_units)
+  needed_units <- list()
   if(is_predefined) {
     predefined_dir <-  NCinternals(NC)$predefined
     # predefined can be character, quoted expression, or function.
@@ -63,6 +65,7 @@ nCompile_nClass <- function(NC,
        "It should give the directory path of the predefined nClass. ",
        "The classname argument to nClass gives the base for filenames in that directory.")
      regular_filename <-  NCinternals(NC)$cpp_classname
+     if(gather_needed_units) needed_units <- NCinternals(NC)$compileInfo$needed_units
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
@@ -89,6 +92,10 @@ nCompile_nClass <- function(NC,
       # Now add interface calls if necessary for this live compilation, having
       # kept them out of the written packet code.
       cppDef$buildGenericInterface(interfaceCalls=TRUE, interface=FALSE)
+      # To do: check that there aren't any detected needed units that are not in the compileInfo$needed_units
+      # because for a predefined, needed units must be provided manually by compileInfo.
+    } else {
+      if(gather_needed_units) needed_units <- NC_Compiler$gather_needed_units()
     }
 
     ##
@@ -101,8 +108,10 @@ nCompile_nClass <- function(NC,
       return(NC_Compiler)
   }
 
-  if(stopAfterCppDef) return(cppDef)
-
+  if(stopAfterCppDef) {
+    if(gather_needed_units) return(list(cppDef = cppDef, needed_units = needed_units))
+    else return(cppDef)
+  }
   # We might deprecate from here onward.
   # Then nCompile_nClass would only be called via nCompile
   filebase <- controlFull$filename

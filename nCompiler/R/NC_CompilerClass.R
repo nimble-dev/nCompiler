@@ -115,6 +115,43 @@ NC_CompilerClass <- R6::R6Class(
                           NCgenerator)
         setupMethodSymbolTables()
       }
+    },
+    gather_needed_units = function() {
+      needed_nClasses1 <- nCompile_gather_needed_nClasses(cppDef, self$symbolTable)
+      needed_nClasses2 <- lapply(NFcompilers,
+                                  \(x) x$gather_needed_nClasses()) |> 
+                          unlist(recursive = FALSE) |> unique()
+      needed_nFunctions <- lapply(NFcompilers,
+                                  \(x) x$gather_needed_nFunctions()) |> 
+                           unlist(recursive = FALSE) |> unique()
+      list(
+        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2)),
+        needed_nFunctions = needed_nFunctions
+      )
     }
   )
 )
+
+nCompile_gather_needed_nClasses <- function(cppDef,
+                                            symTab,
+                                            NF_Compiler = NULL) {
+  # Collect nClass generators needed by this symbol table
+  new_needed <- list()
+  for(i in seq_along(symTab$symbols)) {
+    if(inherits(symTab$symbols[[i]], "symbolNC")) {
+      new_needed[[length(new_needed) + 1]] <-
+        symTab$symbols[[i]]$nClassGenerator
+    }
+  }
+  # For an nFunction, collection nClass generators identified
+  # from processing the code.
+  if(!is.null(NF_Compiler)) {
+    auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
+    if(length(auxEnv_needed_nClasses)) {
+      bool_NCgen <- lapply(auxEnv_needed_nClasses, isNCgenerator) |> unlist()
+      new_needed <- c(new_needed,
+                      auxEnv_needed_nClasses[bool_NCgen])
+    }
+  }
+  unique(new_needed)
+}
