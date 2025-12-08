@@ -150,7 +150,7 @@ NF_CompilerClass <- R6::R6Class(
       nCompile_gather_needed_nClasses(cppDef, self$symbolTable, self)
     },
     gather_needed_nFunctions = function() {
-      nCompile_gather_needed_nFunctions(cppDef, self$symbolTable)
+      nCompile_gather_needed_nFunctions(cppDef, self)
     }
   )
 )

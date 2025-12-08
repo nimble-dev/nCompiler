@@ -125,8 +125,8 @@ NC_CompilerClass <- R6::R6Class(
                                   \(x) x$gather_needed_nFunctions()) |> 
                            unlist(recursive = FALSE) |> unique()
       list(
-        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2)),
-        needed_nFunctions = needed_nFunctions
+        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2 %||% list())),
+        needed_nFunctions = needed_nFunctions %||% list()
       )
     }
   )

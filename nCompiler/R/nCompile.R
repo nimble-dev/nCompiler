@@ -217,7 +217,6 @@ nCompile_createCppDefsInfo <- function(units,
   needed_nFunctions <- vector("list", length(units))
   for(i in seq_along(units)) {
     compileInfo <- compileInfos[[i]]
-    needed_nFunctions[[i]] <- list()
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       oneResult <- nCompile_nFunction(units[[i]],
                                       stopAfterCppDef = TRUE,
@@ -225,7 +224,6 @@ nCompile_createCppDefsInfo <- function(units,
                                       compileInfo = compileInfo,
                                       control = control)
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
-      needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
     } else if(unitTypes[i] == "nCgen") {
       oneResult <- nCompile_nClass(units[[i]],
                                   stopAfterCppDef = TRUE,
@@ -237,6 +235,7 @@ nCompile_createCppDefsInfo <- function(units,
     if(!is.list(oneResult)) stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
     unitResults[[i]] <- oneResult$cppDef
     needed_nClasses[[i]] <- oneResult$needed_units$needed_nClasses
+    needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
   }
   list(cppDefs = unitResults,
        cpp_names = cpp_names,
@@ -441,8 +440,8 @@ nCompile <- function(...,
 
     new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique()
     new_needed_nFunctions <- do.call("c", cppDefs_info$needed_nFunctions) |> unique()
-    setNames(new_needed_nClasses, new_needed_nClasses |> lapply(\(x) x$classname))
-    setNames(new_needed_nFunctions, new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName))
+    names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
+    names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
     # A bit of design irony: At this point, the needed units are
     # nicely organized into nClasses and nFunctions,
     # but we are going to mix them together as if they were an arbitrary
