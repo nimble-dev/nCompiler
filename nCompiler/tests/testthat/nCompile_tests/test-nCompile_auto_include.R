@@ -18,7 +18,7 @@ test_that("nFunction auto-including nFunction works and can be controlled", {
     function(x=double()) {return(fn1(x)); returnType(double())}
   )
   comp <- nCompile(fn1, nf2)
-  expect_equal(comp$fn2(1), 2)
+  expect_equal(comp$nf2(1), 2)
 
   comp <- nCompile(nf2)
   expect_true(is.function(comp))
@@ -428,7 +428,8 @@ test_that("One predefined nClass can use another, separately and by inheritance,
           }
         )
       )
-    , compileInfo = list(interface='none', createFromR = FALSE)
+    , compileInfo = list(interface='none', createFromR = FALSE,
+                         exportName="fooBase")
     , predefined=file.path(tempdir(), "test_predefined_nC_foo_base_dir")
     )
 
@@ -441,7 +442,8 @@ test_that("One predefined nClass can use another, separately and by inheritance,
         )
       )
     , predefined=file.path(tempdir(), "test_predefined_nC_foo_dir")
-    , compileInfo=list(needed_units = "foo_base")
+    , compileInfo=list(needed_units = "foo_base",
+                       exportName = "foo")
     )
 
     use_foo <- nClass(
@@ -452,7 +454,8 @@ test_that("One predefined nClass can use another, separately and by inheritance,
         )
       )
     , predefined=file.path(tempdir(), "test_predefined_nC_use_foo")
-    , compileInfo=list(needed_units = "foo")
+    , compileInfo=list(needed_units = "foo",
+                       exportName = "use_foo")
     )
 
     dir <- file.path(tempdir(), "use_predefined_nC_testdir2")
@@ -460,6 +463,9 @@ test_that("One predefined nClass can use another, separately and by inheritance,
     comp <- nCompile(use_foo, dir=dir, control=list(generate_predefined=TRUE), package=package, returnList=TRUE)
     obj <- comp$use_foo$new()
     expect_equal(obj$make_foo()$bar(1:3), 2:4)
+
+    # now write the next one
+    comp <- nCompile(foo, foo_base, dir=dir, control=list(generate_predefined=TRUE), returnList=TRUE)
     dir2 <- file.path(tempdir(), "use_predefined_nC_testdir2")
     loading_output <- capture_output(comp2 <- nCompile(use_foo, dir=dir2,package=package, returnList=TRUE))
     obj2 <- comp2$use_foo$new()
