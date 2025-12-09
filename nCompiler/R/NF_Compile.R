@@ -61,6 +61,7 @@ nCompile_nFunction <- function(NF,
   gather_needed_units <- isTRUE(controlFull$always_include_units)
   needed_units <- list(needed_nClasses = list(),
                        needed_nFunctions = list())
+  allow_write_predefined <- FALSE
   if(is_predefined) {
     predefined_dir <-  NFinternals(NF)$predefined
     # predefined can be character, quoted expression, or function.
@@ -80,6 +81,7 @@ nCompile_nFunction <- function(NF,
     regular_filename <-  NFinternals(NF)$cpp_code_name
     if(gather_needed_units) 
       needed_units <- nCompile_process_manual_needed_units(NFinternals(NF))
+    allow_write_predefined <- !isTRUE(compileInfo$auto_included)
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
@@ -97,7 +99,7 @@ nCompile_nFunction <- function(NF,
                        NF_Compiler$stageCompleted))
       return(NF_Compiler)
     }
-    if(is_predefined) {
+    if(is_predefined && allow_write_predefined) {
       predefined_gen_dir <- NFinternals(NF)$compileInfo$predefined_output_dir
       if(is.null(predefined_gen_dir))
         predefined_gen_dir <- predefined_dir

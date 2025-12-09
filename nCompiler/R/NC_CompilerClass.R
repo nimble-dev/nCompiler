@@ -146,7 +146,11 @@ NC_CompilerClass <- R6::R6Class(
 nCompile_process_manual_needed_units <- function(internals, 
                                                       where = internals$where, # NFinternals case
                                                       isNC = FALSE) {
-  # A little awkwardness on the input arguments
+  # This function collects two forms of "manual" needed units (nClasses and nFunctions):
+  # those provided via compileInfo$needed_units and also (in the case of nClass)
+  # an inherited nClass.
+  #
+  # A little awkwardness on the input arguments:
   # It would be nice to pass either just the internals (NCinternals(NC) or NFinternals(NF))
   # OR just the NC or NF object.
   # But neither case is consistent between nClass and nFunction.
@@ -170,7 +174,7 @@ nCompile_process_manual_needed_units <- function(internals,
     }
     if(isNCgenerator(obj)) {
       results_nClasses[[length(results_nClasses) + 1]] <- obj
-    } else if(isNFunction(obj)) {
+    } else if(isNF(obj)) {
       results_nFunctions[[length(results_nFunctions) + 1]] <- obj
     } else {
       stop(paste0("In processing compileInfo$needed_units for ", name, ", object '",
@@ -200,7 +204,7 @@ nCompile_gather_needed_nClasses <- function(cppDef,
   for(i in seq_along(symTab$symbols)) {
     if(inherits(symTab$symbols[[i]], "symbolNC")) {
       new_needed[[length(new_needed) + 1]] <-
-        symTab$symbols[[i]]$nClassGenerator
+        symTab$symbols[[i]]$NCgenerator
     }
   }
   # For an nFunction, collection nClass generators identified

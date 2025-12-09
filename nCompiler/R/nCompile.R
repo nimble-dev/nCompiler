@@ -269,6 +269,10 @@ nCompile <- function(...,
   returnNames <- character()
   cppDefs <- list()
   cpp_names <- character()
+  auto_included <- rep(FALSE, length(new_units))
+  # the compileInfos$auto_included field is used in nCompile_nFunction and nCompile_nClass
+  # to decide whether it is allowed to generate predefined code. For auto_included units, NO.
+  new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
 
   while(!done_finding_units) {
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos)
@@ -320,6 +324,8 @@ nCompile <- function(...,
         new_compileInfos <- new_unit_info$compileInfos
         new_exportNames <- new_unit_info$exportNames
         new_returnNames <- new_unit_info$returnNames
+        auto_included <- c(auto_included, rep(TRUE, length(new_units)))
+        new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- TRUE; x})
       } else {
         stop("During compilation, additional units (nClasses or nFunctions) were needed but were not provided in the nCompile call. ",
             "To have nCompile automatically include such units, include control(nCompile_include_units=TRUE) or (to change the setting for all calls) do set_nOption(\"nCompile_include_units\", TRUE, \"compilerOptions\").",
@@ -399,6 +405,11 @@ nCompile <- function(...,
         else NULL
       })
       names(ans_) <- returnNames
+      # Remove any auto_included entries.
+      # See comment below in nCompile_finish_package about this step.
+      if(any(auto_included)) {
+        ans_ <- ans_[!auto_included]
+      }
       ans_
     })
     # cat("done trying devtools::install\n")
@@ -428,7 +439,8 @@ nCompile <- function(...,
                                  cacheDir = cacheDir,
                                  env = env,
                                  returnList = returnList,
-                                 compileInfos = compileInfos))
+                                 compileInfos = compileInfos,
+                                 auto_included = auto_included))
   }
 }
 
@@ -618,7 +630,9 @@ nCompile_finish_nonpackage <- function(units,
                                        cacheDir,
                                        env,
                                        returnList,
-                                       compileInfos) {
+                                       compileInfos,
+                                       auto_included = rep(FALSE, length(units))
+                                       ) {
   cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
   resultEnv <- new.env()
   compiledFuns <- cpp_nCompiler(RcppPacket_list,
@@ -688,6 +702,8 @@ nCompile_finish_nonpackage <- function(units,
 
   if(any(unitTypes == "nCgen")) {
     newDLLenv <- make_DLLenv()
+    # The next call does NOT rely on alignment of compiledFuns and the other inputs.
+    # The other inputs are used to pick out and move subsets of compiledFuns.
     compiledFuns <- setup_nClass_environments(compiledFuns,
                                               newDLLenv,
                                               exportNames = exportNames[expect_nC_interface],
@@ -703,9 +719,12 @@ nCompile_finish_nonpackage <- function(units,
   ## cpp_names should be 1-to-1 with names(ans), with the exception of nF's that are not exported to R via RcppExport
   ## We want to return with names(ans) changed to
   ## names(units), in the order corresponding to cpp_names, but skipping non-exported nF's.
+  ## 
+  ## At the last step, we also exclude returning auto_included entries, and we must track that through any reordering
   unit_is_nF_noExport <- unitTypes=="nF_noExport"
   ans <- vector(mode="list", length = length(units))
   ans_names <- character(length = length(units))
+  ans_auto_included <- logical(length = length(units))
   for(i in seq_along(units)) {
     iRes <- -1 # will not get used. in cases where it is not replaced next, it is not used.
     if(unitTypes[i] == "nF") {
@@ -719,7 +738,14 @@ nCompile_finish_nonpackage <- function(units,
                      "  Returning list of compiled results with internal C++ names."))
       return(compiledFuns)
     }
-    ans_names[i] <- returnNames[i]# names(units)[i]
+    ## In the case of nCgen and !expect_createFromR[i], ans[[i]] will remain NULL
+    ## and below ans[[i]] will remain NULL, which is correct.
+    ## The next two lines are a bit silly in that we are simply copying two vectors
+    ## element by element. What they demonstrate is that the ans list is being returned
+    ## in the same order as input, even if that requires rearrangement from compiledFuns.
+    ## When returning an R6interface, that is being picked out by name.
+    ans_names[i] <- returnNames[i]
+    ans_auto_included[i] <- auto_included[i]
 
     if(unitTypes[i] == "nF") {
       ans[[i]] <- compiledFuns[[iRes]]
@@ -740,6 +766,14 @@ nCompile_finish_nonpackage <- function(units,
     # input and be fully named.
   }
   names(ans) <- ans_names
+
+  # Remove results that were auto_included.
+  # Arguably this could be done earlier and save work.
+  # It is done here for two reasons: being added to the code later,
+  #   and potential cleanness in being able to turn it off or modify later.
+  if(any(ans_auto_included)) {
+    ans <- ans[!ans_auto_included]
+  }
 
   if(is.list(ans)) { # ans should always be a list but this handles if it isn't
     if(!returnList) {

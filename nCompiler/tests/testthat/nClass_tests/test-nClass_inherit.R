@@ -13,8 +13,8 @@ message("See comments in test-nClass_inherit.R for more notes.")
 # We use the inheritance semantics of R6 classes to set the default rules for
 # nClasses.
 #
-# For fields: If two R6 classes have fields of the same name, they seem to 
-#. become one field. Therefore we disallow this in nClasses in order to 
+# For fields: If two R6 classes have fields of the same name, they seem to
+#. become one field. Therefore we disallow this in nClasses in order to
 #  avoid generating C++ classes that actually have two distinct members
 #. of the same name and then getting different compiled vs. uncompiled behavior.
 #  This is checked in NC_check_inheritance.
@@ -27,7 +27,7 @@ message("See comments in test-nClass_inherit.R for more notes.")
 #  fine and a base class method can be accessed by super$foo().
 #. However, R6 has no notion of virtual vs. non-virtual inheritance, no
 #. notion of signatures (argument and return types) being required to match
-#. for virtual inheritance, and no notion of base class pointers. In effect, 
+#. for virtual inheritance, and no notion of base class pointers. In effect,
 #  R6 objects are just passed as objects and a method call will always use
 #  the most derived version. To match that, we require nClass inherited methods
 #. of the same name to have exactly matching argument names, types, and return type.
@@ -51,7 +51,7 @@ message("See comments in test-nClass_inherit.R for more notes.")
 #  We now keep it that way as `inheritQ` (for "quoted")
 # This allows an nClass call to inherit from a method that isn't defined yet.
 
-# We do not currently support "super$" in compilation, so there is no 
+# We do not currently support "super$" in compilation, so there is no
 # way to call a base class method (yet).
 
 test_that("nClass hierarchy traps lack of virtual declaration", {
@@ -362,18 +362,6 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
 # cat("With inheritance, we may now be able to interface at multiple levels, but it is untested.\n")
 
 test_that("inheriting-only classes in 3-level hierarchy works", {
-  # This was written before all the error-trapping above.
-  # I am going to disable the error-trapping. I think this is good
-  # because now we also test the more general compilation, but
-  # I may not be thinking about cases we're missing.
-  oldOpt1 <- nOptions("allow_method_overloading")
-  oldOpt2 <- nOptions("allow_inherited_field_duplicates")
-  nOptions(allow_method_overloading = TRUE)
-  nOptions(allow_inherited_field_duplicates = TRUE)
-  on.exit({
-    nOptions(allow_method_overloading = oldOpt1)
-    nOptions(allow_inherited_field_duplicates = oldOpt2)
-  })
   ncBase <- nClass(
     classname = "ncBase",
     Cpublic = list(
