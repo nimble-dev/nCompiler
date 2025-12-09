@@ -38,7 +38,11 @@ calcInstr_nClass <- nClass(
                file.path("calcInstr_nClass")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   Hincludes = "<nodeInstr_nClass_c_.h>"
+                   Hincludes = "<nodeInstr_nClass_c_.h>",
+                   # In the format here, needed_units is a list with either objects (nFunction or nClass (generators),
+                   # or names. If names, we will use scoping to look them up and decide what they are.
+                   # The list can mix objects and names of nClasses and nFunctions.
+                   needed_units = list("nodeInstr_nClass")
                    #predefined_output_dir = "calcInstr_nClass"
                    )
 )

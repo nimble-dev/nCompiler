@@ -18,6 +18,8 @@ updateDefaults <- function(defaults, control) {
     allow_method_overloading = FALSE,
     allow_inherited_field_duplicates = FALSE,
     compilerOptions = list(
+      nCompile_include_units = TRUE, # Checked by nCompile, which sets always_include_units to match
+      always_include_units = FALSE, # Checked by NC_Compiler and NF_Compile.
       use_nCompiler_error_handling = TRUE,
       rebuild = FALSE,
       rebuildCppDef = FALSE,

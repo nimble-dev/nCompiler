@@ -139,9 +139,31 @@ NF_CompilerClass <- R6::R6Class(
                       doKeywords,
                       .nCompilerProject,
                       initialTypeInferenceOnly)
+    },
+    gather_needed_units = function() {
+      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals)
+      list(
+        needed_nClasses = c(self$gather_needed_nClasses(), 
+                           compileInfo_needed_units$needed_nClasses),
+        needed_nFunctions = c(self$gather_needed_nFunctions(),
+                              compileInfo_needed_units$needed_nFunctions)
+      )
+    },
+    gather_needed_nClasses = function() {
+      nCompile_gather_needed_nClasses(cppDef, self$symbolTable, self)
+    },
+    gather_needed_nFunctions = function() {
+      nCompile_gather_needed_nFunctions(cppDef, self)
     }
   )
 )
+
+nCompile_gather_needed_nFunctions <- function(cppDef,
+                                              NF_Compiler) {
+  lapply(NF_Compiler$auxEnv$needed_nFunctions,
+         function(x)
+           nGet(x[[1]], where = x[[2]])) |> unique()
+}
 
 processNFstages <- function(NFcompiler,
                             control = list(),
