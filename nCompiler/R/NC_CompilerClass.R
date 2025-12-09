@@ -115,6 +115,107 @@ NC_CompilerClass <- R6::R6Class(
                           NCgenerator)
         setupMethodSymbolTables()
       }
+    },
+    gather_needed_units = function() {
+      # This gathers from member variables and methods.
+      # It DOES NOT include an inherit nClass, because we could only access
+      #   the inheritNCinternals, but we need the generator object.
+      # Hence this is collected from nCompile_nClass.
+      # list() |> unlist() returns NULL so we have to catch that and give list() instead.
+      # list() |> unique() retruns list(), what we want.
+      needed_nClasses1 <- nCompile_gather_needed_nClasses(cppDef, self$symbolTable)
+      needed_nClasses2 <- lapply(NFcompilers,
+                                  \(x) x$gather_needed_nClasses()) |> 
+                          unlist(recursive = FALSE) |> unique()
+      needed_nFunctions <- lapply(NFcompilers,
+                                  \(x) x$gather_needed_nFunctions()) |> 
+                          unlist(recursive = FALSE) |> unique()
+      compileInfo_needed_units <- nCompile_process_manual_needed_units(
+                                    NCinternals(self$NCgenerator),
+                                    self$NCgenerator$parent_env, isNC = TRUE)
+      list(
+        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2 %||% list(),
+                                   compileInfo_needed_units$needed_nClasses)),
+        needed_nFunctions = unique(c(needed_nFunctions %||% list(), 
+                                     compileInfo_needed_units$needed_nFunctions))
+      )
     }
   )
 )
+
+nCompile_process_manual_needed_units <- function(internals, 
+                                                      where = internals$where, # NFinternals case
+                                                      isNC = FALSE) {
+  # This function collects two forms of "manual" needed units (nClasses and nFunctions):
+  # those provided via compileInfo$needed_units and also (in the case of nClass)
+  # an inherited nClass.
+  #
+  # A little awkwardness on the input arguments:
+  # It would be nice to pass either just the internals (NCinternals(NC) or NFinternals(NF))
+  # OR just the NC or NF object.
+  # But neither case is consistent between nClass and nFunction.
+  # We would need the nClass generator to get the where (parent_env), and the NCinternals doesn't have that.
+  # Conversely, we could pass the objects, but the NF_CompilerClass (a calling point) does not have the NF object.
+  # Therefore, we make this harder to read and pass both internals and where and indicate which case we're in with isNC.
+  # The defaults are for the case of NF, where internals is NFinternals(NF).
+  name <- if(isNC) internals$classname else internals$uniqueName
+
+  needed_units <- internals$compileInfo$needed_units
+  results_nClasses <- list()
+  results_nFunctions <- list()
+  for(i in seq_along(needed_units)) {
+    if(is.character(needed_units[[i]])) {
+      obj <- nGet(needed_units[[i]], where)
+      if(is.null(obj))
+        stop(paste0("In processing compileInfo$needed_units for ", name, ", could not find object named '",
+                    needed_units[[i]], "' in the environment of the source unit."))
+    } else {
+      obj <- needed_units[[i]]
+    }
+    if(isNCgenerator(obj)) {
+      results_nClasses[[length(results_nClasses) + 1]] <- obj
+    } else if(isNF(obj)) {
+      results_nFunctions[[length(results_nFunctions) + 1]] <- obj
+    } else {
+      stop(paste0("In processing compileInfo$needed_units for ", name, ", object '",
+                  needed_units[[i]], "' is neither an nClass generator nor an nFunction."))
+    }
+  }
+
+  if(isNC) {
+    # Get inherited nClass as a needed unit
+    if(!is.null(internals$inheritQ)) {
+      inherit_obj <- eval(internals$inheritQ, envir = internals$env) # see connect_inherit
+      if(!isNCgenerator(inherit_obj))
+        stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
+      results_nClasses[[length(results_nClasses) + 1]] <- inherit_obj
+    }
+  }
+
+  list(needed_nClasses = results_nClasses,
+       needed_nFunctions = results_nFunctions)
+}
+
+nCompile_gather_needed_nClasses <- function(cppDef,
+                                            symTab,
+                                            NF_Compiler = NULL) {
+  # Collect nClass generators needed by this symbol table
+  new_needed <- list()
+  for(i in seq_along(symTab$symbols)) {
+    if(inherits(symTab$symbols[[i]], "symbolNC")) {
+      new_needed[[length(new_needed) + 1]] <-
+        symTab$symbols[[i]]$NCgenerator
+    }
+  }
+  # For an nFunction, collection nClass generators identified
+  # from processing the code.
+  if(!is.null(NF_Compiler)) {
+    auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
+    if(length(auxEnv_needed_nClasses)) {
+      bool_NCgen <- lapply(auxEnv_needed_nClasses, isNCgenerator) |> unlist()
+      new_needed <- c(new_needed,
+                      auxEnv_needed_nClasses[bool_NCgen])
+    }
+  }
+  unique(new_needed)
+}
