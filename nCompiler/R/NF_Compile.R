@@ -59,7 +59,8 @@ nCompile_nFunction <- function(NF,
 
   is_predefined <- !isFALSE(NFinternals(NF)$predefined)
   gather_needed_units <- isTRUE(controlFull$always_include_units)
-  needed_units <- list()
+  needed_units <- list(needed_nClasses = list(),
+                       needed_nFunctions = list())
   if(is_predefined) {
     predefined_dir <-  NFinternals(NF)$predefined
     # predefined can be character, quoted expression, or function.
@@ -77,7 +78,8 @@ nCompile_nFunction <- function(NF,
        "It should give the directory path of the predefined nFunction. ",
        "The name argument to nFunction gives the base for filenames in that directory.")
     regular_filename <-  NFinternals(NF)$cpp_code_name
-    if(gather_needed_units) needed_units <- NFinternals(NF)$compileInfo$needed_units
+    if(gather_needed_units) 
+      needed_units <- nCompile_process_manual_needed_units(NFinternals(NF))
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)

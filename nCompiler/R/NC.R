@@ -90,6 +90,7 @@ nClass <- function(classname,
   #   All inheritance provided by compileInfo$inherit should include any
   #   accessor specifier, typically "public", e.g. "public some_class".
   #   Similarly, template arguments (include CRTP) should be in the text explicitly.
+  # needed_units: list of needed nClasses and nFunctions to include, by name or object
   #
   # constructor(s) and destructor:
   #

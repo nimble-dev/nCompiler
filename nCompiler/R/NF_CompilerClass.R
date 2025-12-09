@@ -141,9 +141,12 @@ NF_CompilerClass <- R6::R6Class(
                       initialTypeInferenceOnly)
     },
     gather_needed_units = function() {
+      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals)
       list(
-        needed_nClasses = self$gather_needed_nClasses(),
-        needed_nFunctions = self$gather_needed_nFunctions()
+        needed_nClasses = c(self$gather_needed_nClasses(), 
+                           compileInfo_needed_units$needed_nClasses),
+        needed_nFunctions = c(self$gather_needed_nFunctions(),
+                              compileInfo_needed_units$needed_nFunctions)
       )
     },
     gather_needed_nClasses = function() {

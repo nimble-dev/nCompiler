@@ -33,161 +33,7 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 #    - In nCompile, the cpp_name for that unitResult is the cpp_code_name
 
 #' @export
-# This was original but is replaced below by a version that integrates with packing as inherent workflow
-## nCompile1 <- function(...,
-##                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-##                      cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
-##                      env = parent.frame(),
-##                      control = list(),
-##                      interfaces = "full",
-##                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
-##   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
-##   origList <- list(...)
-##   if(is.null(names(origList)))
-##     names(origList) <- rep('', length(origList))
-##   boolNoName <- names(origList)==''
-##   origIsList <- unlist(lapply(origList, is.list))
-##   for(i in which(origIsList)) {
-##     if(is.null(names(origList[[i]])) || any(names(origList[[i]])==""))
-##       stop("If you provide a list of compilation units, all list elements must be named.")
-##   }
-##   dotsDeparses[origIsList] <- ''
-##   names(origList)[boolNoName] <- dotsDeparses[boolNoName] # This puts default names from deparsing ... entries into list
-##   units <- do.call('c', origList)
 
-##   # Unpack interfaces argument from various formats.
-##   # Remember interface is only needed for nClass compilation units
-##   if(!is.list(interfaces)) {
-##     if(is.character(interfaces)) {
-##       if(length(interfaces) == 1) {
-##         interfaces <- rep(interfaces, length(units))
-##         names(interfaces) <- names(units) # nFunction units will just be ignored
-##       }
-##     }
-##     interfaces <- as.list(interfaces)
-##   }
-
-##   unitTypes <- get_nCompile_types(units)
-##   if(is.null(names(units))) names(units) <- rep('', length(units))
-##   if(length(units) == 0) stop('No objects for compilation provided')
-##   unitResults <- list()
-##   ## names(units) should be fully populated and unique. TO-DO: check.
-##   cpp_names <- character(length(units))
-##   # RcppPacket_list <- vector(length = length(units), mode = "list")
-##   for(i in seq_along(units)) {
-##     if(unitTypes[i] == "nF") {
-##       unitResults[[i]] <- nCompile_nFunction(units[[i]],
-##                                              stopAfterCppDef = TRUE,
-##                                              env = env,
-##                                              control = control)
-##       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
-## #      RcppPacket_list[[i]] <- NFinternals(unitResults[[i]])$RcppPacket
-##     } else if(unitTypes[i] == "nCgen") {
-##       unitResults[[i]] <- nCompile_nClass(units[[i]],
-##                                           stopAfterCppDef = TRUE,
-##                                           env = env,
-##                                           control = control)
-##       cpp_names[i] <- NCinternals(units[[i]])$cpp_classname
-##  #     RcppPacket_list[[i]] <- NCinternals(unitResults[[i]])$RcppPacket
-##     }
-##   }
-
-##   allCppDefs <- c(unitResults,
-##                   do.call("c", lapply(unitResults, function(x) x$getExternalDefs())))
-##   allCppDefs <- allCppDefs[!duplicated(allCppDefs)] # preserves names. unique(allCppDefs) does not.
-##   RcppPacket_list <- lapply(allCppDefs, cppDefs_2_RcppPacket)
-
-##   ## Write the results jointly, with one .cpp file and multiple .h files.
-##   ## This fits Rcpp::sourceCpp's requirements.
-##   cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
-##   resultEnv <- new.env()
-##   compiledFuns <- cpp_nCompiler(RcppPacket_list,
-##                                 cppfile = cppfile,
-##                                 dir = dir,
-##                                 cacheDir = cacheDir,
-##                                 env = resultEnv,
-##                                 packetList = TRUE,
-##                                 returnList = TRUE)
-
-##   # Build full interfaces for everything, even if generic is requested in the return object.
-##   unit_is_nClass <- unitTypes=="nCgen"
-##   num_nClasses <- sum(unit_is_nClass)
-##   R6interfaces <- vector(mode="list", length = length(units) ) # will remain null for nFunctions
-##   if(num_nClasses > 0) {
-##     for(i in seq_along(units)) {
-##       if(unit_is_nClass[i]) {
-##         nClass_name <- names(units)[i]
-##         iRes <- which( paste0("new_", cpp_names[i]) == names(compiledFuns))
-##         if(length(iRes) != 1) {
-##           warning(paste0("Building R6 inteface classes: Name matching of results had a problem for ", nClass_name, "."))
-##         } else {
-##           R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
-##                                                          compiledFuns[[iRes]],
-##                                                          env = resultEnv))
-##           if(inherits(R6interfaces[[i]], "try-error")) {
-##             warning(paste0("There was a problem building a full nClass interface. for ", nClass_name, "."))
-##             R6interfaces[[i]] <- NULL
-##           }
-##         }
-##       }
-##     }
-##   }
-##   names(R6interfaces) <- cpp_names
-
-##   if(any(unitTypes == "nCgen")) {
-##     newDLLenv <- make_DLLenv()
-##     compiledFuns <- setup_nClass_environments(compiledFuns,
-##                                            newDLLenv,
-##                                            nC_names = cpp_names[unitTypes=="nCgen"],
-##                                            R6interfaces = R6interfaces,
-##                                            returnList = TRUE)
-##   }
-
-##   ## Next we re-order results using input names,
-##   ## in case the ordering in the C++ code or in Rcpp's handling
-##   ## does not match order of units.
-##   ## cpp_names should be 1-to-1 with names(ans)
-##   ## We want to return with names(ans) changed to
-##   ## names(units), in the order corresponding to cpp_names.
-##   ans <- vector(mode="list", length = length(units))
-##   ans_names <- character(length = length(units))
-##   for(i in seq_along(units)) {
-##     if(unitTypes[i] == "nF") {
-##       iRes <- which(cpp_names[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
-##     } else if(unitTypes[i] == "nCgen") {
-##       iRes <- which( paste0("new_", cpp_names[i]) == names(compiledFuns))
-##     } else {
-##       iRes <- integer()
-##     }
-##     if(length(iRes) != 1) {
-##       warning(paste0("Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
-##                      "  Returning list of compiled results with internal C++ names."))
-##       return(compiledFuns)
-##     }
-##     ans_names[i] <- names(units)[i]
-
-##     if(unitTypes[i] == "nF") {
-##       ans[[i]] <- compiledFuns[[iRes]]
-##     } else if(unitTypes[i] == "nCgen") {
-##       interfaceType <- interfaces[[ ans_names[i] ]]
-##       if(is.null(interfaceType))
-##         interfaceType <- "full"
-##       if(interfaceType == "full")
-##         ans[[i]] <- R6interfaces[[cpp_names[i] ]]
-##       else
-##         ans[[i]] <- compiledFuns[[iRes]]
-##     }
-##   }
-##   names(ans) <- ans_names
-
-##   if(is.list(ans)) { # ans should always be a list but this handles if it isn't
-##     if(!returnList) {
-##       if(length(ans) == 1) ans[[1]]
-##       else ans
-##     } else ans
-##   } else if(returnList) list(ans)
-##   else ans
-## }
 
 get_nCompile_types <- function(units) {
   ans <- character(length(units))
@@ -447,7 +293,21 @@ nCompile <- function(...,
     # but we are going to mix them together as if they were an arbitrary
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
-    new_units <- setdiff(new_units, units)
+    ## We need to make our own version of setdiff as it won't work on these types.
+    ## For now we rely on identical(). If this gets clunky or inefficient,
+    ## we can refine, but that would then need looking at types of each comparison
+    ## to decide how to do the comparison.
+    keep_new_unit <- rep(TRUE, length(new_units))
+    for(i in seq_along(new_units)) {
+      this_new_unit <- new_units[[i]]
+      for(j in seq_along(units)) {
+        if(identical(this_new_unit, units[[j]])) {
+          keep_new_unit[i] <- FALSE
+          break
+        }
+      }
+    }
+    new_units <- new_units[keep_new_unit]
     if(length(new_units) == 0) {
         done_finding_units <- TRUE
     } else {

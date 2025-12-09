@@ -27,7 +27,7 @@ NC_InternalsClass <- R6::R6Class(
     predefined = FALSE, # directory for reading and (default) writing predefined nClass saved RcppPacket. Writing location can be over-ridden by compileInfo$predefined_output_dir
     inheritNCinternals = NULL,
     env = NULL,
-    inheritQ = NULL,
+    inheritQ = NULL, # quoted inherit expression, to defer access to the inherited nClass generator itself.
     process_inherit_done = FALSE,
     virtualMethodNames_self = character(), # will be used when checking inherited method validity, only for locally implemented methods
     virtualMethodNames = character(),
@@ -101,7 +101,7 @@ NC_InternalsClass <- R6::R6Class(
       if(!is.null(self$inheritQ)) {
         inherit_obj <- eval(self$inheritQ, envir = self$env) #inheritQ can be an expression but it must always return the same generator object
         if(!isNCgenerator(inherit_obj))
-          stop("An inherit argument that was provided to nClass is not nClass generator.")
+          stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
         self$inheritNCinternals <- NCinternals(inherit_obj)
         message("add check that base class has interface 'none'")
         if(!self$inherit_base_provided) {

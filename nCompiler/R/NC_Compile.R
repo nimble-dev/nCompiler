@@ -47,7 +47,8 @@ nCompile_nClass <- function(NC,
   )
   is_predefined <- !isFALSE(NCinternals(NC)$predefined)
   gather_needed_units <- isTRUE(controlFull$always_include_units)
-  needed_units <- list()
+  needed_units <- list(needed_nClasses = list(),
+                       needed_nFunctions = list())
   if(is_predefined) {
     predefined_dir <-  NCinternals(NC)$predefined
     # predefined can be character, quoted expression, or function.
@@ -64,15 +65,17 @@ nCompile_nClass <- function(NC,
       stop("There is a predefined nClass whose predefined field is not (and does not evaluate to) character. ",
        "It should give the directory path of the predefined nClass. ",
        "The classname argument to nClass gives the base for filenames in that directory.")
-     regular_filename <-  NCinternals(NC)$cpp_classname
-     if(gather_needed_units) needed_units <- NCinternals(NC)$compileInfo$needed_units
+    regular_filename <-  NCinternals(NC)$cpp_classname
+    if(gather_needed_units)
+      needed_units <- nCompile_process_manual_needed_units(NCinternals(NC),
+                                                                NC$parent_env, isNC = TRUE)
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
     cppDef <- cppRcppPacket$new(RcppPacket = RcppPacket)
     cppDef$externalCppDefs <- c(cppDef$externalCppDefs,
                                 get_R_interface_cppDef()) #might not be needed, but doesn't hurt to add and we don't have the details on whether it is needed from the loaded RcppPacket.
-  } else {
+ } else {
     if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC,
