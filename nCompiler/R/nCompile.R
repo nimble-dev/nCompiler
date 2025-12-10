@@ -670,8 +670,8 @@ nCompile_finish_nonpackage <- function(units,
           } else {
             if(expect_createFromR[i]) createFromR_fun <- compiledFuns[[iRes]]
             R6interfaces[[i]] <- try(build_compiled_nClass(units[[i]],
-                                                            createFromR_fun,
-                                                            env = resultEnv))
+                                                            createFromR_fun))
+                                                           # env = resultEnv))
             if(inherits(R6interfaces[[i]], "try-error")) {
               warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
               R6interfaces[[i]] <- NULL

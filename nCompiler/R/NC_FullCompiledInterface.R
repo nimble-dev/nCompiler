@@ -55,7 +55,7 @@
 #' @export
 build_compiled_nClass <- function(NCgenerator,
                                   newCobjFun,
-                                  env = parent.frame(),
+                                  env = NCgenerator$parent_env,
                                   quoted = FALSE) {
   # One might wonder if we can have an R6 class created here to
   # interface with a compiled C++ class be established with
