@@ -1,25 +1,6 @@
-/* OPENER (Do not edit this comment) */
-#ifndef __modelBase_nClass_H
-#define __modelBase_nClass_H
-/* BODY (Do not edit this comment) */
-#ifndef R_NO_REMAP
-#define R_NO_REMAP
-#endif
-#include <Rinternals.h>
-#include <nodeFxnBase_nClass_c_.h>
-#include "calcInstrList_nC_c_.h"
-
-class modelBase_nClass : public interface_resolver< genericInterfaceC<modelBase_nClass> >, public loadedObjectHookC<modelBase_nClass> {
-public:
-   virtual  bool  ping (  ) ;
-   virtual  double  calculate ( std::shared_ptr<calcInstrList_nC> calcInstr ) ;
-      modelBase_nClass (  ) ;
-    virtual ~modelBase_nClass();
-};
-
-    void  set_CnClass_env_modelBase_nClass ( SEXP env ) ;
-
-    Rcpp::Environment  get_CnClass_env_modelBase_nClass (  ) ;
+// to be included from the predefined modelBase_nClass.
+// Add "#include <nCompiler/predef/modelClass_/modelClass_.h>" to that file,
+// after the declaration of modelBase_nClass.
 
 
 template<class Derived>
@@ -28,7 +9,7 @@ public:
     modelClass_() {};
     std::vector< std::shared_ptr<nodeFxnBase_nClass> > nodeFxnPtrs;
     std::map<std::string, size_t> name2index_map;
-    double calculate(std::shared_ptr<calcInstrList_nC> calcInstrList) override {
+    double calculate(std::shared_ptr<calcInstrList_nClass> calcInstrList) override {
         double logProb(0.0);
         const auto& calcInstrVec = calcInstrList->calcInstrList.get();
         auto calcInstr = calcInstrVec.cbegin();
@@ -44,6 +25,46 @@ public:
         }
         return(logProb);
     }
+    
+    // This version takes a character vector of names from R so that
+    // the ordering of nodeFxns matches that in R, which is important for
+    // the calculation instructions.
+    void do_setup_node_mgmt_from_names(Rcpp::CharacterVector names)   {
+        Rprintf("Attempting setup_node_mgmt_from_names with %d names\n", (int)names.length());
+        Derived *self = static_cast<Derived*>(this);
+        const auto& name2access = self->get_name2access();
+        nodeFxnPtrs.clear();
+        name2index_map.clear();
+        size_t n = names.length();
+        for(size_t i = 0; i < n; ++i) {
+            std::string name = Rcpp::as<std::string>(names[i]);
+            auto it = name2access.find(name);
+            if(it != name2access.end()) {
+                std::shared_ptr<genericInterfaceBaseC> ptr = it->second->getInterfacePtr(dynamic_cast<genericInterfaceBaseC*>(self));
+                // When looking up this way, we do expect always to find objects (ptr valid) and that they are nodeFxn ptrs (ptr2 valid).
+                // So we can turn these messages into errors once things are working.
+                bool got_one = (ptr != nullptr);
+                if(got_one) {
+                    Rprintf("HOORAY: field %s is genericInterfaceBaseC\n", name.c_str());
+                    std::shared_ptr<nodeFxnBase_nClass> ptr2 = std::dynamic_pointer_cast<nodeFxnBase_nClass>(ptr);
+                    bool step_two = (ptr2 != nullptr);
+                    if(step_two) {
+                        Rprintf("AND IT IS A NODEFXN PTR!\n");
+                        name2index_map.emplace(name, nodeFxnPtrs.size());
+                        nodeFxnPtrs.push_back(ptr2);
+                    } else {
+                        Rprintf("but it is not a nodefxn ptr\n");
+                    }
+                } else {
+                    Rprintf("field %s is NOT a genericInterfaceBaseC\n", name.c_str());
+                }
+            }
+        }
+    }
+
+    // This version scans all members to find nodeFxns.
+    // The resulting ordering comes from the order of the name2access map,
+    // and so may not match R. This was written first but may fall out of common use.
     void setup_node_mgmt() {
         Derived *self = static_cast<Derived*>(this);
         const auto& name2access = self->get_name2access();
@@ -130,4 +151,3 @@ public:
         }
     }
 };
-#endif

@@ -1,7 +1,0 @@
-list(saved_at = structure(1762608220.96116, class = c("POSIXct", 
-"POSIXt")), packet_name = "calcInstrList_nC", elements = c("preamble", 
-"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
-), files = list(preamble = "calcInstrList_nC_preamble.cpp", 
-    cppContent = "calcInstrList_nC_cppContent.cpp", hContent = "calcInstrList_nC_hContent.h", 
-    filebase = "calcInstrList_nC_filebase.txt", post_cpp_compiler = "calcInstrList_nC_post_cpp_compiler.txt", 
-    copyFiles = "calcInstrList_nC_copyFiles.txt"))

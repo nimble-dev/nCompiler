@@ -4,8 +4,27 @@
 library(nCompiler)
 library(testthat)
 
+# To update the set of predefined nClasses
+# generate new predef/nodeInstr_nC. Move that directly to package code inst/nCompiler/predef/nodeInstr_nC
+nCompile(nodeInstr_nClass, control=list(generate_predefined=TRUE))
+#
+# generate new predef/calcInstr_nC. Ditto: move directly to package code
+nCompile(calcInstr_nClass, control=list(generate_predefined=TRUE))
+#
+# generate new predef/calcInstrList_nC. Ditto: move directly to package code
+nCompile(calcInstrList_nClass, control=list(generate_predefined=TRUE))
+#
+# generate new predef/nodeFxnBase_nC. Move to package and add
+# "#include <nCompiler/predef/nodeFxnClass_/nodeFxnClass_.h>" in the hContent
+# after declaration of newFxnBase_nClass
+nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
+#
+# generate new predef/modelBase_nC. Move to package and add
+# "#include <nCompiler/predef/modelClass_/modelClass_.h>" to that file,
+# after the declaration of modelBase_nClass.
+nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
 #nCompile(nodeFxnBase_nClass, nodeInstr_nClass, control=list(generate_predefined=TRUE))
-#nCompile(nodeInstr_nClass, calcInstr_nClass, modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, control=list(generate_predefined=TRUE))
+#nCompile(nodeInstr_nClass, calcInstr_nClass, modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, control=list(generate_predefined=TRUE))
 
 test_that("nimble model prototype works", {
   nodeVarInfo <- list(list(name = "x", nDim  = 1), list(name = "mu", nDim = 1),
@@ -18,8 +37,8 @@ test_that("nimble model prototype works", {
       return(ans)
     }
   )
-  my_nodeFxn <- make_node_fun(nodeVarInfo, list(calc_one=calc_one), "test_node")
-  my_nodeInfo <- nCompiler:::make_node_info("beta_NF1", "my_nodeFxn", "test_node", nodeVarInfo)
+  my_nodeFxn <- make_node_nClass(nodeVarInfo, list(calc_one=calc_one), "test_node")
+  my_nodeInfo <- nCompiler:::make_node_info_for_model_nClass("beta_NF1", "my_nodeFxn", "test_node", nodeVarInfo)
 
   modelVarInfo <- list(list(name="x", nDim = 1),
                        list(name = "mu", nDim = 1),
@@ -29,7 +48,8 @@ test_that("nimble model prototype works", {
   ncm1 <- makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model")
   #undebug(nCompiler:::addGenericInterface_impl)
   #undebug(nCompiler:::nCompile_finish_nonpackage)
-  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1, my_nodeFxn)
+  Cncm1 <- nCompile(ncm1, returnList=TRUE)
+  #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, my_nodeFxn)
   obj <- Cncm1$ncm1$new()
 
   obj$do_setup_node_mgmt()
@@ -57,8 +77,8 @@ test_that("nimble model prototype works", {
 })
 
 test_that("nodeInstr_nClass and calcInstr_nClass basics work", {
-  test <- nCompile(nodeInstr_nClass, calcInstr_nClass, calcInstrList_nC, control=list(generate_predefined=TRUE))
-  calcInstrList <- test$calcInstrList_nC$new()
+  test <- nCompile(nodeInstr_nClass, calcInstr_nClass, calcInstrList_nClass, control=list(generate_predefined=TRUE))
+  calcInstrList <- test$calcInstrList_nClass$new()
   calcInstr <- test$calcInstr_nClass$new()
   expect_equal(calcInstr$nodeInstrVec, list())
   ni1 <- test$nodeInstr_nClass$new()
@@ -92,7 +112,8 @@ test_that("nimble model variables are set up", {
   modelVars <- varInfo$vars
   # Try making a model with no nodeFxns
   ncm1 <- makeModel_nClass(modelVars, list(), classname = "my_model")
-  Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nC, calcInstr_nClass, nodeInstr_nClass, ncm1)
+  Cncm1 <- nCompile(ncm1, returnList=TRUE)
+  #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1)
   obj <- Cncm1$ncm1$new()
   obj$resize_from_list(varInfo$sizes)
   expect_equal(length(obj$x), 6)
@@ -120,23 +141,25 @@ if(FALSE) {
   expect_true(!is.null(NFinternals(nFxn[[1]])$R_fun))
 
   # uncompiled
+  Ctest <- nCompiler:::make_model_from_nimbleModel(m, compile=TRUE)
+  debugonce(nCompiler:::makeModel_nClass)
   test <- nCompiler:::make_model_from_nimbleModel(m, compile=FALSE)
   Robj <- test$new()
 
   NULL
   ## Compile
-  debugonce(nCompiler:::make_model_from_nimbleModel)
+  #debugonce(nCompiler:::make_model_from_nimbleModel)
   test <- nCompiler:::make_model_from_nimbleModel(m)
 
 
-obj <- test$model$new()
-obj$do_setup_node_mgmt()
-vals <- list(x = 2:7, y = 11:15, sd = 8)
-obj$set_from_list(vals)
+  obj <- test$model$new()
+  obj$do_setup_node_mgmt()
+  vals <- list(x = 2:7, y = 11:15, sd = 8)
+  obj$set_from_list(vals)
 
-nodeFxn_2_nodeIndex <- c(nodeFxn_1 = 1, nodeFxn_3 = 2)
+  nodeFxn_2_nodeIndex <- c(nodeFxn_1 = 1, nodeFxn_3 = 2)
 
-calcInputList <- list(list(nodeFxn="nodeFxn_1",        # which declaration (nodeFxn)
+  calcInputList <- list(list(nodeFxn="nodeFxn_1",        # which declaration (nodeFxn)
                            nodeInputVec = list(list(methodInput=1,  # which index iteration method
                                                     indsInputVec=list(1))))) # input(s) to index iterations
 

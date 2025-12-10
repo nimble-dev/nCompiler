@@ -21,10 +21,10 @@ nodeInstr_nClass <- nClass(
     indsInstrVec = "nList('integerVector')"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-               file.path("nodeInstr_nClass")),
+               file.path("nodeInstr_nC")),
   compileInfo=list(interface="full",
-                   createFromR = TRUE#,
-                   #predefined_output_dir = "nodeInstr_nClass"
+                   createFromR = TRUE,
+                   exportName = "nodeInstr_nClass"
                    )
 )
 
@@ -35,20 +35,20 @@ calcInstr_nClass <- nClass(
     nodeInstrVec = "nList('nodeInstr_nClass')"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-               file.path("calcInstr_nClass")),
+               file.path("calcInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
                    Hincludes = "<nodeInstr_nClass_c_.h>",
                    # In the format here, needed_units is a list with either objects (nFunction or nClass (generators),
                    # or names. If names, we will use scoping to look them up and decide what they are.
                    # The list can mix objects and names of nClasses and nFunctions.
-                   needed_units = list("nodeInstr_nClass")
-                   #predefined_output_dir = "calcInstr_nClass"
+                   needed_units = list("nodeInstr_nClass"),
+                   exportName = "calcInstr_nClass"
                    )
 )
 
-calcInstrList_nC <- nClass(
-  classname = "calcInstrList_nC",
+calcInstrList_nClass <- nClass(
+  classname = "calcInstrList_nClass",
   Cpublic = list(
     calcInstrList = "nList('calcInstr_nClass')"
   ),
@@ -56,7 +56,10 @@ calcInstrList_nC <- nClass(
                file.path("calcInstrList_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   Hincludes = "<calcInstr_nClass_c_.h>")
+                   Hincludes = "<calcInstr_nClass_c_.h>",
+                   exportName = "calcInstrList_nClass",
+                   needed_units = list("calcInstr_nClass")
+                   )
 )
 
 nodeFxnBase_nClass <- nClass(
@@ -76,9 +79,10 @@ nodeFxnBase_nClass <- nClass(
   # We haven't dealt with ensuring a virtual destructor when any method is virtual
   # For now I did it manually by editing the .h and .cpp
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-               file.path("nodeFxnBase_nClass")),
+               file.path("nodeFxnBase_nC")),
   compileInfo=list(interface="full",
-                   createFromR = FALSE)
+                   createFromR = FALSE,
+                   exportName = "nodeFxnBase_nClass")
 )
 
 # nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
@@ -93,20 +97,34 @@ modelBase_nClass <- nClass(
     ),
     calculate = nFunction(
         name = "calculate",
-        function(calcInstrList) {cat("In uncompiled calculate\n")},
+        function(calcInstrList) {
+          cat("In uncompiled calculate\n")
+          # This is where uncompiled stepping through the calcInstrList happens.
+          for(calcInstr in calcInstrList$calcInstrList) {
+            nodeIdx <- calcInstr$nodeIndex
+            nodemember_name <- self$get_nodeObjNames()[nodeIdx]
+            for(nodeInstr in calcInstr$nodeInstrVec) {
+              self[[nodemember_name]]$calculate(nodeInstr)
+            }
+          }
+          return(0)
+        },
         returnType = 'numericScalar',
         compileInfo = list(
-          C_fun = function(calcInstrList='calcInstrList_nC') {
+          C_fun = function(calcInstrList='calcInstrList_nClass') {
             cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
           virtual=TRUE
         )
     )  
   ),
   # See comment above about needing to ensure a virtual destructor
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nClass")),
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nC")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nC_c_.h>"))
+                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nClass_c_.h>"), # do we need "<nodeFxnBase_nClass_c_.h>" too?
+                   needed_units = list("nodeFxnBase_nClass","calcInstrList_nClass"), #do we need nodeFxnBase_nClass here too?
+                   exportName = "modelBase_nClass"
+                   )
 )
 
 # nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
@@ -153,21 +171,24 @@ nm_addModelDollarSign <- function(expr, exceptionNames = character(0)) {
 ## obj$calculate(NULL)
 
 # Turn variables and methods into a nodeFxn nClass
-make_node_fun <- function(varInfo = list(),
-                          methods = list(),
-                          classname) {
+make_node_nClass <- function(varInfo = list(),
+                            methods = list(),
+                            classname) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
-  varInfo_2_cppVar <- \(x) nCompiler:::symbolBasic$new(
+  # These are the model member variables to be used by the nodeFxn.
+  # They will be used in a constructor to set up C++ references to model variables.
+  varInfo_2_symbol <- \(x) nCompiler:::symbolBasic$new(
     type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # In future maybe isConst=TRUE, but it might not matter much
-  typeList <- varInfo |> lapply(varInfo_2_cppVar)
-  names(typeList) <- varInfo |> lapply(\(x) x$name) |> unlist()
+  symbolList <- varInfo |> lapply(varInfo_2_symbol)
+  names(symbolList) <- varInfo |> lapply(\(x) x$name) |> unlist()
 
-  CpublicVars <- names(typeList) |> lapply(\(x) eval(substitute(quote(T(typeList$NAME)),
+  CpublicVars <- names(symbolList) |> lapply(\(x) eval(substitute(quote(T(symbolList$NAME)),
                                                     list(NAME=as.name(x)))))
-  names(CpublicVars) <- names(typeList)
+  names(CpublicVars) <- names(symbolList)
 
-  ctorArgNames <- paste0(names(typeList), '_')
-  initializersList <- paste0(names(typeList), '(', ctorArgNames ,')')
+  ctorArgNames <- paste0(names(symbolList), '_')
+  # List used when generating C++ constructor code to allow direct initializers, necessary for references.
+  initializersList <- paste0(names(symbolList), '(', ctorArgNames ,')')
   initFun <- function(){}
   formals(initFun) <- structure(as.pairlist(CpublicVars), names = ctorArgNames)
 
@@ -176,6 +197,7 @@ make_node_fun <- function(varInfo = list(),
 
   baseclass <- paste0("nodeFxnClass_<", classname, ">")
 
+  # Rpublic method to set the model pointer/reference.
   setModel <- function(model) {
     if(!isCompiled())
       self$model <- model
@@ -186,6 +208,7 @@ make_node_fun <- function(varInfo = list(),
 #  This was a prototype
   node_nClass <- substitute(
     nClass(
+      inherit = nodeFxnBase_nClass,
       classname = CLASSNAME,
       Rpublic = RPUBLIC,
       Cpublic = CPUBLIC,
@@ -218,7 +241,7 @@ make_node_fun <- function(varInfo = list(),
 # Currently it needs to have a name to include in nCompile(). Later we might be able to pass the object itself
 # At first drafting this is fairly trivial but could grow in complexity.
 
-make_node_info <- function(membername,
+make_node_info_for_model_nClass <- function(membername,
                            nodeFxnName,
                            classname,
                            varInfo = list()
@@ -240,12 +263,15 @@ makeModel_nClass <- function(varInfo,
   names(CpublicModelVars) <- varInfo |> lapply(\(x) x$name) |> unlist()
   opDefs <- list(
     base_ping = getOperatorDef("custom_call"),
-    setup_node_mgmt = getOperatorDef("custom_call")
+    setup_node_mgmt = getOperatorDef("custom_call"),
+    do_setup_node_mgmt_from_names = getOperatorDef("custom_call")
   )
   opDefs$base_ping$returnType <- nCompiler:::argType2symbol(quote(void()))
   opDefs$base_ping$labelAbstractTypes$recurse <- FALSE
   opDefs$setup_node_mgmt$returnType <- nCompiler:::argType2symbol(quote(void()))
   opDefs$setup_node_mgmt$labelAbstractTypes$recurse <- FALSE
+  opDefs$do_setup_node_mgmt_from_names$returnType <- nCompiler:::argType2symbol(quote(void()))
+  opDefs$do_setup_node_mgmt_from_names$labelAbstractTypes$recurse <- FALSE
 
   if(missing(classname))
     classname <- modelLabelCreator()
@@ -256,6 +282,12 @@ makeModel_nClass <- function(varInfo,
       function() {},
       compileInfo=list(
         C_fun = function() {setup_node_mgmt()})
+    ),
+    setup_node_mgmt_from_names = nFunction(
+      name = "call_setup_node_mgmt_from_names",
+      function(nodeNames) {},
+      compileInfo=list(
+        C_fun = function(nodeNames="RcppCharacterVector") {do_setup_node_mgmt_from_names(nodeNames)})
     ),
     print_nodes = nFunction(
       name = "print_nodes",
@@ -280,14 +312,18 @@ makeModel_nClass <- function(varInfo,
   )
   # nodes will be a list of membername, nodeFxnName, (node) classname, ctorArgs (list)
   node_pieces <- nodes |> lapply(\(x) {
-    nClass_type <- paste0(x$nodeFxnName, "()")
+    #nClass_type <- paste0(x$nodeFxnName, "()")
     init_string <- paste0('nCpp("', x$membername, '( new ', x$classname, '(',
                                     paste0(x$ctorArgs, collapse=","), '))")')
-    list(nClass_type = nClass_type,
+    list(nClass_type = x$nodeFxnName,
          init_string = init_string,
          membername = x$membername)
   })
   nodeObjNames <- node_pieces |> lapply(\(x) x$membername) |> unlist()
+  # nodeObjNames also serves for canonical lookup of names by index.
+  # e.g. nodeObjNames[i] gives the member name of the index=i node member.
+  nodeObjName_2_nodeIndex <- (1:length(nodeObjNames)) |> structure(names=nodeObjNames)
+  # Inversely, nodeobjName_2_nodeIndex["node_3"] gives the index of that node.
   CpublicNodeFuns <- node_pieces |> lapply(\(x) x$nClass_type) |> setNames(nodeObjNames)
   # CpublicNodeFuns <- list(
   #   beta_node = 'node_dnorm()'
@@ -300,21 +336,33 @@ makeModel_nClass <- function(varInfo,
                          initializers = node_pieces |> lapply(\(x) x$init_string) |> unlist())
     )
   ) |> structure(names = classname)
-  initialize <- function(sizes, inits) {
+  initialize <- function(sizes = list(), inits = list()) {
     browser()
     if(isCompiled())
-      self$do_setup_node_mgmt()
+      self$setup_node_mgmt_from_names(nodeObjNames)
     if(!isCompiled()) {
-      for(nodeObj in self$nodeObjNames) {
-        self[[nodeObj]] <- CpublicNodeFuns[[nodeObj]]$new()
+      for(nodeObj in nodeObjNames) {
+        self[[nodeObj]] <- eval(as.name(CpublicNodeFuns[[nodeObj]]))$new()
         self[[nodeObj]]$setModel(self)
       }
     }
     if(length(inits)) init_from_list(inits)
     else if(length(sizes)) resize_from_list(sizes)
   }
+  get_nodeObjNames <- function() {
+    return(nodeObjNames)
+  }
+  Rvars <- list(
+   # default_inits = list(),
+   # default_sizes = list()
+  )
   baseclass <- paste0("modelClass_<", classname, ">")
   env <- new.env(parent = parent.frame())
+  # CpublicNodeFuns has elements like "node_1 = quote(nodeFxn_1())"
+  # We provide it in Cpublic to declare C++ member variables with types.
+  # We also place it in env so that we can look up for uncompiled execution 
+  # the objects that need to be created in initialize.
+  # If we someday make type declarations and initializations more automatic, we can avoid this duplication.
   env$CpublicNodeFuns <- CpublicNodeFuns
   ans <- substitute(
     nClass(
@@ -330,7 +378,7 @@ makeModel_nClass <- function(varInfo,
       env = env
     ),
     list(OPDEFS = opDefs,
-        RPUBLIC = list(initialize=initialize, nodeObjNames = nodeObjNames),
+        RPUBLIC = list(initialize=initialize, get_nodeObjNames = get_nodeObjNames, Rvars = Rvars),
         CPUBLIC = c(CpublicNodeFuns, CpublicModelVars, CpublicCtor, CpublicMethods),
         CLASSNAME = classname,
         BASECLASS = baseclass)
@@ -356,6 +404,11 @@ get_varInfo_from_nimbleModel <- function(model) {
 }
 
 make_nodeFxn_from_declInfo <- function(declInfo) {
+  # pieces are adapted from Chris' code in nimbleModel and/or old nimble.
+  #
+  # This function creates a calc_one nFunction that calculates single index case.
+  # This will then be used by generic iterator over indices.
+  # Vectorized cases can be added in this basic framework later.
   modelCode <- declInfo$calculateCode
   LHS <- modelCode[[2]]
   RHS <- modelCode[[3]]
@@ -377,6 +430,7 @@ make_nodeFxn_from_declInfo <- function(declInfo) {
   names(RHSrep)[2] <- ""
   RHSrep[[lenRHS+2]] <- 1
   names(RHSrep)[lenRHS+2] <- "log"
+  # We create separate code for R and C execution.
   calc1Cfun <- substitute(
     function(idx) {LHS <- RHS; return(LHS)},
     list(LHS = logProbExprRep, RHS = RHSrep)
@@ -393,29 +447,31 @@ make_nodeFxn_from_declInfo <- function(declInfo) {
   list(calc_one = calc_one, nodeVars = nodeVars)
 }
 
-make_model_from_nimbleModel <- function(m, compile=TRUE) {
+make_model_from_nimbleModel <- function(m, compile=FALSE) {
   mDef <- m$modelDef
   allVarInfo <- get_varInfo_from_nimbleModel(m)
   modelVarInfo <- allVarInfo$vars
   nodeFxnNames <- character()
   nodeInfoList <- list()
   nodeFxnList <- list()
+  # two vectors for canonical use for calculation instructions
+  # to move between names and indices of nodeFxns:
   for(i in seq_along(mDef$declInfo)) {
     declInfo <- mDef$declInfo[[i]]
     nodeFxn <- make_nodeFxn_from_declInfo(declInfo)
     nodeVars <- nodeFxn$nodeVars
     calc_one <- nodeFxn$calc_one
     SLN <- declInfo$sourceLineNumber
-    node_classname <- paste0("nodeClass_", SLN)
-    nodeFxnName <- paste0("nodeFxn_", SLN)
-    node_membername <- paste0("node_", SLN)
+    node_classname <- paste0("nodeClass_", SLN) # name of an nClass generator
+    node_RvarName <- paste0("nodeFxn_", SLN)    # name of an R variable holding the nClass generator
+    node_membername <- paste0("node_", SLN)     # name of model member variable holding an instance of the nClass
     nodeVarInfo <- modelVarInfo[nodeVars]
     # Currently, we can't just make a list of these but need them as named objects in the environment
-    nodeFxnList[[nodeFxnName]] <- make_node_fun(nodeVarInfo, list(calc_one=calc_one), node_classname)
-    assign(nodeFxnName,
-      nodeFxnList[[nodeFxnName]]
+    nodeFxnList[[node_RvarName]] <- make_node_nClass(nodeVarInfo, list(calc_one=calc_one), node_classname)
+    assign(node_RvarName,
+      nodeFxnList[[node_RvarName]]
     )
-    nodeInfoList[[i]] <- nCompiler:::make_node_info(node_membername, nodeFxnName, node_classname, nodeVarInfo)
+    nodeInfoList[[i]] <- nCompiler:::make_node_info_for_model_nClass(node_membername, node_RvarName, node_classname, nodeVarInfo)
 #    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
 
   }
@@ -424,10 +480,12 @@ make_model_from_nimbleModel <- function(m, compile=TRUE) {
   # We have a situation where order matters: model needs to come after the utility classes. Fix me.
   if(!compile)
     return(model)
-  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nC", "calcInstr_nClass", "nodeInstr_nClass", "model")
-  argList <- c(argList, "nodeFxnList")
-  argList <- argList |> lapply(as.name)
-  Cmodel <- do.call("nCompile", argList)
+  Cmodel <- nCompile(model)
+  return(Cmodel)
+#  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nClass", "calcInstr_nClass", "nodeInstr_nClass", "model")
+#  argList <- c(argList, "nodeFxnList")
+#  argList <- argList |> lapply(as.name)
+#  Cmodel <- do.call("nCompile", argList)
   #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, nodeFxn_3)
 }
 
@@ -452,7 +510,7 @@ calcInputList_to_calcInstrList <- function(calcInputList, comp) {
   calcInstr$nodeInstrVec <- nodeInstrVec
   calcInstrList[[iCalc]] <- calcInstr
   }
-  calcInstrListObj <- comp$calcInstrList_nC$new()
+  calcInstrListObj <- comp$calcInstrList_nClass$new()
   calcInstrListObj$calcInstrList <- calcInstrList
   return(calcInstrListObj)
 }
