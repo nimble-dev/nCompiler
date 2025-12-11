@@ -3,7 +3,7 @@
 ## labelFunctionMetaCreator is only called once, immediately below, to create labelFunctionCreator
 ## The outer layer allows allLabelFunctionCreators to be in the closure of every function returned
 ## by labelFunctionCreator.  Each of those functions is registered as an element of allLableFunctionCreators.
-## 
+##
 ## This scheme allows the function resetLabelFunctionCreators below to work simply,
 ## resetting the count to 1 for all of the label generators.
 ##
@@ -48,9 +48,9 @@ modelLabelCreator <- labelFunctionCreator("model")
 
 # no longer documented in Rd
 # Generates a valid C++ name from an R Name
-# 
+#
 # replaces [ ( $ and a few other symbols with underscores, and removes ] ) and spaces in a string
-# 
+#
 # @param rName A String
 # @return returns a string representing the modified rName
 # @author Jagadish Babu
@@ -74,9 +74,9 @@ Rname2CppName <- function(rName, colonsOK = TRUE) {
                 paste(rName[grepl(':', rName)], collapse=', ')))
   }
   rName <- gsub(' ', '', rName)
-  rName <- gsub('\\.', '_dot_', rName) 
+  rName <- gsub('\\.', '_dot_', rName)
   rName <- gsub("\"", "_quote_", rName)
-  rName <- gsub(',', '_comma_', rName)   
+  rName <- gsub(',', '_comma_', rName)
   rName <- gsub("`", "_backtick_" , rName)
   rName <- gsub('\\[', '_oB', rName)
   rName <- gsub('\\]', '_cB', rName)
@@ -105,7 +105,7 @@ Rname2CppName <- function(rName, colonsOK = TRUE) {
   rName <- gsub('\\^', '_tothe_', rName)
   rName <- gsub('^_+', '', rName) # remove leading underscores.  can arise from (a+b), for example
   rName <- gsub('^([[:digit:]])', 'd\\1', rName)    # if begins with a digit, add 'd' in front
-  rName    
+  rName
 }
 
 ## This takes a character vector as the first argument and length-1
@@ -138,7 +138,7 @@ pasteSemicolon <- function(x, indent = '') {
   stop(paste0('Error, pasteSemicolon called for object of class ',
               class(x),
               '. Must be character or list.'),
-       call. = FALSE) 
+       call. = FALSE)
 }
 
 #' Write unlisted code generated from.nCompiler cpp definitions.
@@ -182,4 +182,37 @@ nDim <- function(obj) {
 is.blank <- function(arg) {
   if(is.null(arg)) return(FALSE)
   return(identical(arg, quote(x[])[[3]]))
+}
+
+
+# Modified from nimble, including comments
+# simply adds width.cutoff = 500 as the default to deal with creation of long variable names from expressions
+# The control list is the default plus "digits17", which is the only one done in nimble.
+# We need to deparse lists (e.g. in build_compiled_nClass) and have the names in the deparsed result.
+# I think "niceNames" does that, possibly  "showAttributes" too.
+deparse <- function(...) {
+  control <- c("keepNA", "keepInteger", "niceNames", "showAttributes", "digits17")
+  if("width.cutoff" %in% names(list(...))) {
+    base::deparse(..., control = control)
+  } else {
+    base::deparse(..., width.cutoff = 500L, control = control)
+  }
+}
+
+## This version of deparse avoids splitting into multiple lines, which generally would lead to
+## problems. We keep the original nimble:::deparse above as deparse is widely used and there
+## are cases where not modifying the nlines behavior may be best.
+safeDeparse <- function(..., warn = FALSE) {
+  out <- deparse(...)
+  if(isTRUE(get_nOption('useSafeDeparse'))) {
+    dotArgs <- list(...)
+    if("nlines" %in% names(dotArgs))
+      nlines <- dotArgs$nlines else nlines <- 1L
+    if(nlines != -1L && length(out) > nlines) {
+      if(warn)
+        message("  [Note] safeDeparse: truncating deparse output to ", nlines, " line", if(nlines>1) "s" else "")
+      out <- out[1:nlines]
+    }
+  }
+  return(out)
 }

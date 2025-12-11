@@ -508,6 +508,15 @@ updateOperatorDef('max', 'cppOutput', 'cppString', 'maximum')
 updateOperatorDef('min', 'cppOutput', 'cppString', 'minimum')
 
 assignOperatorDef(
+  'invisible',
+  list(
+    simpleTransformations = list(
+      handler = 'RemoveLayer'
+    )
+  )
+)
+
+assignOperatorDef(
   c('pairmin', 'pairmax'),
   list(
     labelAbstractTypes = list(

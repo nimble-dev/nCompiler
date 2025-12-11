@@ -145,6 +145,7 @@ if(FALSE) {
   code <- quote({
     sd ~ dunif(0, 10)
     for(i in 1:5) {
+      z[i] <- x[i+1] + 10
       y[i] ~ dnorm(x[i+1], sd = sd)
     }
   })
@@ -153,21 +154,21 @@ if(FALSE) {
   ## Check that a separate R implementation was created
   mDef_ <- m$modelDef
   dI <- mDef_$declInfo[[2]]
-  nFxn <- nCompiler:::make_nodeFxn_from_declInfo(dI)
+  nFxn <- nCompiler:::make_node_methods_from_declInfo(dI)
+  expect_true(!is.null(NFinternals(nFxn[[1]])$R_fun))
+  dI <- mDef_$declInfo[[3]]
+  nFxn <- nCompiler:::make_node_methods_from_declInfo(dI)
   expect_true(!is.null(NFinternals(nFxn[[1]])$R_fun))
 
   # uncompiled
+#  debugonce(nCompiler:::make_model_from_nimbleModel)
   Ctest <- nCompiler:::make_model_from_nimbleModel(m, compile=TRUE)
-  debugonce(nCompiler:::makeModel_nClass)
+#  debugonce(nCompiler:::makeModel_nClass)
   test <- nCompiler:::make_model_from_nimbleModel(m, compile=FALSE)
   Robj <- test$new()
   Ctest <- nCompile(test)
   Cobj <- Ctest$new()
   rm(Cobj); gc()
-
-  nOptions(showCompilerOutput=TRUE)
-  Ctest <- nCompile(test, package=TRUE)
-  Cobj <- Ctest$new()
 
   NULL
   ## Compile

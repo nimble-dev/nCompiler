@@ -184,17 +184,21 @@ make_node_nClass <- function(varInfo = list(),
     type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # In future maybe isConst=TRUE, but it might not matter much
   symbolList <- varInfo |> lapply(varInfo_2_symbol)
   names(symbolList) <- varInfo |> lapply(\(x) x$name) |> unlist()
+  numVars <- length(varInfo)
 
   CpublicVars <- names(symbolList) |> lapply(\(x) eval(substitute(quote(T(symbolList$NAME)),
                                                     list(NAME=as.name(x)))))
   names(CpublicVars) <- names(symbolList)
-
-  ctorArgNames <- paste0(names(symbolList), '_')
-  # List used when generating C++ constructor code to allow direct initializers, necessary for references.
-  initializersList <- paste0(names(symbolList), '(', ctorArgNames ,')')
   initFun <- function(){}
-  formals(initFun) <- structure(as.pairlist(CpublicVars), names = ctorArgNames)
-
+  
+  if(numVars > 0) {
+    ctorArgNames <- paste0(names(symbolList), '_')
+    # List used when generating C++ constructor code to allow direct initializers, necessary for references.
+    initializersList <- paste0(names(symbolList), '(', ctorArgNames ,')')
+    formals(initFun) <- structure(as.pairlist(CpublicVars), names = ctorArgNames)
+  } else {
+    initializersList <- character()
+  }
   if(missing(classname))
     classname <- nodeFxnLabelCreator()
 
@@ -260,6 +264,8 @@ make_node_info_for_model_nClass <- function(membername,
 makeModel_nClass <- function(varInfo,
                              nodes = list(),
                              classname,
+                             sizes = list(),
+                             inits = list(),
                              env = parent.frame()
                              ) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
@@ -352,8 +358,16 @@ makeModel_nClass <- function(varInfo,
         self[[nodeObj]]$setModel(self)
       }
     }
+    
+    # First expand any provided or default sizes
+    # To-Do possibly merge the argument sizes and defaultSizes by element.
+    if(missing(sizes)) sizes <- self$defaultSizes
+    if(length(sizes)) resize_from_list(sizes)
+
+    # Then any provided inits over-ride any provided sizes
+    # To-Do: Ditto
+    if(missing(inits)) inits <- self$defaultInits
     if(length(inits)) init_from_list(inits)
-    else if(length(sizes)) resize_from_list(sizes)
   }
   baseclass <- paste0("modelClass_<", classname, ">")
   # CpublicNodeFuns has elements like "node_1 = quote(nodeFxn_1())"
@@ -379,6 +393,8 @@ makeModel_nClass <- function(varInfo,
         RPUBLIC = list(initialize=initialize, 
                       nodeObjNames = nodeObjNames,
                       nodeObjName_2_nodeIndex = nodeObjName_2_nodeIndex, 
+                      defaultSizes = sizes,
+                      defaultInits = inits,
                       CpublicNodeFuns = CpublicNodeFuns),
         # A concatenation of lists
         CPUBLIC = c(CpublicNodeFuns, CpublicModelVars, CpublicCtor, CpublicMethods),
@@ -405,7 +421,104 @@ get_varInfo_from_nimbleModel <- function(model) {
   )
 }
 
-make_nodeFxn_from_declInfo <- function(declInfo) {
+# make_stoch_calculate <- function(LHSrep, RHSrep, logProbExprRep) {
+#   lenRHS <- length(RHSrep)
+#   if(length(RHS) > 1) {
+#     RHSrep[3:(lenRHS+1)] <- RHSrep[2:lenRHS]
+#     names(RHSrep)[3:(lenRHS+1)] <- names(RHSrep)[2:lenRHS]
+#   }
+#   RHSrep[[2]] <- LHSrep
+#   names(RHSrep)[2] <- ""
+#   RHSrep[[lenRHS+2]] <- 1
+#   names(RHSrep)[lenRHS+2] <- "log"
+#   # We create separate code for R and C execution.
+#   calc1Cfun <- substitute(
+#     function(idx) {LHS <- RHS; return(LHS)},
+#     list(LHS = logProbExprRep, RHS = RHSrep)
+#   ) |> eval()
+#   make_calculate_from_Cfun(calc1Cfun)
+# }
+
+make_stoch_sim_line <- function(LHSrep, RHSrep) {
+  BUGSdistName <- safeDeparse(RHSrep[[1]])
+  distInfo <- getDistributionInfo(BUGSdistName)
+  sim_code <- as.name(distInfo$simulateName)
+  if(is.null(sim_code)) stop("Could not find simulation ('r') function for ", BUGSdistName)
+  RHSrep[[1]] <- sim_code
+  # scoot all named arguments right 1 position
+  if(length(RHSrep) > 1) {    
+    for(i in (length(RHSrep)+1):3) {
+      RHSrep[i] <- RHSrep[i-1]
+      names(RHSrep)[i] <- names(RHSrep)[i-1]
+    } 
+  }    
+  RHSrep[[2]] <- 1
+  names(RHSrep)[2] <- ''
+  sim_line <- substitute(
+    LHS <- RHS,
+    list(LHS = LHSrep, RHS = RHSrep))
+  sim_line
+}
+
+make_stoch_calc_line <- function(LHSrep, RHSrep, logProbExprRep, diff = FALSE) {
+  lenRHS <- length(RHSrep)
+  if(length(RHSrep) > 1) {
+    RHSrep[3:(lenRHS+1)] <- RHSrep[2:lenRHS]
+    names(RHSrep)[3:(lenRHS+1)] <- names(RHSrep)[2:lenRHS]
+  }
+  RHSrep[[2]] <- LHSrep
+  names(RHSrep)[2] <- ""
+  RHSrep[[lenRHS+2]] <- 1
+  names(RHSrep)[lenRHS+2] <- "log"
+  # We create separate code for R and C execution.
+  if(!diff) {
+    calc_line <- substitute(
+      LHS <- RHS,
+      list(LHS = logProbExprRep, RHS = RHSrep))
+  } else {
+    calc_line <- substitute(
+        LocalNewLogProb_ <- RHS,
+      list(RHS = RHSrep))
+  }
+  calc_line
+}
+
+make_determ_calc_line <- function(LHSrep, RHSrep) {
+  calc_line <- substitute(
+    LHS <- RHS,
+    list(LHS = LHSrep, RHS = RHSrep))
+  calc_line
+}
+
+make_nFxn_from_Cfun <- function(Cfun) {
+  Rfun <- Cfun
+  body(calc1Rfun) <- nm_addModelDollarSign(body(Cfun), exceptionNames = c("idx"))
+  nFxn <- nFunction(
+    name = "calc_one",
+    fun = Rfun,
+    compileInfo=list(C_fun=Cfun),
+    argTypes = list(idx = 'integerVector'),
+    returnType = 'numericScalar')
+  #nodeVars <- all.vars(body(calc1Cfun)) |> setdiff("idx")
+  nFxn
+}
+
+make_node_method_nFxn <- function(f, name, returnType='numericScalar') {
+  Cfun <- f
+  Rfun <- f
+  body(Rfun) <- nm_addModelDollarSign(body(f), exceptionNames = c("idx", "LocalNewLogProb_", "LocalAns_"))
+  if(is.null(returnType)) returnType <- 'void'
+  nFxn <- nFunction(
+    name = name,
+    fun = Rfun,
+    argTypes = list(idx = 'integerVector'),
+    returnType = returnType,
+    compileInfo=list(C_fun=Cfun),
+  )
+  nFxn
+}
+
+make_node_methods_from_declInfo <- function(declInfo) {
   # pieces are adapted from Chris' code in nimbleModel and/or old nimble.
   #
   # This function creates a calc_one nFunction that calculates single index case.
@@ -415,38 +528,50 @@ make_nodeFxn_from_declInfo <- function(declInfo) {
   LHS <- modelCode[[2]]
   RHS <- modelCode[[3]]
   type <- if(modelCode[[1]]=="~") "stoch" else "determ" # or use declInfo$stoch (logical)
-  logProbExpr <- declInfo$genLogProbExpr()
   context <- declInfo$declRule$context
   replacements <- sapply(seq_along(context$singleContexts),
                          function(i) parse(text = paste0('idx[',i,']'))[[1]])
   names(replacements) <- context$indexVarNames
   LHSrep <- eval(substitute(substitute(e, replacements), list(e = LHS)))
   RHSrep <- eval(substitute(substitute(e, replacements), list(e = RHS)))
-  logProbExprRep <- eval(substitute(substitute(e, replacements), list(e = logProbExpr)))
-  lenRHS <- length(RHSrep)
-  if(length(RHS) > 1) {
-    RHSrep[3:(lenRHS+1)] <- RHSrep[2:lenRHS]
-    names(RHSrep)[3:(lenRHS+1)] <- names(RHSrep)[2:lenRHS]
+
+  if(type == 'determ') {
+    methodList <- eval(substitute(
+        list(
+            sim_one   = (function(idx) {calc_one(idx)}) |>
+              make_node_method_nFxn("sim_one", NULL),
+            calc_one  = (function(idx) {DETERMCALC; return(invisible(0))}) |>
+              make_node_method_nFxn("calc_one"),
+            calcDiff_one = (function(idx) {calc_one(idx);return(invisible(0))}) |> 
+              make_node_method_nFxn("calcDiff_one"),
+            getLogProb_one = (function(idx) {return(0)}) |>
+              make_node_method_nFxn("getLogProb_one")
+        ),
+        list(DETERMCALC = make_determ_calc_line(LHSrep, RHSrep))
+        ))
+    }
+    if(type == 'stoch') {
+      logProbExpr <- declInfo$genLogProbExpr()
+      logProbExprRep <- eval(substitute(substitute(e, replacements), list(e = logProbExpr)))
+      methodList <- eval(substitute(
+        list(
+            sim_one   = (function(idx) { STOCHSIM }) |>
+              make_node_method_nFxn("sim_one", NULL),
+            calc_one  = (function(idx) { STOCHCALC;   return(invisible(LOGPROB)) }) |>
+              make_node_method_nFxn("calc_one"),
+            calcDiff_one = (function(idx) {STOCHCALC_DIFF; LocalAns_ <- LocalNewLogProb_ - LOGPROB; 
+                                           LOGPROB <- LocalNewLogProb_; return(invisible(LocalAns_))}) |>
+              make_node_method_nFxn("calcDiff_one"),
+            getLogProb_one = (function(idx) { return(LOGPROB) }) |>
+              make_node_method_nFxn("getLogProb_one")
+        ),
+        list( LOGPROB   = logProbExprRep,
+              STOCHSIM  = make_stoch_sim_line(LHSrep, RHSrep),
+              STOCHCALC = make_stoch_calc_line(LHSrep, RHSrep, logProbExprRep),
+              STOCHCALC_DIFF = make_stoch_calc_line(LHSrep, RHSrep, logProbExprRep, diff=TRUE))
+      ))
   }
-  RHSrep[[2]] <- LHSrep
-  names(RHSrep)[2] <- ""
-  RHSrep[[lenRHS+2]] <- 1
-  names(RHSrep)[lenRHS+2] <- "log"
-  # We create separate code for R and C execution.
-  calc1Cfun <- substitute(
-    function(idx) {LHS <- RHS; return(LHS)},
-    list(LHS = logProbExprRep, RHS = RHSrep)
-  ) |> eval()
-  calc1Rfun <- calc1Cfun
-  body(calc1Rfun) <- nm_addModelDollarSign(body(calc1Cfun), exceptionNames = c("idx"))
-  calc_one <- nFunction(
-    name = "calc_one",
-    fun = calc1Rfun,
-    compileInfo=list(C_fun=calc1Cfun),
-    argTypes = list(idx = 'integerVector'),
-    returnType = 'numericScalar')
-  nodeVars <- all.vars(body(calc1Cfun)) |> setdiff("idx")
-  list(calc_one = calc_one, nodeVars = nodeVars)
+  methodList
 }
 
 make_model_from_nimbleModel <- function(m, compile=FALSE) {
@@ -460,35 +585,25 @@ make_model_from_nimbleModel <- function(m, compile=FALSE) {
   # to move between names and indices of nodeFxns:
   for(i in seq_along(mDef$declInfo)) {
     declInfo <- mDef$declInfo[[i]]
-    nodeFxn <- make_nodeFxn_from_declInfo(declInfo)
-    nodeVars <- nodeFxn$nodeVars
-    calc_one <- nodeFxn$calc_one
+    node_methods <- make_node_methods_from_declInfo(declInfo)
+    nodeVars <- node_methods |> lapply(\(x) all.vars(body(x))) |> unlist() |> unique() |> setdiff(c("idx", "LocalNewLogProb_", "LocalAns_", "model")) %||% character()
+    nodeVarInfo <- modelVarInfo[nodeVars]
     SLN <- declInfo$sourceLineNumber
     node_classname <- paste0("nodeClass_", SLN) # name of an nClass generator
     node_RvarName <- paste0("nodeFxn_", SLN)    # name of an R variable holding the nClass generator
     node_membername <- paste0("node_", SLN)     # name of model member variable holding an instance of the nClass
-    nodeVarInfo <- modelVarInfo[nodeVars]
     # Currently, we can't just make a list of these but need them as named objects in the environment
-    nodeFxnList[[node_RvarName]] <- make_node_nClass(nodeVarInfo, list(calc_one=calc_one), node_classname)
+    nodeFxnList[[node_RvarName]] <- make_node_nClass(nodeVarInfo, node_methods, node_classname)
     assign(node_RvarName,
       nodeFxnList[[node_RvarName]]
     )
     nodeInfoList[[i]] <- nCompiler:::make_node_info_for_model_nClass(node_membername, node_RvarName, node_classname, nodeVarInfo)
-#    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
-
   }
   model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model", env = environment())
-  # Currently we must compile from here because here is where we know the nodeFxnName[s].
-  # We have a situation where order matters: model needs to come after the utility classes. Fix me.
   if(!compile)
     return(model)
   Cmodel <- nCompile(model)
   return(Cmodel)
-#  argList <- list("modelBase_nClass", "nodeFxnBase_nClass", "calcInstrList_nClass", "calcInstr_nClass", "nodeInstr_nClass", "model")
-#  argList <- c(argList, "nodeFxnList")
-#  argList <- argList |> lapply(as.name)
-#  Cmodel <- do.call("nCompile", argList)
-  #Cncm1 <- nCompile(modelBase_nClass, nodeFxnBase_nClass, calcInstr_nClass, nodeInstr_nClass, ncm1, nodeFxn_3)
 }
 
 calcInputList_to_calcInstrList <- function(calcInputList, comp) {
