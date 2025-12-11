@@ -6,8 +6,7 @@
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
-#include <nodeFxnBase_nClass_c_.h>
-#include <calcInstrList_nClass_c_.h>
+#include "nodeFxnBase_nClass_c_.h"
 #include "calcInstrList_nClass_c_.h"
 
 class modelBase_nClass : public interface_resolver< genericInterfaceC<modelBase_nClass> >, public loadedObjectHookC<modelBase_nClass> {

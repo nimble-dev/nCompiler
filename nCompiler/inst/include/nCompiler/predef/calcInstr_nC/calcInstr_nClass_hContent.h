@@ -6,7 +6,7 @@
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
-#include <nodeInstr_nClass_c_.h>
+#include "nodeInstr_nClass_c_.h"
 
 class calcInstr_nClass : public interface_resolver< genericInterfaceC<calcInstr_nClass> >, public loadedObjectHookC<calcInstr_nClass> {
 public:

@@ -38,7 +38,10 @@ calcInstr_nClass <- nClass(
                file.path("calcInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   Hincludes = "<nodeInstr_nClass_c_.h>",
+                   # The Hincludes should be picked up automatically but I think it's not 
+                   # because it is in the nList type and that is not being scanned for needed nClasses.
+                   # These do need to be in "" not <>, for case of nCompile(...., package=TRUE)
+                   Hincludes = '"nodeInstr_nClass_c_.h"',
                    # In the format here, needed_units is a list with either objects (nFunction or nClass (generators),
                    # or names. If names, we will use scoping to look them up and decide what they are.
                    # The list can mix objects and names of nClasses and nFunctions.
@@ -56,7 +59,7 @@ calcInstrList_nClass <- nClass(
                file.path("calcInstrList_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   Hincludes = "<calcInstr_nClass_c_.h>",
+                   Hincludes = '"calcInstr_nClass_c_.h"',
                    exportName = "calcInstrList_nClass",
                    needed_units = list("calcInstr_nClass")
                    )
@@ -102,7 +105,7 @@ modelBase_nClass <- nClass(
           # This is where uncompiled stepping through the calcInstrList happens.
           for(calcInstr in calcInstrList$calcInstrList) {
             nodeIdx <- calcInstr$nodeIndex
-            nodemember_name <- self$get_nodeObjNames()[nodeIdx]
+            nodemember_name <- self$nodeObjNames[nodeIdx] # nodeObjNames is found in the derived class
             for(nodeInstr in calcInstr$nodeInstrVec) {
               self[[nodemember_name]]$calculate(nodeInstr)
             }
@@ -121,7 +124,7 @@ modelBase_nClass <- nClass(
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nC")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   Hincludes = c("<nodeFxnBase_nClass_c_.h>", "<calcInstrList_nClass_c_.h>"), # do we need "<nodeFxnBase_nClass_c_.h>" too?
+                   Hincludes = c('"nodeFxnBase_nClass_c_.h"', '"calcInstrList_nClass_c_.h"'), # do we need "<nodeFxnBase_nClass_c_.h>" too?
                    needed_units = list("nodeFxnBase_nClass","calcInstrList_nClass"), #do we need nodeFxnBase_nClass here too?
                    exportName = "modelBase_nClass"
                    )
@@ -256,7 +259,8 @@ make_node_info_for_model_nClass <- function(membername,
 
 makeModel_nClass <- function(varInfo,
                              nodes = list(),
-                             classname
+                             classname,
+                             env = parent.frame()
                              ) {
   # varInfo will be a list (names not used) of name, nDim, sizes.
   CpublicModelVars <- varInfo |> lapply(\(x) paste0("numericArray(nDim=",x$nDim,")"))
@@ -319,10 +323,10 @@ makeModel_nClass <- function(varInfo,
          init_string = init_string,
          membername = x$membername)
   })
-  nodeObjNames <- node_pieces |> lapply(\(x) x$membername) |> unlist()
+  nodeObjNames <- (node_pieces |> lapply(\(x) x$membername) |> unlist()) %||% character()
   # nodeObjNames also serves for canonical lookup of names by index.
   # e.g. nodeObjNames[i] gives the member name of the index=i node member.
-  nodeObjName_2_nodeIndex <- (1:length(nodeObjNames)) |> structure(names=nodeObjNames)
+  nodeObjName_2_nodeIndex <- seq_along(nodeObjNames) |> structure(names=nodeObjNames)
   # Inversely, nodeobjName_2_nodeIndex["node_3"] gives the index of that node.
   CpublicNodeFuns <- node_pieces |> lapply(\(x) x$nClass_type) |> setNames(nodeObjNames)
   # CpublicNodeFuns <- list(
@@ -337,33 +341,26 @@ makeModel_nClass <- function(varInfo,
     )
   ) |> structure(names = classname)
   initialize <- function(sizes = list(), inits = list()) {
-    browser()
+    # It is not very easy to set debug onto the initialize function, so
+    # here is a magic flag.
+    if(isTRUE(.GlobalEnv$.debugModelInit)) browser()
     if(isCompiled())
-      self$setup_node_mgmt_from_names(nodeObjNames)
+      self$setup_node_mgmt_from_names(self$nodeObjNames)
     if(!isCompiled()) {
-      for(nodeObj in nodeObjNames) {
-        self[[nodeObj]] <- eval(as.name(CpublicNodeFuns[[nodeObj]]))$new()
+      for(nodeObj in self$nodeObjNames) {
+        self[[nodeObj]] <- eval(as.name(self$CpublicNodeFuns[[nodeObj]]))$new()
         self[[nodeObj]]$setModel(self)
       }
     }
     if(length(inits)) init_from_list(inits)
     else if(length(sizes)) resize_from_list(sizes)
   }
-  get_nodeObjNames <- function() {
-    return(nodeObjNames)
-  }
-  Rvars <- list(
-   # default_inits = list(),
-   # default_sizes = list()
-  )
   baseclass <- paste0("modelClass_<", classname, ">")
-  env <- new.env(parent = parent.frame())
   # CpublicNodeFuns has elements like "node_1 = quote(nodeFxn_1())"
   # We provide it in Cpublic to declare C++ member variables with types.
-  # We also place it in env so that we can look up for uncompiled execution 
+  # We also place the list itself in the class so that we can look up for uncompiled execution 
   # the objects that need to be created in initialize.
   # If we someday make type declarations and initializations more automatic, we can avoid this duplication.
-  env$CpublicNodeFuns <- CpublicNodeFuns
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
@@ -378,7 +375,12 @@ makeModel_nClass <- function(varInfo,
       env = env
     ),
     list(OPDEFS = opDefs,
-        RPUBLIC = list(initialize=initialize, get_nodeObjNames = get_nodeObjNames, Rvars = Rvars),
+        # A list of individual elements
+        RPUBLIC = list(initialize=initialize, 
+                      nodeObjNames = nodeObjNames,
+                      nodeObjName_2_nodeIndex = nodeObjName_2_nodeIndex, 
+                      CpublicNodeFuns = CpublicNodeFuns),
+        # A concatenation of lists
         CPUBLIC = c(CpublicNodeFuns, CpublicModelVars, CpublicCtor, CpublicMethods),
         CLASSNAME = classname,
         BASECLASS = baseclass)
@@ -388,7 +390,7 @@ makeModel_nClass <- function(varInfo,
 
 ## Get varInfo from new nimbleModel
 get_varInfo_from_nimbleModel <- function(model) {
-  mDef <- m$modelDef
+  mDef <- model$modelDef
   extract <- \(x) x |> lapply(\(x) list(name = x$varName, nDim = x$nDim))
   vars <- mDef$varInfo |> extract()
   logProbVars <- mDef$logProbVarInfo |> extract()
@@ -475,7 +477,7 @@ make_model_from_nimbleModel <- function(m, compile=FALSE) {
 #    nodeFxnNames <- c(nodeFxnNames, nodeFxnName)
 
   }
-  model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model")
+  model <- makeModel_nClass(modelVarInfo, nodeInfoList, classname = "my_model", env = environment())
   # Currently we must compile from here because here is where we know the nodeFxnName[s].
   # We have a situation where order matters: model needs to come after the utility classes. Fix me.
   if(!compile)
