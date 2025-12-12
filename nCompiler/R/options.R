@@ -51,7 +51,8 @@ updateDefaults <- function(defaults, control) {
     verbose = FALSE,
     sourceCpp_verbose = FALSE,
     nimble = FALSE, ## ensure all backward compatibility
-    dropSingleSizes = FALSE ## backward compatibility
+    dropSingleSizes = FALSE, ## backward compatibility
+    useSafeDeparse = TRUE
   )
 )
 

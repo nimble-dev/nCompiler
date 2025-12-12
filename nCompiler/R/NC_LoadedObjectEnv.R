@@ -266,7 +266,7 @@ setup_DLLenv <- function(compiledFuns,
 move_funs_from_list_to_env <- function(funNames, funList, env) {
   keep <- rep(TRUE, length(funList))
   for(funName in funNames) {
-    found <- grepl(funName, names(funList))
+    found <- funName == names(funList) #grepl(funName, names(funList))
     if(any(found)) {
       i <- which(found)
       if(length(i) != 1)

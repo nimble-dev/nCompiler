@@ -25,9 +25,6 @@ return(0.0);
 RESET_EIGEN_ERRORS
 }
 
-nodeFxnBase_nClass::~nodeFxnBase_nClass() {};
-
-
 // [[Rcpp::export(name = "set_CnClass_env_new_nodeFxnBase_nClass")]]
     void  set_CnClass_env_nodeFxnBase_nClass ( SEXP env ) {
 RESET_EIGEN_ERRORS

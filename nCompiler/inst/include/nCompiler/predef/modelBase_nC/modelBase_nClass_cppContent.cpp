@@ -17,7 +17,7 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 return(true);
 }
-    double  modelBase_nClass::calculate ( std::shared_ptr<calcInstrList_nC> calcInstr ) {
+    double  modelBase_nClass::calculate ( std::shared_ptr<calcInstrList_nClass> calcInstrList ) {
 RESET_EIGEN_ERRORS
 Rprintf("modelBase_nClass calculate (should not see this)\n");;
 return(0.0);
@@ -25,8 +25,6 @@ return(0.0);
       modelBase_nClass::modelBase_nClass (  ) {
 RESET_EIGEN_ERRORS
 }
-
-modelBase_nClass::~modelBase_nClass () {};
 
 // [[Rcpp::export(name = "set_CnClass_env_new_modelBase_nClass")]]
     void  set_CnClass_env_modelBase_nClass ( SEXP env ) {
@@ -45,9 +43,7 @@ modelBase_nClass,
 NCOMPILER_FIELDS(),
 NCOMPILER_METHODS(
 method("ping", &modelBase_nClass::ping, args({{}})),
-method("calculate", &modelBase_nClass::calculate, args({{arg("calcInstr",copy)}}))
+method("calculate", &modelBase_nClass::calculate, args({{arg("calcInstrList",copy)}}))
 )
 )
-
-
 #endif

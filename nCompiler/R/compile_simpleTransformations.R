@@ -55,6 +55,13 @@ simpleTransformationsEnv$minMax <-
     if(length(code$args) == 2) code$name <- paste0('pair',code$name)
   }
 
+## Used e.g. for invisible(foo(x)) --> foo(x)
+simpleTransformationsEnv$RemoveLayer <-
+  function(code, symTab, auxEnv, info) {
+    removeExprClassLayer(code)
+  }
+
+
 simpleTransformationsEnv$replace <-
   function(code, symTab, auxEnv, info) {
     repl <- info$replacement
