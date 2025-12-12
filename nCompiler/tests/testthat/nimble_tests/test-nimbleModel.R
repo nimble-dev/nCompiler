@@ -28,7 +28,7 @@ library(testthat)
 
 test_that("nimble model prototype works", {
   nodeVarInfo <- list(list(name = "x", nDim  = 1), list(name = "mu", nDim = 1),
-                  list(name = "sd", nDim = 0))
+                      list(name = "sd", nDim = 0))
   calc_one <- nFunction(
     name = "calc_one",
     fun = function(inds) {
@@ -140,7 +140,7 @@ test_that("nimble model variables are set up", {
 # nOptions(pause_after_writing_files=TRUE)
 # Try automating the whole model creation including nodeFxns
 # Ditto: this works but relies on nimbleModel
-if(FALSE) {
+test_that("nimble model with stochastic and deterministic nodes is created and compiles", {
   library(nimbleModel)
   code <- quote({
     sd ~ dunif(0, 10)
@@ -160,35 +160,36 @@ if(FALSE) {
   nFxn <- nCompiler:::make_node_methods_from_declInfo(dI)
   expect_true(!is.null(NFinternals(nFxn[[1]])$R_fun))
 
-  # uncompiled
-#  debugonce(nCompiler:::make_model_from_nimbleModel)
-  Ctest <- nCompiler:::make_model_from_nimbleModel(m, compile=TRUE)
-#  debugonce(nCompiler:::makeModel_nClass)
-  test <- nCompiler:::make_model_from_nimbleModel(m, compile=FALSE)
-  Robj <- test$new()
-  Ctest <- nCompile(test)
-  Cobj <- Ctest$new()
-  rm(Cobj); gc()
+  for(mode in c("uncompiled", "compiled")) {
+    package_options <- if(mode=="compiled") c(FALSE, TRUE) else TRUE
+    for(package in package_options) {
+      nMod <- nCompiler:::make_model_from_nimbleModel(m, compile=FALSE)
+      if(mode=="compiled") {
+        expect_no_error(CnMod <- nCompile(nMod, package = package))
+        nMod <- CnMod
+      }
+      expect_no_error(obj <- nMod$new())
+      obj$y <- 1:5
+      expect_equal(obj$y, 1:5)
+      vals <- list(x = 2:7, y = 11:15, sd = 8)
+      obj$set_from_list(vals)
+      expect_equal(obj$x, vals$x)
+      rm(obj); gc()
+    }
+  }
+})
 
-  NULL
-  ## Compile
-  #debugonce(nCompiler:::make_model_from_nimbleModel)
-  test <- nCompiler:::make_model_from_nimbleModel(m)
+message("test-nimbleModel does not have tests of calculate etc.")
 
-
-  obj <- test$model$new()
-  obj$do_setup_node_mgmt()
-  vals <- list(x = 2:7, y = 11:15, sd = 8)
-  obj$set_from_list(vals)
-
+if(FALSE) {
   nodeFxn_2_nodeIndex <- c(nodeFxn_1 = 1, nodeFxn_3 = 2)
 
   calcInputList <- list(list(nodeFxn="nodeFxn_1",        # which declaration (nodeFxn)
-                           nodeInputVec = list(list(methodInput=1,  # which index iteration method
-                                                    indsInputVec=list(1))))) # input(s) to index iterations
+                             nodeInputVec = list(list(methodInput=1,  # which index iteration method
+                                                      indsInputVec=list(1))))) # input(s) to index iterations
 
-calcInstrList <- calcInputList_to_calcInstrList(calcInputList, test)
+  calcInstrList <- calcInputList_to_calcInstrList(calcInputList, test)
 
-obj$calculate(calcInstrList)
+  obj$calculate(calcInstrList)
 }
 ########
