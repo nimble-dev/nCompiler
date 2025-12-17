@@ -43,7 +43,7 @@ value <- function(obj, name) {
 }
 
 #' @export
-`value<-` <- function(obj, name, value) {
+`value<-` <- function(obj, name = NULL, value) {
   if(inherits(obj, "CnClass"))
     obj <- obj$private$CppObj
   DLLenv <- get_DLLenv(obj)
