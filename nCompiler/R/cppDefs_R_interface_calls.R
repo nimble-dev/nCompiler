@@ -27,11 +27,15 @@ global_R_interface_cppDef <-
 
       "// This is completely generic, good for all derived classes\n",
       "// [[Rcpp::export]]\n",
-      "SEXP set_value(SEXP Xptr, const std::string &name, SEXP Svalue) {\n",
+      "SEXP set_value(SEXP Xptr, Rcpp::Nullable<Rcpp::String> &name, SEXP Svalue) {\n",
       "  genericInterfaceBaseC *obj =\n",
       "    get_genericInterfaceBaseC(Xptr);\n",
       "  //std::cout << name << std::endl;\n",
-      "  obj->set_value( name, Svalue );\n",
+      "  if(name.isNull()) {\n",
+      "    obj->set_all_values( Svalue );\n",
+      "  } else {\n",
+      "  obj->set_value( Rcpp::as<std::string>(name), Svalue );\n",
+      "  }\n",
       "  return(R_NilValue);\n",
       "}\n\n",
 

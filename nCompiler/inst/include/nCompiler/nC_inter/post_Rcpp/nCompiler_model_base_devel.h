@@ -35,7 +35,6 @@ class modelClass_ : public modelBaseClass_ {
       auto i_n2a = name2access.begin();
       auto end_n2a = name2access.end();
       for(; i_n2a != end_n2a; ++i_n2a) {
-        // This compiles and runs but does not successfully identify any genericInterfaceBaseC members.
         std::shared_ptr<genericInterfaceBaseC> ptr = i_n2a->second->getInterfacePtr(dynamic_cast<genericInterfaceBaseC*>(self));
         bool got_one = (ptr != nullptr);
         if(got_one)
