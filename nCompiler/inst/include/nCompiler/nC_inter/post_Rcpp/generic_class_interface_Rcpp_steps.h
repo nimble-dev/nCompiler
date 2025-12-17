@@ -160,13 +160,9 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
     return (access->second->get(this));
   }
 
-  template<typename Rtype>
-  void set_all_values_impl(const Rtype Robj);
-
   // For a list input, checking names in the list is costly
   // so we iterate through the list and check names against name2access.
-  template<>
-  void set_all_values_impl<Rcpp::List>(const Rcpp::List Robj) {
+  void set_all_values_impl_list(const Rcpp::List Robj) {
     // Cache names once to avoid repeatedly constructing the names vector
     Rcpp::Nullable<Rcpp::CharacterVector> nmsN = Robj.names();
     if(nmsN.isNull()) {
@@ -186,8 +182,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
   // For an environment input, checking names is less costly
   // so we iterate through name2access and check for each name
   // whether it exists in the environment.
-  template<>
-  void set_all_values_impl<Rcpp::Environment>(const Rcpp::Environment Robj) {
+  void set_all_values_impl_environment(const Rcpp::Environment Robj) {
     size_t n = name2access.size();
     auto i_n2a = name2access.begin();
     auto end_n2a = name2access.end();
@@ -201,9 +196,9 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 
   void set_all_values(SEXP Robj) {
     if(Rcpp::is<Rcpp::Environment>(Robj)) {
-      set_all_values_impl<Rcpp::Environment>(Robj);
+      set_all_values_impl_environment(Robj);
     } else if(Rcpp::is<Rcpp::List>(Robj)) {
-      set_all_values_impl<Rcpp::List>(Robj);
+      set_all_values_impl_list(Robj);
     } else {
       Rcpp::stop("Setting all values of an nClass only works from environment (including nClass or R6) or list objects.\n");
     }    
