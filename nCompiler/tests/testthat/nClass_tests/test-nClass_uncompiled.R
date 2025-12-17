@@ -2,6 +2,7 @@
 
 test_that("nClass basics",
 {
+
   nc1 <- nClass(
     Rpublic = list(
       Rv = NULL,

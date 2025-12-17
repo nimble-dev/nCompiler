@@ -2,7 +2,12 @@ nClassLabelMaker <- labelFunctionCreator('nClass')
 
 nClassClass <- R6::R6Class(
   classname = "nClass",
-  portable = FALSE
+  portable = FALSE,
+  public = list(
+    initialize = function(...) {
+      private$Cpublic_obj <- private$initialize_Cpublic_obj(...)
+    }
+  )
 )
 
 CnClassClass <- R6::R6Class(
@@ -10,6 +15,12 @@ CnClassClass <- R6::R6Class(
   inherit = nClassClass,
   portable = FALSE
 )
+
+CpubClass <- R6::R6Class(
+  classname = "CpubClass",
+  portable = FALSE
+)
+
 
 #' Create a nClass definition
 #'
@@ -138,7 +149,7 @@ nClass <- function(classname,
   if('initialize' %in% names(Cpublic)) {
     if('initialize' %in% names(Rpublic))
       stop("If an initialize method is provided in Rpublic, it can't be provided in Cpublic.",
-           "If you want a C++ constructor that is not an R finalizer, give it a name and set",
+           "If you want a C++ constructor that is not an R constructor, give it a name and set",
            "compileInfo$constructor=TRUE.")
     if(!isTRUE(NFinternals(Cpublic[['initialize']])$compileInfo$constructor))
       stop("In nFunction 'initialize', use 'compileInfo = list(constructor=TRUE)'.")
@@ -170,11 +181,28 @@ nClass <- function(classname,
   # Uncompiled behavior for Cpublic fields needs to be handled.
   # Right now a type string like 'numericScalar' just becomes a
   # default value.
-  builtIn <- list(isCompiled=function() FALSE)
+  eval(substitute(
+    Cpub_unc_class <- R6::R6Class(
+      classname = paste0(classname, "_Cpub_uncompiled"),
+      public = Cpublic,
+      portable = FALSE,
+      inherit = INHERIT,
+      parent_env = new_env
+    ),
+    list(INHERIT =
+           if(inherit_provided) substitute((INHERITQ)$parent_env$.Cpub_uncompiled_class, list(INHERITQ = inheritQ))
+         else quote(CpubClass))
+  ))
+  new_env$.Cpub_uncompiled_class <- Cpub_unc_class
+
+  components <- build_nClass(Rpublic, Cpublic, internals)
+
   eval(substitute(
     result <- R6::R6Class(
       classname = classname,
-      public = c(Rpublic, Cpublic, builtIn),
+      public = components$public,
+      private = components$private,
+      active = components$active,
       portable = FALSE,
       inherit = INHERIT,
       parent_env = new_env
@@ -197,6 +225,133 @@ nClass <- function(classname,
 #
 # NC_InternalsClass does not keep track of the name.
 #
-# In nCompile, the classname is used as the cpp_name
-
+# In nCompile, the classname is used as the cpp_name.
 # See nCompile comments for more.
+
+build_Cobject_class_uncompiled <- function(Cpublic, internals) {
+  ans <- quote(
+    R6::R6Class(
+      classname = paste0(classname, "_Cpub_uncompiled"),
+      public = Cpublic,
+      portable = FALSE,
+      parent_env = new_env
+    )
+  )
+}
+
+build_nClass <- function(Rpublic, Cpublic, internals) {
+  CfieldNames <- internals$fieldNames
+  activeBindings <- buildActiveBindings_for_nClass(internals,
+                                                   CfieldNames)$activeBindings
+  CmethodNames <- internals$methodNames
+  Cmethods <- mapply(buildMethod_for_nClass,
+                    fun = Cpublic[CmethodNames],
+                    name = CmethodNames)
+  
+  builtIn <- list(isCompiled=function() private$isCompiled_)
+  private <- list(
+    Cpublic_obj = NULL,
+    isCompiled_ = FALSE,
+    init_Cpublic_obj_code = quote(.Cpub_uncompiled_class$new())
+  )
+  
+  if(!('initialize' %in% names(Rpublic))) {
+    initialize <- function(...) {
+      super$initialize(...)
+    }
+    Rpublic$initialize <- initialize
+  }
+
+  initialize_Cpublic_obj <- function(...) {
+    private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
+  }
+  private$initialize_Cpublic_obj <- initialize_Cpublic_obj
+
+  Cobject_class_uncompiled <- build_Cobject_class_uncompiled(Cpublic, internals)
+
+  # The initializeCpp will go into the compiled Cpublic case.
+  list(
+    public = c(Rpublic,
+               Cmethods,
+               builtIn),
+    private = private,
+    active = activeBindings
+  )
+}
+
+# Active bindings to access the contained object for Cpublic content
+buildActiveBindings_for_nClass <- function(NCI, fieldNames) {
+  symTab <- NCI$symbolTable
+  activeBindings <- list()
+  for(name in fieldNames) {
+    ans <- function(value) {}
+    sym <- symTab$getSymbol(name)
+    if(is.null(sym)) {
+      warning(paste0("Could not find a way to build active binding for field ", name, "."))
+      return(ans)
+    }
+    body(ans) <- substitute(
+    {
+      if(missing(value))
+        Cpublic_obj$NAME
+      else
+        Cpublic_obj$NAME <- value
+    },
+    list(NAME = name)
+    )
+    activeBindings[[name]] <- ans
+  }
+  list(activeBindings = activeBindings)
+}
+
+buildMethod_for_nClass <- function(fun, name) {
+  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
+  if(!NFinternals(fun)$compileInfo$callFromR) {
+    ans <- function(...) {}
+    environment(ans) <- new.env()
+    body(ans) <- substitute(
+      stop("method ", NAME, " cannot be called directly from R (because compileInfo$callFromR is FALSE)."),
+      list(NAME = name)
+    )
+    return(ans)
+  }
+
+  refArgs <- NFinternals(fun)$refArgs
+  blockRefArgs <- NFinternals(fun)$blockRefArgs
+
+  if(length(refArgs) + length(blockRefArgs) == 0) {
+    innerCall <- substitute(private$Cpublic_obj$NAME(...),
+                            list(NAME = name))
+    ans <- substitute(function(...) {
+      INNERCALL
+    },
+      list(INNERCALL = innerCall)
+    )
+    ans <- eval(ans)
+    attr(ans, "srcref") <- NULL
+    return(ans)
+  }
+
+  ## Create Cpublic_obj$method(A = A, B = B) call
+  ## We need the arguments in place instead of using ...
+  ## so that we can use passByReference if needed.
+  formals_fun <- formals(fun)
+  innerCallDollarPart <- substitute(private$Cpublic_obj$NAME,
+                                   list(NAME = name))
+  innerArgsList <- names(formals_fun) |> lapply(as.name) |> structure(names = names(formals_fun))
+  innerCallTemplate <- as.call(c(list(as.name("CALL__")),
+                               innerArgsList))
+  innerCall <- do.call("substitute",
+                       list(expr = innerCallTemplate,
+                            env = list(CALL__ = innerCallDollarPart)))
+
+  ans <- substitute(
+    function() {
+      INNERCALL
+  },
+    list(INNERCALL = innerCall)
+  )
+  ans[[2]] <- formals_fun
+  ans <- passByReference(ans, refArgs, blockRefArgs)
+  ans
+}
