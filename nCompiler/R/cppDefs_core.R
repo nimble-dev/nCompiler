@@ -348,7 +348,7 @@ addGenericInterface_impl <- function(self) {
     for(mName in methodNames) {
       if(mName %in% outputMethodNames) next
       if(useIM && !(mName %in% interfaceMembers)) next
-      NFint <- NFinternals(current_NCgen$public_methods[[mName]])
+      NFint <- NFinternals(NC_get_Cpub_class(current_NCgen)$public_methods[[mName]])
       NFcompInfo <- NFint$compileInfo
       if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
       if(isTRUE(NFcompInfo$destructor)) next

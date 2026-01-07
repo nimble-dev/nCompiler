@@ -24,21 +24,25 @@ test_that("nClass basics",
         returnType = 'numericScalar')
     )
   )
-
+  expect_true(isNCgenerator(nc1))
+  expect_false(isCompiledNCgenerator(nc1))
   my.nc1 <- nc1$new()
+  expect_true(isNC(my.nc1))
+  expect_false(isCNC(my.nc1))
 
   expect_true(inherits(my.nc1, "nClass"))
   expect_true(inherits(my.nc1, "R6"))
   expect_true(inherits(my.nc1$private$Cpublic_obj$Cfoo, 'nFunction'))
   expect_true(inherits(my.nc1$Cfoo, 'function'))
   expect_equal(my.nc1$Cfoo(2), 3)
+  expect_equal(my.nc1$Rfoo(2), 3)
   expect_true(inherits(nc1$.nCompiler$symbolTable, "symbolTableClass"))
   expect_equal(nc1$.nCompiler$symbolTable$getSymbol("Cv")$nDim, 0)
   expect_true(isNC(my.nc1))
   expect_true(isNCgenerator(nc1))
   expect_error(inherits(NCinternals(my.nc1), "NC_InternalsClass"))
   expect_true(inherits(NCinternals(nc1), "NC_InternalsClass"))
-  expect_equal(NCinternals(nc1)$methodNames, 'Cfoo')
+  expect_equal(NCinternals(nc1)$methodNames, c('Cfoo','Cbreak'))
 }
 )
 

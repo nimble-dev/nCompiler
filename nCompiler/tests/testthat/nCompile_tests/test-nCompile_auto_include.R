@@ -331,7 +331,7 @@ test_that("auto-including from inherited nClass works and can be controlled", {
   Cobj <- comp$ncDer$new()
   Cobj$x <- 10
   expect_equal(Cobj$add_x(15), 25)
-  expect_equal(method(Cobj$private$CppObj, "add_x")(15), 25)
+  expect_equal(method(to_generic_interface(Cobj), "add_x")(15), 25)
   expect_equal(Cobj$add_2x_virt(15), 35)
   Cobj2 <- comp$ncUseBase$new()
   expect_true(is.null(Cobj2$myBase))
@@ -343,7 +343,7 @@ test_that("auto-including from inherited nClass works and can be controlled", {
   Cobj <- comp$ncDer$new()
   Cobj$x <- 10
   expect_equal(Cobj$add_x(15), 25)
-  expect_equal(method(Cobj$private$CppObj, "add_x")(15), 25)
+  expect_equal(method(to_generic_interface(Cobj), "add_x")(15), 25)
   expect_equal(Cobj$add_2x_virt(15), 35)
   Cobj2 <- comp$ncUseBase$new()
   expect_true(is.null(Cobj2$myBase))

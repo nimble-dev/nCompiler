@@ -222,7 +222,7 @@ cpp_nClassClass <- R6::R6Class(
       buildParallelClassDefs()
     },
     buildFunctionDefs = function() {
-      message("To-do: Care needed to filter interfaced methods by exportMembers names.")
+      # message("To-do: Care needed to filter interfaced methods by exportMembers names.")
       for(i in seq_along(Compiler$NFcompilers)) {
         RCname <- names(Compiler$NFcompilers)[i]
         thisNFcomp <- Compiler$NFcompilers[[RCname]]

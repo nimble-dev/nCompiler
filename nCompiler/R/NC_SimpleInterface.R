@@ -4,8 +4,11 @@
 
 #' @export
 method <- function(obj, name) {
-  if(inherits(obj, "CnClass"))
-    obj <- obj$private$CppObj
+  if(inherits(obj, "nClass"))
+    if(obj$isCompiled())
+      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
+    else 
+      stop("method() can only be used on compiled nClass objects.")
   CnCenv <- get_CnCenv(obj)
   ans <- CnCenv[[name]]
   environment(ans) <- new.env(parent = environment(ans))
@@ -31,27 +34,25 @@ method <- function(obj, name) {
 
 #' @export
 value <- function(obj, name) {
-  if(inherits(obj, "CnClass"))
-    obj <- obj$private$CppObj
+  if(inherits(obj, "nClass"))
+    if(obj$isCompiled())
+      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
+    else 
+      stop("value() can only be used on compiled nClass objects.")
   DLLenv <- get_DLLenv(obj)
   extptr <- getExtptr(obj)
   DLLenv$get_value(extptr, name)
-
-  ## if(is.null(getExtptr(obj)))
-  ##   stop("obj does not point to a C++ object.")
-  ## nCompiler:::get_value(getExtptr(obj), name)
 }
 
 #' @export
 `value<-` <- function(obj, name = NULL, value) {
-  if(inherits(obj, "CnClass"))
-    obj <- obj$private$CppObj
+   if(inherits(obj, "nClass"))
+    if(obj$isCompiled())
+      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
+    else 
+      stop("value<-() can only be used on compiled nClass objects.")
   DLLenv <- get_DLLenv(obj)
   extptr <- getExtptr(obj)
   DLLenv$set_value(extptr, name, value)
   obj
-  ## if(is.null(getExtptr(obj)))
-  ##   stop("obj does not point to a C++ object.")
-  ## nCompiler:::set_value(getExtptr(obj), name, value)
-  ## obj
 }

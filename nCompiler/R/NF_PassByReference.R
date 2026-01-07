@@ -4,6 +4,18 @@
 passByReference <- function(fun,
                             refArgs = character(),
                             blockRefArgs = character()) {
+  if(is.list(refArgs))
+    refArgs <- names(refArgs)[ unlist(lapply(refArgs, isTRUE)) ]
+
+  if(is.list(blockRefArgs))
+    blockRefArgs <- names(blockRefArgs)[ unlist(lapply(blockRefArgs, isTRUE)) ]
+
+  if(is.null(refArgs)) refArgs <- character()
+  if(is.null(blockRefArgs)) blockRefArgs <- character()
+
+  if((length(refArgs)==0) & length(blockRefArgs)==0)
+    return(fun)
+
   passedAsFunction <- is.function(fun)
   code <- if(passedAsFunction)
             body(fun)

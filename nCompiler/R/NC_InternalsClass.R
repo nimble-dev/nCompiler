@@ -32,9 +32,12 @@ NC_InternalsClass <- R6::R6Class(
     virtualMethodNames_self = character(), # will be used when checking inherited method validity, only for locally implemented methods
     virtualMethodNames = character(),
     check_inherit_done = FALSE,
+    #Cpub_class_code = NULL,
+    #main_class_code = NULL,
+    RpublicNames = character(),
     initialize = function(classname,
                           Cpublic,
-                          isOnlyC = FALSE,
+                          RpublicNames = character(),
                           enableDerivs = NULL,
                           enableSaving = get_nOption("enableSaving"),
                           inheritQ = NULL,
@@ -46,7 +49,8 @@ NC_InternalsClass <- R6::R6Class(
       self$compileInfo <- compileInfo
       self$classname <- classname
       self$cpp_classname <- Rname2CppName(classname)
-      self$isOnlyC = isOnlyC
+      self$RpublicNames <- RpublicNames
+      self$isOnlyC = length(RpublicNames) == 0
       numEntries <- length(Cpublic)
       if(numEntries) {
         isMethod <- rep(FALSE, numEntries)
@@ -64,14 +68,22 @@ NC_InternalsClass <- R6::R6Class(
                  call. = FALSE)
           }
         }
+        has_Cpublic_init <- "initialize" %in% names(Cpublic)
         self$virtualMethodNames <- names(Cpublic)[isVirtual]
         self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
+        if(has_Cpublic_init) {
+          if("initialize" %in% self$methodNames) {
+            stop("The name 'initialize' in Cpublic can only be used for an R function to provide any special initialization handling (usually not needed).",
+                 call. = FALSE)
+          }
+        }
         self$allMethodNames_self <- methodNames
         self$virtualMethodNames_self <- names(Cpublic)[isVirtual]
         self$allMethodNames <- methodNames
         self$fieldNames <- names(Cpublic)[!isMethod]
+        if(has_Cpublic_init) self$fieldNames <- setdiff(self$fieldNames, "initialize")
         self$allFieldNames_self <- fieldNames
         self$allFieldNames <- fieldNames
         self$orig_methodName_to_cpp_code_name <- structure(vector("list", length=length(methodNames)),

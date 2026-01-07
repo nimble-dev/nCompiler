@@ -10,7 +10,7 @@
 isNC <- function(x) inherits(x, 'nClass')
 
 #' @export
-isCNC <- function(x) inherits(x, 'CnClass')
+isCNC <- function(x) inherits(x, 'nClass') && isTRUE(x$isCompiled())
 
 
 #' Determine if an object is a nClass generator
@@ -92,7 +92,7 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
   method <- NULL
   while(!done) {
     if(name %in% NCinternals(current_NCgen)$methodNames) {
-      method <- current_NCgen$public_methods[[name]]
+      method <- NC_get_Cpub_class(current_NCgen)$public_methods[[name]]
       done <- TRUE
     } else {
       if(inherits)  {
@@ -156,7 +156,7 @@ NC_check_inheritance <- function(NCgenerator) {
         next
       }
       # At this point the current level has the method and it is inherited
-      localMethod <- NCgenerator$public_methods[[mN]]
+      localMethod <- NC_get_Cpub_class(NCgenerator)$public_methods[[mN]]
       inheritMethod <- NC_find_method(inheritNCgenerator, mN)
       if(is.null(inheritMethod))
         stop("Problem finding inherited method ", mN, " in NC_check_inheritance.", call. = FALSE)
@@ -193,4 +193,10 @@ NC_check_inheritance <- function(NCgenerator) {
   }
   NCint$check_inherit_done <- TRUE
   c(new_virtualMethodNames, inherit_virtualMethodNames)
+}
+
+NC_get_Cpub_class <- function(NCgenerator) {
+  if(!isNCgenerator(NCgenerator))
+    stop("Input to NC_get_Cpub_class must be a nClass generator.")
+  NCgenerator$parent_env$.Cpub_class
 }

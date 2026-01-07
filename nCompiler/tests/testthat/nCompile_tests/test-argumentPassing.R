@@ -111,9 +111,11 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(access_dynamic_package("testpackage", "foo"))
 })
 
-
 test_that("pass 1D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
   message("This test has four trapped errors.")
+
+  #debug(nCompiler:::make_nClass_code)
+  #undebug(nCompiler:::build_Cmethod_code_for_nClass)
   nc1 <- nClass(
     Cpublic = list(
       foo = nFunction(
@@ -127,6 +129,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
         blockRefArgs = 'xBlockRef',
         returnType = 'numericVector'
       )))
+
   test_foo <- function(fn) {
     x <- as.numeric(1:3)
     xRef <- as.numeric(11:13)
@@ -146,14 +149,14 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   Cnc1 <- nCompile(nc1, package = FALSE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
   # Compiled via package
   Cnc1 <- nCompile(nc1, package = TRUE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
   # Compiled via package via writePackage
@@ -166,7 +169,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
   Cobj <- access_dynamic_package("testpackage", "nc1")$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 })
@@ -260,7 +263,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   Cnc1 <- nCompile(nc1, package = FALSE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 
@@ -268,7 +271,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   Cnc1 <- nCompile(nc1, package = TRUE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 
@@ -282,7 +285,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
   Cobj <- testpackage::nc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 })
@@ -377,7 +380,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   Cnc1 <- nCompile(nc1, package = FALSE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 
@@ -385,7 +388,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   Cnc1 <- nCompile(nc1, package = TRUE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 
@@ -399,7 +402,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
   Cobj <- testpackage::nc1$new()
   test_foo(Cobj$foo)
-  CppObj <- Cobj$private$CppObj
+  CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 })

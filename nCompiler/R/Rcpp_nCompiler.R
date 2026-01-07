@@ -10,7 +10,7 @@
 ## When calling nCompile with package=TRUE, or calling writePackage
 ## cppDefsList --> RcppPacket_list --> WP_writeCpp --> writeCpp_nCompiler (for each RcppPacket in the list)
 
-## Rcpp_nCompilerPacket represents information needed from cppDefs in.nCompiler
+## Rcpp_nCompilerPacket represents information needed from cppDefs in nCompiler
 ## to generate Rcpp-ready content.
 ## At the moment it is just a list, but we establish the abstraction
 ## because we suspect it will need to do more work in the future.
@@ -22,8 +22,8 @@ Rcpp_nCompilerPacket <- function(...) {
     list(...)
 }
 
-## Interface between.nCompiler's cppDef representation of code and
-##.nCompiler's packet of content for Rcpp
+## Interface between nCompiler's cppDef representation of code and
+## nCompiler's packet of content for Rcpp
 ## To be expanded to take a list of cppDefs
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {

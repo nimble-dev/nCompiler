@@ -5,15 +5,12 @@ nClassClass <- R6::R6Class(
   portable = FALSE,
   public = list(
     initialize = function(...) {
+      initialize_Cpublic(...)
+    },
+    initialize_Cpublic = function(...) {
       private$Cpublic_obj <- private$initialize_Cpublic_obj(...)
     }
   )
-)
-
-CnClassClass <- R6::R6Class(
-  classname = "CnClass",
-  inherit = nClassClass,
-  portable = FALSE
 )
 
 CpubClass <- R6::R6Class(
@@ -135,7 +132,8 @@ nClass <- function(classname,
   )
   if(missing(classname))
     classname <- nClassLabelMaker()
-
+  if(is.null(compileInfo$classname))
+    compileInfo$classname <- paste0(classname, "_compiled")
   if('finalize' %in% names(Cpublic)) {
     if('finalize' %in% names(Rpublic))
       stop("If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",
@@ -160,7 +158,7 @@ nClass <- function(classname,
 
   internals = NC_InternalsClass$new(classname = classname,
                                     Cpublic = Cpublic,
-                                    isOnlyC = length(Rpublic) == 0,
+                                    RpublicNames = names(Rpublic),
                                     enableDerivs = enableDerivs,
                                     enableSaving = enableSaving,
                                     inheritQ = inheritQ,
@@ -170,52 +168,175 @@ nClass <- function(classname,
                                     env = env)
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance
-  new_env <- new.env(parent = env)
+
   # The R6Class inherit argument has weird handling:
   # "captured as an unevaluated expression which is evaluated in parent_env each time an object is instantiated."
   # so if provided in the nClass call, we stick it in new_env.
   # (That is not the only reason for new_env.)
   # Also note that the inherit arg is for nClass inheritance. The compileInfo$inherit element is for hard-coded C++ inheritance statements.
   #if(!is.null(inherit)) new_env$.inherit_obj <- inherit
-  new_env$.NCinternals <- internals
+
   # Uncompiled behavior for Cpublic fields needs to be handled.
   # Right now a type string like 'numericScalar' just becomes a
   # default value.
-  eval(substitute(
-    Cpub_unc_class <- R6::R6Class(
-      classname = paste0(classname, "_Cpub_uncompiled"),
-      public = Cpublic,
-      portable = FALSE,
-      inherit = INHERIT,
-      parent_env = new_env
-    ),
-    list(INHERIT =
-           if(inherit_provided) substitute((INHERITQ)$parent_env$.Cpub_uncompiled_class, list(INHERITQ = inheritQ))
-         else quote(CpubClass))
-  ))
-  new_env$.Cpub_uncompiled_class <- Cpub_unc_class
+  if("isCompiled" %in% names(Cpublic)) {
+    stop("The name 'isCompiled' in Cpublic is reserved for nCompiler internal use.",
+         call. = FALSE)
+  }
+  # Cpublic$initialize may be provided and should check isCompiled() for behavior
+  # because it will be inherited directly in the compiled Cpublic class.
+  #
+  # It should not normally be necessary.
+  #
+  Cpub_class_code <- make_uncompiled_Cpub_class_code(
+    classname = classname,
+    inheritQ = inheritQ,
+    Cpublic = NULL # indicates to leave quote(Cpublic)
+  )
 
-  components <- build_nClass(Rpublic, Cpublic, internals)
+  main_class_code <- make_nClass_code(
+    internals = internals,
+    Cpublic = Cpublic, # Allows to make methods that call the Cpub_object
+    Rpublic = NULL # indicates to leave quote(Rpublic)
+  )
 
-  eval(substitute(
-    result <- R6::R6Class(
-      classname = classname,
-      public = components$public,
-      private = components$private,
-      active = components$active,
-      portable = FALSE,
-      inherit = INHERIT,
-      parent_env = new_env
-    ),
-    list(INHERIT =
-           if(inherit_provided) inheritQ
-         else quote(nClassClass))
-    ))
+  ## Build the R6 class generator
+  NCgenerator <- eval(main_class_code)
+  Cpub_generator <- eval(Cpub_class_code)
+  connect_nClass_envs(NCgenerator, Cpub_generator, env)
+
+  NCgenerator$parent_env$.NCinternals <- internals
+  ## Store the internals in two places:
   ## 2. in the generator
-  result$.nCompiler <- internals
+  NCgenerator$.nCompiler <- internals
   ## NB: We want to avoid having every object
   ## include the generator, to keep saving light.
-  result
+  NCgenerator
+}
+
+make_uncompiled_Cpub_class_code <- function(classname, 
+                                            inheritQ = NULL, 
+                                            Cpublic = NULL) {
+  inherit_provided <- !is.null(inheritQ)
+  Cpublic_code <- quote(Cpublic)
+  if(!is.null(Cpublic)) {
+    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
+    Cpublic_code_list <- Cpublic |> lapply(\(x) if(is.function(x)) parsedcopy(x) else x)
+    Cpublic_code <- do.call("call", c("list",
+                              Cpublic_code_list))
+  }
+  substitute(
+    R6::R6Class(
+      classname = CLASSNAME,
+      public = c(CPUBLIC,
+                  list(isCompiled=function() FALSE)),
+      portable = FALSE,
+      inherit = INHERIT,
+      parent_env = NULL
+    ),
+    list(CLASSNAME = paste0(classname, "_Cpub_uncompiled"),
+          CPUBLIC = Cpublic_code,
+          INHERIT =
+            if(inherit_provided) substitute((INHERITQ)$parent_env$.Cpub_class, list(INHERITQ = inheritQ))
+            else quote(nCompiler::CpubClass))
+  )
+}
+
+make_nClass_code <- function(internals,
+                    Cpublic = NULL, # if nFunctions (called from nClass), create method. If R function (called from WP_writeRinterfaces), use that ()
+                    Rpublic = NULL  # If NULL (called from nClass), use quote(Rpbulic. If provided (from WP_writeRinterfaces), deparse.)
+                    ) {
+  classname <- internals$classname
+  inheritQ <- internals$inheritQ
+  fieldNames <- internals$fieldNames
+  CmethodNames <- internals$methodNames
+                            
+  inherit_provided <- !is.null(inheritQ)
+
+  activeBindings_code <- fieldNames |> lapply(
+    function(name) {
+      substitute(
+        function(value) {
+        if(missing(value))
+          private$Cpublic_obj$NAME
+        else
+          private$Cpublic_obj$NAME <- value
+        },
+        list(NAME = name)
+      ) |> removeSource()} # otherwise future srcref persists as fourth list element -- confusing!
+    ) |> structure(names = fieldNames)
+  activeBindings_list_code <- do.call("call", c("list", activeBindings_code))
+
+  if(length(CmethodNames)) {
+    Cmethods_code_list <- mapply(build_Cmethod_code_for_nClass,
+                                fun = Cpublic[CmethodNames],
+                                name = CmethodNames)
+  } else {
+    Cmethods_code_list <- list()
+  }
+  Cmethods_code <- do.call("call", c("list",
+                                Cmethods_code_list))
+
+  builtIn_code_list <- list(isCompiled = quote(function() FALSE)) # Will be overridden in compiled version to return TRUE
+
+  Rpublic_code <- quote(Rpublic)
+  if(!is.null(Rpublic)) {
+    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f)}
+    Rpublic_code_list <- Rpublic |> lapply(\(x) if(is.function(x)) parsedcopy(x) else x)
+    Rpublic_code <- do.call("call", c("list",
+                              Rpublic_code_list))
+  }
+
+  substitute(
+    R6::R6Class(
+      classname = CLASSNAME,
+      public = c(RPUBLIC,
+                CMETHODS,
+                list(isCompiled = function() FALSE)),
+      private = list(
+        Cpublic_obj = NULL,
+        init_Cpublic_obj_code = quote(.Cpub_class$new()),
+        initialize_Cpublic_obj = function(...) {
+          private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
+        }
+      ),
+      active = ACTIVE,
+      portable = FALSE,
+      inherit = INHERIT,
+      parent_env = new.env() # We do this so that the parsed code for writePackage is clean, and we modify the result below.
+    ),
+    list(CLASSNAME = classname,
+         RPUBLIC = Rpublic_code,
+         CMETHODS = Cmethods_code,
+         ACTIVE = activeBindings_list_code,
+         INHERIT =
+           if(inherit_provided) inheritQ
+         else quote(nCompiler::nClassClass))
+  )
+}
+
+connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
+  # The NCgen at this point has been created by R6::R6Class
+  # with "parent_env = new.env()".
+  # The Cpub_gen has been created by R6::R6Class
+  # with "parent_env = NULL"
+  # env is environment to be treated as the parent env
+  # of the call to nClass.
+  #
+  # The reason to do the below steps here in a separate
+  # function is to be able to call it from either
+  # nCompile pathway: package = FALSE or package = TRUE
+  # as well as from uncompiled nClass. This allows
+  # the environment arrangements to be done in one place
+  # for all pathways for consistency. In the package=TRUE
+  # case, it also allows this step to be done in .onLoad
+  # so that the objects saved with the class (e.g. R6 class
+  # generators) are a bit simpler than they would otherwise be.
+  Cpub_gen$parent_env <- (new_env <- NCgen$parent_env)
+  parent.env(new_env) <- env
+  new_env$.Cpub_class <- Cpub_gen
+  if(!is.null(.NCgenerator))
+    new_env$.NCgenerator <- .NCgenerator # It would be (for overall network of environments) not to need this reference
 }
 
 # Provenance of names for an nClass:
@@ -228,91 +349,23 @@ nClass <- function(classname,
 # In nCompile, the classname is used as the cpp_name.
 # See nCompile comments for more.
 
-build_Cobject_class_uncompiled <- function(Cpublic, internals) {
-  ans <- quote(
-    R6::R6Class(
-      classname = paste0(classname, "_Cpub_uncompiled"),
-      public = Cpublic,
-      portable = FALSE,
-      parent_env = new_env
-    )
-  )
-}
-
-build_nClass <- function(Rpublic, Cpublic, internals) {
-  CfieldNames <- internals$fieldNames
-  activeBindings <- buildActiveBindings_for_nClass(internals,
-                                                   CfieldNames)$activeBindings
-  CmethodNames <- internals$methodNames
-  Cmethods <- mapply(buildMethod_for_nClass,
-                    fun = Cpublic[CmethodNames],
-                    name = CmethodNames)
-  
-  builtIn <- list(isCompiled=function() private$isCompiled_)
-  private <- list(
-    Cpublic_obj = NULL,
-    isCompiled_ = FALSE,
-    init_Cpublic_obj_code = quote(.Cpub_uncompiled_class$new())
-  )
-  
-  if(!('initialize' %in% names(Rpublic))) {
-    initialize <- function(...) {
-      super$initialize(...)
-    }
-    Rpublic$initialize <- initialize
-  }
-
-  initialize_Cpublic_obj <- function(...) {
-    private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
-  }
-  private$initialize_Cpublic_obj <- initialize_Cpublic_obj
-
-  Cobject_class_uncompiled <- build_Cobject_class_uncompiled(Cpublic, internals)
-
-  # The initializeCpp will go into the compiled Cpublic case.
-  list(
-    public = c(Rpublic,
-               Cmethods,
-               builtIn),
-    private = private,
-    active = activeBindings
-  )
-}
-
-# Active bindings to access the contained object for Cpublic content
-buildActiveBindings_for_nClass <- function(NCI, fieldNames) {
-  symTab <- NCI$symbolTable
-  activeBindings <- list()
-  for(name in fieldNames) {
-    ans <- function(value) {}
-    sym <- symTab$getSymbol(name)
-    if(is.null(sym)) {
-      warning(paste0("Could not find a way to build active binding for field ", name, "."))
-      return(ans)
-    }
-    body(ans) <- substitute(
-    {
-      if(missing(value))
-        Cpublic_obj$NAME
-      else
-        Cpublic_obj$NAME <- value
-    },
-    list(NAME = name)
-    )
-    activeBindings[[name]] <- ans
-  }
-  list(activeBindings = activeBindings)
-}
-
-buildMethod_for_nClass <- function(fun, name) {
+build_Cmethod_code_for_nClass <- function(fun, name) {
   if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
+  
+  if(!isNF(fun)) {
+    if(is.function(fun)) { # This was called from writePackge with a method from a previously built nClass
+      return(parse(text = deparse(fun), keep.source = FALSE)[[1]])
+    } else {
+      stop("In nClass, Cpublic method ", name, " is not a function or nFunction.")
+    }
+  }
   if(!NFinternals(fun)$compileInfo$callFromR) {
-    ans <- function(...) {}
-    environment(ans) <- new.env()
-    body(ans) <- substitute(
-      stop("method ", NAME, " cannot be called directly from R (because compileInfo$callFromR is FALSE)."),
+    ans <- substitute(
+      function(...) {
+        stop("method ", NAME, " cannot be called directly from R (because compileInfo$callFromR is FALSE).")
+      },
       list(NAME = name)
-    )
+    ) |> removeSource()
     return(ans)
   }
 
@@ -320,15 +373,11 @@ buildMethod_for_nClass <- function(fun, name) {
   blockRefArgs <- NFinternals(fun)$blockRefArgs
 
   if(length(refArgs) + length(blockRefArgs) == 0) {
-    innerCall <- substitute(private$Cpublic_obj$NAME(...),
-                            list(NAME = name))
     ans <- substitute(function(...) {
-      INNERCALL
+      private$Cpublic_obj$NAME(...)
     },
-      list(INNERCALL = innerCall)
-    )
-    ans <- eval(ans)
-    attr(ans, "srcref") <- NULL
+      list(NAME = name)
+    ) |> removeSource()
     return(ans)
   }
 
@@ -350,8 +399,9 @@ buildMethod_for_nClass <- function(fun, name) {
       INNERCALL
   },
     list(INNERCALL = innerCall)
-  )
-  ans[[2]] <- formals_fun
-  ans <- passByReference(ans, refArgs, blockRefArgs)
+  ) |> removeSource()
+  if(!is.null(formals_fun)) ans[[2]] <- formals_fun
+  if(!is.null(ans[[3]]))
+    ans[[3]] <- passByReference(ans[[3]], refArgs, blockRefArgs)
   ans
 }
