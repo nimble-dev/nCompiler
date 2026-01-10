@@ -4,6 +4,8 @@
 passByReference <- function(fun,
                             refArgs = character(),
                             blockRefArgs = character()) {
+  # The format from an NFinternals object is a named list of TRUE/FALSE values,
+  # so convert that to a character vector of names for the TRUE ones.
   if(is.list(refArgs))
     refArgs <- names(refArgs)[ unlist(lapply(refArgs, isTRUE)) ]
 
@@ -16,17 +18,22 @@ passByReference <- function(fun,
   if((length(refArgs)==0) & length(blockRefArgs)==0)
     return(fun)
 
+  # fun can be a function or the body of a function.
   passedAsFunction <- is.function(fun)
   code <- if(passedAsFunction)
             body(fun)
           else
             fun
 
+  # Helper to create a substitution list from argument names
+  # e.g. ("x", "_suffix") -> list(x = as.name("x_suffix"))
   args_2_subList <- function(args, suffix)
     args |>
       lapply(function(x) as.name(paste0(x, suffix))) |>
       structure(names = args)
 
+  # Helper to create lines of code for active bindings
+  # e.g. nCompiler::createRef("x_suffix", x) # either createRef or createBlockRef
   subList_2_lines <- function(subList,
                               fun_name) {
     lines <- list()
@@ -41,12 +48,17 @@ passByReference <- function(fun,
     lines
   }
 
+  # From "x", create lines like
+  # nCompiler::createRef("x_Ref__", x)
   subList <- args_2_subList(refArgs, "_Ref__")
   refArg_activeBinding_lines <- subList_2_lines(subList, "createRef")
 
+  # From "y", create lines like
+  # nCompiler::createBlockRef("y_BlockRef__", y)
   blockSubList <- args_2_subList(blockRefArgs, "_BlockRef__")
   blockRefArg_activeBinding_lines <- subList_2_lines(blockSubList, "createBlockRef")
 
+  # In the original code, replace x with x_Ref__, y with y_BlockRef__, etc.
   code <-
     eval(
       substitute(
@@ -56,6 +68,7 @@ passByReference <- function(fun,
       )
     )
 
+  # Wrap in braces if not already
   if(code[[1]] != '{')
     code <- substitute({CODE}, list(CODE=code))
 
@@ -102,8 +115,7 @@ createRef <- function(innerName,
 createBlockRef <- function(innerName,
                            outerCode,
                            env,
-                           innerEnv,
-                           dummyName = 'DUMMY_FOR_CREATE_BLOCK_REF_') {
+                           innerEnv) {
   # There is potential for more elaborate error-trapping.
   # E.g. we could determine the sizes (or net length) of outerCode (assignment target)
   # and check that v matches it.
@@ -117,9 +129,8 @@ createBlockRef <- function(innerName,
       stop("A block reference argument must be passed as a variable name, e.g. `x`, or an indexed block of a variable, e.g. `x[1:4, 2:3]` or `x[1:4, ]`.")
   }
   outerLen <- eval(substitute(length(OC), list(OC = outerCode)), envir=env)
-  outer_dummy_assign_code <- substitute(L <- R,
-                                        list(L = outerCode,
-                                             R = as.name(dummyName)))
+  assignment_code <- substitute(L <- NULL,
+                                list(L = outerCode))
   binding <-
     function(v)
       if(missing(v))
@@ -127,9 +138,9 @@ createBlockRef <- function(innerName,
       else {
         if(outerLen != length(v))
           stop("blockRef assignment must match in length.")
-        assign(dummyName, v, env)
-        on.exit(rm(list = dummyName, envir = env))
-        eval(outer_dummy_assign_code, env)
+        assignment_code[[3]] <<- v
+        eval(assignment_code, env)
+        assignment_code[[3]] <<- NULL
         v
       }
   makeActiveBinding(innerName, binding, innerEnv)

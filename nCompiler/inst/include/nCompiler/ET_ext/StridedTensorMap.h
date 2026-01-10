@@ -122,7 +122,25 @@ namespace Eigen {
     };
 
     // See Eigen::TensorMap for alternative constructor ideas that have been removed.
-    // Constructor added for StridedTensorMap
+    // Constructors added for StridedTensorMap
+
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor) // default to mapping the full tensor
+      : m_data(inputTensor.data())
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions, // sizes
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+#ifdef DEBUG_STRIDED_TENSOR_MAP
+      std::cout<<"sizes\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_dimensions[i]<<" "; std::cout<<std::endl;
+      std::cout<<"starts\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_startIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"stops\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_stopIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"strides\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_strides[i]<<" "; std::cout<<std::endl;
+#endif
+    }
+
     template<typename InputType>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
@@ -618,15 +636,19 @@ typename MakeIndexBlocksTypes<P...>::type MakeIndexBlocks(P ...p) {
 // or   MakeStridedTensorMap<2>::make(myEigenTensor, Eigen::array<b__, 3>({s(1, 2), s(), s(3)}))
 template<int output_nInd>
 struct MakeStridedTensorMap {
-  template<typename EigenInputType, typename IndexBlocksType>
+  template<typename EigenInputType>
    struct MakeOutputType {
      typedef typename EigenInputType::Scalar Scalar;
      typedef Tensor<Scalar, output_nInd> EigenOutputType;
      typedef StridedTensorMap< EigenOutputType > type;
    };
   template<typename EigenInputType, typename IndexBlocksType>
-  static typename MakeOutputType<EigenInputType, IndexBlocksType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
-    return typename MakeOutputType<EigenInputType, IndexBlocksType>::type(x, indexBlockArray);
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(x, indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x) {
+    return typename MakeOutputType<EigenInputType>::type(x);
   }
 };
 

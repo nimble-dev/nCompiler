@@ -24,7 +24,9 @@ test_that("One nClass holds another and uses it", {
   expect_true(is.null(inner_obj))
   obj$init()
   inner_obj <- obj$my_inner
-  expect_true(inherits(inner_obj, "CnClass"))
+  expect_true(obj$isCompiled())
+  expect_true(inherits(inner_obj, "nClass"))
+  expect_true(inner_obj$isCompiled())
 
   inner_obj$x <- 10
   expect_equal(obj$get_inner()$x, 10)
@@ -46,7 +48,7 @@ test_that("One nClass holds another by a base class and uses it", {
         }
       )
     ),
-    compileInfo = list(interface="none", createFromR=FALSE)
+    compileInfo = list(interface="generic", createFromR=FALSE)
   )
   nc_inner <- nClass(
     inherit = ncA,
@@ -70,33 +72,35 @@ test_that("One nClass holds another by a base class and uses it", {
       inner_wA_p3 = nFunction(function() {return(my_inner$wA + 3)}, returnType='numericScalar')
     )
   )
-  message("clean up this test for both compilation paths")
-  comp <- nCompile(nc_inner, nc_outer, ncA, package = TRUE)
-  comp <- nCompile(nc_inner, nc_outer, ncA, package = FALSE)
-  obj <- comp$nc_outer$new()
-  inner_obj <- obj$my_inner
-  expect_true(is.null(inner_obj))
-  obj$init()
-  inner_obj <- obj$my_inner
-  expect_true(inherits(inner_obj, "CnClass"))
+  for(package in c(TRUE, FALSE)) {
+    comp <- nCompile(nc_inner, nc_outer, ncA, package = package)
+    obj <- comp$nc_outer$new()
+    inner_obj <- obj$my_inner
+    expect_true(is.null(inner_obj))
+    obj$init()
+    inner_obj <- obj$my_inner
+    expect_true(inner_obj$isCompiled())
+    expect_true(inherits(inner_obj, "nClass"))
 
-  obj$my_A
-  obj$initA()
-  obj$my_A
-  obj$useA()
+    obj$my_A
+    obj$initA()
+    # since my_A is of type ncA, which has interface="none", we get back only a raw externalptr,
+    expect_true(inherits(obj$my_A, "loadedObjectEnv"))
+    obj$useA()
 
-  inner_obj$x <- 10
-  expect_equal(obj$get_inner()$x, 10)
-  expect_equal(obj$inner_x_p1(), 11)
+    inner_obj$x <- 10
+    expect_equal(obj$get_inner()$x, 10)
+    expect_equal(obj$inner_x_p1(), 11)
 
-  inner_obj$wA <- 20
-  inner_obj$v.A <- 1:3
-  expect_equal(obj$get_inner()$v.A, 1:3)
-  expect_equal(inner_obj$add.wA(1:3), 1:3 + 20)
+    inner_obj$wA <- 20
+    inner_obj$v.A <- 1:3
+    expect_equal(obj$get_inner()$v.A, 1:3)
+    expect_equal(inner_obj$add.wA(1:3), 1:3 + 20)
 
-  expect_equal(obj$inner_add_wA_p2(1:3), 1:3 + 20 + 2)
-  expect_equal(obj$inner_wA_p3(), 20 + 3)
+    expect_equal(obj$inner_add_wA_p2(1:3), 1:3 + 20 + 2)
+    expect_equal(obj$inner_wA_p3(), 20 + 3)
 
-  rm(obj, inner_obj)
-  gc()
+    rm(obj, inner_obj)
+    gc()
+  }
 })

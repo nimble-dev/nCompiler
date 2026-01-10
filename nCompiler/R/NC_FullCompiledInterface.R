@@ -156,32 +156,32 @@ build_compiled_nClass <- function(NCgenerator,
   CnCgenerator
 } 
 
-buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
+# buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
   #fieldNames <- NCI$fieldNames
-  symTab <- NCI$symbolTable
-  activeBindings <- list()
-  newFields <- list()
-  for(name in fieldNames) {
-    ans <- function(value) {}
-    sym <- symTab$getSymbol(name)
-    if(is.null(sym)) {
-      warning(paste0("Could not find a way to build active binding for field ", name, "."))
-      return(ans)
-    }
-    body(ans) <- substitute(
-    {
-      if(missing(value))
-        private$DLLenv$get_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME)
-      else
-        private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
-    },
-    list(NAME = name)
-    )
-    activeBindings[[name]] <- ans
-  }
-  list(activeBindings = activeBindings,
-       newFields = newFields)
-}
+#   symTab <- NCI$symbolTable
+#   activeBindings <- list()
+#   newFields <- list()
+#   for(name in fieldNames) {
+#     ans <- function(value) {}
+#     sym <- symTab$getSymbol(name)
+#     if(is.null(sym)) {
+#       warning(paste0("Could not find a way to build active binding for field ", name, "."))
+#       return(ans)
+#     }
+#     body(ans) <- substitute(
+#     {
+#       if(missing(value))
+#         private$DLLenv$get_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME)
+#       else
+#         private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
+#     },
+#     list(NAME = name)
+#     )
+#     activeBindings[[name]] <- ans
+#   }
+#   list(activeBindings = activeBindings,
+#        newFields = newFields)
+# }
 
 make_compiled_nClass_code <- function(NCgenerator) {
   classname <- NCinternals(NCgenerator)$compileInfo$classname
@@ -248,8 +248,10 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
   initialize_fun <- NC_get_Cpub_class(NCgenerator)$public_methods[["initialize"]]
   if(is.null(initialize_fun)) {
     if(!omit_automatic_Cpp_construction) {
+      # The ... argument to initialize is important because it will be called
+      # with ... from the outer R6generator, which might have other arguments embedded in the ...
       Rmethods_code_list[["initialize"]] <- quote(
-        function(CppObj) {self$initializeCpp(CppObj)}
+        function(CppObj, ...) {self$initializeCpp(CppObj)}
       )
     }
   } else {
@@ -276,7 +278,7 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
         private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
     },
     list(NAME = name)
-    )
+    ) |> removeSource()
     activeBindings_code_list[[name]] <- ABcode
   }
   activeBindings_code <- do.call("call", c("list",
@@ -291,7 +293,7 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
   
   Cpub_inherit_arg <- if(package) {
     if(is.null(inheritName)) quote(nCompiler::CpubClass)
-    else substitute(IRN$parent_env$.Cpub_class, list(IRN=as.name(paste0(inheritName, "_C_compiled"))))
+    else substitute(IRN$parent_env$.Cpub_class, list(IRN=as.name(paste0(".", inheritName, "_CnCgenerator_CpubGen"))))
   } else {
     if(is.null(inheritName)) quote(nCompiler::CpubClass)
     else quote(.Cpub_base_class)

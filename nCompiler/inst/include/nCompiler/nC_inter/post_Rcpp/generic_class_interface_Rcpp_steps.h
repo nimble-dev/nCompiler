@@ -53,51 +53,32 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
       // argument passing by defining new Rcpp::traits::input_parameter specializations.
       // As a result, it is simpler here to create a new P object via this pathway.
       if constexpr(P_is_shared_ptr) {
-        bool use_set_all_values(true);
-        if(Rcpp::is<Rcpp::List>(Svalue)) {
-          // use_set_all_values is definitively true.
-        } else {
-          // Unfortunately the checking for either extptr
-          // or private$CppObj will be done again if we use the Exporter
-          // when use_set_all_values=false.
-          // But at the moment there is not a great way to avoid that.
-          // This checking could possibly be pulled out to a small utility
-          // used also by the Exporter< shared_ptr <T> > specialization.
-          if(Rcpp::is<Rcpp::Environment>(Svalue)) {
-            Rcpp::Environment Senv(Svalue);
-            if(Senv.exists("extptr")) {
-              use_set_all_values = false; // it is a loadedObjectEnv
-            } else {
-              Nullable<Rcpp::Environment> private_env = Senv["private"];
-              if(private_env.isNotNull()) {
-                if(Rcpp::Environment(private_env).exists("CppObj")) {
-                  use_set_all_values = false; // It is an R6 nClass-interface object.
-                }
-              }
-            }
-          }
-        }
-        if(use_set_all_values) {
-          //         Rprintf("trying to use set all values\n");
-          auto casted_T = dynamic_cast<T*>(intBasePtr);
-          auto& ptr2 = casted_T->*ptr;
-          if(ptr2 != nullptr) {
-            //           Rprintf("its not null\n");
-            ptr2->set_all_values(Svalue);
-          } else {
-            if constexpr(std::is_default_constructible_v<typename P::element_type>) {
-              casted_T->*ptr =  std::make_shared<typename P::element_type>();
-              //   auto& ptr3 = casted_T->*ptr;
-              (casted_T->*ptr)->set_all_values(Svalue);
-            } else {
-              Rcpp::stop("Trying to set values of an uninitialized compiled nClass (with no default constructor!) from a list or environment.");
-            }
-          }
+        Rcpp::RObject Rextptr = get_extptr_from_SEXP(Svalue);
+        SEXP Sextptr = Rextptr;
+        if(Sextptr != R_NilValue) {
+          // Use the regular Exporter pathway for non-shared_ptr types
+          dynamic_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Sextptr));
           return;
         }
+        // If Svalue is not an external pointer, try to set values from list or environment
+        //         Rprintf("trying to use set all values\n");
+        auto casted_T = dynamic_cast<T*>(intBasePtr);
+        auto& ptr2 = casted_T->*ptr;
+        if(ptr2 != nullptr) {
+          //           Rprintf("its not null\n");
+          ptr2->set_all_values(Svalue);
+        } else {
+          if constexpr(std::is_default_constructible_v<typename P::element_type>) {
+            casted_T->*ptr =  std::make_shared<typename P::element_type>();
+            //   auto& ptr3 = casted_T->*ptr;
+            (casted_T->*ptr)->set_all_values(Svalue);
+          } else {
+            Rcpp::stop("Trying to set values of an uninitialized compiled nClass (with no default constructor!) from a list or environment.");
+          }
+        }
+      } else {
+        dynamic_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Svalue));
       }
-      // Use the regular Exporter pathway for non-shared_ptr types
-      dynamic_cast<T*>(intBasePtr)->*ptr = P(typename Rcpp::traits::input_parameter<P>::type(Svalue));
     }
     std::unique_ptr<ETaccessorBase> ETaccess(genericInterfaceBaseC *intBasePtr) {
       std::unique_ptr<ETaccessorBase> ans( new ETaccessor<P>( dynamic_cast<T*>(intBasePtr)->*ptr ) );

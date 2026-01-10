@@ -85,8 +85,8 @@ namespace nCompiler {
   template<typename EigenType>
   struct nEval_ {
     template<typename T>
-    static EigenType go(const T& op) {
-      EigenType ans = op; // Materialize the result of op.
+    static std::remove_reference_t<EigenType> go(const T& op) {
+        std::remove_reference_t<EigenType> ans = op; // Materialize the result of op.
       return ans;
     }
   };

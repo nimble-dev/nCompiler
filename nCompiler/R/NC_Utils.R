@@ -40,7 +40,7 @@ isNCgenerator <- function(x) {
 #' @export
 isCompiledNCgenerator <- function(x) {
   if(inherits(x, "R6ClassGenerator"))
-    exists(".newCobjFun", x)
+    exists(".newCobjFun", x$parent_env)
   else
     FALSE
 }

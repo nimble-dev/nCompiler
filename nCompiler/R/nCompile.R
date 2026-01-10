@@ -385,6 +385,8 @@ nCompile <- function(...,
                  memberData = list(),
                  roxygen = list()
                  )
+    if(isTRUE(get_nOption('pause_after_writing_files')))
+      browser()
     lib <- file.path(tempdir(), "templib")
     if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
     pkgDir <- file.path(dir, temppkgname)

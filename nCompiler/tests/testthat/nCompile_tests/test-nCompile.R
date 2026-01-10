@@ -647,8 +647,8 @@ test_that("nCompile naming and interface choices work in various ways",
         )
     )
 
-                                        # Basic use
-                                        #nOptions(showCompilerOutput = TRUE)
+    # Basic use
+    #nOptions(showCompilerOutput = TRUE)
     comp <- nCompile(nc1, nc2)
     expect_identical(names(comp), c("nc1", "nc2"))
     expect_true(inherits(comp$nc1$new(), "nClass"))
@@ -665,17 +665,18 @@ test_that("nCompile naming and interface choices work in various ways",
     comp <- nCompile(nc1x = nc1, nc2,
                      interfaces = c(nc1x = "full", nc2 = "generic"))
     expect_identical(names(comp), c("nc1x", "nc2"))
-    expect_true(inherits(comp$nc1x$new(), "CnClass"))
+    expect_true(inherits(comp$nc1x$new(), "nClass"))
+    expect_true(comp$nc1x$new()$isCompiled())
     expect_true(class(comp$nc2())=="loadedObjectEnv")
 
                                         # Call with singleton does not return a list
     comp <- nCompile(nc1)
-    expect_true(inherits(comp$new(), "CnClass"))
-
+    expect_true(comp$new()$isCompiled())
+    expect_true(inherits(comp$new(), "nClass"))
                                         # Option to return a list with a singleton
     comp <- nCompile(nc1, returnList = TRUE)
-    expect_true(inherits(comp$nc1$new(), "CnClass"))
-
+    expect_true(comp$nc1$new()$isCompiled())
+    expect_true(inherits(comp$nc1$new(), "nClass"))
                                         # Provide compilation units as a named list
     comp <- nCompile(list(nc1 = nc1, nc2 = nc2), interfaces = "generic")
     expect_identical(names(comp), c("nc1", "nc2"))

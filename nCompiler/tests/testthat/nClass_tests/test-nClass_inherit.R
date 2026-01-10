@@ -174,6 +174,7 @@ test_that("nClass hierarchy traps inherited field duplicate names", {
   )
 })
 
+message("add a test that inheriting from interface = 'none' results in not being able to use base class fields and methods")
 
 test_that("nClass hierarchies work as expected (including uncompiled vs compiled discrepancies)",
 {
@@ -185,6 +186,10 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
   oldOpt2 <- nOptions("allow_inherited_field_duplicates")
   nOptions(allow_method_overloading = TRUE)
   nOptions(allow_inherited_field_duplicates = TRUE)
+  # The tests below worked in an early version.
+  # Then some changes were made around inheritance handling.
+  # Now we need these options to keep these tests functioning.
+  # To-Do: Update these tests to be more deliberate about these options.
   on.exit({
     nOptions(allow_method_overloading = oldOpt1)
     nOptions(allow_inherited_field_duplicates = oldOpt2)
@@ -249,7 +254,7 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
           return(wA); returnType('numericScalar')
         })
     ),
-    compileInfo = list(interface = "none", createFromR = FALSE)
+    compileInfo = list(interface = "generic", createFromR = FALSE)
   )
 
   ncB <- nClass(
@@ -374,13 +379,13 @@ test_that("inheriting-only classes in 3-level hierarchy works", {
         return(v + 2*x); returnType('numericScalar');
       })
     ),
-    compileInfo = list(interface = "none",createFromR=FALSE)
+    compileInfo = list(interface = "generic",createFromR=FALSE)
   )
 
   ncMid <- nClass(
     inherit = ncBase,
     classname = "ncMid",
-    compileInfo = list(interface = "none",createFromR=FALSE),
+    compileInfo = list(interface = "generic",createFromR=FALSE),
     Cpublic = list(x2 = 'numericScalar')
   )
 

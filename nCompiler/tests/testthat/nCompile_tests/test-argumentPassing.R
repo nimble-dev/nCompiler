@@ -60,6 +60,7 @@ test_that("pass 1D by copy works (compiled & uncompiled)", {
 ####################
 ## 1D tests
 
+# Shows bug of modifying a lazy copy by blockRef
 # compiled and uncompiled 1D by ref
 test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompiled) in nFunction", {
   message("This test has many trapped errors.")
@@ -77,7 +78,9 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo <- function(fn) {
     x <- as.numeric(1:3)
     xRef <- as.numeric(11:13)
+    xRef2 <- xRef
     xBlockRef <- as.numeric(21:23)
+    xBlockRef2 <- xBlockRef
     expect_error(fn(x, 11:13, xBlockRef)) # Can't pass literal to ref
     expect_error(fn(x, xRef, 11:13))      # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3], blockRef)) # Can't pass block to ref
@@ -85,6 +88,8 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
     expect_equal(y, x[1:2] + 10 + 100)
     expect_equal(xRef, x[1:2] + 10)
     expect_equal(xBlockRef, c(21, 1:2 + 10 + 1000))
+    expect_equal(xRef2, 11:13) # copies should be unmodified
+    expect_equal(xBlockRef2, 21:23)
   }
   cfoo <- nCompile(foo)
   test_foo(foo)
@@ -406,6 +411,260 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
 })
+
+## Tests added while re-designing these schemes as part of redesigning nClasses
+## Jan 2026
+
+test_that("nested pass by ref works", {
+  foo1 <- nFunction(
+    fun=function(x=double(1)) {
+      x <- x+1
+    },
+    refArgs = "x"
+  )
+  foo2 <- nFunction(
+    fun=function(x=double(1)) {
+      foo1(x)
+    },
+    refArgs = "x"
+  )
+  foo3 <- nFunction(
+    fun=function(x=double(1)) {
+      x <- x + 1
+      foo1(x)
+    },
+    refArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo1(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo2(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo3(x)
+  expect_equal(x, 3:4)
+
+  C <- nCompile(foo1, foo2, foo3)
+  x <- as.numeric(1:2)
+  C$foo1(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo2(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo3(x)
+  expect_equal(x, 3:4)
+
+  # Nest from R to C++
+  foo4 <- nFunction(
+    fun=function(x=double(1)) {
+      C$foo3(x)
+    },
+    refArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo4(x)
+  expect_equal(x, 3:4)
+})
+
+## FIXED when nested from R to C++ with brackets in use.
+test_that("nested pass by blockRef case 1 works", {
+  foo1 <- nFunction(
+    fun=function(x=double(1)) {
+      x <- x+1
+    },
+    blockRefArgs = "x"
+  )
+  foo2 <- nFunction(
+    fun=function(x=double(1)) {
+      foo1(x)
+    },
+    blockRefArgs = "x"
+  )
+  foo3 <- nFunction(
+    fun=function(x=double(1)) {
+      x <- x + 1
+      foo1(x)
+    },
+    blockRefArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo1(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo2(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo3(x)
+  expect_equal(x, 3:4)
+
+  Cfoo1 <- nCompile(foo1)
+
+  C <- nCompile(foo1, foo2, foo3)
+  x <- as.numeric(1:2)
+  C$foo1(x[1:2])
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo2(x[1:2])
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo3(x[1:2])
+  expect_equal(x, 3:4)
+
+  # Nest from R to C++
+  foo4 <- nFunction(
+    fun=function(x=double(1)) {
+      C$foo3(x)
+    },
+    blockRefArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo4(x[1:2])
+  expect_equal(x, 3:4) ## FIXED
+})
+
+# FAIL with the same argument pass by refArg to C++
+# This will NEVER (in any forseeable way) be made to work
+# in the case from R to C++
+test_that("pass by ref with same ref in multiple args works except R->C++", {
+  foo1 <- nFunction(
+    fun=function(x=double(1), y=double(1)) {
+      z <- x
+      x <- x+1
+      y <- z+2
+      # foo1(v, v) should set v = v+2
+    },
+    refArgs = c("x", "y")
+  )
+  v <- as.numeric(1:2)
+  foo1(v, v)
+  expect_equal(v, 3:4)
+
+  foo2 <- nFunction(
+    fun=function(x=double(1), y=double(1)) {
+      z <- x
+      y <- z+2
+      x <- x+1
+      # foo1(v, v) should set v = v + 2
+    },
+    refArgs = c("x", "y")
+  )
+  v <- as.numeric(1:2)
+  foo2(v, v)
+  expect_equal(v, (1:2)+3)
+
+  C <- nCompile(foo1, foo2)
+
+  v <- as.numeric(1:2)
+  C$foo1(v, v)
+  expect_false(identical(v, 3:4)) # FAIL
+
+  v <- as.numeric(1:2)
+  C$foo2(v, v)
+  expect_false(identical(v, (1:2)+3)) # FAIL
+
+  # Nest from R to C++
+
+})
+
+# This will NEVER be made to work in the case from R to C++
+test_that("pass by blockRef with same ref in multiple args works except R->C++", {
+  foo1 <- nFunction(
+    fun=function(x=double(1), y=double(1)) {
+      z <- x
+      x <- x+1
+      y <- z+2
+      # foo1(v, v) should set v = v+2
+    },
+    blockRefArgs = c("x", "y")
+  )
+  v <- as.numeric(1:3)
+  foo1(v[2:3], v[2:3])
+  expect_equal(v, c(1, (2:3) + 2))
+
+  foo2 <- nFunction(
+    fun=function(x=double(1), y=double(1)) {
+      z <- x
+      y <- z+2
+      x <- x+1
+      # foo1(v, v) should set v = v + 2
+    },
+    blockRefArgs = c("x", "y")
+  )
+  v <- as.numeric(1:3)
+  foo2(v[2:3], v[2:3])
+  expect_equal(v, c(1, (2:3) + 3))
+
+  C <- nCompile(foo1, foo2)
+
+  v <- as.numeric(1:3)
+  C$foo1(v[2:3], v[2:3])
+  expect_false(identical(v, c(1, (2:3) + 2))) # FAIL
+
+  v <- as.numeric(1:3)
+  C$foo2(v[2:3], v[2:3])
+  expect_false(identical(v, c(1, (2:3) + 3)))
+})
+
+message("Uncomment an argumentPassing test when nested STM / ISEQS_ issues are fixed")
+
+## This fails to compile due to ISEQS_ issues
+## test_that("nested pass by blockRef works", {
+##   foo1 <- nFunction(
+##     fun=function(x=double(1)) {
+##       x <- x+1
+##     },
+##     blockRefArgs = "x"
+##   )
+##   foo2 <- nFunction(
+##     fun=function(x=double(1)) {
+##       foo1(x[1:2])
+##     },
+##     blockRefArgs = "x"
+##   )
+##   foo3 <- nFunction(
+##     fun=function(x=double(1)) {
+##       x <- x + 1
+##       foo1(x[1:2])
+##     },
+##     blockRefArgs = "x"
+##   )
+##   x <- as.numeric(1:2)
+##   foo1(x)
+##   expect_equal(x, 2:3)
+##   x <- as.numeric(1:2)
+##   foo2(x)
+##   expect_equal(x, 2:3)
+##   x <- as.numeric(1:2)
+##   foo3(x)
+##   expect_equal(x, 3:4)
+
+##   C <- nCompile(foo1, foo2, foo3)
+##   x <- as.numeric(1:2)
+##   C$foo1(x)
+##   expect_equal(x, 2:3)
+##   x <- as.numeric(1:2)
+##   foo2(x)
+##   expect_equal(x, 2:3)
+##   x <- as.numeric(1:2)
+##   foo3(x)
+##   expect_equal(x, 3:4)
+
+##   foo4 <- nFunction(
+##     fun=function(x=double(1)) {
+##       C$foo3(x)
+##     },
+##     blockRefArgs = "x"
+##   )
+##   x <- as.numeric(1:2)
+##   foo4(x)
+##   expect_equal(x, 3:4)
+
+## })
+
+
+
 
 ## It seems like this test should give an error because we are assigning
 ## from a vector to a scalar and the vector is not length 1.

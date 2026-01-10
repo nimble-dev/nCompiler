@@ -295,7 +295,7 @@ make_nClass_code <- function(internals,
                 list(isCompiled = function() FALSE)),
       private = list(
         Cpublic_obj = NULL,
-        init_Cpublic_obj_code = quote(.Cpub_class$new()),
+        init_Cpublic_obj_code = quote(.Cpub_class$new(...)),
         initialize_Cpublic_obj = function(...) {
           private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
         }

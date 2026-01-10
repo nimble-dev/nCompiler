@@ -654,6 +654,10 @@ inLabelAbstractTypesEnv(
         if(!symTab$symbolExists(LHS$name, TRUE)) {
           newSym <- RHStype$clone()
           newSym$isArg <- FALSE
+          # Assignment from a reference (could be a refArg) or a blockRef (blockRefArg) should be a plain type
+          newSym$isRef <- FALSE
+          if(!is.null(newSym$isBlockRef))
+            newSym$isBlockRef <- FALSE
           newSym$name <- LHS$name
           symTab$addSymbol(newSym)
           LHS$type <- newSym
