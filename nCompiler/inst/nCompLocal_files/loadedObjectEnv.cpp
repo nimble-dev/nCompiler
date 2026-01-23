@@ -5,7 +5,7 @@
 // [[Rcpp::depends(nCompiler)]]
 
 SEXP loadedObjectEnv(SEXP Xptr) {
-  Rcpp::Environment nc("package:nCompiler");
+  Rcpp::Environment nc = Environment::namespace_env("nCompiler"); //nc("package:nCompiler");
   Rcpp::Function newLOE = nc["new.loadedObjectEnv"];
   return newLOE(Xptr);
 }
