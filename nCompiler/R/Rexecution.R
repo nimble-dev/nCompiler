@@ -417,3 +417,26 @@ nVar <- function(x) {
 nSd <- function(x) { 
   sd(x) 
 }
+
+#' Call a browser even from compiled code
+#' 
+#' @export
+Rbrowser <- function(view) {
+  # the view will be a vector of names
+  view_names <- view
+  view <- list()
+  for(nm in view_names) {
+    view[[nm]] <- get(nm, envir = parent.frame())
+  }
+  browser()
+  invisible(NULL)
+}
+
+#' Call a browser even from compiled code
+#' 
+#' @export
+Rbrowser_fromC <- function(view) {
+  # The view will already be populated as a list
+  browser()
+  invisible(NULL)
+}

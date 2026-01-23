@@ -499,6 +499,15 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  Rbrowser <- function(code, symTab) {
+    view <- code$aux$compileArgs$view
+    view <- eval(view)
+    inline_vector_string <- paste0("{", paste0("\"", view, "\"", collapse = ", "), "}")
+    paste0("Rbrowser(", inline_vector_string, ", " , paste0(view, collapse = ", "), ")")
+  }
+)
+
+inGenCppEnv(
   RR_Distribution <- function(code, symTab) {
     callingNamespace = ifelse(
       all(sapply(code$args, function(arg) arg$type$nDim) == 0),

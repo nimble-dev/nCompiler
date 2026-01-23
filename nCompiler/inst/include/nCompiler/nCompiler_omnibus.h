@@ -61,7 +61,7 @@ using namespace Rcpp;
 #include <math.h>
 #include <iostream>
 
-#include "omnibus_fxns.h" // What everything should see or need.
+#include <nCompiler/utils/utils_post_Rcpp.h> //"omnibus_fxns.h" // What everything should see or need.
 
 #ifdef NCOMPILER_USES_CEREAL
 #include <nCompiler/nC_cereal/nC_cereal_post_Rcpp.h>

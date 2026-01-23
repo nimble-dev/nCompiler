@@ -1205,6 +1205,19 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'Rbrowser',
+  list(
+    help = 'Rbrowser() inserts a call to R\'s browser() function for debugging purposes. This works even from compiled code.',
+    matchDef = function(view) {},
+    compileArgs = c("view"),
+    cppOutput = list(
+      handler = 'Rbrowser'
+    )
+  )
+)
+
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
