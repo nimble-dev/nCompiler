@@ -484,8 +484,9 @@ inLabelAbstractTypesEnv(
   }
 )
 
+
 inLabelAbstractTypesEnv(
-  nC <- function(code, symTab, auxEnv, handlingInfo) {
+    nC <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
     if(length(code$args) > 1) {
@@ -832,7 +833,6 @@ inLabelAbstractTypesEnv(
           )
         ), call. = FALSE
       )    
-
     # Check: Is recurse=FALSE ever used.  Why was this here?
     inserts <-
       if (recurse)
@@ -1782,6 +1782,14 @@ inLabelAbstractTypesEnv(
     invisible(inserts)
   }
 )
+
+inLabelAbstractTypesEnv(
+    nimCat <- function(code, symTab, auxEnv, handlingInfo) {
+        inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+        invisible(inserts)
+    }
+)
+
 
 sizeProxyForDebugging <- function(code, symTab, auxEnv) {
   browser()

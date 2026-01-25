@@ -598,3 +598,11 @@ inGenCppEnv(
     compile_generateCpp(code, symTab)
   }
 )
+
+inGenCppEnv(
+    nimCat <- function(code, symTab) {
+        paste0("std::cout << ", 
+               compile_generateCpp(code$args[[1]], symTab)
+               )
+    }
+)
