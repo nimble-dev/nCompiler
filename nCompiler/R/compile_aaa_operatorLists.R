@@ -1206,13 +1206,13 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'nimCat',
+  'nCat',
   list(
     labelAbstractTypes = list(
-      handler = 'nimCat'
+      handler = 'nCat'
     ),
     cppOutput = list(
-      handler = 'nimCat'
+      handler = 'nCat'
     )
   )
 )

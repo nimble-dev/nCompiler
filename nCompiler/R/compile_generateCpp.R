@@ -600,9 +600,16 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-    nimCat <- function(code, symTab) {
-        paste0("std::cout << ", 
-               compile_generateCpp(code$args[[1]], symTab)
-               )
+    nCat <- function(code, symTab) {
+        ## paste0("std::cout << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'))
+        if(is.null(get_nOption('digits'))) {
+            paste0("_nCompiler_global_output << ",
+                   paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+                   '; nCompiler_print_to_R(_nCompiler_global_output)')
+        } else {
+            paste0('_nCompiler_global_output.precision(', get_nOption('digits'), '); _nCompiler_global_output << std::fixed << ',
+                   paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+                   '; nCompiler_print_to_R(_nCompiler_global_output)')
+        }
     }
 )
