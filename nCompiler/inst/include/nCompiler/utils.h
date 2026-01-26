@@ -1,3 +1,17 @@
+#include<iostream>
+#include<sstream>
+
+#define PRINTF Rprintf
+
+std::ostringstream _nCompiler_global_output;
+
+void nCompiler_print_to_R(std::ostringstream &input) {
+  PRINTF("%s", input.str().c_str());
+  input.str("");
+  input.clear();
+}
+
+
 #ifndef _NC_UTILS_
 #define _NC_UTILS_
 

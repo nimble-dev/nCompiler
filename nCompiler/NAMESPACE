@@ -67,6 +67,7 @@ export(new.loadedObjectEnv) ## needed for Rcpp::Function access in loadedObjectE
 export(new.loadedObjectEnv_full) ## ditto
 export(nBacksolve)
 export(nC) ## c()
+export(nCat) ## cat()
 export(nClassClass)
 export(nCompile_nClass)
 export(nCompile_nFunction)

@@ -1205,6 +1205,19 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'nCat',
+  list(
+    labelAbstractTypes = list(
+      handler = 'nCat'
+    ),
+    cppOutput = list(
+      handler = 'nCat'
+    )
+  )
+)
+
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
@@ -1244,6 +1257,8 @@ for(op in names(specificCallReplacements))
     )
 
 ifOrWhile <- c('if','while')
+
+
 
 # aliasRiskOperators <- c('t', 'asRow') # If we develop asRow
 # These are currently hard-coded in compile_eigenize system.

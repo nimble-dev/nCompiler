@@ -45,6 +45,8 @@ loggam <- lgamma
 logfact <- lfactorial
 #' @export
 nC <- c
+#' @export
+nCat <- cat
 
 #' Creates numeric, integer or logical vectors for use in nFunctions
 #'
