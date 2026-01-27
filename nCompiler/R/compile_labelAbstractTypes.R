@@ -1784,7 +1784,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    nCat <- function(code, symTab, auxEnv, handlingInfo) {
+    output <- function(code, symTab, auxEnv, handlingInfo) {
         inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
         invisible(inserts)
     }

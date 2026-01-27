@@ -5,11 +5,31 @@
 
 std::ostringstream _nCompiler_global_output;
 
+typedef enum {
+  FATAL = 100,
+  ERROR = 200,
+  WARN = 300,
+  SUCCESS = 350,
+  INFO = 400,
+  DEBUG = 500,
+  TRACE = 600
+} LogLevel;
+
 void nCompiler_print_to_R(std::ostringstream &input) {
   PRINTF("%s", input.str().c_str());
   input.str("");
   input.clear();
 }
+
+void Rmessage(LogLevel level, std::ostringstream &input) {
+  Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
+  Rcpp::Function message = nc["nMessage"];
+  message(int(level), input.str().c_str());
+  input.str("");
+  input.clear();  
+  return;
+}
+
 
 
 #ifndef _NC_UTILS_

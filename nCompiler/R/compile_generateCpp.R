@@ -613,3 +613,10 @@ inGenCppEnv(
         }
     }
 )
+
+inGenCppEnv(
+    nMessage <- function(code, symTab) {
+        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+               '; Rmessage(', compile_generateCpp(code$args[[1]], symTab), ', _nCompiler_global_output)')
+    }
+)

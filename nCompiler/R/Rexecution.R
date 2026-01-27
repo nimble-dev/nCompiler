@@ -419,3 +419,8 @@ nVar <- function(x) {
 nSd <- function(x) { 
   sd(x) 
 }
+
+#' @export
+nMessage <- function(level, msg) {
+    logger::log_level(logger::as.loglevel(level), msg)
+}

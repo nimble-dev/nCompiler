@@ -1209,7 +1209,7 @@ assignOperatorDef(
   'nCat',
   list(
     labelAbstractTypes = list(
-      handler = 'nCat'
+      handler = 'output'
     ),
     cppOutput = list(
       handler = 'nCat'
@@ -1217,6 +1217,17 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'nMessage',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'nMessage'
+    )
+  )
+)
 
 ## assignOperatorDef(
 ##   c('list'),
