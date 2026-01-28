@@ -2,6 +2,7 @@
 #include<sstream>
 
 #define PRINTF Rprintf
+#define NERROR Rf_error
 
 std::ostringstream _nCompiler_global_output;
 
@@ -40,6 +41,11 @@ void Rwarning(std::ostringstream &input) {
   return;
 }
 
+void nStop(std::ostringstream &input) {
+  NERROR("%s", input.str().c_str());
+  input.str("");
+  input.clear();
+}
 
 
 #ifndef _NC_UTILS_

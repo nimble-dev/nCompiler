@@ -627,3 +627,10 @@ inGenCppEnv(
                '; Rwarning(_nCompiler_global_output)')
     }
 )
+
+inGenCppEnv(
+    nStop <- function(code, symTab) {
+        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+               '; nStop(_nCompiler_global_output)')
+    }
+)

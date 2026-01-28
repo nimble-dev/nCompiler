@@ -1241,6 +1241,19 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'nStop',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'nStop'
+    )
+  )
+)
+
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
