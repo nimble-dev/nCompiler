@@ -5,6 +5,7 @@
 
 std::ostringstream _nCompiler_global_output;
 
+// Values as defined by R `logger` package.
 typedef enum {
   FATAL = 100,
   ERROR = 200,
@@ -25,6 +26,15 @@ void Rmessage(LogLevel level, std::ostringstream &input) {
   Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
   Rcpp::Function message = nc["nMessage"];
   message(int(level), input.str().c_str());
+  input.str("");
+  input.clear();  
+  return;
+}
+
+void Rwarning(std::ostringstream &input) {
+  Rcpp::Environment base = Rcpp::Environment::namespace_env("base");
+  Rcpp::Function warning = base["warning"];
+  warning(input.str().c_str());
   input.str("");
   input.clear();  
   return;
