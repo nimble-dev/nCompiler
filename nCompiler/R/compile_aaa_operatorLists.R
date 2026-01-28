@@ -1253,6 +1253,26 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  'progress_bar',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'progress_bar'
+    )
+  )
+)
+
+assignOperatorDef(
+  'progress_update',
+  list(
+    cppOutput = list(
+      handler = 'progress_update'
+    )
+  )
+)
 
 ## assignOperatorDef(
 ##   c('list'),

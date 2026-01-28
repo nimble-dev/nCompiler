@@ -1,8 +1,11 @@
 #include<iostream>
 #include<sstream>
 
+
 #define PRINTF Rprintf
 #define NERROR Rf_error
+
+using std::string;
 
 std::ostringstream _nCompiler_global_output;
 
@@ -45,8 +48,22 @@ void nStop(std::ostringstream &input) {
   NERROR("%s", input.str().c_str());
   input.str("");
   input.clear();
+  return;
 }
 
+void Rprogress_bar(string msg, int total) {
+    Rcpp::Environment cli = Rcpp::Environment::namespace_env("cli");
+    Rcpp::Function progress_bar = cli["cli_progress_bar"];
+    progress_bar("", msg, "iterator", total);
+    return;
+}
+
+void Rprogress_update() {
+    Rcpp::Environment cli = Rcpp::Environment::namespace_env("cli");
+    Rcpp::Function progress_update = cli["cli_progress_update"];
+    progress_update();
+    return;
+}
 
 #ifndef _NC_UTILS_
 #define _NC_UTILS_

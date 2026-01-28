@@ -8,7 +8,7 @@ Authors@R: c(person("Perry", "de Valpine", email = "pdevalpine@berkeley.edu", ro
 Description: Provides nFunction and nClass for function and class definitions for which C++ can be automatically generated, or used in combination with other C++.  Supports linear algebra by code-generating C++ that uses the Eigen library. Supports automatic differentiation by code-generating C++ that uses the CppAD library.  Support for parallelization is planned by code-generating C++ that uses Intel Threading Building Blocks (TBB).
 Depends: R (>= 4.1.0)
 Imports:
-    methods,R6,Rcpp,pkgKitten,roxygen2,logger
+    methods,R6,Rcpp,pkgKitten,roxygen2,logger,cli
 Suggests:
     Matrix, spam, SparseM, testthat, devtools
 LinkingTo: Rcpp,Rcereal,RcppEigen,RcppParallel

@@ -634,3 +634,20 @@ inGenCppEnv(
                '; nStop(_nCompiler_global_output)')
     }
 )
+
+inGenCppEnv(
+    progress_bar <- function(code, symTab) {
+        paste0('Rprogress_bar(', 
+               compile_generateCpp(code$args[[1]], symTab), ",",
+               compile_generateCpp(code$args[[2]], symTab),
+               ')')
+    }
+)
+
+# Perhaps we don't need this if we rename the C++ wrapper to be `progress_update`.
+# But we might want to allow arguments to be passed through...
+inGenCppEnv(
+    progress_update <- function(code, symTab) {
+        'Rprogress_update()'
+    }
+)

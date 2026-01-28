@@ -420,7 +420,20 @@ nSd <- function(x) {
   sd(x) 
 }
 
+#' Log/message handling via `logger` package, including within progress bar execution.
+#' 
 #' @export
 nMessage <- function(level, msg) {
-    logger::log_level(logger::as.loglevel(level), msg)
+    if(!cli::cli_progress_num()) {  # No active progress bar.
+        logger::log_level(logger::as.loglevel(level), msg)
+    } else {
+        if(level <= 400) {  ## FIXME: need to use actual nOption here.
+            ## `capture.output()` does not work.
+            con <- textConnection("log_output", open = "w", local = TRUE)  
+            logger::log_appender(logger::appender_file(con))
+            logger::log_level(logger::as.loglevel(level), msg)
+            cli::cli_progress_output(log_output, .envir = globalenv())  # Cleanly handle the interrupting msg.
+        }
+    }
 }
+
