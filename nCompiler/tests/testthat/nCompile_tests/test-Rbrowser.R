@@ -22,6 +22,68 @@ testthat("Simple Rbrowser call works", {
   cfoo()
 
   # Check that we get into a browser
+  # with update list containing x (an argument)
+  foo <- nFunction(
+      fun = function(x = double(1)) {
+        Rbrowser(update = c("x"))
+        return(x)
+        returnType(double(1))
+      }
+  )
+  foo(1:5)
+  cfoo <- nCompile(foo)
+  cfoo(1:5)
+
+  # Check that we get into a browser
+  # with update list containing x (an ref argument)
+  foo <- nFunction(
+    fun = function(x = double(1)) {
+      Rbrowser(update = c("x"))
+      return(x)
+      returnType(double(1))
+    },
+    refArgs = "x"
+  )
+  message("currently a ref arg in Rbrowser works in compiled but not uncompiled. The name x_Ref__ is not used")
+  local_x <- 1:5
+  foo(local_x)
+  cfoo <- nCompile(foo)
+  local_x <- 1:5
+  cfoo(local_x)
+
+  foo <- nFunction(
+    fun = function(x = double(1)) {
+      Rbrowser(update = c("x"))
+      return(x)
+      returnType(double(1))
+    },
+    blockRefArgs = "x"
+  )
+  message("currently a blockRefArg in Rbrowser fails in both uncompiled and compiled (does not compile in C++)")
+  local_x <- 1:5
+  foo(local_x[2:4])
+  cfoo <- nCompile(foo)
+  local_x <- 1:5
+  cfoo(local_x)
+
+
+  # Check that we get into a browser
+  # with update list containing x (an argument)
+  # and y (a local variable)
+  foo <- nFunction(
+    fun = function(x = double(1)) {
+      y <- 1:5
+      Rbrowser(update = c("x", "y"))
+      return(c(x, y))
+      returnType(double(1))
+    }
+  )
+  foo(1:5)
+  cfoo <- nCompile(foo)
+  cfoo(1:5)
+
+
+  # Check that we get into a browser
   # with view list containing x and y
   foo <- nFunction(
     fun = function() {
@@ -35,6 +97,30 @@ testthat("Simple Rbrowser call works", {
   cfoo()
 
   # Check that we get into a browser
+  # with view list containing x and y
+  # after a nested call
+  # Note that the "Called from" message from
+  # compiled case looks like it will be the
+  # last call from R itself, regardness of
+  # calls among C++ functions.
+  bar <- nFunction(
+    fun = function() {
+      foo()
+    }
+  )
+  foo <- nFunction(
+    fun = function() {
+      x <- 1:5
+      y <- 6:10
+      Rbrowser(view = c("x", "y"))
+    }
+  )
+  bar()
+  comp <- nCompile(foo, bar)
+  comp$bar()
+
+
+  # Check that we get into a browser
   # with view list containing input arguments
   foo <- nFunction(
     fun = function(y) {
@@ -46,7 +132,21 @@ testthat("Simple Rbrowser call works", {
   foo()
   cfoo <- nCompile(foo)
   cfoo()
-  
+
+  # Check that we can mix view and update variables
+  foo <- nFunction(
+    fun = function(y) {
+      x <- 1:5
+      Rbrowser(view = "x", update = "y")
+      return(y)
+      returnType('numericScalar')
+    },
+    argTypes = list(y = 'numericScalar')
+  )
+  foo(101)
+  cfoo <- nCompile(foo)
+  cfoo(101)
+
   # Check that we get into a browser
   # with view list containing vars of various types
   foo <- nFunction(
@@ -73,7 +173,7 @@ testthat("Simple Rbrowser call works", {
           Cfoo = nFunction(
               fun = function(x) {
                   Cv <- Cv + 100
-                  Rbrowser(view = 'x') 
+                  Rbrowser(view = 'x')
                   return(x+1)
               },
               argTypes = list(x = 'numericScalar'),
@@ -87,7 +187,37 @@ testthat("Simple Rbrowser call works", {
   ## Use `get('obj')$Cv` to see member data.
   ## Use `local_obj <- get('obj'); local_obj$Cv <- 1000` to modify.
 
-  
+
+
+  # Check that we get into a browser
+  # with view list containing x, y, and an nClass object
+  nc1 <- nClass(
+    Cpublic = list(
+      z = 'numericMatrix'
+    )
+  )
+  nc2 <- nClass(
+    Cpublic = list(
+      my_nc1 = 'nc1',
+      foo = nFunction(
+        fun = function() {
+          x <- 1:5
+          y <- 6:10
+          Rbrowser(view = c("x", "y", "my_nc1"))
+        }
+      )
+    )
+  )
+  nc2obj <- nc2$new()
+  nc2obj$my_nc1 <- nc1$new()
+  nc2obj$foo() # check for x, y, my_nc1
+  comp <- nCompile(nc1, nc2)
+  Cnc2obj <- comp$nc2$new()
+  Cnc2obj$my_nc1 <- comp$nc1$new()
+  Cnc2obj$my_nc1$z <- matrix(1:4, nrow = 2)
+  Cnc2obj$foo()
+
+
   # to do:
   # - add a "modify" list of inputs whose modified
   # values will be copied back into C++

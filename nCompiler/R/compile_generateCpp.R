@@ -498,12 +498,37 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
   Rbrowser <- function(code, symTab) {
     view <- code$aux$compileArgs$view
     view <- eval(view)
-    inline_vector_string <- paste0("{", paste0("\"", view, "\"", collapse = ", "), "}")
-    paste0("Rbrowser(", inline_vector_string, ", " , paste0(view, collapse = ", "), ")")
+    update <- code$aux$compileArgs$update
+    update <- eval(update)
+    browser()
+    inline_vector_view <- if(length(view))
+      paste0("{", paste0("\"", view, "\"", collapse = ", "), "}")
+    else {
+       "{}"
+    }
+    inline_vector_update <- if(length(update))
+      paste0("{", paste0("\"", update, "\"", collapse = ", "), "}")
+    else {
+       "{}"
+    }
+    view_variadic_args <- character()
+    if(length(view))
+      view_variadic_args <- paste0(view, collapse = ", ")
+    variadic_sep <- if(length(update) && length(view)) ", " else character()
+    update_variadic_args <- character()
+    if(length(update))
+      update_variadic_args <- paste0(update, collapse = ", ")
+
+    paste0("Rbrowser(", inline_vector_view, ", " ,
+    inline_vector_update, ",",
+      view_variadic_args,
+      variadic_sep,
+      update_variadic_args,
+      ")")
   }
 )
 

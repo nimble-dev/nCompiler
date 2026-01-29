@@ -60,9 +60,9 @@ nC <- c
 #'
 #' @details
 #' These functions are similar to R's \code{\link{numeric}}, \code{\link{integer}}, \code{\link{logical}} functions, but they can be used in a nFunction and then compiled using \code{nCompile}.  Largely for compilation purposes, finer control is provided over initialization behavior.  If \code{init = FALSE}, no initialization will be done, and \code{value}, \code{fillZeros} and \code{recycle} will be ignored.  If \code{init=TRUE} and \code{recycle=TRUE}, then \code{fillZeros} will be ignored, and \code{value} will be repeated (according to R's recycling rule) as much as necessary to fill a vector of length \code{length}.  If \code{init=TRUE} and \code{recycle=FALSE}, then if \code{fillZeros=TRUE}, values of 0 (or FALSE for \code{nLogical}) will be filled in after \code{value} up to length \code{length}.  Compiled code will be more efficient if unnecessary initialization is not done, but this may or may not be noticeable depending on the situation.
-#' 
-#' When used in a \code{nFunction} (in \code{run} or other member function), \code{numeric}, \code{integer} and \code{logical} are immediately converted to \code{nNumeric}, \code{nInteger} and \code{nLogical}, respectively.  
-#' 
+#'
+#' When used in a \code{nFunction} (in \code{run} or other member function), \code{numeric}, \code{integer} and \code{logical} are immediately converted to \code{nNumeric}, \code{nInteger} and \code{nLogical}, respectively.
+#'
 #' @author Daniel Turek, Chris Paciorek, Perry de Valpine
 #' @aliases numeric
 #' @seealso \code{\link{nMatrix}}, \code{\link{nArray}}
@@ -87,7 +87,7 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
 }
 
 #' Creates matrix or array objects for use in nFunctions
-#' 
+#'
 #' In a \code{nFunction}, \code{matrix} and \code{array} are identical to \code{nMatrix} and \code{nArray}, respectively
 #'
 #' @aliases nArray matrix array
@@ -108,7 +108,7 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
 #' When used in a \code{nFunction} (in \code{run} or other member function), \code{matrix} and \code{array} are immediately converted to \code{nMatrix} and \code{nArray}, respectively.
 #'
 #' The \code{nDim} argument is only necessary for a use like \code{dim <- c(2, 3, 4); A <- nArray(0, dim = dim, nDim = 3)}.  It is necessary because the compiler must determine during compilation that \code{A} will be a 3-dimensional numeric array.  However, the compiler doesn't know for sure what the length of \code{dim} will be at run time, only that it is a vector.  On the other hand,   \code{A <- nArray(0, dim = c(2, 3, 4))} is allowed because the compiler can directly determine that a vector of length three is constructed inline for the \code{dim} argument.
-#' 
+#'
 #' @author Daniel Turek and Perry de Valpine
 #' @seealso \code{\link{nNumeric}} \code{\link{nInteger}} \code{\link{nLogical}}
 #' @export
@@ -168,13 +168,13 @@ makeReturnVector <- function(fillValue, length, recycle) {
     else {
         if(length(fillValue) != length) {
             if(length(fillValue) < length) {
-                ##warning(paste0("Not enough values provided for vector of length ",length, ".")) 
+                ##warning(paste0("Not enough values provided for vector of length ",length, "."))
                 if(recycle)
                     rep(fillValue, length.out = length)
                 else
                     c(fillValue, as(rep(0, length-length(fillValue)), class(fillValue)))
             } else {
-                ##warning(paste0("Too many values provided for vector of length ",length, ".")) 
+                ##warning(paste0("Too many values provided for vector of length ",length, "."))
                 fillValue[1:length]
             }
         } else {
@@ -184,17 +184,17 @@ makeReturnVector <- function(fillValue, length, recycle) {
 }
 
 #' Spectral Decomposition of a Matrix
-#' 
+#'
 #' In a \code{nFunction}, \code{nEigen} is identical to \code{eigen}
 #'
-#' @details This function is similar to R's \code{\link{eigen}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a numeric or complex matrix whose spectral decomposition is to be 
+#' @details This function is similar to R's \code{\link{eigen}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a numeric or complex matrix whose spectral decomposition is to be
 #'   computed. Logical matrices are coerced to numeric.
 #'
 #' @export
-#' 
+#'
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
@@ -208,10 +208,10 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
   return(ans)
 }
 
-#' Singular Value Decomposition of a Matrix  
+#' Singular Value Decomposition of a Matrix
 #'
 #' Computes singular values and, optionally, left and right singular vectors of a numeric matrix.
-#' 
+#'
 #' @param x a symmetric numeric matrix (double or integer) whose spectral decomposition is to be computed.
 #' @param vectors character that determines whether to calculate left and right singular vectors.  Can take values \code{'none'}, \code{'thin'} or \code{'full'}.  Defaults to \code{'full'}.  See details.
 #'
@@ -222,22 +222,22 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' @export
 #'
 #' @details
-#' Computes the singular value decomposition of a numeric matrix using the Eigen C++ template library.  
-#' 
+#' Computes the singular value decomposition of a numeric matrix using the Eigen C++ template library.
+#'
 #' The \code{vectors} character argument determines whether to compute no left and right singular vectors (\code{'none'}), thinned left and right singular vectors (\code{'thin'}), or full left and right singular vectors (\code{'full'}).  For a
-#' matrix \code{x} with dimensions \code{n} and \code{p}, setting \code{vectors = 'thin'} will does the following (quoted from eigen website): 
-#' In case of a rectangular n-by-p matrix, letting m be the smaller value among n and p, there are only m singular vectors; 
-#' the remaining columns of U and V do not correspond to actual singular vectors. 
-#' Asking for thin U or V means asking for only their m first columns to be formed. 
-#' So U is then a n-by-m matrix, and V is then a p-by-m matrix. 
+#' matrix \code{x} with dimensions \code{n} and \code{p}, setting \code{vectors = 'thin'} will does the following (quoted from eigen website):
+#' In case of a rectangular n-by-p matrix, letting m be the smaller value among n and p, there are only m singular vectors;
+#' the remaining columns of U and V do not correspond to actual singular vectors.
+#' Asking for thin U or V means asking for only their m first columns to be formed.
+#' So U is then a n-by-m matrix, and V is then a p-by-m matrix.
 #' Notice that thin U and V are all you need for (least squares) solving.
-#' 
+#'
 #' Setting \code{vectors = 'full'} will compute full matrices for U and V, so that U will be of size n-by-n, and V will be of size p-by-p.
-#' 
-#' In a \code{nFunction}, \code{svd} is identical to \code{nSvd}. 
-#'  
-#'  \code{returnType(svdNimbleList())} can be used within a \link{nFunction} to specify that the function will return a \code{nCompilerList} generated by the \code{nSvd} function.  \code{svdNimbleList()} can also be used to define a nested \code{nimbleList} element.  See the User Manual for usage examples. 
-#' 
+#'
+#' In a \code{nFunction}, \code{svd} is identical to \code{nSvd}.
+#'
+#'  \code{returnType(svdNimbleList())} can be used within a \link{nFunction} to specify that the function will return a \code{nCompilerList} generated by the \code{nSvd} function.  \code{svdNimbleList()} can also be used to define a nested \code{nimbleList} element.  See the User Manual for usage examples.
+#'
 #' @return
 #'  The singular value decomposition of \code{x} is returned as a \code{nCompilerList} with elements:
 #' \itemize{
@@ -245,8 +245,8 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' \item v matrix with columns containing the left singular vectors of \code{x}, or an empty matrix if \code{vectors = 'none'}.
 #' \item u matrix with columns containing the right singular vectors of \code{x}, or an empty matrix if \code{vectors = 'none'}.
 #' }
-#' 
-#' @examples 
+#'
+#' @examples
 #'  singularValuesDemoFunction <- nFunction(
 #'    setup = function(){
 #'      demoMatrix <- diag(4) + 2
@@ -273,66 +273,66 @@ nSvd <- function(x, vectors = 'full') {
 }
 
 #' Extract or replace the diagonal of matrix
-#' 
+#'
 #' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
+#' @details This function is similar to R's \code{\link{diag}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
 #' @param x a numeric or complex matrix
 #'
 #' @export
-#' 
+#'
 nDiag <- function(x, ...) {
   diag(x, ...)
 }
 
 #' Compute the cholesky decomposition of a matrix
-#' 
+#'
 #' In a \code{nFunction}, \code{nChol} is identical to \code{chol}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
+#' @details This function is similar to R's \code{\link{diag}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
 #' @param x a symmetric matrix
 #'
 #' @export
-#' 
+#'
 nChol <- function(x) {
   chol(x)
 }
 
 #' Compute the log-determinant of a matrix
-#' 
+#'
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
+#' @details This function is similar to R's \code{\link{diag}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
 #' @param x a square matrix
 #'
 #' @export
-#' 
+#'
 nLogdet <- function(x) {
     ldet <- determinant(x, logarithm = TRUE)
     ifelse(ldet$sign >= 0, ldet$modulus, NaN)
   }
 
 #' Replicate Elements of Vectors and Lists
-#' 
+#'
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}
 #'
-#' @details This function is similar to R's \code{\link{rep}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a vector (of any mode including a list) or a factor or 
-#'   (for rep only) a POSIXct or POSIXlt or Date object; or an S4 object 
+#' @details This function is similar to R's \code{\link{rep}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a vector (of any mode including a list) or a factor or
+#'   (for rep only) a POSIXct or POSIXlt or Date object; or an S4 object
 #'   containing such an object.
 #'
 #' @param ... further arguments to be passed to or from other methods.
 #'
 #' @export
-#' 
+#'
 nRep <- function(x, ...) {
   base::rep(x, ...)
 }
@@ -341,11 +341,11 @@ nRep <- function(x, ...) {
 #'
 #' @importFrom Matrix Matrix as
 #' @param x object to convert to sparse representation
-#' @param prune TRUE to remove 0's from an object if it is already stored in a 
+#' @param prune TRUE to remove 0's from an object if it is already stored in a
 #'   sparse format
 #' @export
 asSparse <- function(x, prune = TRUE) {
-  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector', 
+  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector',
                    'lsparseVector', 'zsparseVector'))) {
     if(prune) {
       return(drop0(x))
@@ -362,7 +362,7 @@ asSparse <- function(x, prune = TRUE) {
 }
 
 #' Converts a sparse matrix or vector to a dense sparse matrix or vector
-#' 
+#'
 #' @export
 asDense <- function(x) {
   if(inherits(x, c('matrix', 'numeric', 'integer', 'logical', 'complex'))) {
@@ -377,7 +377,7 @@ asDense <- function(x) {
 }
 
 #' Wrapper for matrix multiplication
-#' 
+#'
 #' @export
 nMul <- function(x, y) {
   x %*% y
@@ -405,38 +405,55 @@ nBacksolve <- function(r, x) {
 }
 
 #' Wrapper for var
-#' 
+#'
 #' @export
-nVar <- function(x) { 
-  var(x) 
+nVar <- function(x) {
+  var(x)
 }
 
 #' Wrapper for sd
-#' 
+#'
 #' @export
-nSd <- function(x) { 
-  sd(x) 
+nSd <- function(x) {
+  sd(x)
 }
 
 #' Call a browser even from compiled code
-#' 
+#'
 #' @export
-Rbrowser <- function(view) {
+Rbrowser <- function(view = character(), update = character()) {
   # the view will be a vector of names
-  view_names <- view
-  view <- list()
-  for(nm in view_names) {
-    view[[nm]] <- get(nm, envir = parent.frame())
-  }
-  browser()
+  .VIEW_NAMES <- view
+  .UPDATE_NAMES <- update
+  rm(view)
+  rm(update)
+  for(.NAME in .VIEW_NAMES) assign(.NAME, get(.NAME, envir=parent.frame()))
+  for(.NAME in .UPDATE_NAMES) assign(.NAME, get(.NAME, envir=parent.frame()))
+  if(length(.VIEW_NAMES))
+    message("Variable(s) ", paste(.VIEW_NAMES, collapse=", "), " can be inspected.")
+  if(length(.UPDATE_NAMES))
+    message("Variable(s) ", paste(.UPDATE_NAMES, collapse=", "), " can be modified.")
+
+  browser(skipCalls = 1L)
+  for(.NAME in .UPDATE_NAMES) assign(.NAME, get(.NAME), envir=parent.frame())
   invisible(NULL)
 }
 
+
+
 #' Call a browser even from compiled code
-#' 
+#'
 #' @export
-Rbrowser_fromC <- function(view) {
-  # The view will already be populated as a list
-  browser()
-  invisible(NULL)
+Rbrowser_fromC <- function(.VIEW_LIST = list(), .UPDATE_LIST = list()) {
+  for(.NAME in names(.VIEW_LIST)) assign(.NAME, .VIEW_LIST[[.NAME]])
+  for(.NAME in names(.UPDATE_LIST)) assign(.NAME, .UPDATE_LIST[[.NAME]])
+  if(length(.VIEW_LIST))
+    message("Variable(s) ", paste(names(.VIEW_LIST), collapse=", "), " can be inspected.")
+  if(length(.UPDATE_LIST))
+    message("Variable(s) ", paste(names(.UPDATE_LIST), collapse=", "), " can be modified.")
+
+  browser(skipCalls = 1L)
+  # Copy updated values back to update list
+  for(.NAME in names(.UPDATE_LIST)) if(exists(.NAME, inherits=FALSE)) .UPDATE_LIST[[.NAME]] <- get(.NAME)
+  .UPDATE_LIST
 }

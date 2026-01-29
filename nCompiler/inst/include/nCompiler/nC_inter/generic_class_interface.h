@@ -137,7 +137,7 @@ struct FirstGenericDerived<T> {
 };
 
 template <typename... Bases>
-class interface_resolver : public Bases..., virtual public genericInterfaceBaseC
+class interface_resolver : public Bases..., public std::enable_shared_from_this< typename FirstGenericDerived<Bases...>::type >, virtual public genericInterfaceBaseC
 {
 private:
   using FirstFound = typename FirstGenericDerived<Bases...>::type;
