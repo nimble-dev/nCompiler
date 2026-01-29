@@ -498,13 +498,12 @@ inGenCppEnv(
   }
 )
 
-nCompiler:::inGenCppEnv(
+inGenCppEnv(
   Rbrowser <- function(code, symTab) {
     view <- code$aux$compileArgs$view
     view <- eval(view)
     update <- code$aux$compileArgs$update
     update <- eval(update)
-    browser()
     inline_vector_view <- if(length(view))
       paste0("{", paste0("\"", view, "\"", collapse = ", "), "}")
     else {
