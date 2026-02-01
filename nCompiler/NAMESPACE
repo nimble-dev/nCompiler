@@ -1,4 +1,6 @@
 useDynLib(nCompiler)
+importFrom(logger,log_threshold, FATAL, ERROR, WARN, SUCCESS, INFO, DEBUG, TRACE)
+export(log_threshold, FATAL, ERROR, WARN, SUCCESS, INFO, DEBUG, TRACE)
 export(rcpp_hello_world)
 export(DLLenv)
 export("NCinternals<-")
