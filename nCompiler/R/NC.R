@@ -181,7 +181,7 @@ nClass <- function(classname,
     ),
     list(INHERIT =
            if(inherit_provided) inheritQ
-         else quote(nClassClass))
+         else quote(nCompiler::nClassClass))
     ))
   ## 2. in the generator
   result$.nCompiler <- internals
