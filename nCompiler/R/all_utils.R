@@ -218,5 +218,5 @@ safeDeparse <- function(..., warn = FALSE) {
 }
 
 #' @name log_threshold
-#' @importFrom logger log_threshold FATAL ERROR WARN SUCCESS INFO DEBUG TRACE
+#' @importFrom logger log_threshold OFF FATAL ERROR WARN SUCCESS INFO DEBUG TRACE
 #' @export

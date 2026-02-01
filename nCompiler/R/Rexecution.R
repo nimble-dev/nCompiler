@@ -47,6 +47,11 @@ logfact <- lfactorial
 nC <- c
 #' @export
 nCat <- cat
+#' @export
+nStop <- stop
+#' @export
+nWarning <- warning
+
 
 #' Creates numeric, integer or logical vectors for use in nFunctions
 #'
@@ -423,17 +428,39 @@ nSd <- function(x) {
 #' Log/message handling via `logger` package, including within progress bar execution.
 #' 
 #' @export
-nMessage <- function(level, msg) {
+nMessage <- function(level, msg, ...) {
+    if(length(list(...)))  # For uncompiled execution.
+        msg <- paste(msg, ..., collapse = ' ')
     if(!cli::cli_progress_num()) {  # No active progress bar.
         logger::log_level(logger::as.loglevel(level), msg)
     } else {
-        if(level <= 400) {  ## FIXME: need to use actual nOption here.
+        if(level <= log_threshold()) { 
             ## `capture.output()` does not work.
             con <- textConnection("log_output", open = "w", local = TRUE)  
             logger::log_appender(logger::appender_file(con))
             logger::log_level(logger::as.loglevel(level), msg)
-            cli::cli_progress_output(log_output, .envir = globalenv())  # Cleanly handle the interrupting msg.
+            output <- try(cli::cli_progress_output(log_output, .envir = globalenv()), silent = TRUE)  # Cleanly handle the interrupting msg.
+            ## Having trouble with uncompiled execution needing to 'look' in different env:
+            ## Browse[1]> cli:::clienv$progress_ids
+            ## $`<environment: 0x64b09faa2ef8>`
+            ## [1] "cli-151-47"
+            ## This is a work-around, noting that this is a corner case (message within progress bar within uncompiled exec.).
+            logger::log_appender(logger::appender_stdout)
+            if(is(output, 'try-error'))
+                logger::log_level(logger::as.loglevel(level), msg)  # Accept that interruption won't be clean.
         }
     }
 }
+
+#' Progress bar functionality via `cli`.
+#' N.B. If we wrap these functions instead of alias them,
+#' we have problems in R execution with
+#' "Cannot find current progress bar for `<environment: R_GlobalEnv>`"
+#' related to lookup of `cli:::clienv`.
+#' 
+#' @export
+progress_bar <- cli::cli_progress_bar
+
+#' @export
+progress_update <- cli::cli_progress_update
 
