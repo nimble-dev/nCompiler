@@ -1,1 +1,2 @@
-export(myfun)
+export(fun_using_nClass)
+export(fun_using_nFun)

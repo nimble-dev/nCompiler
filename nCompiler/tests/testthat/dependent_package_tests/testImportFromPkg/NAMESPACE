@@ -1,2 +1,3 @@
-importFrom(nCompiler, nClass, nFunction, nClassClass, nCompile)
-export(myfun)
+importFrom(nCompiler, nClass, nFunction, nCompile)
+export(fun_using_nClass)
+export(fun_using_nFun)
