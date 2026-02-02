@@ -225,3 +225,18 @@ testthat("Simple Rbrowser call works", {
   # - work to make "self" work (will take some care)
 
 })
+
+test_that("check_recover" , {
+    foo = nFunction(
+        fun = function(){
+            if(check_recover()) {
+                return(1) 
+            } else return(0)
+        }, returnType = 'numericScalar')
+    cfoo <- nCompile(foo)
+    expect_identical(foo(), 0)
+    expect_identical(cfoo(), 0)
+    options(error=recover)
+    expect_identical(foo(), 1)
+    expect_identical(cfoo(), 1)
+})
