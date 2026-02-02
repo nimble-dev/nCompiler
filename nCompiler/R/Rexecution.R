@@ -440,6 +440,10 @@ Rbrowser <- function(view = character(), update = character()) {
 }
 
 
+#' @export
+check_recover <- function() {
+    !is.null(options()$error)
+}
 
 #' Call a browser even from compiled code
 #'

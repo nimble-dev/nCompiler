@@ -531,6 +531,8 @@ inGenCppEnv(
   }
 )
 
+
+        
 inGenCppEnv(
   RR_Distribution <- function(code, symTab) {
     callingNamespace = ifelse(

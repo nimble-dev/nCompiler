@@ -37,4 +37,11 @@ void Rbrowser(const std::vector<std::string>& view_names,
     return;
 }
 
+bool check_recover() {
+  Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
+  Rcpp::Function check = nc["check_recover"];
+  bool flag = Rcpp::as<bool>(check());
+  return flag;
+}
+
 #endif

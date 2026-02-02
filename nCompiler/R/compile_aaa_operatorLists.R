@@ -1218,6 +1218,12 @@ assignOperatorDef(
 )
 
 
+assignOperatorDef(
+    'check_recover',
+    list()
+)
+
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
