@@ -50,7 +50,7 @@ test_that("dependent package using `imports` works correctly", {
     expect_identical(objs[[1]]$Cfoo(1), c(2,2))
     expect_identical(objs[[2]]$Rfoo(1), c(2,2))
     expect_identical(objs[[2]]$Cfoo(1), c(2,2))
-    
+
 })
 
 ## `importFrom(nCompiler, nClass, nFunction, nCompile)` in `NAMESPACE`.

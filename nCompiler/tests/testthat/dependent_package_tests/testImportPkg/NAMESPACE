@@ -1,3 +1,4 @@
 import(nCompiler)
 export(fun_using_nClass)
 export(fun_using_nFun)
+export(fun_with_nClass_using_member_data)
