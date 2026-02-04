@@ -331,6 +331,14 @@ inGenCppEnv(
     if(length(code$args) == 0) {
       return('return')
     }
+    # argPart <- compile_generateCpp(code$args[[1]], symTab)
+    # returnSym <- code$type
+    # if(returnSym$nDim == 0) {
+    #   argPart <- paste0('scalar_cast_<',
+    #                     returnSym$genCppVar()$generate(), '>::cast(',
+    #                     argPart, ')')
+    #   return(paste0('return ', argPart))
+    # }
     AsIs(code, symTab)
   }
 )

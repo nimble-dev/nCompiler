@@ -425,6 +425,8 @@ assignOperatorDef(
     list(
         labelAbstractTypes = list(
             handler = 'Return'),
+        eigenImpl = list(
+          handler = 'Return'),
         cppOutput = list(
             handler = 'Return')
     )
