@@ -282,7 +282,10 @@ inLabelAbstractTypesEnv(
       ## 1. Check if RHS is a method
       ## 2. Check if RHS is a field
       innerName <- code$args[[2]]$name
-      method <- NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)
+      ## Calling context must be the same class as the method being invoked.
+      includePrivate <- inherits(auxEnv$where, "R6ClassGenerator") && auxEnv$where$class &&
+        auxEnv$where$classname == code$args[[1]]$type$NCgenerator$classname
+      method <- NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE, includePrivate = includePrivate)
       if(!is.null(method)) { ## Is RHS a method?
         obj_internals <- NFinternals(method)
         returnSym <- symbolNF$new(
