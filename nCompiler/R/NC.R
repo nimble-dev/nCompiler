@@ -24,6 +24,11 @@ CnClassClass <- R6::R6Class(
 #' @param Cpublic list of public data (with type declarations) and methods
 #'   (nFunctions) that can be turned into C++ via \link{nCompile_nClass}. As in
 #'   R6 classes (see \link{R6Class}), data and methods go in the same list.
+#' @param Rprivate list of private data and methods (functions) for use from R
+#'   only.
+#' @param Cprivate list of private data (with type declarations) and methods
+#'   (nFunctions) that can be turned into C++ via \link{nCompile_nClass}. As in
+#'   R6 classes (see \link{R6Class}), data and methods go in the same list.
 #' @param enableDerivs list or character vector of methods in Cpublic for which
 #'   derivatives should be enabled.
 #' @param enableSaving logical indicating whether C++ should include support for
@@ -68,6 +73,8 @@ CnClassClass <- R6::R6Class(
 nClass <- function(classname,
                    Rpublic = list(),
                    Cpublic = list(),
+                   Rprivate = NULL,
+                   Cprivate = NULL,
                    enableDerivs = character(),
                    enableSaving = get_nOption("enableSaving"),
                    inherit = NULL,
@@ -147,9 +154,14 @@ nClass <- function(classname,
   inheritQ <- substitute(inherit)
   inherit_provided <- !is.null(inheritQ)
 
+  isPrivate <- c(rep(FALSE, length(Cpublic)), rep(TRUE, length(Cprivate)),
+                 rep(FALSE, length(Rpublic)), rep(TRUE, length(Rprivate)))
+  names(isPrivate) <- c(names(Cpublic), names(Cprivate), names(Rpublic), names(Rprivate))  
   internals = NC_InternalsClass$new(classname = classname,
                                     Cpublic = Cpublic,
-                                    isOnlyC = length(Rpublic) == 0,
+                                    Cprivate = Cprivate,
+                                    isPrivate = isPrivate,
+                                    isOnlyC = length(Rpublic) == 0 && length(Rprivate) == 0,
                                     enableDerivs = enableDerivs,
                                     enableSaving = enableSaving,
                                     inheritQ = inheritQ,
@@ -174,6 +186,7 @@ nClass <- function(classname,
   eval(substitute(
     result <- R6::R6Class(
       classname = classname,
+      private = c(Rprivate, Cprivate),                
       public = c(Rpublic, Cpublic, builtIn),
       portable = FALSE,
       inherit = INHERIT,
