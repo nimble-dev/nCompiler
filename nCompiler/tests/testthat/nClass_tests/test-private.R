@@ -129,7 +129,7 @@ test_that("Access to private members", {
         )
     )
 
-    ## Can't access private members from external function.
+    ## Can't access private methods from external function.
     myfun <- nFunction(
         fun = function(obj, x) {
             return(obj$Cmethod2(x))
@@ -139,7 +139,18 @@ test_that("Access to private members", {
     ## We get a WARN in testing output from this. Should clean things up if possible.
     expect_error(cmyfun <- nCompile(myfun), "could not be found")
 
-    ## Can't access private members from objects of a different class.
+    ## Can't access private methods from external function.
+    myfun <- nFunction(
+        fun = function(obj, x) {
+            return(obj$Cv2)
+        }, argTypes = list(obj = 'nc1', x='numericScalar'),
+        returnType = 'numericScalar'
+    )
+    ## We get a WARN in testing output from this. Should clean things up if possible.
+    expect_error(cmyfun <- nCompile(myfun), "is a private field")
+
+
+    ## Can't access private methods from objects of a different class.
     ncOuter <- nClass(
         Cpublic = list(
             Cfoo = nFunction(
@@ -154,7 +165,119 @@ test_that("Access to private members", {
    
     expect_error(cncOuter <- nCompile(ncOuter), "could not be found")
 
-    ## Can access private members from separate objects of the same class.
+    ncOuter <- nClass(
+        Cpublic = list(
+            Cfoo = nFunction(
+                fun = function(obj, x) {
+                    return(obj$Cv2)
+                },
+                argTypes = list(obj = 'nc1', x='numericScalar'),
+                returnType = 'numericScalar'
+            )
+        )
+    )
+   
+    expect_error(cncOuter <- nCompile(ncOuter), "is a private field")
+    
+    ## Can access private methods from separate objects of the same class.
+    nc1 <- nClass(
+        Cpublic = list(
+            Cmethod = nFunction(
+                fun = function(obj, x) {
+                    return(obj$Cmethod2(x))
+                },
+                argTypes = list(obj = 'nc1', x = 'numericScalar'),
+                returnType = 'numericScalar'
+            ),
+            CmethodAlt = nFunction(
+                fun = function(obj, x) {
+                    obj$Cv2 <- x
+                    return(obj$Cv2)
+                },
+                argTypes = list(obj = 'nc1', x = 'numericScalar'),
+                returnType = 'numericScalar'
+            )
+        ),
+        Cprivate = list(
+            Cv2 = 'numericScalar',
+            Cmethod2 = nFunction(
+                fun = function(x) {
+                    return(x + 3)
+                },
+                argTypes = list(x = 'numericScalar'),
+                returnType = 'numericScalar'
+            )
+        )
+    )
+    cnc1 <- nCompile(nc1)
+    Cobj1 <- cnc1$new()
+    Cobj2 <- cnc1$new()
+    expect_identical(Cobj2$Cmethod(Cobj1, 5), 8)
+    expect_identical(Cobj2$CmethodAlt(Cobj1, 7), 7)
+    
+})
+
+
+    nc1 <- nClass(
+        Cpublic = list(
+            Cv = 'numericScalar',
+            Cmethod = nFunction(
+                fun = function(x) {
+                    return(Cmethod2(x))
+                },
+                argTypes = list(x = 'numericScalar'),
+                returnType = 'numericScalar'
+            ),
+            Cset_Cv2 = nFunction(
+                fun = function(x) {
+                    Cv2 <<- x                
+                },
+                argTypes = list(x = 'numericScalar')
+            ),
+            Cget_Cv2 = nFunction(
+                fun = function() {
+                    return(Cv2)
+                }, returnType = 'numericScalar'
+            )
+        ),
+        Cprivate = list(
+            Cv2 = 'numericScalar',
+            Cmethod2 = nFunction(
+                fun = function(x) {
+                    return(x + Cv2)
+                },
+                argTypes = list(x = 'numericScalar'),
+                returnType = 'numericScalar'
+            )
+        )
+    )
+
+    ## Can't access private methods from external function.
+    myfun <- nFunction(
+        fun = function(obj, x) {
+            return(obj$Cv2)
+        }, argTypes = list(obj = 'nc1', x='numericScalar'),
+        returnType = 'numericScalar'
+    )
+    ## We get a WARN in testing output from this. Should clean things up if possible.
+    expect_error(cmyfun <- nCompile(myfun), "could not be found")
+
+    ## Can't access private methods from objects of a different class.
+    ncOuter <- nClass(
+        Cpublic = list(
+            Cfoo = nFunction(
+                fun = function(obj, x) {
+                    return(obj$Cmethod2(x))
+                },
+                argTypes = list(obj = 'nc1', x='numericScalar'),
+                returnType = 'numericScalar'
+            )
+        )
+    )
+   
+    expect_error(cncOuter <- nCompile(ncOuter), "could not be found")
+
+    ## Can access private methods from separate objects of the same class.
     nc1 <- nClass(
         Cpublic = list(
             Cmethod = nFunction(
@@ -179,5 +302,4 @@ test_that("Access to private members", {
     Cobj1 <- cnc1$new()
     Cobj2 <- cnc1$new()
     expect_identical(Cobj2$Cmethod(Cobj1, 5), 8)
-    
-})
+

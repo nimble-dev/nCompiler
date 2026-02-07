@@ -306,6 +306,15 @@ inLabelAbstractTypesEnv(
         obj_internals <- NULL
       } else {  ## Is RHS a field?
         symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
+        if(!is.null(symbol)) {  # Check for improper use of private field.
+          if(!(inherits(auxEnv$where, "R6ClassGenerator") && auxEnv$where$class &&
+               auxEnv$where$classname == code$args[[1]]$type$NCgenerator$classname) &&
+             NCinternals(code$args[[1]]$type$NCgenerator)$compileInfo$isPrivate[symbol$name])
+             stop(exprClassProcessingErrorMsg(
+                  code,
+                  paste0(nDeparse(code$args[[2]]), " is a private field.")
+              ), call. = FALSE)
+        }
         if(is.null(symbol))
           stop(exprClassProcessingErrorMsg(
             code,
