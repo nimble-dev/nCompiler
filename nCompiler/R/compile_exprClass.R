@@ -144,7 +144,7 @@ addIndentToList <- function(x, indent) {
 exprClassProcessingErrorMsg <- function(code, msg) {
   deparsed_code <- try(nDeparse(code), silent = TRUE)
   ans <- paste0(
-    msg, '\n This occured for',
+    msg, '\n This occurred for',
     if (!inherits(deparsed_code, 'try-error'))
       paste0(': ', deparsed_code, collapse = '\n')
     else
