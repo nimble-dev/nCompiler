@@ -8,8 +8,9 @@ nCompiler_$(VERSION).tar.gz:
 build: 
 	R CMD build nCompiler
 
+## e.g., `make install -l /tmp/nc-branch`
 install: nCompiler_$(VERSION).tar.gz
-	R CMD INSTALL --install-tests ${NCDIR} nCompiler_$(VERSION).tar.gz
+	R CMD INSTALL $(LIB) --install-tests nCompiler_$(VERSION).tar.gz
 
 check: nCompiler_$(VERSION).tar.gz
 	R CMD check --as-cran nCompiler_$(VERSION).tar.gz
