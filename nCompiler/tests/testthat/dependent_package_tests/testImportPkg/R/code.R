@@ -78,3 +78,27 @@ utils::globalVariables(c('Rv','Cv','Ca'))
 ##   global variable ‘Cv’
 ## Undefined global functions or variables:
 ##   Cv Rv
+
+nc <- nClass(
+    Cpublic = list(
+        Cfoo = nFunction(
+            fun = function(x) {
+                return(x+1)
+            },
+            argTypes = list(x = 'numericScalar'),
+            returnType = 'numericScalar')
+    )
+)
+
+fun_using_nClass_in_pkg <- function(x, returnGen = FALSE, returnObj = FALSE) {
+
+    Cnc <- nCompile(nc)
+    if(returnGen)
+        return(Cnc)
+    Robj <- nc$new()
+    Cobj <- Cnc$new()
+    if(returnObj)
+        return(list(Robj = Robj, Cobj = Cobj))
+    
+    return(c(Robj$Cfoo(x), Cobj$Cfoo(x)))
+}

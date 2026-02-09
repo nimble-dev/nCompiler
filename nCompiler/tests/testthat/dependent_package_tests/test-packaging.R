@@ -154,3 +154,36 @@ test_that("dependent package using `nCompiler::foo` works correctly", {
 
 })
 
+if(F) {
+test_that("Package function can use nClass defined in package namespace", {
+    devtools::install_local("testImportPkg", force = TRUE)
+
+    cnc <- testImportPkg::fun_using_nClass_in_pkg(5, returnGen = TRUE)
+    Robj <- testImportPkg::nc$new()
+    Cobj <- cnc$new()
+    expect_identical(Robj$Cfoo(3), 4)
+    expect_identical(Cobj$Cfoo(3), 4)
+
+    objs <- testImportPkg::fun_using_nClass_in_pkg(5, returnObj = TRUE)
+    expect_identical(objs[[1]]$Cfoo(3), 4)
+    expect_identical(objs[[2]]$Cfoo(3), 4)
+
+    expect_identical(testImportPkg::fun_using_nClass_in_pkg(5), c(6,6))
+    
+    library(testImportPkg)
+    cnc <- fun_using_nClass_in_pkg(5, returnGen = TRUE)
+    Robj <- nc$new()
+    Cobj <- cnc$new()
+    expect_identical(Robj$Cfoo(3), 4)
+    expect_identical(Cobj$Cfoo(3), 4)
+
+    objs <- fun_using_nClass_in_pkg(5, returnObj = TRUE)
+    expect_identical(objs[[1]]$Cfoo(3), 4)
+    expect_identical(objs[[2]]$Cfoo(3), 4)
+
+    expect_identical(fun_using_nClass_in_pkg(5), c(6,6))
+    
+   
+
+})
+}
