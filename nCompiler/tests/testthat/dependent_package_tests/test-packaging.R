@@ -154,7 +154,6 @@ test_that("dependent package using `nCompiler::foo` works correctly", {
 
 })
 
-if(F) {
 test_that("Package function can use nClass defined in package namespace", {
     devtools::install_local("testImportPkg", force = TRUE)
 
@@ -182,8 +181,5 @@ test_that("Package function can use nClass defined in package namespace", {
     expect_identical(objs[[2]]$Cfoo(3), 4)
 
     expect_identical(fun_using_nClass_in_pkg(5), c(6,6))
-    
-   
-
 })
-}
+
