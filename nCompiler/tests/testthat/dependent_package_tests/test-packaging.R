@@ -4,10 +4,12 @@ library(testthat)
 ## All of the test packages use `nRep` in R and C methods as example of
 ## using an nCompiler operator that must be found.
 
+devtools::install_local("testImportPkg", force = TRUE)
+devtools::install_local("testImportFromPkg", force = TRUE)
+devtools::install_local("testNamespaceUsingPkg", force = TRUE)
+
 ## `import(nCompiler)` in `NAMESPACE`.
 test_that("dependent package using `imports` works correctly", {
-    devtools::install_local("testImportPkg", force = TRUE)
-
     ## Test without importing package.
     
     ## Test execution within nClass.
@@ -57,8 +59,6 @@ test_that("dependent package using `imports` works correctly", {
 ## `nRep` is not in `importFrom` in package to
 ## mimic situation like using `dinvgamma` in a model or `rep` in an nFunction.
 test_that("dependent package using `importFrom` works correctly", {
-    devtools::install_local("testImportFromPkg", force = TRUE)
-
     ## Test without importing package.
     
     ## Test execution within nClass.
@@ -108,7 +108,6 @@ test_that("dependent package using `importFrom` works correctly", {
 ## `nRep` in package does not use `nCompile::nRep` to
 ## mimic situation like using `dinvgamma` in a model or `rep` in an nFunction.
 test_that("dependent package using `nCompiler::foo` works correctly", {
-    devtools::install_local("testNamespaceUsingPkg", force = TRUE)
     ## Test without importing package.
     
     ## Test execution within nClass.
@@ -155,7 +154,6 @@ test_that("dependent package using `nCompiler::foo` works correctly", {
 })
 
 test_that("Package function can use nClass defined in package namespace", {
-    devtools::install_local("testImportPkg", force = TRUE)
 
     cnc <- testImportPkg::fun_using_nClass_in_pkg(5, returnGen = TRUE)
     Robj <- testImportPkg::nc$new()
@@ -182,4 +180,3 @@ test_that("Package function can use nClass defined in package namespace", {
 
     expect_identical(fun_using_nClass_in_pkg(5), c(6,6))
 })
-
