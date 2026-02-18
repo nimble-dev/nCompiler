@@ -4,7 +4,7 @@ library(testthat)
 ## All of the test packages use `nRep` in R and C methods as example of
 ## using an nCompiler operator that must be found.
 
-remotes::install_local("testImportPkg", force = TRUE)  # CJP
+remotes::install_local("testImportPkg", force = TRUE)  
 remotes::install_local("testImportFromPkg", force = TRUE)
 remotes::install_local("testNamespaceUsingPkg", force = TRUE)
 
