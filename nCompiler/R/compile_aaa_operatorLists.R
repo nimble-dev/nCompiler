@@ -40,7 +40,7 @@ getHandlerEnv <- function(stage) {
          )
 }
 
-registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE, where = parent.frame()) {
+registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
   opNames <- names(opDefs)
   if(is.null(opNames))
     stop("opDef must be a named list, with names that are the operator names.")
@@ -72,7 +72,6 @@ registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE, where = parent.f
     }
     operatorDefUserEnv[[opName]] <- currentOpDef
   }
-  return(where)
 }
 
 deregisterOpDef <- function(names) {
