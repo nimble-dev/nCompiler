@@ -334,8 +334,13 @@ nCompile <- function(...,
     }
   }
 
-  if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
+  if(isTRUE(controlFull$show_types)) 
+    sapply(cppDefs, function(def) def$showTypes())
+  if(isTRUE(controlFull$show_annotations)) 
+    sapply(cppDefs, function(def) def$showTypes(annotations = TRUE))      
 
+  if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
+    
   # writePackage inserts roxygen here
 
   # (3) Create RcppPacket_list

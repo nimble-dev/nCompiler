@@ -82,6 +82,12 @@ cpp_nFunctionClass <- R6::R6Class(
       ## nCompiler_plugin()$includes already have #include, so they go here
       super$initialize(...)
     },
+    showTypes = function(annotations = FALSE) {
+      if(annotations) {
+        print(self$code$code, showType = TRUE)
+      } else print(self$NF_Compiler$symbolTable, parent = FALSE)
+      invisible(self)
+    },
     getInternalDefs = function() {
       super$getInternalDefs()
     },

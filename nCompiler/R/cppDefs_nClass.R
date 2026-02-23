@@ -200,6 +200,20 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
     },
+    showTypes = function(annotations = FALSE) {
+      if(!annotations) {
+        cat("----------------- Class variables ---------------------------\n")
+        print(self$Compiler$symbolTable, parent = FALSE)
+      }
+      sapply(self$memberCppDefs, function(def) {
+        if(inherits(def, "cpp_nFunctionClass")) {
+          suffix <- paste0(rep("-", max(42-nchar(def$name), 5)), collapse = "")    
+          cat("----------------- ", def$name, " ", suffix, "\n", sep = "")
+          def$showTypes(annotations)
+        }
+      })
+      invisible(self)
+    },
     process_inheritance = function(Compiler) {
       for(oneInheritance in Compiler$compileInfo$inherit) {
         self$addInheritance(oneInheritance)

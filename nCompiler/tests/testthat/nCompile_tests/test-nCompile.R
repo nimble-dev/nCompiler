@@ -902,3 +902,48 @@ test_that("argument name mangling and argument ordering work together", {
   expect_equal(bar2(1.2,TRUE), dnorm(1.2,0,1,TRUE))
   expect_equal(comp2$bar2(1.2,TRUE), dnorm(1.2,0,1,TRUE))
 })
+
+test_that("showing types works", {
+    test <- nFunction(
+        fun = function(x = double(0),
+                       y = double(0)) {
+            tmp <- nRep(1,7)
+            tmp2 <- nMatrix(0, 5 ,3)
+        }
+    )
+    defs <- nCompile(test, control = list(return_cppDefs=TRUE))
+    expect_output(defs[[1]]$showTypes(), "symbol table")
+    expect_output(defs[[1]]$showTypes(annotations=TRUE), "{ |", fixed = TRUE) 
+
+    expect_output(defs <- nCompile(test, control =
+                 list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
+                 "symbol table") 
+
+    nc <- nClass(
+        Cpublic = list(
+            x = double(1),
+            add_vectors = nFunction(
+                name ='add_vectors',
+                fun = function(x = double(1),
+                               y = double(1)) {
+                    returnType(double(1))
+                    ans <- x + y
+                    return(ans)
+                }
+            ),
+            foo = nFunction(
+                fun = function(x = double(0)) {
+                    y <- nRep(1,2)
+                    z <- x + y
+                }
+            )
+        )
+    )
+    defs <- nCompile(nc, control = list(return_cppDefs=TRUE))
+    expect_output(defs[[1]]$showTypes(), "Class variables")
+    expect_output(defs[[1]]$showTypes(annotations=TRUE), "-- add_vectors --") 
+
+    expect_output(defs <- nCompile(nc, control =
+                  list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
+                  "Class variables")
+})
