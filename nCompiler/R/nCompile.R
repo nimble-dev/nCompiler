@@ -335,9 +335,19 @@ nCompile <- function(...,
   }
 
   if(isTRUE(controlFull$show_types)) 
-    sapply(cppDefs, function(def) def$showTypes())
+      sapply(cppDefs, function(def) {
+          nm <- def$name
+          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
+          def$showTypes()
+          cat("\n")
+      })
   if(isTRUE(controlFull$show_annotations)) 
-    sapply(cppDefs, function(def) def$showTypes(annotations = TRUE))      
+      sapply(cppDefs, function(def) {
+          nm <- def$name
+          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
+          def$showTypes(annotations = TRUE)
+          cat("\n")
+      })
 
   if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
     

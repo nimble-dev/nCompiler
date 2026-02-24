@@ -905,6 +905,7 @@ test_that("argument name mangling and argument ordering work together", {
 
 test_that("showing types works", {
     test <- nFunction(
+        name = "test",
         fun = function(x = double(0),
                        y = double(0)) {
             tmp <- nRep(1,7)
@@ -946,4 +947,10 @@ test_that("showing types works", {
     expect_output(defs <- nCompile(nc, control =
                   list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
                   "Class variables")
+    
+    ## Multi-unit compilation.
+    expect_output(defs <- nCompile(nc, test, control =
+                  list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
+                  "==== nClass_1 ====")
+    
 })
