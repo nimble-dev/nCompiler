@@ -51,7 +51,7 @@
 #     }
 #   )
 # )
-# 
+#
 
 #' @export
 build_compiled_nClasses <- function(units,
@@ -60,7 +60,8 @@ build_compiled_nClasses <- function(units,
                                     exportNames,
                                     returnNames,
                                     newCobjFuns = NULL,
-                                    package = FALSE) {
+                                    package = FALSE,
+                                    packageNames = list()) {
   numUnits <- length(units)
   ans <- vector("list", numUnits)
   inherit_indices <- vector("list", numUnits)
@@ -73,7 +74,7 @@ build_compiled_nClasses <- function(units,
         match <- rep(FALSE, numUnits)
         inherit_returnName <- NULL
         inherit_indices[[i]] <- integer()
-        if(identical(inherit_NCgen, nCompiler::nClassClass)) 
+        if(identical(inherit_NCgen, nCompiler::nClassClass))
           inherit_NCgen <- NULL
         else {
           for(j in seq_along(units)) {
@@ -82,7 +83,8 @@ build_compiled_nClasses <- function(units,
           if(sum(match)>1)
             stop("When building compiled interface for ", exportNames[i], ", there were multiple matches for inherited nClass generator.")
           inherit_indices[[i]] <- which(match)
-          inherit_returnName <- returnNames[inherit_indices[[i]] ]
+          inherit_returnName <- if(!package) "NOT_USED"
+                                else packageNames[[inherit_indices[[i]] ]]["compiled"]
         }
 
         ans[[i]] <- try(build_compiled_nClass(NCgenerator = units[[i]],
@@ -97,7 +99,7 @@ build_compiled_nClasses <- function(units,
       }
     }
   }
-  
+
   if(package) return(ans)
 
   for(i in seq_along(units)) {
@@ -114,7 +116,7 @@ build_compiled_nClass <- function(NCgenerator,
                                   inherit_NCgen = NULL,
                                   inherit_returnName = NULL,
                                   package = FALSE) {
-  
+
 
   compiled_Cpub_class_code <- make_compiled_Cpub_class_code(
     NCgenerator = NCgenerator,
@@ -154,7 +156,7 @@ build_compiled_nClass <- function(NCgenerator,
     CnCgenerator$parent_env$.newCobjFun <- NULL
   }
   CnCgenerator
-} 
+}
 
 # buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
   #fieldNames <- NCI$fieldNames
@@ -188,7 +190,9 @@ make_compiled_nClass_code <- function(NCgenerator) {
   substitute(
     R6::R6Class(
       classname = CLASSNAME,
-      public =list(isCompiled = \() TRUE),
+      public =list(isCompiled = \() TRUE,
+                   initializeCpp = \(CppObj) private$Cpublic_obj$initializeCpp(CppObj)
+      ),
       portable = FALSE,
       inherit = INHERIT,
       parent_env = new.env()
@@ -290,10 +294,10 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
                                         CmethodNames)
   CinterfaceMethods_code <- do.call("call", c("list",
                             CinterfaceMethods_code_list))
-  
+
   Cpub_inherit_arg <- if(package) {
     if(is.null(inheritName)) quote(nCompiler::CpubClass)
-    else substitute(IRN$parent_env$.Cpub_class, list(IRN=as.name(paste0(".", inheritName, "_CnCgenerator_CpubGen"))))
+    else substitute(IRN$parent_env$.Cpub_class, list(IRN=as.name(inheritName)))#as.name(paste0(inheritName, "_compiled"))))
   } else {
     if(is.null(inheritName)) quote(nCompiler::CpubClass)
     else quote(.Cpub_base_class)
@@ -374,7 +378,7 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   environment(ans) <- new.env()
   ## The internet says that R6 methods are assigned their environments
   ## during a call to methodGenerator$new().  We put a new.env()
-  ## here anyway as insurance against the possibility of quirky 
+  ## here anyway as insurance against the possibility of quirky
   ## environment problems.
   ##
   ## We used to make the third argument like list(arg1, arg2, arg3)

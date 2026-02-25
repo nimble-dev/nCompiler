@@ -220,6 +220,7 @@ test_that("generating and compiling a predefined nClass works through packaging"
 })
 
 cat("type declaration in code of returnType(foo()) needs fixing\n")
+cat("inheriting from an nClass with interface='none' will not work via package=TRUE")
 
 test_that("One predefined nClass can use another, separately and by inheritance",
 {
@@ -233,7 +234,7 @@ test_that("One predefined nClass can use another, separately and by inheritance"
           }
         )
       )
-    , compileInfo = list(interface='none', createFromR = FALSE)
+    , compileInfo = list(interface='generic', createFromR = FALSE)
     , predefined=file.path(tempdir(), "test_predefined_nC_foo_base_dir")
     )
 

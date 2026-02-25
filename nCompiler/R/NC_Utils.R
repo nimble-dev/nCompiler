@@ -12,6 +12,20 @@ isNC <- function(x) inherits(x, 'nClass')
 #' @export
 isCNC <- function(x) inherits(x, 'nClass') && isTRUE(x$isCompiled())
 
+#' @export
+compileInfo <- function(NC) {
+  if(!isNCgenerator(NC))
+    stop("NC must be a nClass generator (returned from nClass).")
+  NCinternals(NC)$compileInfo
+}
+
+#' @export
+`compileInfo<-` <- function(NC, value) {
+  if(!isNCgenerator(NC))
+    stop("NC must be a nClass generator (returned from nClass).")
+  NCinternals(NC)$compileInfo <- value
+  NC
+}
 
 #' Determine if an object is a nClass generator
 #'

@@ -38,8 +38,8 @@ test_that("One nClass holds another and uses it", {
 test_that("One nClass holds another by a base class and uses it", {
 
   ncA <- nClass(
+    classname = "ncA",
     Cpublic = list(
-      classname = "ncA",
       v.A = 'numericVector',
       wA = 'numericScalar',
       add.wA = nFunction(
@@ -73,7 +73,12 @@ test_that("One nClass holds another by a base class and uses it", {
     )
   )
   for(package in c(TRUE, FALSE)) {
-    comp <- nCompile(nc_inner, nc_outer, ncA, package = package)
+    # A different returnName must be provided for ncA because that
+    # will be its default exportName and for interface != "full" that
+    # takes priority and results in renaming the uncompiled class name
+    # and that breaks inherits
+    comp <- nCompile(nc_inner, nc_outer, ncAc = ncA, package = package)
+    comp <- nCompile(nc_inner, nc_outer, package = package)
     obj <- comp$nc_outer$new()
     inner_obj <- obj$my_inner
     expect_true(is.null(inner_obj))

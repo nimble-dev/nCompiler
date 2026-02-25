@@ -83,6 +83,7 @@ nClass <- function(classname,
                    compileInfo = list(),
                    predefined = FALSE,
                    env = parent.frame()) {
+  #
   # supported elements of compileInfo:
   # exportName: name of the R function to call the
   #    C/C++ function for a new object. Defaults to paste0("new_", classname)
@@ -99,6 +100,21 @@ nClass <- function(classname,
   #   accessor specifier, typically "public", e.g. "public some_class".
   #   Similarly, template arguments (include CRTP) should be in the text explicitly.
   # needed_units: list of needed nClasses and nFunctions to include, by name or object
+  #
+  # packageNames: can be a vector or list of two names, possibly named by "uncompiled" and "compiled",
+  #  and taken in that order if unnamed. 
+  #. These will be the names of the uncompiled and compiled class generators when writing package code,
+  #  either through writePackage or nCompile(..., package=TRUE). If another nClass inherits from this one,
+  #. the inherit name must be the uncompiled packageNames element if compiling through a package.
+  #. A good practice will be my_nClass_unc <- nClass(..., packageNames = c("my_nClass_unc", "my_nClass_comp"))
+  #  If these are missing, nCompile can generate names that will work if there is no inheritance by other nClasses,
+  #. and will often work through nCompiler(..., package=TRUE) if there is inheritance, but will not work
+  #. if there is inheritance and writePackage is called to help create a new package. The difference in these cases
+  #  is that nCompile() returns a (possibly list of) compiled results in an active R session, but writePackage
+  #. must create names that will be the names used by the new package. nCompile(nc1, nc2) can return a list with 
+  #. elements nc1 and nc2 that are the compiled versions of nc1 and nc2. But writePackage(nc1, nc2) can't
+  #  safely do that because if it renames the compiled versions to nc1 and nc2, then the uncompiled versions
+  #  must be given some other automated names, which will break `inherits` statements.
   #
   # constructor(s) and destructor:
   #
@@ -127,11 +143,12 @@ nClass <- function(classname,
          interfaceMembers = NULL,
          depends = list(),
          inherit = list(),
-         nClass_inherit = list()),
+         nClass_inherit = list(),
+         packageNames = character()),
     compileInfo
   )
   if(missing(classname))
-    classname <- nClassLabelMaker()
+    classname <- c(generated = nClassLabelMaker())
   if(is.null(compileInfo$classname))
     compileInfo$classname <- paste0(classname, "_compiled")
   if('finalize' %in% names(Cpublic)) {

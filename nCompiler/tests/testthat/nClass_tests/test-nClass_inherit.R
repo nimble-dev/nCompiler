@@ -254,7 +254,8 @@ test_that("nClass hierarchies work as expected (including uncompiled vs compiled
           return(wA); returnType('numericScalar')
         })
     ),
-    compileInfo = list(interface = "generic", createFromR = FALSE)
+    compileInfo = list(interface = "generic", createFromR = FALSE,
+                       packageNames=c(compiled="ncA_comp"))
   )
 
   ncB <- nClass(

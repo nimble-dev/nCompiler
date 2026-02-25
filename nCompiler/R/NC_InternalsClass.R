@@ -104,6 +104,19 @@ NC_InternalsClass <- R6::R6Class(
         }
         self$enableDerivs <- enableDerivs
       }
+      classname_provided <- !identical(names(classname), "generated")
+      packageNames <- c(uncompiled = "", compiled = "")
+      if(!is.null(self$compileInfo$packageNames)) packageNames <- self$compileInfo$packageNames
+      if(is.list(packageNames)) packageNames <- unlist(packageNames)
+      if(is.null(names(packageNames)))
+        names(packageNames) <- c("uncompiled", "compiled")[seq_along(packageNames)]
+      if(is.na(packageNames["compiled"])) packageNames["compiled"] <- ""
+      if(is.na(packageNames["uncompiled"])) packageNames["uncompiled"] <- ""
+      packageNames <- packageNames[c("uncompiled", "compiled")]
+      if(classname_provided && packageNames["uncompiled"] == "") 
+        packageNames["uncompiled"] <- classname
+      self$compileInfo$packageNames <- packageNames
+
       self$predefined <- predefined
       self$enableSaving <- enableSaving
     },

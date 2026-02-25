@@ -126,13 +126,14 @@ test_that("nCompile direct, package, and writePackage work with nClass interface
     rm(CppObj, obj); gc();
 
     dir <- file.path(tempdir(), "test_nComp_testpackage")
+    compileInfo(nc)$packageNames <- c(compiled = "ncc")
     test <- writePackage(nc, pkgName = "testpackage", dir = dir, modify="clear")
     lib <- file.path(tempdir(), "test_nComp_lib")
     dir.create(lib, showWarnings=FALSE)
     withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
                                                                           upgrade = "never", quick=TRUE, quiet=TRUE))
     withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-    obj <- access_dynamic_package("testpackage", "nc")$new() #testpackage::nc$new()
+    obj <- access_dynamic_package("testpackage", "ncc")$new() #testpackage::nc$new()
     expect_equal(x1 + x2, obj$add_vectors(x1, x2))
     CppObj <- to_generic_interface(obj)
     expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
@@ -145,7 +146,7 @@ test_that("nCompile direct, package, and writePackage work with nClass interface
     withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
                                                                           upgrade = "never", quick=TRUE, quiet=TRUE))
     withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-    CppObj <- access_dynamic_package("testpackage", "nc")() # testpackage::nc()
+    CppObj <- access_dynamic_package("testpackage", "ncc")() # testpackage::nc()
     expect_equal(x1 + x2, method(CppObj, 'add_vectors')(x1, x2))
     obj <- to_full_interface(CppObj)
     expect_equal(x1 + x2, obj$add_vectors(x1, x2))
@@ -193,6 +194,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
         }
     )
 
+    # simplest case: no explicit version of naming
     test <- nCompile(add.Scalars, package = FALSE, returnList = TRUE)
     expect_equal(test$add.Scalars(2, 3), 5)
     test <- nCompile(add.Scalars, package = TRUE, returnList = TRUE)
@@ -208,6 +210,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
     expect_equal(access_dynamic_package("testpackage", "add.Scalars")(2, 3), 5) #testpackage::add.Scalars(2, 3), 5)
     pkgload::unload("testpackage")
 
+    # next case: the nFunction has a name argument, but that should correctly not be used
     test <- nCompile(add.Scalars_name, package = FALSE, returnList = TRUE)
     expect_equal(test$add.Scalars_name(2, 3), 5)
     test <- nCompile(add.Scalars_name, package = TRUE, returnList = TRUE)
@@ -223,6 +226,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
     expect_equal(access_dynamic_package("testpackage", "add.Scalars_name")(2, 3), 5) #testpackage::add.Scalars_name(2, 3), 5)
     pkgload::unload("testpackage")
 
+    # next case: an exportName is provided
     test <- nCompile(add.Scalars_eName, package = FALSE, returnList = TRUE)
     expect_equal(test$foo1(2, 3), 5)
     test <- nCompile(add.Scalars_eName, package = TRUE, returnList = TRUE)
@@ -238,6 +242,7 @@ test_that("nCompile direct, package, and writePackage work with various name man
     expect_equal(access_dynamic_package("testpackage", "foo1")(2, 3), 5) #testpackage::foo1(2, 3), 5)
     pkgload::unload("testpackage")
 
+    # next case: an exportName and a name argument are provided. The exportName should get used.
     test <- nCompile(add.Scalars_name_eName, package = FALSE, returnList = TRUE)
     expect_equal(test$foo2(2, 3), 5)
     test <- nCompile(add.Scalars_name_eName, package = TRUE, returnList = TRUE)
