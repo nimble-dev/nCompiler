@@ -34,6 +34,8 @@ NC_InternalsClass <- R6::R6Class(
     check_inherit_done = FALSE,
     initialize = function(classname,
                           Cpublic,
+                          Cprivate,
+                          isPrivate,
                           isOnlyC = FALSE,
                           enableDerivs = NULL,
                           enableSaving = get_nOption("enableSaving"),
@@ -47,37 +49,40 @@ NC_InternalsClass <- R6::R6Class(
       self$classname <- classname
       self$cpp_classname <- Rname2CppName(classname)
       self$isOnlyC = isOnlyC
-      numEntries <- length(Cpublic)
+
+      Cmembers <- c(Cpublic, Cprivate)
+      numEntries <- length(Cmembers)
       if(numEntries) {
         isMethod <- rep(FALSE, numEntries)
         isVirtual <- rep(FALSE, numEntries)
-        for(i in seq_along(Cpublic)) {
-          if(isNF(Cpublic[[i]])) {
+        for(i in seq_along(Cmembers)) {
+          if(isNF(Cmembers[[i]])) {
             isMethod[i] <- TRUE
-            isVirtual[i] <- isTRUE(NFinternals(Cpublic[[i]])$compileInfo$virtual)
+            isVirtual[i] <- isTRUE(NFinternals(Cmembers[[i]])$compileInfo$virtual)
             # NFinternals(Cpublic[[i]])$isMethod <- TRUE 
             next;
           }
-          if(is.function(Cpublic[[i]])) {
-            stop(paste0('Cpublic methods should be provided as nFunctions, ',
-                        'not functions. ', names(Cpublic)[i], ' is a function.'),
+          if(is.function(Cmembers[[i]])) {
+            stop(paste0('Cpublic and Cprivate methods should be provided as nFunctions, ',
+                        'not functions. ', names(Cmembers)[i], ' is a function.'),
                  call. = FALSE)
           }
         }
-        self$virtualMethodNames <- names(Cpublic)[isVirtual]
-        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
+        self$virtualMethodNames <- names(Cmembers)[isVirtual]
+        self$symbolTable <- argTypeList2symbolTable(Cmembers[!isMethod], evalEnv = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
-        self$methodNames <- names(Cpublic)[isMethod]
+        self$methodNames <- names(Cmembers)[isMethod]
         self$allMethodNames_self <- methodNames
-        self$virtualMethodNames_self <- names(Cpublic)[isVirtual]
+        self$virtualMethodNames_self <- names(Cmembers)[isVirtual]
         self$allMethodNames <- methodNames
-        self$fieldNames <- names(Cpublic)[!isMethod]
+        self$fieldNames <- names(Cmembers)[!isMethod]
         self$allFieldNames_self <- fieldNames
         self$allFieldNames <- fieldNames
+        self$compileInfo$isPrivate <- isPrivate
         self$orig_methodName_to_cpp_code_name <- structure(vector("list", length=length(methodNames)),
                                                        names = methodNames)
         for(mN in methodNames) {
-          self$orig_methodName_to_cpp_code_name[[mN]] <- NFinternals(Cpublic[[mN]])$cpp_code_name
+          self$orig_methodName_to_cpp_code_name[[mN]] <- NFinternals(Cmembers[[mN]])$cpp_code_name
         }
       }
       # An over-riding base class can be provided either through inherit or nClass_inherit.
@@ -88,7 +93,7 @@ NC_InternalsClass <- R6::R6Class(
           enableDerivs <- as.list(enableDerivs)
         for(i in enableDerivs) {
           if(!(i %in% self$methodNames))
-            stop(paste0('enableDerivs entry ', i, ' is not a method in Cpublic.'))
+            stop(paste0('enableDerivs entry ', i, ' is not a method in Cmembers.'))
         }
         self$enableDerivs <- enableDerivs
       }

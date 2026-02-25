@@ -346,9 +346,10 @@ addGenericInterface_impl <- function(self) {
     useIM <- !is.null(interfaceMembers)
     methodNames <- NCint$methodNames
     for(mName in methodNames) {
+      if(NCcompInfo$isPrivate[mName]) next
       if(mName %in% outputMethodNames) next
       if(useIM && !(mName %in% interfaceMembers)) next
-      NFint <- NFinternals(current_NCgen$public_methods[[mName]])
+      NFint <- NFinternals(c(current_NCgen$public_methods, current_NCgen$private_methods)[[mName]])
       NFcompInfo <- NFint$compileInfo
       if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
       if(isTRUE(NFcompInfo$destructor)) next
@@ -380,7 +381,7 @@ addGenericInterface_impl <- function(self) {
     # sure that order is preserved aligning fieldNames and cpp_fieldNames
     new_fieldNames <- NCint$symbolTable$getSymbolNames()
     do_interface <- NCint$symbolTable$getSymbols() |>
-      lapply(\(x) isTRUE(x$interface)) |> unlist()
+      lapply(\(x) isTRUE(x$interface) && !NCcompInfo$isPrivate[x$name]) |> unlist()
     new_fieldNames <- new_fieldNames[do_interface]
     new_fieldNames <- new_fieldNames[!(new_fieldNames %in% fieldNames)]
     fieldNames <- c(fieldNames, new_fieldNames)
@@ -528,7 +529,7 @@ cppClassClass <- R6::R6Class(
     # variableNamesForInterface = character(),
     ##SEXPfinalizerFun = 'ANY',
     # globalObjectsDefs = list(),
-
+    
     initialize = function(...) {
       ##useGenerator <<- TRUE
       force(self)
@@ -606,21 +607,38 @@ cppClassClass <- R6::R6Class(
         else {
           list()
         }
+
+        defNames <- names(memberCppDefs)
+        nonMembers <- defNames[!defNames %in% names(compileInfo$isPrivate)]
+        members <-defNames[defNames %in% names(compileInfo$isPrivate)]
+        privateMembers <- members[compileInfo$isPrivate[members]]
+        publicMembers <- c(nonMembers, members[!compileInfo$isPrivate[members]])
         output <- c(generateClassHeader(name, inheritance, nClass_inheritance),
-                    list('public:'), ## In the future we can separate public and private
-                    generateAll(memberCppDefs, declaration = TRUE),
+                    list('public:'), 
+                    generateAll(memberCppDefs[publicMembers], declaration = TRUE),
                     # it is important to declare methods before variables
                     # because nDerivsMgrClass variables are templated using a macro
                     # that invokes a method address to get its type, so the method
                     # must have been declared before the variable.
-                    lapply(generateObjectDefs(symbolsToUse),
+                    lapply(generateObjectDefs(symbolsToUse[!compileInfo$isPrivate[names(symbolsToUse)]]),
                            function(x)
                              if(length(x)==0)
                                ''
                            else
-                             pasteSemicolon(x, indent = '  ')),
-                    '};'
+                               pasteSemicolon(x, indent = '  '))
                     )
+        if(length(privateMembers))
+            output <- c(output, 
+                    list('private:'),
+                    generateAll(memberCppDefs[privateMembers], declaration = TRUE),
+                    lapply(generateObjectDefs(symbolsToUse[compileInfo$isPrivate[names(symbolsToUse)]]),
+                           function(x)
+                             if(length(x)==0)
+                               ''
+                           else
+                               pasteSemicolon(x, indent = '  '))
+                    )
+        output <- c(output, '};')
       } else {
         if(length(memberCppDefs) > 0) {
           output <- generateAll(memberCppDefs, scopes = name)

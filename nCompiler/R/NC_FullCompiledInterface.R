@@ -68,14 +68,14 @@ build_compiled_nClass <- function(NCgenerator,
   #  the current class except for those overloaded in the current class.
   #  All inherited member variables are pulled down, with no
   #  possibility of the same member variable being distinct at different
-  #  levels of a class hierarchy.
+                                        #  levels of a class hierarchy.
   NCI <- NCinternals(NCgenerator)
   # Make C interface methods
   CmethodNames <- NCI$methodNames
   recurse_make_Cmethods <- function(NCgenerator, CmethodNames,
                                     derivedNames = character()) {
     interfaceMethods <-  mapply(buildMethod_for_compiled_nClass,
-                                NCgenerator$public_methods[CmethodNames],
+                                c(NCgenerator$public_methods, NCgenerator$private_methods)[CmethodNames],
                                 CmethodNames)
     inherit_obj <- NCgenerator$get_inherit()
     if(isNCgenerator(inherit_obj)) {
@@ -94,17 +94,17 @@ build_compiled_nClass <- function(NCgenerator,
   }
   CinterfaceMethods <- recurse_make_Cmethods(NCgenerator, CmethodNames)
   # Make R interface methods
-  RmethodNames <- setdiff(names(NCgenerator$public_methods),
+  RmethodNames <- setdiff(c(names(NCgenerator$public_methods), names(NCgenerator$private_methods)),
                           c(CmethodNames, 'clone'))
   recurse_make_Rmethods <- function(NCgenerator, RmethodNames,
                                     derivedNames = character()) {
-    interfaceMethods <- NCgenerator$public_methods[RmethodNames]
+    interfaceMethods <- c(NCgenerator$public_methods, NCgenerator$private_methods)[RmethodNames]
     inherit_obj <- NCgenerator$get_inherit()
     if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, RmethodNames)
       baseNCgen <- inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
-      baseRmethodNames <- setdiff(names(baseNCgen$public_methods),
+      baseRmethodNames <- setdiff(c(names(baseNCgen$public_methods), names(baseNCgen$private_methods)),
                                   c(baseCmethodNames, 'clone'))
       baseRmethodNames <- setdiff(baseRmethodNames, derivedNames)
       baseInterfaceMethods <- recurse_make_Rmethods(baseNCgen,
@@ -162,19 +162,19 @@ build_compiled_nClass <- function(NCgenerator,
     activeBindingResults
   }
   CfieldNames <- NCI$fieldNames
-  activeBindingResults <- recurse_make_activeBindings(NCgenerator, CfieldNames)
+  activeBindingResults <- recurse_make_activeBindings(NCgenerator, CfieldNames[!NCI$compileInfo$isPrivate[CfieldNames]])
   activeBindings <- activeBindingResults$activeBindings
   internal_fields <- activeBindingResults$newFields
 
   recurse_make_Rfields <- function(NCgenerator, RfieldNames,
                                     derivedNames = character()) {
-    interfaceFields <- NCgenerator$public_fields[RfieldNames]
+    interfaceFields <- c(NCgenerator$public_fields, NCgenerator$private_fields)[RfieldNames]
     inherit_obj <- NCgenerator$get_inherit()
     if(isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, RfieldNames)
       baseNCgen <- inherit_obj
       baseCfieldNames <- NCinternals(baseNCgen)$fieldNames
-      baseRfieldNames <- setdiff(names(baseNCgen$public_fields),
+      baseRfieldNames <- setdiff(c(names(baseNCgen$public_fields),names(baseNCgen$private_fields)),
                                   c(baseCfieldNames, 'clone'))
       baseRfieldNames <- setdiff(baseRfieldNames, derivedNames)
       baseInterfaceFields <- recurse_make_Rfields(baseNCgen,
@@ -184,7 +184,7 @@ build_compiled_nClass <- function(NCgenerator,
     }
     interfaceFields
   }
-  RfieldNames <- setdiff(names(NCgenerator$public_fields),
+  RfieldNames <- setdiff(c(names(NCgenerator$public_fields), names(NCgenerator$private_fields)),
                          CfieldNames)
   RinterfaceFields <- recurse_make_Rfields(NCgenerator, RfieldNames)
 
@@ -237,12 +237,46 @@ build_compiled_nClass <- function(NCgenerator,
     if(!omit_automatic_Cpp_construction)
        RinterfaceMethods[["initialize"]] <- function(CppObj) {initializeCpp(CppObj)} 
   }
+
+  methodNames <- names(RinterfaceMethods)
+  nonMembers <- methodNames[!methodNames %in% names(NCI$compileInfo$isPrivate)]
+  members <- methodNames[methodNames %in% names(NCI$compileInfo$isPrivate)]
+  RprivateMethods <- members[NCI$compileInfo$isPrivate[members]]
+  RpublicMethods <- c(nonMembers, members[!NCI$compileInfo$isPrivate[members]])
+  fieldNames <- names(RinterfaceFields)
+  nonMembers <- fieldNames[!fieldNames %in% names(NCI$compileInfo$isPrivate)]
+  members <- fieldNames[fieldNames %in% names(NCI$compileInfo$isPrivate)]
+  RprivateFields <- members[NCI$compileInfo$isPrivate[members]]
+  RpublicFields <- c(nonMembers, members[!NCI$compileInfo$isPrivate[members]])
+  methodNames <- names(CinterfaceMethods)
+  nonMembers <- methodNames[!methodNames %in% names(NCI$compileInfo$isPrivate)]
+  members <- methodNames[methodNames %in% names(NCI$compileInfo$isPrivate)]
+  CprivateMethods <- members[NCI$compileInfo$isPrivate[members]]
+  CpublicMethods <- c(nonMembers, members[!NCI$compileInfo$isPrivate[members]])
+
+  ## Named lists or NULL cause problems when eval'ing the code to construct the R6Class; this avoids those.
+  RFIELDS_PRIVATE <- parse(text = deparse(
+                               RinterfaceFields[RprivateFields] 
+                           ), keep.source = FALSE)[[1]]
+  if(!length(RinterfaceFields[RprivateFields])) RFIELDS_PRIVATE <- list()
+  RPRIVATE <- parse(text = deparse(
+                        RinterfaceMethods[RprivateMethods] 
+                    ), keep.source = FALSE)[[1]]
+  if(!length(RinterfaceMethods[RprivateMethods])) RPRIVATE <- list()
+  CINTERFACE_PRIVATE <- parse(text = deparse(
+                                  CinterfaceMethods[CprivateMethods]
+                              ), keep.source = FALSE)[[1]]
+  if(!length(CinterfaceMethods[CprivateMethods])) CINTERFACE_PRIVATE <- list()
+  
   ans <- substitute(
     expr = R6::R6Class(
       classname = CLASSNAME,
-      private = list(
-        CppObj = NULL,
-        DLLenv = NULL
+      private = c(
+        list(CppObj = NULL,
+        DLLenv = NULL),
+        RPRIVATE,
+        RFIELDS_PRIVATE,
+        CINTERFACE_PRIVATE
       ),
       public = c(
         RPUBLIC,
@@ -256,15 +290,18 @@ build_compiled_nClass <- function(NCgenerator,
     env = list(
       CLASSNAME = classname,
       RPUBLIC = parse(text = deparse(
-        RinterfaceMethods #NCgenerator$public_methods[RmethodNames]
+        RinterfaceMethods[RpublicMethods] #NCgenerator$public_methods[RmethodNames]
       ), keep.source = FALSE)[[1]],
       RFIELDS = parse(text = deparse(
 #        c(NCgenerator$public_fields[RfieldNames], internal_fields)
-        c(RinterfaceFields, internal_fields)
+        c(RinterfaceFields[RpublicFields], internal_fields)
       ), keep.source = FALSE)[[1]],
+      RPRIVATE = RPRIVATE,
+      RFIELDS_PRIVATE = RFIELDS_PRIVATE,
       CINTERFACE = parse(text = deparse(
-        CinterfaceMethods
-      ), keep.source = FALSE)[[1]],
+                             CinterfaceMethods[CpublicMethods]),
+                         keep.source = FALSE)[[1]],
+      CINTERFACE_PRIVATE = CINTERFACE_PRIVATE,
       ACTIVEBINDINGS = parse(text = deparse(activeBindings))[[1]]
     )
   )
@@ -422,7 +459,7 @@ build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
   recurse_make_Cmethods <- function(NCgenerator, CmethodNames,
                                     derivedNames = character()) {
     interfaceFns <-  mapply(build_generic_fn_for_compiled_nClass_method,
-                                NCgenerator$public_methods[CmethodNames],
+                                c(NCgenerator$public_methods, NCgenerator$private_methods)[CmethodNames],
                                 CmethodNames)
     inherit_obj <- NCgenerator$get_inherit()
     if(isNCgenerator(inherit_obj)) {

@@ -84,7 +84,7 @@ NCinternals <- function(x) {
 
 # Utility function to allow searching up an inheritance
 # ladder to find a method.
-NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
+NC_find_method <- function(NCgenerator, name, inherits=TRUE, includePrivate = TRUE) {
   if(!isNCgenerator(NCgenerator))
     stop("Input must be a nClass generator.")
   current_NCgen <- NCgenerator
@@ -92,7 +92,10 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
   method <- NULL
   while(!done) {
     if(name %in% NCinternals(current_NCgen)$methodNames) {
-      method <- current_NCgen$public_methods[[name]]
+      method <- c(current_NCgen$public_methods,
+                  if(includePrivate) current_NCgen$private_methods else NULL)[[name]]
+      if(!includePrivate && name %in% names(current_NCgen$private_methods))
+          warning(name, " is a private method not available in the calling context")  # TODO: use new messaging system.
       done <- TRUE
     } else {
       if(inherits)  {
