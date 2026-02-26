@@ -36,49 +36,55 @@ test_that("One nClass holds another and uses it", {
 })
 
 test_that("One nClass holds another by a base class and uses it", {
-
-  ncA <- nClass(
-    classname = "ncA",
-    Cpublic = list(
-      v.A = 'numericVector',
-      wA = 'numericScalar',
-      add.wA = nFunction(
-        function(x.1 = 'numericVector') {
-          return(wA + x.1); returnType('numericVector')
-        }
+  make_defs <- function() {
+    ncA <- nClass(
+      classname = "ncAclass",
+      Cpublic = list(
+        v.A = 'numericVector',
+        wA = 'numericScalar',
+        add.wA = nFunction(
+          function(x.1 = 'numericVector') {
+            return(wA + x.1); returnType('numericVector')
+          }
+        )
+      ),
+      compileInfo = list(interface="generic", createFromR=FALSE,
+                         packageNames = c(uncompiled="ncA", compiled="ncAcomp"))
+    )
+    nc_inner <- nClass(
+      inherit = ncA,
+      classname = "nc_inner",
+      Cpublic = list(
+        x = 'numericScalar',
+        get_x = nFunction(function() {return(x)}, returnType = 'numericScalar')
       )
-    ),
-    compileInfo = list(interface="generic", createFromR=FALSE)
-  )
-  nc_inner <- nClass(
-    inherit = ncA,
-    classname = "nc_inner",
-    Cpublic = list(
-      x = 'numericScalar',
-      get_x = nFunction(function() {return(x)}, returnType = 'numericScalar')
     )
-  )
-  nc_outer <- nClass(
-    classname = "nc_outer",
-    Cpublic = list(
-      my_inner = 'nc_inner',
-      my_A = 'ncA',
-      init = nFunction(function() {my_inner = nc_inner$new()}),
-      initA = nFunction(function() {my_A = nc_inner$new() }),
-      useA = nFunction(function() {my_A$wA <- 10; return(my_A$wA + 3)}, returnType='numericScalar'),
-      get_inner = nFunction(function() {return(my_inner)}, returnType = 'nc_inner'),
-      inner_x_p1 = nFunction(function() {return(my_inner$x+1)}, returnType='numericScalar'),
-      inner_add_wA_p2 = nFunction(function(v='numericVector') {return(my_inner$add.wA(v)+2)}, returnType='numericVector'),
-      inner_wA_p3 = nFunction(function() {return(my_inner$wA + 3)}, returnType='numericScalar')
+    nc_outer <- nClass(
+      classname = "nc_outer",
+      Cpublic = list(
+        my_inner = 'nc_inner',
+        my_A = 'ncA',
+        init = nFunction(function() {my_inner = nc_inner$new()}),
+        initA = nFunction(function() {my_A = nc_inner$new() }),
+        useA = nFunction(function() {my_A$wA <- 10; return(my_A$wA + 3)}, returnType='numericScalar'),
+        get_inner = nFunction(function() {return(my_inner)}, returnType = 'nc_inner'),
+        inner_x_p1 = nFunction(function() {return(my_inner$x+1)}, returnType='numericScalar'),
+        inner_add_wA_p2 = nFunction(function(v='numericVector') {return(my_inner$add.wA(v)+2)}, returnType='numericVector'),
+        inner_wA_p3 = nFunction(function() {return(my_inner$wA + 3)}, returnType='numericScalar')
+      )
     )
-  )
+    list(ncA = ncA,
+         nc_inner = nc_inner,
+         nc_outer = nc_outer)
+  }
+  defs <- make_defs()
   for(package in c(TRUE, FALSE)) {
     # A different returnName must be provided for ncA because that
     # will be its default exportName and for interface != "full" that
     # takes priority and results in renaming the uncompiled class name
     # and that breaks inherits
-    comp <- nCompile(nc_inner, nc_outer, ncAc = ncA, package = package)
-    comp <- nCompile(nc_inner, nc_outer, package = package)
+    comp <- with(defs, nCompile(nc_inner, nc_outer, ncAc = ncA, package = package))
+    comp <- with(defs, nCompile(nc_inner, nc_outer, package = package))
     obj <- comp$nc_outer$new()
     inner_obj <- obj$my_inner
     expect_true(is.null(inner_obj))

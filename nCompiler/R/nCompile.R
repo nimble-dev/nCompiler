@@ -320,6 +320,11 @@ nCompile_prepare_units <- function(...,
     if(is.null(packageNames[[i]])) packageNames[[i]] <- c(uncompiled = "", compiled = "")
     # Note other packageNames normalization is done in NC_InternalsClass$initialize
     # and if a classname was provided, the packageNames$uncompiled defaults to that classname
+    # We do some normalization here because a user could have modified the compileInfo$packageNames
+    # manually and left one or other element empty.
+    if(is.na(packageNames[[i]]["compiled"])) packageNames[[i]]["compiled"] <- ""
+    if(is.na(packageNames[[i]]["uncompiled"])) packageNames[[i]]["uncompiled"] <- ""
+    packageNames[[i]] <- packageNames[[i]][c("uncompiled", "compiled")]
 
     if(case == "NF")
       if(packageNames[[i]]["compiled"] == "" && exportNames[i] != "")

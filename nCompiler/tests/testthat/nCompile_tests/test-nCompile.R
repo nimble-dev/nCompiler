@@ -428,25 +428,35 @@ test_that("nCompile works for nClass with classname and/or exportName and either
 ###### eName version of nc
     ## generic & direct
     test <- nCompile(nc_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
-    obj <- test$exnc1(); test_obj(obj)
+    # This was previously a test expecting to see the exportName
+    # exnc1, but after changing how names work, that would have
+    # to use packageNames instead of exportName
+    # obj <- test$exnc1(); test_obj(obj)
+    obj <- test$nc_eName(); test_obj(obj)
     objf <- to_full_interface(obj); test_obj(objf)
     rm(obj, objf); gc()
 
     ## full & direct
     test <- nCompile(nc_eName, package=FALSE, interfaces = "full", returnList = TRUE)
-    obj <- test$exnc1$new(); test_obj(obj)
+    # See comment on previous test
+    # obj <- test$exnc1$new(); test_obj(obj)
+    obj <- test$nc_eName$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc()
 
     ## generic & package
     test <- nCompile(nc_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
-    obj <- test$exnc1(); test_obj(obj)
+    # See comment on previous two tests
+    # obj <- test$exnc1(); test_obj(obj)
+    obj <- test$nc_eName(); test_obj(obj)
     objf <- to_full_interface(obj); test_obj(objf)
     rm(obj, objf); gc()
 
     ## full & package
     test <- nCompile(nc_eName, package=TRUE, interfaces = "full", returnList = TRUE)
-    obj <- test$exnc1$new(); test_obj(obj)
+    # See comment on previous three tests
+    # obj <- test$exnc1$new(); test_obj(obj)
+    obj <- test$nc_eName$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc()
 
@@ -459,11 +469,14 @@ test_that("nCompile works for nClass with classname and/or exportName and either
     withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
                                                                           upgrade = "never", quick=TRUE, quiet=TRUE))
     withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
+    # Here we really do get the exportName.
+    # Note that the full interface generator nc_eName is *also* now available.
     obj <- access_dynamic_package("testpackage", "exnc1")(); test_obj(obj)
     objf <- to_full_interface(obj); test_obj(objf)
     rm(obj, objf); gc(); pkgload::unload("testpackage")
 
     ## full & writePackage
+    ## This is really not different than above and should probably be re-done.
     dir <- file.path(tempdir(), "test_nComp_testpackage2")
     dir.create(dir, showWarnings=FALSE)
     test <- writePackage(nc_eName, pkgName = "testpackage", dir = dir, modify="clear")
@@ -472,32 +485,41 @@ test_that("nCompile works for nClass with classname and/or exportName and either
     withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
                                                                           upgrade = "never", quick=TRUE, quiet=TRUE))
     withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-    obj <- access_dynamic_package("testpackage", "exnc1")$new(); test_obj(obj)
+    # obj <- access_dynamic_package("testpackage", "exnc1")$new(); test_obj(obj)
+    obj <- access_dynamic_package("testpackage", "nc_eName")$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc(); pkgload::unload("testpackage")
 
 ###### name and eName version of nc
     ## generic & direct
     test <- nCompile(nc_name_eName, package=FALSE, interfaces = "generic", returnList = TRUE) ## we got a full interface!
-    obj <- test$exnc2(); test_obj(obj)
+    # See above comments
+    # obj <- test$exnc2(); test_obj(obj)
+    obj <- test$nc_name_eName(); test_obj(obj)
     objf <- to_full_interface(obj); test_obj(objf)
     rm(obj, objf); gc()
 
     ## full & direct
     test <- nCompile(nc_name_eName, package=FALSE, interfaces = "full", returnList = TRUE)
-    obj <- test$exnc2$new(); test_obj(obj)
+    # See above comments
+    # obj <- test$exnc2$new(); test_obj(obj)
+    obj <- test$nc_name_eName$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc()
 
     ## generic & package
     test <- nCompile(nc_name_eName, package=TRUE, interfaces = "generic", returnList = TRUE)
-    obj <- test$exnc2(); test_obj(obj)
+    # See above comments
+    # obj <- test$exnc2(); test_obj(obj)
+    obj <- test$nc_name_eName(); test_obj(obj)
     objf <- to_full_interface(obj); test_obj(objf)
     rm(obj, objf); gc()
 
     ## full & package
     test <- nCompile(nc_name_eName, package=TRUE, interfaces = "full", returnList = TRUE)
-    obj <- test$exnc2$new(); test_obj(obj)
+    # See above comments
+    # obj <- test$exnc2$new(); test_obj(obj)
+    obj <- test$nc_name_eName$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc()
 
@@ -523,7 +545,8 @@ test_that("nCompile works for nClass with classname and/or exportName and either
     withr::with_libpaths(lib, devtools::install(file.path(dir, "testpackage"),
                                                 upgrade = "never", quick=TRUE, quiet=TRUE))
     withr::with_libpaths(lib, load_dynamic_namespace("testpackage"))
-    obj <- access_dynamic_package("testpackage", "exnc2")$new(); test_obj(obj)
+    # obj <- access_dynamic_package("testpackage", "exnc2")$new(); test_obj(obj)
+    obj <- access_dynamic_package("testpackage", "nc_name_eName")$new(); test_obj(obj)
     objC <- to_generic_interface(obj); test_obj(objC)
     rm(obj, objC); gc(); pkgload::unload("testpackage")
 })
