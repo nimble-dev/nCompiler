@@ -111,9 +111,11 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  test_foo(access_dynamic_package("testpackage", "foo"))
-  test_foo(access_dynamic_package("testpackage", "foo"))
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackage")
+    test_foo(access_dynamic_package("testpackage", "foo"))
+    test_foo(access_dynamic_package("testpackage", "foo"))
+  })
 })
 
 test_that("pass 1D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
@@ -165,18 +167,20 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   test_foo(method(CppObj, "foo"))
   rm(Cobj, CppObj); gc()
   # Compiled via package via writePackage
-  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(nc1, pkgName = "testpackage", dir = dir, modify="clear")
-  lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassingb")
+  test <- writePackage(nc1, pkgName = "testpackageb", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib_argPassingb")
   dir.create(lib, showWarnings=FALSE)
-  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
+  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackageb"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  Cobj <- access_dynamic_package("testpackage", "nc1")$new()
-  test_foo(Cobj$foo)
-  CppObj <- to_generic_interface(Cobj)
-  test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackageb")
+    Cobj <- access_dynamic_package("testpackageb", "nc1")$new()
+    test_foo(Cobj$foo)
+    CppObj <- to_generic_interface(Cobj)
+    test_foo(method(CppObj, "foo"))
+    rm(Cobj, CppObj); gc()
+  })
 })
 
 ####################
@@ -219,15 +223,17 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(cfoo)
   test_foo(cfoo)
 
-  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(foo, pkgName = "testpackage", dir = dir, modify="clear")
-  lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing2")
+  test <- writePackage(foo, pkgName = "testpackage2", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib_argPassing2")
   dir.create(lib, showWarnings=FALSE)
-  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
+  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  test_foo(testpackage::foo)
-  test_foo(testpackage::foo)
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackage2")
+    test_foo(testpackage2::foo)
+    test_foo(testpackage2::foo)
+  })
 })
 
 test_that("pass 2D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
@@ -281,18 +287,20 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   rm(Cobj, CppObj); gc()
 
   # Compiled via package via writePackage
-  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(nc1, pkgName = "testpackage", dir = dir, modify="clear")
-  lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing2b")
+  test <- writePackage(nc1, pkgName = "testpackage2b", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib_argPassing2b")
   dir.create(lib, showWarnings=FALSE)
-  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
+  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2b"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  Cobj <- testpackage::nc1$new()
-  test_foo(Cobj$foo)
-  CppObj <- to_generic_interface(Cobj)
-  test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackage2b")
+    Cobj <- testpackage2b::nc1$new()
+    test_foo(Cobj$foo)
+    CppObj <- to_generic_interface(Cobj)
+    test_foo(method(CppObj, "foo"))
+    rm(Cobj, CppObj); gc()
+  })
 })
 
 #####################
@@ -335,15 +343,17 @@ test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(cfoo)
   test_foo(cfoo)
 
-  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(foo, pkgName = "testpackage", dir = dir, modify="clear")
-  lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing3")
+  test <- writePackage(foo, pkgName = "testpackage3", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib_argPassing3")
   dir.create(lib, showWarnings=FALSE)
-  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
+  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  test_foo(testpackage::foo)
-  test_foo(testpackage::foo)
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackage3")
+    test_foo(testpackage3::foo)
+    test_foo(testpackage3::foo)
+  })
 })
 
 test_that("pass 2D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
@@ -398,18 +408,20 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   rm(Cobj, CppObj); gc()
 
   # Compiled via package via writePackage
-  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(nc1, pkgName = "testpackage", dir = dir, modify="clear")
-  lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
+  dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing3b")
+  test <- writePackage(nc1, pkgName = "testpackage3b", dir = dir, modify="clear")
+  lib <- file.path(tempdir(), "test_nComp_lib_argPassing3b")
   dir.create(lib, showWarnings=FALSE)
-  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
+  withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3b"),
                                               upgrade = "never", quick=TRUE, quiet=TRUE))
-  withr::with_libpaths(lib, action = "prefix", code = load_dynamic_namespace("testpackage"))
-  Cobj <- testpackage::nc1$new()
-  test_foo(Cobj$foo)
-  CppObj <- to_generic_interface(Cobj)
-  test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  withr::with_libpaths(lib, action = "prefix", code = {
+    load_dynamic_namespace("testpackage3b")
+    Cobj <- testpackage3b::nc1$new()
+    test_foo(Cobj$foo)
+    CppObj <- to_generic_interface(Cobj)
+    test_foo(method(CppObj, "foo"))
+    rm(Cobj, CppObj); gc()
+  })
 })
 
 ## Tests added while re-designing these schemes as part of redesigning nClasses
