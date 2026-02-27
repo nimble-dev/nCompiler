@@ -180,8 +180,6 @@ namespace Eigen {
     EIGEN_STRONG_INLINE Index dimension(Index n) const { return m_dimensions[n]; }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index stride(Index n) const { return m_strides[n]; } // Added for StridedTensorMap
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE Index offset() const { return m_offset; } // Added for StridedTensorMap
     
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Dimensions& dimensions() const { return m_dimensions; }
@@ -223,7 +221,7 @@ namespace Eigen {
     EIGEN_STRONG_INLINE const Scalar& operator()(Index index) const
     {
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -251,7 +249,6 @@ namespace Eigen {
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
@@ -331,7 +328,7 @@ namespace Eigen {
     EIGEN_STRONG_INLINE Scalar& operator()(Index index)
     {
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -360,7 +357,6 @@ namespace Eigen {
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
@@ -436,7 +432,6 @@ namespace Eigen {
     Dimensions m_strides; // Added for StridedTensorMap.  Could this be a simple array?
     Dimensions m_startIndices; // ditto 
     Dimensions m_stopIndices;  // ditto
-    Index m_offset;
   };
 
   // TensorEvaluator cases are modified from TensorSlidingSlicingOp
