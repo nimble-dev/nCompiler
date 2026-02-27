@@ -17,19 +17,19 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 }
 
-// [[Rcpp::export(name = "new_calcInstrList_nClass")]]
+// [[Rcpp::export(name = "calcInstrList_nClass_new")]]
     SEXP  new_calcInstrList_nClass (  ) {
 RESET_EIGEN_ERRORS
 return CREATE_NEW_NCOMP_OBJECT(calcInstrList_nClass);;
 }
 
-// [[Rcpp::export(name = "set_CnClass_env_new_calcInstrList_nClass")]]
+// [[Rcpp::export(name = "set_CnClass_env_calcInstrList_nClass_new")]]
     void  set_CnClass_env_calcInstrList_nClass ( SEXP env ) {
 RESET_EIGEN_ERRORS
 SET_CNCLASS_ENV(calcInstrList_nClass, env);;
 }
 
-// [[Rcpp::export(name = "get_CnClass_env_new_calcInstrList_nClass")]]
+// [[Rcpp::export(name = "get_CnClass_env_calcInstrList_nClass_new")]]
     Rcpp::Environment  get_CnClass_env_calcInstrList_nClass (  ) {
 RESET_EIGEN_ERRORS
 return GET_CNCLASS_ENV(calcInstrList_nClass);;

@@ -217,6 +217,11 @@ nClass <- function(classname,
     Rpublic = NULL # indicates to leave quote(Rpublic)
   )
 
+  # Either we must store this or rebuilding it when writing package code.
+  # To store it, we would need to retain the Rpublic from this function's environment.
+  # Currently the strategy is to rebuild it.
+  # internals$main_class_code <- main_class_code
+
   ## Build the R6 class generator
   NCgenerator <- eval(main_class_code)
   Cpub_generator <- eval(Cpub_class_code)
@@ -261,7 +266,7 @@ make_uncompiled_Cpub_class_code <- function(classname,
 
 make_nClass_code <- function(internals,
                     Cpublic = NULL, # if nFunctions (called from nClass), create method. If R function (called from WP_writeRinterfaces), use that ()
-                    Rpublic = NULL  # If NULL (called from nClass), use quote(Rpbulic. If provided (from WP_writeRinterfaces), deparse.)
+                    Rpublic = NULL  # If NULL (called from nClass), use quote(Rpublic). If provided (from WP_writeRinterfaces), deparse.
                     ) {
   classname <- internals$classname
   inheritQ <- internals$inheritQ
@@ -298,7 +303,7 @@ make_nClass_code <- function(internals,
 
   Rpublic_code <- quote(Rpublic)
   if(!is.null(Rpublic)) {
-    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f)}
+    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
     Rpublic_code_list <- Rpublic |> lapply(\(x) if(is.function(x)) parsedcopy(x) else x)
     Rpublic_code <- do.call("call", c("list",
                               Rpublic_code_list))

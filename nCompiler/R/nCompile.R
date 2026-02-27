@@ -1114,10 +1114,17 @@ WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames, packa
         inherit_obj <- units[[i]] # NCgenerator from which the CncGen_code will inherit
         NCI_inherit <- NCinternals(inherit_obj)
 
+        # deparsed_main_class <- NCI_inherit$main_class_code |> deparse()
+        RpublicMethodNames <- NCI_inherit$RpublicNames[
+          NCI_inherit$RpublicNames %in% names(units[[i]]$public_methods)]
+        RpublicFieldNames <- NCI_inherit$RpublicNames[
+          NCI_inherit$RpublicNames %in% names(units[[i]]$public_fields)]
+        #N.B: Cpublic fields are build from NCI_inherit$fieldNames.
         deparsed_main_class <- make_nClass_code(
           internals = NCI_inherit,
           Cpublic = units[[i]]$public_methods[NCI_inherit$methodNames],
-          Rpublic = units[[i]]$public_methods[NCI_inherit$RpublicNames]
+          Rpublic = c(units[[i]]$public_methods[RpublicMethodNames],
+                      units[[i]]$public_fields[RpublicFieldNames])
         ) |> deparse()
         deparsed_main_class[1] <- paste0(
           generator_name, ' <- ', deparsed_main_class[1]
