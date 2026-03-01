@@ -220,59 +220,70 @@ test_that("generating and compiling a predefined nClass works through packaging"
 })
 
 cat("type declaration in code of returnType(foo()) needs fixing\n")
+cat("inheriting from an nClass with interface='none' will not work via package=TRUE")
+cat("If only packageNames$uncompiled is given, but not exportName or packageNames$compiled, then packageNames$uncompiled will not be respected. Fix.")
 
 test_that("One predefined nClass can use another, separately and by inheritance",
 {
   for(package in c(FALSE, TRUE)) {
-    foo_base <- nClass(
-      classname = "test_predefined_nC_foo_base",
-      Cpublic = list(
-        give_one = nFunction(
-          function() {
-            return(1.0); returnType(double())
-          }
+    make_defs <- function() {
+      foo_base <- nClass(
+        classname = "test_predefined_nC_foo_base",
+        Cpublic = list(
+          give_one = nFunction(
+            function() {
+              return(1.0); returnType(double())
+            }
+          )
         )
+      , compileInfo = list(interface='generic', createFromR = FALSE,
+                           packageNames=c(uncompiled="foo_base", compiled = "foo_base_c")),
+      , predefined=file.path(tempdir(), "test_predefined_nC_foo_base_dir")
       )
-    , compileInfo = list(interface='none', createFromR = FALSE)
-    , predefined=file.path(tempdir(), "test_predefined_nC_foo_base_dir")
-    )
 
-    foo <- nClass(
-      classname = "test_predefined_nC_foo",
-      inherit = foo_base,
-      Cpublic = list(
-        bar = nFunction(
-          function(x=double(1)) {return(x+1); returnType(double(1))}
+      foo <- nClass(
+        classname = "test_predefined_nC_foo",
+        inherit = foo_base,
+        Cpublic = list(
+          bar = nFunction(
+            function(x=double(1)) {return(x+1); returnType(double(1))}
+          )
         )
+      , predefined=file.path(tempdir(), "test_predefined_nC_foo_dir")
       )
-    , predefined=file.path(tempdir(), "test_predefined_nC_foo_dir")
-    )
 
-    use_foo <- nClass(
-      classname = "test_predefined_nC_usefoo",
-      Cpublic = list(
-        make_foo = nFunction(
-          function() {return(foo$new()); returnType('foo')}
+      use_foo <- nClass(
+        classname = "test_predefined_nC_usefoo",
+        Cpublic = list(
+          make_foo = nFunction(
+            function() {return(foo$new()); returnType('foo')}
+          )
         )
+      , predefined=file.path(tempdir(), "test_predefined_nC_use_foo")
       )
-    , predefined=file.path(tempdir(), "test_predefined_nC_use_foo")
-    )
-
+      list(foo_base = foo_base,
+           foo = foo,
+           use_foo = use_foo)
+    }
+    defs <- make_defs()
     dir <- file.path(tempdir(), "use_predefined_nC_testdir2")
 
-    comp <- nCompile(foo, foo_base, use_foo, dir=dir, control=list(generate_predefined=TRUE),package=package)
+    comp <- with(defs,
+                 nCompile(foo, foo_base, use_foo, dir=dir, control=list(generate_predefined=TRUE),package=package))
     obj <- comp$use_foo$new()
     expect_equal(obj$make_foo()$bar(1:3), 2:4)
     dir2 <- file.path(tempdir(), "use_predefined_nC_testdir2")
-    loading_output <- capture_output(comp2 <- nCompile(foo, foo_base, use_foo, dir=dir2,package=package))
+    loading_output <- capture_output(
+      comp2 <- with(defs,
+                    nCompile(foo, foo_base, use_foo, dir=dir2,package=package)))
     obj2 <- comp2$use_foo$new()
     expect_true(grepl("^Loading RcppPacket", loading_output))
     expect_equal(obj2$make_foo()$bar(1:3), 2:4)
     rm(obj, obj2); gc()
     unlink(dir, recursive = TRUE)
     unlink(dir2, recursive = TRUE)
-    unlink(NCinternals(foo)$predefined, recursive=TRUE)
-    unlink(NCinternals(foo_base)$predefined, recursive=TRUE)
-    unlink(NCinternals(use_foo)$predefined, recursive=TRUE)
+    with(defs, unlink(NCinternals(foo)$predefined, recursive=TRUE))
+    with(defs, unlink(NCinternals(foo_base)$predefined, recursive=TRUE))
+    with(defs, unlink(NCinternals(use_foo)$predefined, recursive=TRUE))
   }
 })

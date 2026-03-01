@@ -97,7 +97,7 @@ nOptions <- function(...) {
   invisibleReturn <- FALSE
   args <- list(...)
   if (!length(args)) {
-    # Get all.nCompiler options.
+    # Get all nCompiler options.
     return(as.list(.nOptions))
   }
   if (length(args) == 1 && is.null(names(args)) && is.list(args[[1]])) {
@@ -105,10 +105,10 @@ nOptions <- function(...) {
     args <- args[[1]]
   }
   if (is.null(names(args))) {
-    # Get some.nCompiler options.
+    # Get some nCompiler options.
     args <- unlist(args)
   } else {
-    # Set some.nCompiler options.
+    # Set some nCompiler options.
     for(i in seq_along(args)) {
       set_nOption(names(args)[[i]], args[[i]])
     }

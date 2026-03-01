@@ -7,6 +7,7 @@
 #include "SEXP_2_EigenTensor.h"
 #include "SEXP_indices_2_IndexArray.h"
 #include <nCompiler/ET_ext/index_block.h>
+#include <typeindex>
 
 #define PRINTF Rprintf
 
@@ -18,16 +19,19 @@ class nCompiler_Eigen_SEXP_converter {
   typedef typename EigenTensorType::Index Index;
   typedef typename Eigen::array<Index, nInd> IndexArray;
  nCompiler_Eigen_SEXP_converter(SEXP Sx) :
-  Sinput(Sx),
+  Rinput(Sx),
     indexArray(SEXP_indices_2_IndexArray<Index, nInd>(Sx)) {
   }
   operator EigenTensorType() {
     EigenTensorType xCopy;
-    xCopy = SEXP_2_EigenTensor<Scalar, nInd>::template copy<EigenTensorType, IndexArray>(Sinput, indexArray);
+    SEXP Sinput = static_cast<SEXP>(Rinput);
+    xCopy = SEXP_2_EigenTensor<Scalar, nInd>
+        ::template copy<EigenTensorType, IndexArray>(
+                    Sinput, indexArray);
     return xCopy; // compiler should use copy elision
   }
  private:
-  SEXP Sinput;
+  Rcpp::RObject Rinput;
   IndexArray indexArray;
 };
 
@@ -45,115 +49,57 @@ class nCompiler_EigenRef_SEXP_converter {
     if(!(RxList_.isUsable()))
       Rcpp::stop("Problem: List was not provided for a ref arg.\n");
     Rcpp::List RxList(RxList_);
-    // I could not get the following uses of Nullable to work.
-    // Rcpp::Nullable<Rcpp::CharacterVector> SobjName_(SxList[0]); // compiler error: ambiguous
-    //
     // Sx should contain a list with first element a symbol and second element an environment
-    SEXP SobjName = Rcpp::as<SEXP>(RxList[0]);
-    if(TYPEOF(SobjName) != SYMSXP) {
-      if(TYPEOF(SobjName) == LANGSXP)
-        Rcpp::stop("A reference argument should be a variable name, not an expression.");
-      else
-        Rcpp::stop("A reference argument should be a variable name.");
+    RobjExpr = static_cast<SEXP>(RxList[0]);
+    SEXP SobjExpr = static_cast<SEXP>(RobjExpr);
+    if(TYPEOF(SobjExpr) != SYMSXP && TYPEOF(SobjExpr) != LANGSXP) {
+      Rcpp::stop("A reference argument should be a name or expression.");
     }
-    objStr = Rcpp::String(PRINTNAME(SobjName)).get_cstring();
-    // Rcpp::Nullable<Rcpp::Environment> Senv_(SxList[1]);  // ditto
-    // if(Senv_.isNull())
-    //   Rcpp::stop("Problem: Environment as second list element is missing for a ref arg.\n");
-    // Senv = Senv_;
-    Renv = RxList[1];
-    // Since Nullable did not work in this context, error-trapping might need
-    // simpler use of SEXPs until everything is checked.
+    Renv = static_cast<SEXP>(RxList[1]);
   }
   operator EigenTensorRefType() {
-    //    Rcpp::CharacterVector SobjName = SxList[0];
-    //    Rcpp::Environment Renv(SxList[1]);
-//    Rprintf("Doing the implicit type conversion operator\n");
-    SEXP Sobj = PROTECT(Renv.get(objStr)); // equiv to Renv[ <1st arg> ]
+    Rcpp::RObject Robj = Rf_eval(RobjExpr, Renv);
+    SEXP Sobj = static_cast<SEXP>(Robj);
     if(Sobj == R_NilValue) {
       Rcpp::stop("Problem: Could not obtain object for a ref arg.\n");
     }
     IndexArray indexArray( SEXP_indices_2_IndexArray<Index, nInd>(Sobj) );
-    xCopy = SEXP_2_EigenTensor<Scalar, nInd>::template copy<EigenTensorType, IndexArray>(Sobj, indexArray);
-    UNPROTECT(1);
+    xCopy = SEXP_2_EigenTensor<Scalar, nInd>::
+        template copy<EigenTensorType, IndexArray>(
+          Sobj, indexArray);
     return xCopy; // compiler should use copy elision
   }
   ~nCompiler_EigenRef_SEXP_converter() {
 //    Rprintf("goodbye to a tensor ref\n");
-    SEXP Sputback = PROTECT(Rcpp::wrap(xCopy));
-    Renv.assign(objStr,  Sputback);
-    UNPROTECT(1);
-    // One idea was to update the Sinput object upon destruction,
-    // but that is not how SEXP objects work.  If we assign it to
-    // newly allocated data, this is not seen by the calling function.
-    // std::cout<<xCopy[0]<<std::endl;
-    //    Sinput = PROTECT(Rcpp::wrap(xCopy)); // Does not modify original object
-    // UNPROTECT(1);
-    //    REAL(Sinput)[0] = xCopy[0];
+    Rcpp::RObject Rputback = Rcpp::wrap(xCopy);
+    Language call("<-", RobjExpr, Rputback);
+    Rf_eval(call, Renv);
   }
 private:
   Rcpp::Nullable<Rcpp::List> RxList_;
-  std::string objStr;
+  Rcpp::RObject RobjExpr;
   Rcpp::Environment Renv;
   IndexArray indexArray;
   EigenTensorType xCopy;
 };
 
-static SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
-  // Input should be a name (`A`) or a bracket expression (`[`(A, <indices>), parsed from A[<indices>].
-  // add checks and flexibility for integer vs double
-  //
-  // If it is bracketed expression, Sexpr is pairlist:
-  // ( `[`, (`A`, ( index1, (index 2, etc. ) ) ) )
-  // where CAR pulls out the first and CDR the rest at each step and
-  // CADR( ) is CAR(CAR( ) ), etc.
-
-  SEXP Ssym;
-  if(Rf_isSymbol(Sexpr)) { // argument is a name without indexing brackets
-    Ssym = Sexpr;
-  } else {
-    if( Rf_isLanguage(Sexpr) ) {
-      // It is unclear if PROTECT needs to be used for results or CAR, CADR, etc.  I don't think so.
-      SEXP Sop = CAR(Sexpr); // should be `[` of A[ <inds> ]
-      // If these get turned into error throws, check on PROTECT/UNPROTECT balance,
-      // or use Rcpp::Shield.
-      if(Sop != R_BracketSymbol) {
-        Rcpp::stop("Problem: Argument to refBlock should be a name or indexing expression.");
-      }
-      Ssym = CADR(Sexpr);
-      if(!Rf_isSymbol(Ssym)) {
-        Rcpp::stop("Problem: Argument to refBlock has first arg that is not a symbol.");
-      }
-    } else {
-      Rcpp::stop("Problem: Argument to refBlock should be a name or language object.");
+// We use Rcpp::RObject because we could have a symbol (name) or expression (language).
+static Rcpp::RObject Rexpr_2_RvarExpr(Rcpp::RObject Rexpr) {
+  if(Rcpp::is<Rcpp::Symbol>(Rexpr)) return Rexpr;
+  if( Rcpp::is<Rcpp::Language>(Rexpr) ) {
+    Rcpp::Language lang(Rexpr);
+    if (lang[0] == Symbol("[")) {
+      return static_cast<SEXP>(lang[1]);
     }
+    return Rexpr;
   }
-  SEXP Robj = PROTECT(Rf_findVarInFrame(Senv, Ssym)); // This does not search up environments
-  // SEXP Robj = PROTECT(Rf_findVar(Ssym, Senv)); // This does.
-  // For now the reference behavior only works in the immediate calling environment.
-  // Passing by reference is already dangerous, so the user should be careful,
-  // and objects of the same name in higher environments should not be modified.
-  if(Rf_isNull(Robj)) {
-    Rcpp::stop("Problem: Variable in refBlock argument not found.");
-  }
-  UNPROTECT(1);
-  return Robj;
-}
-
-static SEXP STMinput_2_expr(SEXP Sx) {
-  // add checks
-  return VECTOR_ELT(Sx, 0);
-}
-
-static SEXP STMinput_2_env(SEXP Sx) {
-  // add checks
-  return VECTOR_ELT(Sx, 1);
+  Rcpp::stop("A refBlock argument should be an expression (with or without \"[]\").");
 }
 
 // From nimble
 static int SEXP_2_int(SEXP Sn, int i, int offset ) {
   if(!(Rf_isNumeric(Sn) || Rf_isLogical(Sn))) PRINTF("Error: SEXP_2_int called for SEXP that is not numeric or logical\n");
-  if(LENGTH(Sn) <= i) PRINTF("Error: SEXP_2_int called for element %i% >= length of %i.\n", i, LENGTH(Sn));
+  if(LENGTH(Sn) <= i) PRINTF("Error: SEXP_2_int called for element %i >= length of %i.\n", i, LENGTH(Sn));
   if(Rf_isInteger(Sn) || Rf_isLogical(Sn)) {
     if(Rf_isInteger(Sn))
       return(INTEGER(Sn)[i] + offset);
@@ -183,8 +129,9 @@ static int SEXP_eval_to_single_int(SEXP Sx, SEXP Senv) {
 }
 
 template<typename InputArray>
-std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
-                                        SEXP Senv,
+std::vector<b__> Rinputs_2_indexBlockArray(Rcpp::RObject Rdata,
+                                        Rcpp::RObject Rexpr,
+                                        Rcpp::Environment Renv,
                                         InputArray &sizeArray) {
   // This will be called after Sexpr_2_data, so much of the checking
   // of Sexpr as a valid input will already be done.
@@ -192,28 +139,33 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
   // sizeArray is used if there are no indexing brackets.
   // It is also used to check that entries in indexing brackets
     //  are within bounds.
-    SEXP R_ColonSymbol = Rf_install(":"); // Why isn't this with the others in Rinternals.h
-
+  
   int nDim = sizeArray.size();
   std::vector<b__> indexBlockArray(nDim);
-  SEXP SnextIndex, Sind, Sop, Sargs;
-  bool useSizeArray = Rf_isSymbol(Sexpr);
-  if(!useSizeArray) {
-    SnextIndex = PROTECT(CDDR(Sexpr)); // See explanation above of CAR, CADR, etc.
+  Rcpp::Language lang;
+  bool isIndexed = false;
+  if(Rcpp::is<Rcpp::Language>(Rexpr) ) {
+    lang = Rcpp::Language(Rexpr);
+    isIndexed = (lang[0] == Symbol("["));       
   }
+  if(isIndexed) {
+    if( (lang.size() - 2) != nDim ) {
+      Rcpp::stop("Number of indices in refBlock does not match number of dimensions of object.");
+    }
+  }
+  Rcpp::Language RcurrentIndex;
   for(int i = 0; i < nDim; ++i) {
-   // std::cout<<"i = "<<i<<std::endl;
-    if(!useSizeArray) {
-      Sind = PROTECT(CAR(SnextIndex));
-      if(Rf_isLanguage(Sind)) { // should be `:`(start, end)
-        Sop = PROTECT(CAR(Sind)); // should be `:`
-        if(Sop != R_ColonSymbol) {
-          std::cout<<"Problem: Index in a refBlock argument has an operation that is not ':'"<<std::endl;
+    //std::cout<<"i = "<<i<<std::endl;
+    if(isIndexed) {
+      RcurrentIndex = lang[i + 2];
+      if(Rcpp::is<Rcpp::Language>(RcurrentIndex)) { // should be `:`(start, end)
+        Rcpp::Language indexLang(RcurrentIndex);
+        if(indexLang[0] != Symbol(":")) {
+          Rcpp::stop("Problem: Index in a refBlock argument has an operation that is not ':'.");
         }
-        UNPROTECT(1); // done with Sop
-        Sargs = PROTECT(CDR(Sind));
-        int first = SEXP_eval_to_single_int(PROTECT(CAR(Sargs)), Senv);
-        int last =  SEXP_eval_to_single_int(PROTECT(CADR(Sargs)), Senv);
+        int first = SEXP_eval_to_single_int(indexLang[1], Renv);
+        int last =  SEXP_eval_to_single_int(indexLang[2], Renv);
+        //PRINTF("first %i last %i size %td\n", first, last, sizeArray[i]);
         if(first < 0) {
           PRINTF("Problem: First index in a range is <= 0. Using 0.\n");
           first = 0;
@@ -222,30 +174,23 @@ std::vector<b__> SEXP_2_indexBlockArray(SEXP Sexpr,
           PRINTF("Problem: Last index in a range is too large.  Using size of object instead.\n");
           last = sizeArray[i] - 1;
         }
-        // PRINTF("first last\n");
         indexBlockArray[i] = b__(first, last);
-        UNPROTECT(3);
       } else { // index entry is a number, a variable, or a blank.
-        bool isBlank(false);
-        if(Rf_isSymbol(Sind)) {
-          isBlank = PRINTNAME(Sind) == R_BlankString;
+        bool isBlank = false;
+        if(Rcpp::is<Rcpp::Symbol>(RcurrentIndex)) {
+          isBlank = Rcpp::Symbol(RcurrentIndex) == R_MissingArg;
         }
         if(isBlank) {
-        //  PRINTF("blank\n");
+          //PRINTF("blank\n");
           indexBlockArray[i] = b__(0, sizeArray[i]-1);
         } else {
-          indexBlockArray[i] = b__( SEXP_eval_to_single_int(Sind, Senv) );
-          std::cout<<"Got singleton "<< SEXP_eval_to_single_int(Sind, Senv)<<std::endl;
+          indexBlockArray[i] = b__( SEXP_eval_to_single_int(RcurrentIndex, Renv) );
+          //std::cout<<"Got singleton "<< SEXP_eval_to_single_int(RcurrentIndex, Renv)<<std::endl;
         }
       }
-      if(i < nDim -1)
-        SnextIndex = PROTECT(CDR(SnextIndex));
     } else {
       indexBlockArray[i] = b__(0, sizeArray[i]-1);
     }
-  }
-  if(!useSizeArray) {
-    UNPROTECT(2*nDim); // From the SnextIndex and Sind uses.
   }
   return(indexBlockArray);
 }
@@ -265,6 +210,10 @@ struct Rdataptr<double> {
     }
     return REAL(Sin);
   }
+  static bool matches_type(SEXP Sin) {
+    return Rf_isReal(Sin);
+  }
+  static const SEXPTYPE Rtype = REALSXP;
 };
 
 template<>
@@ -278,6 +227,10 @@ struct Rdataptr<int> {
     }
     return INTEGER(Sin);
   }
+  static bool matches_type(SEXP Sin) {
+    return Rf_isInteger(Sin);
+  }
+  static const SEXPTYPE Rtype = INTSXP;
 };
 
 template<>
@@ -291,8 +244,101 @@ struct Rdataptr<bool> {
     }
     return INTEGER(Sin);// R bools are integers
   }
+  static bool matches_type(SEXP Sin) {
+    return Rf_isLogical(Sin);
+  }
+  static const SEXPTYPE Rtype = LGLSXP;
+
 };
 
+template<class fromT, class toT, int nDim, typename Index>
+Eigen::Tensor<toT, nDim>
+castedSTMcopy( fromT *  from,
+                 const std::vector<Index> &indexArray,
+                 const std::vector<b__> &indexBlockArray,
+                 std::true_type same_types) {
+  Eigen::StridedTensorMap<Eigen::Tensor<fromT, nDim> > xMap(from, indexArray, indexBlockArray);
+  Eigen::Tensor<toT, nDim> to = xMap;
+  return to;
+}
+
+template<class fromT, class toT, int nDim, typename Index>
+Eigen::Tensor<toT, nDim>
+castedSTMcopy( fromT *  from,
+                 const std::vector<Index> &indexArray,
+                 const std::vector<b__> &indexBlockArray,
+                 std::false_type different_types) {
+  Eigen::StridedTensorMap<Eigen::Tensor<fromT, nDim> > xMap(from, indexArray, indexBlockArray);
+  Eigen::Tensor<toT, nDim> to = xMap.template cast<toT>();
+  return to;
+}
+
+template<typename Scalar, int nInd> /* Scalar is the target scalar.  The input scalar is determined by TYPEOF(SINPUT). */
+struct Rexpr_2_EigenTensor {
+  typedef Eigen::Tensor<Scalar, nInd> EigenTensorType;
+  typedef typename EigenTensorType::Index Index;
+  //typedef typename Eigen::array<Index, nInd> IndexArray;
+
+  static EigenTensorType copy(Rcpp::RObject &Rdata,
+                              Rcpp::RObject &Rexpr,
+                              Rcpp::Environment &Renv) {
+    SEXP Sdata = static_cast<SEXP>(Rdata);
+    std::vector<Index> indexArray(
+      SEXP_indices_2_IndexArray_general<Index, std::vector<Index> >(
+        static_cast<SEXP>(Rdata)));
+    std::vector<b__> indexBlockArray(
+      Rinputs_2_indexBlockArray(
+        Rdata, Rexpr, Renv, indexArray));
+    EigenTensorType xCopy;
+    typedef typename std::is_same<Scalar, int>::type i_match_type;
+    typedef typename std::is_same<Scalar, double>::type d_match_type;
+    switch( TYPEOF(Sdata) ) {
+    case REALSXP:
+      //      std::cout<<"copying from REAL\n";
+      xCopy =
+        castedSTMcopy<double, Scalar, nInd, Index>(REAL(Sdata),
+                                               indexArray,
+                                               indexBlockArray,
+                                               d_match_type()
+                                               );
+      break;
+    case INTSXP:
+      //      std::cout<<"copying from INTEGER\n";
+      xCopy =
+        castedSTMcopy<int, Scalar, nInd, Index>(INTEGER(Sdata),
+                                            indexArray,
+                                            indexBlockArray,
+                                            i_match_type()
+                                            );
+      break;
+    case LGLSXP:
+      //      std::cout<<"copying from LOGICAL\n";
+      // R represents logicals as int
+      xCopy =
+        castedSTMcopy<int, Scalar, nInd, Index>(INTEGER(Sdata),
+                                            indexArray,
+                                            indexBlockArray,
+                                            i_match_type()
+                                            );
+      break;
+    default:
+      std::cout<<"Bad type\n"<<std::endl;
+    }
+    return xCopy; // compiler should use copy elision
+  }
+};
+
+//
+// Say we got f(x[6:10, 2]) as a refBlock double(1) argument.
+// We will copy and store x,
+// make a StridedTensorMap over that copy,
+// and then evaluate "x <- our copy" upon destruction.
+// That is the only way that if different slices of x are 
+// passed in different refBlock arguments, they correctly access
+// the same object.
+// A problem is we DO NOT KNOW the underlying type of x
+// Since we are getting some slice of it.
+// So for an STM we might as copy the underlying R object.
 template< typename Scalar, int nInd >
 class nCompiler_StridedTensorMap_SEXP_converter {
  public:
@@ -301,32 +347,49 @@ class nCompiler_StridedTensorMap_SEXP_converter {
   typedef Eigen::Tensor<Scalar, nInd>& EigenTensorRefType;
 
   typedef typename EigenTensorType::Index Index;
-  typedef typename Eigen::array<Index, nInd> IndexArray;
- nCompiler_StridedTensorMap_SEXP_converter(SEXP Sx) :
-  Sinput(Sx),
-    Senv(STMinput_2_env(Sx)),
-    Sexpr(STMinput_2_expr(Sx)),
-    Sdata(Sexpr_2_data(Sexpr, Senv)),
-    indexArray(SEXP_indices_2_IndexArray_general<Index, std::vector<Index> >(Sdata)),
-    indexBlockArray(SEXP_2_indexBlockArray(Sexpr, Senv, indexArray)),
-    xMap(Rdataptr<Scalar>::PTR(Sdata), indexArray, indexBlockArray )
-      {
-  //      std::cout<<"hello to a StridedTensorMap"<<std::endl;
+// typedef typename Eigen::array<Index, nInd> IndexArray;
+
+  static Rcpp::List check_input_Sx(Rcpp::Nullable<Rcpp::List> RxList_) {
+    if(!(RxList_.isUsable()))
+      Rcpp::stop("Problem: List was not provided for a refBlock arg.\n");
+    Rcpp::List Rlist(RxList_);
+    if(Rlist.size() != 2)
+      Rcpp::stop("Problem: refBlock arg list should have two elements: expression and environment.\n");
+    return Rlist;
   }
+
+  nCompiler_StridedTensorMap_SEXP_converter(SEXP Sx) :
+    Rlist(check_input_Sx(Sx)),
+    Renv(Rlist[1]),
+    Rexpr(Rlist[0]),
+    RobjExpr(Rexpr_2_RvarExpr(Rexpr)),
+    Rdata(Rf_eval(RobjExpr, Renv)),
+    xCopy(Rexpr_2_EigenTensor<Scalar, nInd>
+          ::copy(Rdata, Rexpr, Renv)),
+    xMap(Eigen::MakeStridedTensorMap<nInd>::make(xCopy))
+  {
+  //  Rcpp::Language call("print", Rexpr);
+  //  Rf_eval(call, Renv);
+  //  std::cout<<"hello to a StridedTensorMap"<<std::endl;
+  }
+
   operator StridedTensorMapType() {
     //xMap = Eigen::MakeStridedTensorMap<2>::make(ans, indexBlockArray);
   //  std::cout<<"handling my StridedTensorMap for function input"<<std::endl;
     return xMap; // compiler should use copy elision
   }
   ~nCompiler_StridedTensorMap_SEXP_converter() {
+    Rcpp::RObject Rputback = Rcpp::wrap(xCopy);
+    Rcpp::Language call("<-", Rexpr, Rputback);
+    Rf_eval(call, Renv);
   }
  private:
-  SEXP Sinput;
-  SEXP Senv;
-  SEXP Sexpr;
-  SEXP Sdata;
-  std::vector<Index> indexArray;
-  std::vector<b__> indexBlockArray;
+  Rcpp::List Rlist;
+  Rcpp::Environment Renv;
+  Rcpp::RObject Rexpr;
+  Rcpp::RObject RobjExpr;
+  Rcpp::RObject Rdata;
+  EigenTensorType xCopy;
   StridedTensorMapType xMap;
 };
 

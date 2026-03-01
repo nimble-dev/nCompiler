@@ -75,7 +75,7 @@ cpp_nFunctionClass <- R6::R6Class(
     SEXPwrapperCname = character(),
     NF_Compiler = NULL,
     initialize = function(...) {
-      ## conflicting protocols:.nCompiler inserts #include later
+      ## conflicting protocols: nCompiler inserts #include later
       ## inline/Rcpp plugins do not, so we strip them out here
       ## so that they can be inserted later.
       cpp_nFunctionClass_init_impl(self)

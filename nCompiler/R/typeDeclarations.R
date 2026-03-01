@@ -287,7 +287,7 @@ typeDeclarationList <- list(
     nDim <- length(nDim(x))
     if(!(nDim >= 0 &
            nDim <= 6))
-      stop(paste0("Invalid number of dimensions used to declare a.nCompiler ",
+      stop(paste0("Invalid number of dimensions used to declare a nCompiler ",
                   "argument.  Dimensions from 0-6 are allowed."),
            call. = FALSE)
     nType(scalarType, nDim)

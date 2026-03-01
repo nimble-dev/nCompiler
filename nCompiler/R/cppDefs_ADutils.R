@@ -64,7 +64,7 @@ symbolTable2templateTypeSymbolTable <- function(symTab,
 makeTypeTemplateFunction = function(newName, self) {
   newCppFunDef <- cpp_nFunctionClass$new(name = newName,
                                              static = TRUE)
-  ## use typedefs to change.nCompiler's general typedefs for Eigen locally
+  ## use typedefs to change nCompiler's general typedefs for Eigen locally
   typeDefs <- symbolTableClass$new()
   ## Need to add here replacement of Eigen<double> types with Eigen<AD<double> > 
   newCppFunDef$name <- newName
@@ -135,7 +135,7 @@ makeADtapingFunction <- function(newFunName = 'callForADtaping',
   ansSym$name <- 'ANS_'
   localVars$addSymbol(ansSym)
   symNames <- localVars$getSymbolNames()
-  ## set up a set of index variables for copying code, up to six to be arbitrary (allowing up to 6-dimensional.nCompiler objects to be handled)
+  ## set up a set of index variables for copying code, up to six to be arbitrary (allowing up to 6-dimensional nCompiler objects to be handled)
   indexVarNames <- paste0(letters[9:14],'_')
   ## set any sizes, which must be known
  .nCompilerSymTab <- targetFunDef$NF_Compiler$symbolTable ##targetFunDef$RCfunProc$compileInfo$newLocalSymTab
@@ -171,7 +171,7 @@ makeADtapingFunction <- function(newFunName = 'callForADtaping',
   
   ## call CppAD::Independent(ADindependentVars)
   ## This starts CppADs taping system
-  CppADindependentCode <- quote(`CppAD::Independent`(ADindependentVars)) #.nCompiler:::RparseTree2ExprClasses(quote(`CppAD::Independent`(ADindependentVars)))
+  CppADindependentCode <- quote(`CppAD::Independent`(ADindependentVars)) # nCompiler:::RparseTree2ExprClasses(quote(`CppAD::Independent`(ADindependentVars)))
   
   ## make copying blocks into independent vars
   ## This looks like e.g.
@@ -296,7 +296,7 @@ makeADtapingFunction <- function(newFunName = 'callForADtaping',
   
   returnCall <- cppLiteral("return(RETURN_TAPE_);")
   
-  ## Finally put together all the code, parse it into the.nCompiler exprClass system,
+  ## Finally put together all the code, parse it into the nCompiler exprClass system,
   ## and add it to the result (CFT)
   allRcode <- do.call('call', 
                       c(list('{'), 

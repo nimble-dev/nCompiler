@@ -26,13 +26,13 @@ return(0.0);
 RESET_EIGEN_ERRORS
 }
 
-// [[Rcpp::export(name = "set_CnClass_env_new_modelBase_nClass")]]
+// [[Rcpp::export(name = "set_CnClass_env_modelBase_nClass_new")]]
     void  set_CnClass_env_modelBase_nClass ( SEXP env ) {
 RESET_EIGEN_ERRORS
 SET_CNCLASS_ENV(modelBase_nClass, env);;
 }
 
-// [[Rcpp::export(name = "get_CnClass_env_new_modelBase_nClass")]]
+// [[Rcpp::export(name = "get_CnClass_env_modelBase_nClass_new")]]
     Rcpp::Environment  get_CnClass_env_modelBase_nClass (  ) {
 RESET_EIGEN_ERRORS
 return GET_CNCLASS_ENV(modelBase_nClass);;

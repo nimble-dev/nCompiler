@@ -122,7 +122,25 @@ namespace Eigen {
     };
 
     // See Eigen::TensorMap for alternative constructor ideas that have been removed.
-    // Constructor added for StridedTensorMap
+    // Constructors added for StridedTensorMap
+
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor) // default to mapping the full tensor
+      : m_data(inputTensor.data())
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions, // sizes
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+#ifdef DEBUG_STRIDED_TENSOR_MAP
+      std::cout<<"sizes\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_dimensions[i]<<" "; std::cout<<std::endl;
+      std::cout<<"starts\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_startIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"stops\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_stopIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"strides\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_strides[i]<<" "; std::cout<<std::endl;
+#endif
+    }
+
     template<typename InputType>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
@@ -162,8 +180,6 @@ namespace Eigen {
     EIGEN_STRONG_INLINE Index dimension(Index n) const { return m_dimensions[n]; }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index stride(Index n) const { return m_strides[n]; } // Added for StridedTensorMap
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE Index offset() const { return m_offset; } // Added for StridedTensorMap
     
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Dimensions& dimensions() const { return m_dimensions; }
@@ -205,7 +221,7 @@ namespace Eigen {
     EIGEN_STRONG_INLINE const Scalar& operator()(Index index) const
     {
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -233,7 +249,6 @@ namespace Eigen {
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
@@ -313,7 +328,7 @@ namespace Eigen {
     EIGEN_STRONG_INLINE Scalar& operator()(Index index)
     {
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -342,7 +357,6 @@ namespace Eigen {
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
@@ -418,7 +432,6 @@ namespace Eigen {
     Dimensions m_strides; // Added for StridedTensorMap.  Could this be a simple array?
     Dimensions m_startIndices; // ditto 
     Dimensions m_stopIndices;  // ditto
-    Index m_offset;
   };
 
   // TensorEvaluator cases are modified from TensorSlidingSlicingOp
@@ -618,15 +631,19 @@ typename MakeIndexBlocksTypes<P...>::type MakeIndexBlocks(P ...p) {
 // or   MakeStridedTensorMap<2>::make(myEigenTensor, Eigen::array<b__, 3>({s(1, 2), s(), s(3)}))
 template<int output_nInd>
 struct MakeStridedTensorMap {
-  template<typename EigenInputType, typename IndexBlocksType>
+  template<typename EigenInputType>
    struct MakeOutputType {
      typedef typename EigenInputType::Scalar Scalar;
      typedef Tensor<Scalar, output_nInd> EigenOutputType;
      typedef StridedTensorMap< EigenOutputType > type;
    };
   template<typename EigenInputType, typename IndexBlocksType>
-  static typename MakeOutputType<EigenInputType, IndexBlocksType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
-    return typename MakeOutputType<EigenInputType, IndexBlocksType>::type(x, indexBlockArray);
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(x, indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x) {
+    return typename MakeOutputType<EigenInputType>::type(x);
   }
 };
 
