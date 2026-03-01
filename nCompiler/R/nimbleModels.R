@@ -24,7 +24,8 @@ nodeInstr_nClass <- nClass(
                file.path("nodeInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   exportName = "nodeInstr_nClass"
+                   exportName = "nodeInstr_nClass_new",
+                   packageNames = c(uncompiled = "nodeInstr_nClass", compiled="nodeInstr_nClass_C")
                    )
 )
 
@@ -38,7 +39,7 @@ calcInstr_nClass <- nClass(
                file.path("calcInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
-                   # The Hincludes should be picked up automatically but I think it's not 
+                   # The Hincludes should be picked up automatically but I think it's not
                    # because it is in the nList type and that is not being scanned for needed nClasses.
                    # These do need to be in "" not <>, for case of nCompile(...., package=TRUE)
                    Hincludes = '"nodeInstr_nClass_c_.h"',
@@ -46,7 +47,8 @@ calcInstr_nClass <- nClass(
                    # or names. If names, we will use scoping to look them up and decide what they are.
                    # The list can mix objects and names of nClasses and nFunctions.
                    needed_units = list("nodeInstr_nClass"),
-                   exportName = "calcInstr_nClass"
+                   exportName = "calcInstr_nClass_new",
+                   packageNames = c(uncompiled="calcInstr_nClass", compiled="calcInstr_nClass_C")
                    )
 )
 
@@ -60,7 +62,8 @@ calcInstrList_nClass <- nClass(
   compileInfo=list(interface="full",
                    createFromR = TRUE,
                    Hincludes = '"calcInstr_nClass_c_.h"',
-                   exportName = "calcInstrList_nClass",
+                   exportName = "calcInstrList_nClass_new",
+                   packageNames = c(uncompiled = "calcInstrList_nClass", compiled = "calcInstrList_nClass_C"),
                    needed_units = list("calcInstr_nClass")
                    )
 )
@@ -85,7 +88,9 @@ nodeFxnBase_nClass <- nClass(
                file.path("nodeFxnBase_nC")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   exportName = "nodeFxnBase_nClass")
+                   exportName = "nodeFxnBase_nClass_new",
+                   packageNames = c(uncompiled="nodeFxnBase_nClass", compiled="nodeFxnBase_nClass_C")
+                   )
 )
 
 # nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
@@ -118,7 +123,7 @@ modelBase_nClass <- nClass(
             cppLiteral('Rprintf("modelBase_nClass calculate (should not see this)\\n");'); return(0)},
           virtual=TRUE
         )
-    )  
+    )
   ),
   # See comment above about needing to ensure a virtual destructor
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nC")),
@@ -126,7 +131,8 @@ modelBase_nClass <- nClass(
                    createFromR = FALSE,
                    Hincludes = c('"nodeFxnBase_nClass_c_.h"', '"calcInstrList_nClass_c_.h"'), # do we need "<nodeFxnBase_nClass_c_.h>" too?
                    needed_units = list("nodeFxnBase_nClass","calcInstrList_nClass"), #do we need nodeFxnBase_nClass here too?
-                   exportName = "modelBase_nClass"
+                   exportName = "modelBase_nClass_new",
+                   packageNames = c(uncompiled="modelBase_nClass", compiled="modelBase_nClass_C")
                    )
 )
 
@@ -147,7 +153,7 @@ nm_addModelDollarSign <- function(expr, exceptionNames = character(0)) {
         if(expr[[1]] == '$'){
             expr[2] <- lapply(expr[2], function(listElement) nm_addModelDollarSign(listElement, exceptionNames))
             return(expr)
-        } 
+        }
         if(expr[[1]] == 'returnType')
             return(expr)
         if(length(expr) > 1) {
@@ -189,8 +195,12 @@ make_node_nClass <- function(varInfo = list(),
   CpublicVars <- names(symbolList) |> lapply(\(x) eval(substitute(quote(T(symbolList$NAME)),
                                                     list(NAME=as.name(x)))))
   names(CpublicVars) <- names(symbolList)
+  # This is a kluge to have a model field in the Cpublic_obj,
+  # needed for uncompiled purposes, and for compiled purposes
+  # we instead use references to model variables. So
+  # the declared type here is arbitrary.
   initFun <- function(){}
-  
+
   if(numVars > 0) {
     ctorArgNames <- paste0(names(symbolList), '_')
     # List used when generating C++ constructor code to allow direct initializers, necessary for references.
@@ -206,8 +216,10 @@ make_node_nClass <- function(varInfo = list(),
 
   # Rpublic method to set the model pointer/reference.
   setModel <- function(model) {
-    if(!isCompiled())
+    if(!isCompiled()) {
       self$model <- model
+      #private$Cpublic_obj$model <- model
+    }
     else
        warning("setModel called on compiled object; no action taken")
   }
@@ -232,9 +244,10 @@ make_node_nClass <- function(varInfo = list(),
           )
         ) |> structure(names = classname),
         CpublicVars,
+        list(model = "RcppList"),
         methods
       ),
-      RPUBLIC = list(model = NULL,
+      RPUBLIC = list(#model = NULL,
                      setModel = setModel),
       CLASSNAME = classname,
       BASECLASS = baseclass
@@ -350,6 +363,7 @@ makeModel_nClass <- function(varInfo,
     # It is not very easy to set debug onto the initialize function, so
     # here is a magic flag.
     if(isTRUE(.GlobalEnv$.debugModelInit)) browser()
+    super$initialize()
     if(isCompiled())
       self$setup_node_mgmt_from_names(self$nodeObjNames)
     if(!isCompiled()) {
@@ -358,7 +372,7 @@ makeModel_nClass <- function(varInfo,
         self[[nodeObj]]$setModel(self)
       }
     }
-    
+
     # First expand any provided or default sizes
     # To-Do possibly merge the argument sizes and defaultSizes by element.
     if(missing(sizes)) sizes <- self$defaultSizes
@@ -372,7 +386,7 @@ makeModel_nClass <- function(varInfo,
   baseclass <- paste0("modelClass_<", classname, ">")
   # CpublicNodeFuns has elements like "node_1 = quote(nodeFxn_1())"
   # We provide it in Cpublic to declare C++ member variables with types.
-  # We also place the list itself in the class so that we can look up for uncompiled execution 
+  # We also place the list itself in the class so that we can look up for uncompiled execution
   # the objects that need to be created in initialize.
   # If we someday make type declarations and initializations more automatic, we can avoid this duplication.
   ans <- substitute(
@@ -390,9 +404,9 @@ makeModel_nClass <- function(varInfo,
     ),
     list(OPDEFS = opDefs,
         # A list of individual elements
-        RPUBLIC = list(initialize=initialize, 
+        RPUBLIC = list(initialize=initialize,
                       nodeObjNames = nodeObjNames,
-                      nodeObjName_2_nodeIndex = nodeObjName_2_nodeIndex, 
+                      nodeObjName_2_nodeIndex = nodeObjName_2_nodeIndex,
                       defaultSizes = sizes,
                       defaultInits = inits,
                       CpublicNodeFuns = CpublicNodeFuns),
@@ -446,12 +460,12 @@ make_stoch_sim_line <- function(LHSrep, RHSrep) {
   if(is.null(sim_code)) stop("Could not find simulation ('r') function for ", BUGSdistName)
   RHSrep[[1]] <- sim_code
   # scoot all named arguments right 1 position
-  if(length(RHSrep) > 1) {    
+  if(length(RHSrep) > 1) {
     for(i in (length(RHSrep)+1):3) {
       RHSrep[i] <- RHSrep[i-1]
       names(RHSrep)[i] <- names(RHSrep)[i-1]
-    } 
-  }    
+    }
+  }
   RHSrep[[2]] <- 1
   names(RHSrep)[2] <- ''
   sim_line <- substitute(
@@ -542,7 +556,7 @@ make_node_methods_from_declInfo <- function(declInfo) {
               make_node_method_nFxn("sim_one", NULL),
             calc_one  = (function(idx) {DETERMCALC; return(invisible(0))}) |>
               make_node_method_nFxn("calc_one"),
-            calcDiff_one = (function(idx) {calc_one(idx);return(invisible(0))}) |> 
+            calcDiff_one = (function(idx) {calc_one(idx);return(invisible(0))}) |>
               make_node_method_nFxn("calcDiff_one"),
             getLogProb_one = (function(idx) {return(0)}) |>
               make_node_method_nFxn("getLogProb_one")
@@ -559,7 +573,7 @@ make_node_methods_from_declInfo <- function(declInfo) {
               make_node_method_nFxn("sim_one", NULL),
             calc_one  = (function(idx) { STOCHCALC;   return(invisible(LOGPROB)) }) |>
               make_node_method_nFxn("calc_one"),
-            calcDiff_one = (function(idx) {STOCHCALC_DIFF; LocalAns_ <- LocalNewLogProb_ - LOGPROB; 
+            calcDiff_one = (function(idx) {STOCHCALC_DIFF; LocalAns_ <- LocalNewLogProb_ - LOGPROB;
                                            LOGPROB <- LocalNewLogProb_; return(invisible(LocalAns_))}) |>
               make_node_method_nFxn("calcDiff_one"),
             getLogProb_one = (function(idx) { return(LOGPROB) }) |>

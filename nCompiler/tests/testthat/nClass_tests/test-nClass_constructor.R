@@ -73,12 +73,16 @@ test_that("nClass replacing default constructor works", {
 #  gc()
 })
 
-test_that("manual initialize works and Cpp ctor call is inserted", {
+test_that("manual initialize works and Cpp ctor call is made", {
+  # Requirement is that users include "super$initialize()".
+  # That seems reasonable.
+  # Manual alternative is below.
   nc <- nClass(
     classname = "methods_test",
     Rpublic = list(
       Ra = 0,
       initialize = function() {
+        super$initialize()
         print("calling initialize")
         self$Ra <- 1
       },
@@ -121,14 +125,19 @@ test_that("manual initialize works and Cpp ctor call is inserted", {
 })
 
 
-test_that("manual initialize with hand-coded C++ initialization works", {
+test_that("manual initialize with hand-coded Cpublic initialization works", {
+  # two distinct steps on display here:
+  # 1. manual alternative to calling super$initialize() is initialize_Cpublic()
+  # 2. If the auto_include of C++ constructor is turned off, it can be constructed manually
+  #    at whatever step of initialize one wants.
   nc <- nClass(
     classname = "methods_test",
     Rpublic = list(
       Ra = 0,
       initialize = function() {
         print("calling initialize")
-        if(isCompiled()) initializeCpp()
+        initialize_Cpublic() # step 1, for uncompiled or compiled
+        if(isCompiled()) initializeCpp() # step 2, only for compiled
         self$Ra <- 1
       },
       get_Ra = function() {
@@ -154,6 +163,7 @@ test_that("manual initialize with hand-coded C++ initialization works", {
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
+  expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
   #obj$Ca
   #obj$get_Ca()
@@ -179,6 +189,7 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
       Ra = 0,
       initialize = function() {
         print("calling initialize")
+        super$initialize()
         # if(isCompiled()) initializeCpp() # OMITTED!
         self$Ra <- 1
       },
@@ -205,6 +216,7 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
+  expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
   #obj$Ca
   #obj$get_Ca()

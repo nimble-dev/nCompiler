@@ -129,7 +129,7 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
     fxn <- eval(fxnCall, envir = parent.frame())
     fxnName <- fxnCall[[3]]
     if (!is.character(fxnName)) fxnName <- deparse(fxnName)
-    nf <- NC$public_methods[[fxnName]]
+    nf <- NC_get_Cpub_class(NC)$public_methods[[fxnName]]
     fxnArgs <- NFinternals(nf)$argSymTab$symbols
 
   } else if (is.call(fxnCall) && fxnCall[[1]] == 'method') {
@@ -154,7 +154,7 @@ setup_wrt <- function(nFxn = NA, dropArgs = NA, wrt = NULL, NC = NULL) {
 
     fxnName <- fxnCall[[3]]
 
-    nf <- NC$public_methods[[fxnName]]
+    nf <- NC_get_Cpub_class(NC)$public_methods[[fxnName]]
     if (is.null(nf))
       stop(paste0(
         "The 'NC' argument provided to 'setup_wrt' has no public method named ",
@@ -575,7 +575,7 @@ nDerivs_full <- function(fxnCall = NULL, order = c(0, 1, 2), dropArgs = NA,
 
   fxnName <- fxnCall[[1]][[3]]
   if (is.symbol(fxnName)) fxnName <- deparse(fxnName)
-  nf <- NC$public_methods[[fxnName]]
+  nf <- NC_get_Cpub_class(NC)$public_methods[[fxnName]]
   fxnArgs <- NFinternals(nf)$argSymTab$symbols
   fxnCall[[1]] <- derivFxnCall
   fxnCall$order <- order
@@ -603,7 +603,7 @@ nDerivs_generic <- function(fxnCall = NULL, order = c(0, 1, 2), dropArgs = NA,
       "The 'NC' argument to 'nDerivs' must be an nClass generator (returned",
       "from a call to 'nClass')."))
 
-  nf <- NC$public_methods[[fxnName]]
+  nf <- NC_get_Cpub_class(NC)$public_methods[[fxnName]]
   if (is.null(nf))
     stop(paste0(
       "The 'NC' argument provided to 'nDerivs' has no public method named ",

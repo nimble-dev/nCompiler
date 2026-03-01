@@ -141,10 +141,10 @@ pasteSemicolon <- function(x, indent = '') {
        call. = FALSE)
 }
 
-#' Write unlisted code generated from.nCompiler cpp definitions.
+#' Write unlisted code generated from nCompiler cpp definitions.
 #'
 #' This is not intended to be called directly but is useful for
-#' debugging.nCompiler's C++ output.
+#' debugging nCompiler's C++ output.
 #'
 #' @param x A (potentially nested) list of C++ code in character
 #'     strings.

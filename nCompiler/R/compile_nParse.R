@@ -41,10 +41,10 @@ embedListInRbracket <- function(code) {
 
 ## build exprClasses from an R parse tree.
 ## caller and callerArgID are for recursion, not to be used on first entry
-#' Create.nCompiler parse tree from R code.
+#' Create nCompiler parse tree from R code.
 #'
 #' Create nCompiler parse tree, an annotated bidirectional syntax tree
-#' used by the.nCompiler compiler, from R code.
+#' used by the nCompiler compiler, from R code.
 #'
 #' @param code R code object such as returned by \code{quote()} or
 #'     \code{call()}.
@@ -228,7 +228,7 @@ brackOperatorsForDeparse <- list('[' = c('[',']'),
 #' Convert a nCompiler parse tree, specifically an \code{exprClass}
 #' object, to an R parse tree or text.
 #'
-#' @param code An \code{exprClass} object, representing a.nCompiler parse
+#' @param code An \code{exprClass} object, representing a nCompiler parse
 #'     tree.
 #' @param indent Amount of indentation in text output if \code{toR} is
 #'     \code{FALSE}

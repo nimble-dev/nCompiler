@@ -50,7 +50,7 @@ NC_CompilerClass <- R6::R6Class(
 
       methodNames <- myNCinternals$methodNames
       for(m in methodNames) {
-        thisMethod <- NCgenerator$public_methods[[m]]
+        thisMethod <- NC_get_Cpub_class(NCgenerator)$public_methods[[m]]
         thisName <- NULL
         if(isConstructor(thisMethod)) {
           #NFinternals(thisMethod)$cpp_code_name <- self$name

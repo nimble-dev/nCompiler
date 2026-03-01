@@ -6,6 +6,7 @@
 #include <nCompiler/nC_inter/nC_factory.h>
 // #include "loadedObjectEnv.h"
 
+
 // For an input of type T (e.g. shared_ptr< some_nClass_ >),
 // Rcpp creates code like this:
 // void test_input_(std::shared_ptr<nc1_> obj);
@@ -37,27 +38,15 @@ namespace Rcpp {
 
       std::shared_ptr<T> sp_, spnew_;
       Exporter(SEXP Sx) {
-        Rcpp::Environment Sx_env(Sx); // Sx is an environment, so initialize an Rcpp:Environment from it.
-        SEXP Xptr = PROTECT(Sx_env["extptr"]); // Get the extptr element of it.
-        bool ok(false);
-        if(Xptr != R_NilValue) {
-          ok = true;
-        } else {
-          UNPROTECT(1);
-          Nullable<Rcpp::Environment> private_env = Sx_env["private"];
-          if(private_env.isNotNull()) {
-            Nullable<Rcpp::Environment> CppObj = Rcpp::Environment(private_env)["CppObj"];
-            if(CppObj.isNotNull()) {
-              Xptr = PROTECT(Rcpp::Environment(CppObj)["extptr"]);
-              if(Xptr != R_NilValue) {
-                ok=true;}}}
-        }
-        if(!ok) {stop("An argument that should be an nClass object is not valid.");}
-        std::shared_ptr<genericInterfaceBaseC> spbase = static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr))->get_interfaceBase_shared_ptr();
+        Rcpp::RObject Rx = Sx; // to protect it
+        Rcpp::RObject  Rextptr = get_extptr_from_SEXP(Sx);
+        SEXP Sextptr = Rextptr;
+        if(Sextptr == R_NilValue) {stop("An argument that should be an nClass object is not valid.");}
+        std::shared_ptr<genericInterfaceBaseC> spbase = 
+          static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_interfaceBase_shared_ptr();
         if constexpr (T_is_polymorphic) {
           spnew_ = std::dynamic_pointer_cast<T>(spbase);
           if(!spnew_) {
-            UNPROTECT(1);
             stop("Invalid nClass assignment: check that the assigned object is of the expected class (or derived from it).");
           }
           sp_ = spnew_;
@@ -65,7 +54,6 @@ namespace Rcpp {
           sp_ = std::static_pointer_cast<T>(spbase);
         }
         // sp_ = dynamic_cast<shared_ptr_holder<T>* >(static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Xptr)))->sp();
-        UNPROTECT(1);
       }
       inline std::shared_ptr< T > get(){
         return sp_;

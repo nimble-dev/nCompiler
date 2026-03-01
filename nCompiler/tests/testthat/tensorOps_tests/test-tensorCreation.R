@@ -47,12 +47,13 @@ test_that("data initialization working: nNumeric, nInteger, nLogical", {
   )
   ncc <- nCompile(nc)
   nc_obj <- ncc$new()
-  expect_equivalent(nc_obj$nf1(), nc$public_methods$nf1())
+  Robj <- nc$new()
+  expect_equivalent(nc_obj$nf1(), Robj$nf1())
   expect_equivalent(
     nc_obj$nf2(1:4, 3:6, c(TRUE, TRUE, FALSE, TRUE)),
-    nc$public_methods$nf2(1:4, 3:6, c(TRUE, TRUE, FALSE, TRUE))
+    Robj$nf2(1:4, 3:6, c(TRUE, TRUE, FALSE, TRUE))
   )
-  expect_equivalent(nc_obj$nf3(), nc$public_methods$nf3())
+  expect_equivalent(nc_obj$nf3(), Robj$nf3())
 })
 
 test_that("data initialization working: nMatrix", {
@@ -85,9 +86,10 @@ test_that("data initialization working: nMatrix", {
   )
   ncc <- nCompile(nc)
   nc_obj <- ncc$new()
-  expect_equivalent(nc_obj$nf1(), nc$public_methods$nf1())
-  expect_equivalent(nc_obj$nf2(), nc$public_methods$nf2())
-  expect_equivalent(nc_obj$nf3(1:14), nc$public_methods$nf3(1:14))
+  Robj <- nc$new()
+  expect_equivalent(nc_obj$nf1(), Robj$nf1())
+  expect_equivalent(nc_obj$nf2(), Robj$nf2())
+  expect_equivalent(nc_obj$nf3(1:14), Robj$nf3(1:14))
 })
 
 cat("A SET OF FAILING tensorCreation TESTS IS COMMENTED OUT.")
