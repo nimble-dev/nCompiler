@@ -121,6 +121,18 @@ assignOperatorDef(
   )
 )
 
+nCompiler:::assignOperatorDef(
+  'nClassBuilder',
+  list(
+    # matchDef doesn't make sense because this case isn't recognized until after parsing.
+    matchDef = function(...) {},
+    labelAbstractTypes = list(
+      handler = 'nClassBuilder')#,
+#    cppOutput = list(
+#      handler = 'nClassBuilder')
+  )
+)
+
 assignOperatorDef(
   'nFunctionRef',
   list(

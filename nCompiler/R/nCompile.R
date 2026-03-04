@@ -94,7 +94,8 @@ get_nCompile_types <- function(units) {
 nCompile_createCppDefsInfo <- function(units,
                               unitTypes,
                               control,
-                              compileInfos) {
+                              compileInfos,
+                              project_env = new.env()) {
   if(is.null(names(units))) names(units) <- rep('', length(units))
   if(length(units) == 0) stop('No objects for compilation provided')
   unitResults <- vector("list", length(units))
@@ -108,14 +109,16 @@ nCompile_createCppDefsInfo <- function(units,
                                       stopAfterCppDef = TRUE,
                                       env = env,
                                       compileInfo = compileInfo,
-                                      control = control)
+                                      control = control,
+                                      project_env = project_env)
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
     } else if(unitTypes[i] == "nCgen") {
       oneResult <- nCompile_nClass(units[[i]],
                                   stopAfterCppDef = TRUE,
                                   env = env,
                                   compileInfo = compileInfo,
-                                  control = control)
+                                  control = control,
+                                  project_env = project_env)
       cpp_names[i] <- NCinternals(units[[i]])$cpp_classname
     }
     if(!is.list(oneResult)) stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
@@ -454,8 +457,10 @@ nCompile <- function(...,
   # to decide whether it is allowed to generate predefined code. For auto_included units, NO.
   new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
 
+  cppDefs_project_env <- new.env()
+
   while(!done_finding_units) {
-    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos)
+    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos, cppDefs_project_env)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
 

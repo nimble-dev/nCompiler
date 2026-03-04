@@ -32,6 +32,7 @@ NC_InternalsClass <- R6::R6Class(
     virtualMethodNames_self = character(), # will be used when checking inherited method validity, only for locally implemented methods
     virtualMethodNames = character(),
     check_inherit_done = FALSE,
+    classID = NULL,
     #Cpub_class_code = NULL,
     #main_class_code = NULL,
     RpublicNames = character(),

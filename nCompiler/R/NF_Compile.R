@@ -26,6 +26,7 @@ nCompile_nFunction <- function(NF,
                                env = parent.frame(),
                                compileInfo = NULL,
                                control = list(),
+                               project_env = new.env(),
                               ## name,
                                ...) {
   ## ... is used for internal arguments that are not necessarily documents or 
@@ -91,7 +92,7 @@ nCompile_nFunction <- function(NF,
                                         useUniqueNameInCpp = 
                                          controlFull$useUniqueNameInCode,
                                        compileInfo = compileInfo)
-    NF_Compiler$createCpp(control = controlFull)
+    NF_Compiler$createCpp(control = controlFull, project_env = project_env)
     if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
                                 controlFull)) {
       if(get_nOption('verbose')) 

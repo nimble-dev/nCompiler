@@ -107,13 +107,18 @@ compilerStage_simpleIntermediates <-
 
 compilerStage_initializeAuxEnv <- function(NFcompiler,
                                            sourceObj = NULL, ## This will be a derived nClass object if the nFunction is an nClass method 
+                                           class_env = new.env(),
+                                           project_env = new.env(),
                                            debug = FALSE) {
   nameSubList <- NFcompiler$nameSubList
   NFcompiler$auxEnv[['uses_nList']] <- FALSE
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
   NFcompiler$auxEnv[['needed_nClasses']] <- list()
+  NFcompiler$auxEnv[['nClassBuilder_built']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()
   NFcompiler$auxEnv[["derivsContent"]] <- list()
+  NFcompiler$auxEnv[["class_env"]] <- class_env # used for sharing information among methods in a class
+  NFcompiler$auxEnv[["project_env"]] <- project_env # used for sharing information among compilation units in a project
   NFcompiler$auxEnv[['.AllowUnknowns']] <- TRUE ## will be FALSE for RHS recursion in setSizes
   NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.
   ##NFcompiler$auxEnv[['.nCompilerProject']] <- nimbleProject
@@ -135,9 +140,9 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
 }
 
 compilerStage_labelAbstractTypes <-
-  function(compileInfo,
+  function(NFcompiler,
            debug = FALSE) {
-    compileInfo$auxEnv$returnSymbol = compileInfo$returnSymbol
+    NFcompiler$auxEnv$returnSymbol = NFcompiler$returnSymbol
     if(debug) {
       browser()
       labelAbstractTypesEnv$.debug <- TRUE
@@ -149,15 +154,15 @@ compilerStage_labelAbstractTypes <-
         nimUndebugHandlerEnv(labelAbstractTypesEnv)
       })
     }
-    compile_labelAbstractTypes(compileInfo$code,
-                               compileInfo$symbolTable,
-                               compileInfo$auxEnv)
+    compile_labelAbstractTypes(NFcompiler$code,
+                               NFcompiler$symbolTable,
+                               NFcompiler$auxEnv)
     invisible(NULL)
   }
 
 
 compilerStage_processAD <-
-  function(compileInfo,
+  function(NFcompiler,
            debug = FALSE) {
     if(debug) {
       browser()
@@ -170,22 +175,22 @@ compilerStage_processAD <-
         nimUndebugHandlerEnv(processADEnv)
       })
     }
-    compile_processAD(compileInfo$code,
-                      compileInfo$symbolTable,
-                      compileInfo$auxEnv)
+    compile_processAD(NFcompiler$code,
+                      NFcompiler$symbolTable,
+                      NFcompiler$auxEnv)
     invisible(NULL)
   }
 
 
-compileInfo_insertAssertions <- function(compileInfo,
+compileInfo_insertAssertions <- function(NFcompiler,
                                          debug = FALSE) {
   if(debug) browser()
-  tryResult <- try(exprClasses_insertAssertions(compileInfo$code))
+  tryResult <- try(exprClasses_insertAssertions(NFcompiler$code))
   if(inherits(tryResult, 'try-error')) {
     stop(
       paste('There is some problem at the insertAdditions processing',
             'step for this code:\n',
-            paste(deparse(compileInfo$origRcode),
+            paste(deparse(NFcompiler$origRcode),
                   collapse = '\n'),
             collapse = '\n'),
       call. = FALSE)
@@ -193,22 +198,22 @@ compileInfo_insertAssertions <- function(compileInfo,
   invisible(NULL)
 }
 
-compileInfo_eigenize <- function(compileInfo,
+compileInfo_eigenize <- function(NFcompiler,
                                  debug = FALSE) {
   if(debug) browser()
-  compile_eigenize(compileInfo$code,
-                   compileInfo$symbolTable,
-                   compileInfo$auxEnv)
+  compile_eigenize(NFcompiler$code,
+                   NFcompiler$symbolTable,
+                   NFcompiler$auxEnv)
   invisible(NULL)
 }
 
-compilerStage_addDebug <- function(compileInfo, debug = FALSE) {
+compilerStage_addDebug <- function(NFcompiler, debug = FALSE) {
   if(debug) browser()
   workEnv <- new.env()
-  workEnv$name <- compileInfo$name
-  compile_addDebug(compileInfo$code,
-                   compileInfo$symbolTable,
-                   compileInfo$auxEnv,
+  workEnv$name <- NFcompiler$name
+  compile_addDebug(NFcompiler$code,
+                   NFcompiler$symbolTable,
+                   NFcompiler$auxEnv,
                    workEnv = workEnv)
   invisible(NULL)
 }

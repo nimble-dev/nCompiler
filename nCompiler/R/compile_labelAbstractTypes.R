@@ -1,4 +1,3 @@
-
 labelAbstractTypesEnv <- new.env()
 labelAbstractTypesEnv$.debug <- FALSE
 
@@ -226,6 +225,34 @@ inLabelAbstractTypesEnv(
                                           handlingInfo)
     auxEnv$uses_nList <- TRUE
     if(length(inserts) == 0) NULL else inserts
+  }
+)
+
+nCompiler:::inLabelAbstractTypesEnv(
+  nClassBuilder <- function(code, symTab, auxEnv, handlingInfo) {
+    this_builder <- code$aux$cachedOpInfo$obj_internals
+    Rexpr <- code$Rexpr
+    args <- as.list(Rexpr)[-1]
+    args2 <- c(args, .ID=TRUE)
+    ID <- do.call(this_builder, args2)
+    NCgen <- NULL
+    for(already_built in auxEnv$nClassBuilder_built) {
+      if(identical(ID, NCinternals(already_built)$classID)) {
+        NCgen <- already_built
+        break
+      }
+    }
+    if(is.null(NCgen)) {
+      NCgen <- do.call(this_builder, args)
+      auxEnv$nClassBuilder_built <- c(auxEnv$nClassBuilder_built, list(NCgen))
+    }
+
+    newSym <- symbolNCgenerator$new(name = ID,
+                                    type = ID,
+                                    NCgenerator = NCgen)
+    code$type <- newSym
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, NCgen)
+    NULL
   }
 )
 

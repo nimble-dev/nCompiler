@@ -155,15 +155,21 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
           # There is no error trapping if obj is not an nFunction, because
           # it could be simply an R function, since nGet (via get0) may traverse up to R_GlobalEnv.
           cachedOpInfo$case <- "nFunction"
+        } else if(inherits(obj, "nClassBuilder")) {
+          cachedOpInfo$case <- "nClassBuilder"
+          opDef <- getOperatorDef("nClassBuilder")
+          cachedOpInfo$obj_internals <- obj
         } else {
-          obj <- NULL # reset to NULL if not an nFunction
+          obj <- NULL # reset to NULL if not an nFunction or nClassBuilder
         }
       }
     }
     if(!is.null(obj)) {
+      if(cachedOpInfo$case == "nFunction") {
       # We found an nFunction object that is either a method or not.
-      cachedOpInfo$obj_internals <- NFinternals(obj)
-      opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
+        cachedOpInfo$obj_internals <- NFinternals(obj)
+        opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
+      }
     }
   }
   if(is.null(opDef)) {

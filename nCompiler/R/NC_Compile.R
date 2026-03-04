@@ -26,6 +26,7 @@ nCompile_nClass <- function(NC,
                             compileInfo = NULL,
                             control = list(),
                             interface = c("full", "generic", "both"),
+                            project_env = new.env(),
                             ...) {
   ## ... is used for internal arguments that are not necessarily documents or
   ## promised to stay stable.
@@ -83,9 +84,12 @@ nCompile_nClass <- function(NC,
     NC_Compiler <- NC_CompilerClass$new(NC,
                                         compileInfo = compileInfo)
     ## Use the compiler to generate a cppDef
+    class_env <- new.env()
     NC_Compiler$createCpp(control = controlFull,
                           sourceObj = NC,
-                          interfaceCalls = !is_predefined) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
+                          interfaceCalls = !is_predefined,
+                          class_env = class_env,
+                          project_env = project_env) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
     if(is_predefined && allow_write_predefined) {

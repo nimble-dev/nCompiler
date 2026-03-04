@@ -68,20 +68,28 @@ NC_CompilerClass <- R6::R6Class(
       }
     },
     createCppMethods = function(control,
-                                sourceObj) {
+                                sourceObj,
+                                class_env = new.env(),
+                                project_env = new.env()) {
       for(i in seq_along(NFcompilers)) {
-        NFcompilers[[i]]$createCpp(sourceObj = sourceObj)
+        NFcompilers[[i]]$createCpp(sourceObj = sourceObj,
+                                   class_env = class_env,
+                                   project_env = project_env)
       }
     },
     createCpp = function(control = list(),
                          sourceObj, #this will be the same as NC, so seems redundant and should be considered for removal/cleanup
-                         interfaceCalls = TRUE) {
+                         interfaceCalls = TRUE,
+                         class_env = new.env(),
+                         project_env = new.env()) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control
       )
       process(control = controlFull,
-              sourceObj)
+              sourceObj = sourceObj,
+              class_env = class_env,
+              project_env = project_env)
       cppDef <<- cpp_nClassClass$new(
         Compiler = self,
         name = self$name,
@@ -94,7 +102,9 @@ NC_CompilerClass <- R6::R6Class(
       invisible(NULL)
     },
     process = function(control = list(),
-                       sourceObj) {
+                       sourceObj,
+                       class_env = new.env(),
+                       project_env = new.env()) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control
@@ -103,7 +113,9 @@ NC_CompilerClass <- R6::R6Class(
         makeSymbolTables()
       }
       createCppMethods(control = controlFull,
-                       sourceObj)
+                       sourceObj = sourceObj,
+                       class_env = class_env,
+                       project_env = project_env)
       ##collectNeededTypes()
       invisible(NULL)
     },

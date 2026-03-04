@@ -1,0 +1,7 @@
+list(saved_at = structure(1772480823.32226, class = c("POSIXct", 
+"POSIXt")), packet_name = "nList2Base_nClass", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "nList2Base_nClass_preamble.cpp", 
+    cppContent = "nList2Base_nClass_cppContent.cpp", hContent = "nList2Base_nClass_hContent.h", 
+    filebase = "nList2Base_nClass_filebase.txt", post_cpp_compiler = "nList2Base_nClass_post_cpp_compiler.txt", 
+    copyFiles = "nList2Base_nClass_copyFiles.txt"))
