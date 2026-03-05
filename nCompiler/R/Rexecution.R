@@ -418,18 +418,18 @@ nRep <- function(x, ...) {
 }
 
 #' Sequence Generation
-#'
+#' 
 #' In a \code{nFunction}, \code{nSeq} is (mostly) equivalent to \code{base::seq}
 #'
-#' @details This function is similar to R's \code{\link{seq}} function, but
-#'   can be used in a nFunction and compiled using \code{nCompile}.
-#'
+#' @details This function is similar to R's \code{\link{seq}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
 #' @param from the starting value of the sequence.
-#'
+#' 
 #' @param to the ending value of the sequence.
-#'
+#' 
 #' @param by increment of the sequence
-#'
+#' 
 #' @param length.out desired length of the sequence
 #'
 #' @details
@@ -440,7 +440,6 @@ nRep <- function(x, ...) {
 #' There are no nCompiler versions of \code{seq.int}, \code{seq_along} or \code{seq_len}.
 
 #' @export
-#'
 nSeq <- function(...) {
   base::seq(...)
 }
