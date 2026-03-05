@@ -349,6 +349,36 @@ nRep <- function(x, ...) {
   base::rep(x, ...)
 }
 
+#' Sequence Generation
+#' 
+#' In a \code{nFunction}, \code{nSeq} is (mostly) equivalent to \code{base::seq}
+#'
+#' @details This function is similar to R's \code{\link{seq}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
+#' @param from the starting value of the sequence.
+#' 
+#' @param to the ending value of the sequence.
+#' 
+#' @param by increment of the sequence
+#' 
+#' @param length.out desired length of the sequence
+#'
+#' @details
+#'
+#' \code{nSeq} behaves like R's \code{\link{seq}} function with
+#' support for \code{from}, \code{to}, \code{by}, and \code{length.out}
+#' arguments.  The \code{along.with} argument is not supported.
+#' There are no nCompiler versions of \code{seq.int}, \code{seq_along} or \code{seq_len}.
+
+#' @export
+#' 
+nSeq <- function(...) {
+  base::seq(...)
+}
+
+
+
 #' Converts a dense matrix or vector to a sparse matrix or vector
 #'
 #' @importFrom Matrix Matrix as
