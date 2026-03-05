@@ -333,14 +333,17 @@ argType2symbol <- function(argType,
     explicitType
   else
     argType
+  
+  if(missing(typeToUse))
+      stop("Argument `", origName, "` does not have its type specified.")
 
   ## This could be restricted to inherits(typeToUse, "symbolBase")
   ## but "R6" allows an even wider range of flexibility.
- if(inherits(typeToUse, "R6")) {
-   ans <- typeToUse$clone(deep=TRUE)
-   ans$name <- name
-   return(ans)
- }
+  if(inherits(typeToUse, "R6")) {
+    ans <- typeToUse$clone(deep=TRUE)
+    ans$name <- name
+    return(ans)
+  }
 
   inputAsCharacter <- FALSE
   if(is.character(typeToUse)) {
