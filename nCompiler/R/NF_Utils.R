@@ -42,7 +42,11 @@ isConstructor <- function(NF) {
 ## if inherits = FALSE there would be no need to call nGet
 ## (simply `get` would work).
 ## If the name is not found, NULL is returned.
-nGet <- function(name, where) {
+nGet <- function(name, where, project_env = NULL) {
+  if(!is.null(project_env)) {
+    obj <- project_env$built_types[[name]]
+    if(!is.null(obj)) return(obj)
+  }
   if(inherits(where, "R6ClassGenerator")) {
     if(exists(name, envir = where, inherits = FALSE))
       return(get(name, envir = where, inherits = FALSE))

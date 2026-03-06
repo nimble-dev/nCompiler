@@ -68,6 +68,30 @@ compile_normalizeCalls <- function(code,
         auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
       }
     }
+    # In the case of an nClassBuilder call, we evaluate that in R right here, right now,
+    # and replace it with a type name.
+    # This is a candidate for a new compilation stage, but it might work fine to bundle it here.
+    if(cachedOpInfo$case == "nClassBuilder") {
+      this_builder <- cachedOpInfo$obj_internals
+      type_res <- check_built_types(this_builder, code$Rexpr, auxEnv$project_env)
+      ID <- names(type_res)[1]
+      new_code <- exprClass$new(name = ID, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      replaceArgInCaller(code, new_code)
+      code$aux$cachedOpInfo <- NULL
+      return(NULL) # Now we have made it a name, not a call.
+    }
+    if(is.null(NCgen)) {
+      NCgen <- do.call(this_builder, args)
+      auxEnv$nClassBuilder_built <- c(auxEnv$nClassBuilder_built, list(NCgen))
+    }
+
+    newSym <- symbolNCgenerator$new(name = ID,
+                                    type = ID,
+                                    NCgenerator = NCgen)
+    code$type <- newSym
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, NCgen)
+
+    }
 
     opDef <- cachedOpInfo$opDef
     matchDef <- opDef[["matchDef"]]
@@ -157,7 +181,7 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
           cachedOpInfo$case <- "nFunction"
         } else if(inherits(obj, "nClassBuilder")) {
           cachedOpInfo$case <- "nClassBuilder"
-          opDef <- getOperatorDef("nClassBuilder")
+          opDef <- getOperatorDef("nClassBuilder") # a dummy to be non-null below
           cachedOpInfo$obj_internals <- obj
         } else {
           obj <- NULL # reset to NULL if not an nFunction or nClassBuilder

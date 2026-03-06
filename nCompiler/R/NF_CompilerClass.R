@@ -303,7 +303,8 @@ processNFstages <- function(NFcompiler,
     stageName,
     use_nCompiler_error_handling)
     resolveTBDsymbols(NFcompiler$symbolTable,
-                      env = NFcompiler$auxEnv[['where']])
+                      env = NFcompiler$auxEnv[['where']],
+                      project_env = project_env)
     NFcompiler$returnSymbol <- resolveOneTBDsymbol(NFcompiler$returnSymbol,
                                                    env = NFcompiler$auxEnv[['where']])
     if(inherits(NFcompiler$returnSymbol, "symbolNC")) {

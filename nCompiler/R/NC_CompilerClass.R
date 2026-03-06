@@ -110,7 +110,7 @@ NC_CompilerClass <- R6::R6Class(
         control
       )
       if(is.null(symbolTable)) {
-        makeSymbolTables()
+        makeSymbolTables(project_env = project_env)
       }
       createCppMethods(control = controlFull,
                        sourceObj = sourceObj,
@@ -119,12 +119,13 @@ NC_CompilerClass <- R6::R6Class(
       ##collectNeededTypes()
       invisible(NULL)
     },
-    makeSymbolTables = function() {
+    makeSymbolTables = function(project_env = new.env()) {
       if(is.null(symbolTable)) {
         symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
         ## Update any symbolTBD symbols by scoped lookup
         resolveTBDsymbols(symbolTable,
-                          NCgenerator)
+                          NCgenerator,
+                          project_env = project_env)
         setupMethodSymbolTables()
       }
     },

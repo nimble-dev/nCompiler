@@ -605,13 +605,42 @@ argTypeList2symbolTable <- function(argTypeList,
   symTab
 }
 
-resolveOneTBDsymbol <- function(symbol, env = parent.frame()) {
+check_built_types <- function(builder, Rexpr, project_env) {
+ # this_builder <- cachedOpInfo$obj_internals
+ #     Rexpr <- code$Rexpr
+  args <- as.list(Rexpr)[-1]
+  args2 <- c(args, .ID=TRUE)
+  ID <- do.call(this_builder, args2)
+  NCgen <- project_env$built_types[[ID]]
+  if(is.null(NCgen)) {
+    NCgen <- do.call(this_builder, args)
+    project_env$built_types[[ID]] <- NCgen
+  }
+  list(NCgen) |> setNames(ID)
+}
+
+resolveOneTBDsymbol <- function(symbol, env = parent.frame(), project_env = new.env()) {
   if(inherits(symbol, "symbolTBD")) {
-    candidate <- nGet(symbol$type,
-                      where = env)
+   # symbol$name is the name of the code object, like "x".
+    symbol_type <- symbol$type # The name of the type or expression to get the type
+    candidate <- nGet(symbol_type,
+                      where = env,
+                      project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
+    if(!isNCgenerator(candidate)) {
+      type_expr <- parse(text = symbol_type, keep.source = FALSE)[[1]]
+      if(is.call(type_expr)) {
+        funName <- deparse(type_expr[[1]])
+        builder <- nGet(funName, where = env, project_env = project_env)
+        if(inherits(builder, "nClassBuilder")) {
+          types_res <- check_built_types(builder, type_expr, project_env)
+          candidate <- type_res[[1]]
+          symbol_type <- names(types_res)[1]
+        }
+      }
+    }
     if(isNCgenerator(candidate)) {
       newSym <- symbolNC$new(name = symbol$name,
-                             type = symbol$type,
+                             type = symbol_type,
                              isArg = symbol$isArg,
                              NCgenerator = candidate)
       return(newSym)
@@ -619,7 +648,7 @@ resolveOneTBDsymbol <- function(symbol, env = parent.frame()) {
   } else if(inherits(symbol, "symbolNlist")) {
     elementSym <- symbol$elementSym
     if(inherits(elementSym, "symbolTBD")) {
-      elementSym <- resolveOneTBDsymbol(elementSym, env)
+      elementSym <- resolveOneTBDsymbol(elementSym, env, project_env)
       newSym <- symbol$clone(deep=TRUE)
       newSym$elementSym <- elementSym
       return(newSym)
@@ -629,9 +658,10 @@ resolveOneTBDsymbol <- function(symbol, env = parent.frame()) {
 }
 
 resolveTBDsymbols <- function(symTab,
-                              env = parent.frame()) {
+                              env = parent.frame(),
+                              project_env = new.env()) {
   for(i in seq_along(symTab$symbols)) {
-    symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env)
+    symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env, project_env)
   }
   invisible(NULL)
 }
