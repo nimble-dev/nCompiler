@@ -75,6 +75,7 @@ Collate:
     nCompile.R
     nConstructor.R
     nimbleModels.R
+    nimble_wrappers.R
     nList.R
     nTry.R
     packaging.R
