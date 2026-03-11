@@ -128,7 +128,7 @@ inFinalTransformationsEnv(
     setArg(colon, 1, exprClass$new(name = 1, isLiteral = TRUE, isCall = FALSE,
                                    isName = FALSE, isAssign = FALSE))
     size_expr <- setArg(
-      colon, 2, nParse(paste0('cppLiteral("', vector_arg$name, '.size();")')))
+      colon, 2, nParse(paste0('cppLiteral("', vector_arg$name, '.size()")')))
     ## make the vector an argument of the reduce op and index it
     reduce_op <- code$args[[3]]
     setArg(reduce_op, 1, copyExprClass(vector_arg))

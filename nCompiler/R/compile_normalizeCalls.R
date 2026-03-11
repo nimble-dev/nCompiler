@@ -1,3 +1,9 @@
+## Special cases placed here by analogy with `eigenizeUseArgs`,
+## but perhaps should be in handler list.
+normalizeCallsFunctionArgs <- list(
+    parallel_reduce = 1
+)
+
 normalizeCallsEnv <- new.env()
 normalizeCallsEnv$.debug <- FALSE
 
@@ -50,7 +56,10 @@ compile_normalizeCalls <- function(code,
     # What gets cached in the aux of the exprClass for the call:
     #   cachedOpInfo = list(opDef, name, obj_internals, case)
     #   We defer: uniqueName, cpp_code_name
-    cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
+    fxnArg <- normalizeCallsFunctionArgs[[code$name]]
+    if(!is.null(fxnArg)) {  # Handle arguments that are functions (`parallel_reduce`).
+      cachedOpInfo <- update_cachedOpInfo(code$args[[fxnArg]], auxEnv$where)
+    } else cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
     if(cachedOpInfo$case == "nFunction") {
       uniqueName <- cachedOpInfo$obj_internals$uniqueName2
       if(length(uniqueName)==0)
@@ -65,17 +74,19 @@ compile_normalizeCalls <- function(code,
         ## but we do not as a way to avoid having many references to R6 objects
         ## in a blind attempt to facilitate garbage collection based on past experience.
         ## Instead, we provide what is needed to look up the nFunction again later.
-        auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
+        auxEnv$needed_nFunctions[[uniqueName]] <- list(code$args[[fxnArg]]$name, auxEnv$where)
       }
     }
 
-    opDef <- cachedOpInfo$opDef
-    matchDef <- opDef[["matchDef"]]
-    if(is.null(matchDef))
-      matchDef <- cachedOpInfo$obj_internals$default_matchDef
-    if(!is.null(matchDef)) {
-      exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
-      # code <- replaceArgInCaller(code, matched_code)
+    if(is.null(fxnArg)) {
+      opDef <- cachedOpInfo$opDef
+      matchDef <- opDef[["matchDef"]]
+      if(is.null(matchDef))
+        matchDef <- cachedOpInfo$obj_internals$default_matchDef
+      if(!is.null(matchDef)) {
+        exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
+        # code <- replaceArgInCaller(code, matched_code)
+      }
     }
     normalizeCallsEnv$recurse_normalizeCalls(code, symTab, auxEnv, handlingInfo)
   }

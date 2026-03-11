@@ -1,4 +1,3 @@
-# not working
 ## cppDefs for parallel loop bodies for TBB
 
 cppParallelBodyClass <- R6::R6Class(
@@ -256,8 +255,9 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   vector_name <- orig_caller$args[[4]] ## should be a string
   initializerList <- list()
   initializerList[[1]] <- nParse(
-    substitute(X(X_), list(X = as.name(value_name),
-                           X_ = as.name(init_arg$name))))
+    substitute(X(X_), list(X = as.name(value_name))))
+  ## Need to directly parse the init value to handle various numeric cases, e.g., `Inf`.
+  setArg(initializerList[[1]], 1, init_arg) 
   initializerList[[2]] <- nParse(
     substitute(X(X_), list(X = as.name(vector_name),
                            X_ = as.name(paste0('parent.', vector_name)))))
@@ -278,14 +278,17 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                             ref = TRUE,
                                             const = TRUE))
   ## make the reduce code
-  reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, isCall = TRUE,
-                             isName = FALSE, isAssign = FALSE,
+  ## `aux` needed so that user-defined reduction functions will be replaced with `cpp_code_name`. 
+  reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, aux = loop_body$args[[2]]$aux,
+                             isCall = TRUE, isName = FALSE, isAssign = FALSE,
                              isLiteral = FALSE)
   setArg(reduce_op, 1, copyExprClass(value_expr))
-  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, ';")')))
+  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, '")')))
   join_code <- newAssignmentExpression()
   setArg(join_code, 1, copyExprClass(value_expr))
   setArg(join_code, 2, reduce_op)
+  ## Put code in {} so handled by full processing later, in particular adding ending `;`.  
+  join_code <- newBracketExpr(list(join_code))  
   ## create the join cppFunctionClass definition
   join_body <- cppCodeBlockClass$new(code = join_code,
                                      ## TODO: any symbols ever needed?

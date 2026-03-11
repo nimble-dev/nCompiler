@@ -5,7 +5,8 @@
 eigenizeUseArgs <- c(
     list(
         setWhich = c(FALSE, TRUE),
-        setRepVectorTimes = c(FALSE, TRUE, TRUE)
+        setRepVectorTimes = c(FALSE, TRUE, TRUE),
+        parallel_reduce = c(FALSE, TRUE, TRUE)
         ))
 
 eigenizeEnv <- new.env()
