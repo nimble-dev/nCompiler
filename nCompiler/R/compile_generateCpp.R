@@ -38,7 +38,7 @@ compile_generateCpp <- function(code,
             paste0('(', sign(value), 
                    ' * std::numeric_limits<double>::infinity())')
         else if (identical(code$type$type, 'double') &&
-                   identical(value %% 1, 0))
+                   (value > 9007199254740992  ||  identical(value %% 1, 0)))
           ## If value is a whole number we need to add "." or ".0" to the end
           ## or use scientific notation so C++ knows it's actually a double.
           format(x = value, nsmall = 1)
