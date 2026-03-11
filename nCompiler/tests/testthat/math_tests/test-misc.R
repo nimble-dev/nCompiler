@@ -5,6 +5,6 @@ test_that("Numerical issues", {
             return(x)
         }, returnType = 'numericScalar')
     
-    cmyfun <- nCompile(myfun)
+    expect_silent(cmyfun <- nCompile(myfun))
     expect_identical(cmyfun(), 1e200)
 })
