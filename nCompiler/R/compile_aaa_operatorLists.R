@@ -554,9 +554,11 @@ assignOperatorDef(
           )
         ),
         cppOutput = list(
-          handler = 'BinaryOrUnary')
+          handler = 'BinaryOrUnary'),
+        reduction = 0
     )
 )
+updateOperatorDef('-', 'reduction', val = NULL)
 
 assignOperatorDef(
   c('inprod'),
@@ -603,11 +605,13 @@ assignOperatorDef(
     labelAbstractTypes = list(
         handler = 'BinaryCwise',
         returnTypeCode = returnTypeCodes$promoteNoLogical),
-    cppOutput = list()
+    cppOutput = list(),
+    reduction = Inf
   )
 )
 updateOperatorDef('pairmax', 'cppOutput', 'cppString', 'std::max')
 updateOperatorDef('pairmin', 'cppOutput', 'cppString', 'std::min')
+updateOperatorDef('pairmax', 'reduction', val = -Inf)
 
 assignOperatorDef(
   c('pmin', 'pmax'),
@@ -984,7 +988,8 @@ assignOperatorDef(
       )
     ),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    reduction = 1
   )
 )
 

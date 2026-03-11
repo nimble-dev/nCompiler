@@ -277,7 +277,7 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  MidOperator <- function(code, symTab) {
+    MidOperator <- function(code, symTab) {
     if(length(code$args) != 2) stop('Error: expecting 2 arguments for operator ',code$name)
     if(is.null(code$caller)) useParens <- FALSE
     else {

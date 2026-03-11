@@ -14,6 +14,18 @@ parallel_for <- function(index, range, body, ...) {
 
 #' @export
 parallel_reduce <- function(f, x, init, ...) {
+  if(is.character(f)) {  # Not clear how to convert to char ...
+    operatorDef <- operatorDefEnv[[f]]
+    if(!is.null(operatorDef) && is.null(operatorDef$reduction))
+        stop("`", f, "` is not a valid reduction function/operator")
+  }
+  if(missing(init)) {
+    if(!is.character(f) || is.null(operatorDef) || is.null(operatorDef$reduction))
+      stop("`init` argument is missing and no default value provided for reduction function/operator")
+    init <- operatorDef$reduction
+  }
+  if(identical(f, "pairmin")) f <- "pmin"
+  if(identical(f, "pairmax")) f <- "pmax"
   Reduce(f, x, init)
 }
 
@@ -513,6 +525,6 @@ nVar <- function(x) {
 #' Wrapper for sd
 #'
 #' @export
-nSd <- function(x) {
-  sd(x)
+nSd <- function(x) { 
+  sd(x) 
 }

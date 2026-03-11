@@ -9,6 +9,7 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_TBB",
                         "#define USES_NCOMPILER")
   ## handler nCppVec in labelAbstractTypes does record in auxEnv if an
   ## explicit call to nCppVec() was uses. That is the beginning of a smarter
@@ -19,6 +20,7 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
                           "#define NCOMPILER_USES_NCPPVEC",
+                          "#define NCOMPILER_USES_TBB",
                           "#define USES_NCOMPILER")
   cppDef$Hincludes <- c(cppDef$Hincludes)#,
   ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))

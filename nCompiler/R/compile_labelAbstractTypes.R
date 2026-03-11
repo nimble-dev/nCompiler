@@ -807,12 +807,33 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
-    if (length(code$args) != 3)
+    if(is.null(symTab$parentST))   #  TODO: this seems kludgey and perhaps should be done at a different processing stage.
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In labelAbstractTypes handler ParallelReduce: ',
+               'parallel_reduce must be used in a method of an nClass, not in a stand-alone nFunction.')),
+        call. = FALSE)          
+    operatorDef <- operatorDefEnv[[code$args[[1]]$name]]
+    if (!is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
+    # TODO: perhaps this should just be a warning.        
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In labelAbstractTypes handler ParallelReduce: ',
+               'function/operator `', code$args[[1]]$name, '` is not a valid reduction function/operator.')),
+        call. = FALSE)
+    if(length(code$args) == 2 && !is.null(operatorDef$reduction))
+      setArg(code, 3, nParse(operatorDef$reduction))
+    if (length(code$args) != 3) 
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
               'expected 3 arguments but got', length(code$args))),
         call. = FALSE)
+    if(code$args[[1]]$isName) {  ## Handle reduction function as function not char.        
+      code$args[[1]]$isName <- FALSE
+      code$args[[1]]$isLiteral <- TRUE
+      code$args[[1]]$Rexpr <- deparse(code$args[[1]]$Rexpr)
+    }
     ## process the initial value
     inserts <- compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv)
     if (code$args[[3]]$type$nDim != 0)
@@ -822,12 +843,14 @@ inLabelAbstractTypesEnv(
               'initial value for parallel_reduce should be scalar but got',
               ' nDim = ', code$args[[3]]$type$nDim)),
         call. = FALSE)
-    if (isFALSE(code$args[[3]]$isLiteral))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'initial value for parallel_reduce must be a literal')),
-        call. = FALSE)
+    if (isFALSE(code$args[[3]]$isLiteral)) {
+      if(!(code$args[[3]]$name == "-" && isTRUE(code$args[[3]]$args[[1]]$isLiteral)))  # Handle negative init.
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'initial value for parallel_reduce must be a literal value, not a variable or expression')),
+          call. = FALSE)
+    }
     ## process the reduce operator
     if (isTRUE(code$args[[1]]$isLiteral)) {
       if (!is.character(code$args[[1]]$name))
@@ -840,11 +863,11 @@ inLabelAbstractTypesEnv(
       code$args[[1]]$isLiteral <- FALSE
       code$args[[1]]$isCall <- TRUE
     }
-    ## give reduce operator the same return type as the initial value
+    ## give reduce operator the same return type as the input vector.
     ## TODO: Maybe symbolNF is the right type for the reduction op.
     code$args[[1]]$type <-
       symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[3]]$type$type)
+                      nDim = 0, type = code$args[[2]]$type$type)
     ## finish by processing the vector arg
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
     if (code$args[[2]]$type$nDim != 1)
@@ -855,10 +878,7 @@ inLabelAbstractTypesEnv(
               code$args[[2]]$type$nDim)),
         call. = FALSE)
     code$type <- symbolBasic$new(name = code$name, nDim = 0,
-                                 type = code$args[[3]]$type$type)
-    
-    auxEnv$uses_TBB <- TRUE
-    nCompiler_pluginEnv$uses_TBB <- TRUE
+                                 type = code$args[[2]]$type$type)
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
