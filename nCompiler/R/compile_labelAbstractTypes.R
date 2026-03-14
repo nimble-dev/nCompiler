@@ -574,7 +574,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  InitData <- function(code, symTab, auxEnv, handlingInfo) {
+    InitData <- function(code, symTab, auxEnv, handlingInfo) {
     ## TODO: handle 'init' arg
     ## defaults:
     ## n{Numeric|Integer|Logical}(length = 0, value = 0, init = TRUE)
@@ -770,11 +770,12 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 5) 
+    if(length(code$args) < 3 || !identical(names(code$args)[1:3],
+                                               c('index','range','body')))
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelFor:',
-              'expected 5 arguments to a parallel_for-loop')), call. = FALSE)
+              'expected arguments `index`, `range`, and `body` to a parallel_for-loop')), call. = FALSE)
     ## first handle type of the indexing variable
     if(!inherits(code$args[[2]], 'exprClass'))
       stop(
@@ -801,6 +802,7 @@ inLabelAbstractTypesEnv(
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )

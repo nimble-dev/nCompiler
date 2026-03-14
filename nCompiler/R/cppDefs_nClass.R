@@ -260,7 +260,7 @@ cpp_nClassClass <- R6::R6Class(
     buildParallelClassDefs = function() {
       for(i in seq_along(Compiler$NFcompilers)) {
         parallelContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelContent
-        if(!is.null(parallelContent)) {
+        if(length(parallelContent)) {
           for(j in seq_along(parallelContent)) {
             cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
                                                    loop_var = parallelContent[[j]]$args[[1]],
