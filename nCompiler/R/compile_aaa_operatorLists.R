@@ -228,6 +228,10 @@ updateOperatorDef(
   c('nMatrix', 'nArray'),
   'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
 )
+updateOperatorDef(
+  'nMatrix',
+  'matchDef', val = function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {}
+)
 
 assignOperatorDef(
   'type_is',
@@ -273,6 +277,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('parallel_for'),
   list(
+    matchDef = function(index, range, body, copyVars, shareVars) {},
     labelAbstractTypes = list(
       handler = 'ParallelFor'),
     finalTransformations = list(

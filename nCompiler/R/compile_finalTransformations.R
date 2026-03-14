@@ -28,10 +28,24 @@ inFinalTransformationsEnv(
 inFinalTransformationsEnv(
   ParallelExpr <- function(parallel_expr_name, loop_body_name, auxEnv_field,
                            code, symTab, auxEnv, info) {
-    copyVars <- eval(nDeparse(code$args[[4]], toR = TRUE), 
+    ## TODO: not sure if we will do more work on arg matching such that
+    ## code$args[[4]] and code$args[[5]] will always exist and correspond to `copyVars` and `shareVars`
+    ## respectively. But if so, we might rework/simplify this.
+    ## Check for "" is because it seems valid to do: `parallel_for(i,1:5,{},}` or `parallel_for(i,1:5,{},,}`.  
+    if(!'copyVars' %in% names(code$args) || nDeparse(code$args[['copyVars']]) == "") {
+      copyVars <- NULL
+    } else copyVars <- eval(nDeparse(code$args[['copyVars']], toR = TRUE), 
                      envir = auxEnv$where)
-    shareVars <- eval(nDeparse(code$args[[5]], toR = TRUE),
-                      envir = auxEnv$where)
+    if(!'shareVars' %in% names(code$args) || nDeparse(code$args[['shareVars']]) == "") {
+      shareVars <- NULL
+    } else shareVars <- eval(nDeparse(code$args[['shareVars']], toR = TRUE),
+                     envir = auxEnv$where)
+    if(any(shareVars %in% copyVars))
+              stop(exprClassProcessingErrorMsg(
+      code,
+      paste('In finalTransformations handler ParallelExpr:',
+            'arguments `shareVars` and `copyVars` to `parallel_for`',
+            'both contain the same variable')), call. = FALSE)
     ## Look for a mangled argument name in nameSubList.
     ## It is unfortunate to have to do this here instead of earlier
     ## when other names are replaced, but here the names are given
@@ -39,8 +53,28 @@ inFinalTransformationsEnv(
     copyVars <- replace_nameSubList(copyVars, auxEnv$nameSubList)
     shareVars <- replace_nameSubList(shareVars, auxEnv$nameSubList)
 
+    ## Add default vars:
+    ## Any argument, class method, class member variable, nFunction local variable by default is shared.
+    ## Any local variable in the loop body by default is copied.
+    vars <- all.vars(code$args[[3]]$Rexpr)
+    vars <- vars[vars != nDeparse(code$args[[1]])]  # Omit index variable.
+    inST <- vars %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
+    defaultCopyVars <- vars[!inST]     # Local vars in for loop body.
+    defaultCopyVars <- defaultCopyVars[!defaultCopyVars %in% shareVars]
+    defaultShareVars <- vars[inST]     # All other vars.
+    defaultShareVars <- defaultShareVars[!defaultShareVars %in% copyVars]
+    shareVars <- unique(c(shareVars, defaultShareVars))
+    copyVars  <- unique(c(copyVars, defaultCopyVars))
+    ## Look for methods. (how know what class we are in...)
+      
+    ## NULL cannot hold a position in `code$args`.
+    if(is.null(copyVars)) copyVars <- character(0)
+    if(is.null(shareVars)) shareVars <- character(0)
+      
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
+    names(code$args)[4:5] <- c('copyVars','shareVars')
+      
     auxEnv[[auxEnv_field]] <- c(auxEnv[[auxEnv_field]], code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
     ## blocked_range_expr will be blocked_range<int>(start, end + 1)
