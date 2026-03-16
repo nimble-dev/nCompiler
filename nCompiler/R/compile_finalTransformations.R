@@ -59,13 +59,18 @@ inFinalTransformationsEnv(
     vars <- all.vars(code$args[[3]]$Rexpr)
     vars <- vars[vars != nDeparse(code$args[[1]])]  # Omit index variable.
     inST <- vars %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
-    defaultCopyVars <- vars[!inST]     # Local vars in for loop body.
+    defaultCopyVars <- code$aux$localVars  # Local vars in for loop body.
     defaultCopyVars <- defaultCopyVars[!defaultCopyVars %in% shareVars]
     defaultShareVars <- vars[inST]     # All other vars.
+    defaultShareVars <- defaultShareVars[!defaultShareVars %in% code$aux$localVars]
     defaultShareVars <- defaultShareVars[!defaultShareVars %in% copyVars]
     shareVars <- unique(c(shareVars, defaultShareVars))
     copyVars  <- unique(c(copyVars, defaultCopyVars))
-    ## Look for methods. (how know what class we are in...)
+      
+    ## Look for methods.
+    #localMethods <- c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))
+    #nms <- all.names(code$args[[3]]$Rexpr)
+    #shareVars <- c(shareVars, nms[nms %in% localMethods])  
       
     ## NULL cannot hold a position in `code$args`.
     if(is.null(copyVars)) copyVars <- character(0)
