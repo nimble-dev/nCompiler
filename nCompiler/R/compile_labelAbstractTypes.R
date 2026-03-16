@@ -759,10 +759,16 @@ inLabelAbstractTypesEnv(
       if (TRUE) 
         symTab$addSymbol(code$args[[1]]$type)
 
-    ## Now the 3rd arg, the body of the loop, can be processed
+    ## Now the 3rd arg, the body of the loop, can be processed.
+    ## For now, we will handle local vars in body as `copyVars` that are vars
+    ## in the encompassing method, but consider setting up local symbol table for
+    ## the loop body with the loop body C++ function declaring its own variables.
+    symbolsNoBody <- symTab$getSymbolNames()
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
-
+    symbols <- symTab$getSymbolNames()
+    code$aux$localVars <- symbols[!symbols %in% symbolsNoBody] 
+    
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
