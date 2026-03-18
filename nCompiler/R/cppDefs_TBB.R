@@ -1,5 +1,7 @@
 ## cppDefs for parallel loop bodies for TBB
 
+selfNameInLiftedBlock <- "obj__"
+
 cppParallelBodyClass <- R6::R6Class(
   'cppParallelBodyClass',
   inherit = cppClassClass,
@@ -9,13 +11,15 @@ cppParallelBodyClass <- R6::R6Class(
                           loop_var,
                           symbolTable,
                           copyVars = character(),
-                          noncopyVars = character()) {
+                          noncopyVars = character(),
+                          aux = list()) {
       cppParallelBodyClass_init_impl(self,
                                      loop_body = loop_body,
                                      loop_var = loop_var,
                                      symbolTable = symbolTable,
                                      copyVars = copyVars,
-                                     noncopyVars = noncopyVars)
+                                     noncopyVars = noncopyVars,
+                                     aux = aux)
     },
     generate = function(declaration = FALSE, ...) {
       ## This version of generate creates a fully inlined version
@@ -52,7 +56,8 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                            loop_var = orig_loop_code$args[[1]],
                                            symbolTable,
                                            copyVars,
-                                           noncopyVars) {
+                                           noncopyVars,
+                                           aux) {
   ## 1. Create symbolTable for copyVars + noncopyVars
   ## 2. Create operator()
   ## 3. Create constructor
@@ -98,6 +103,11 @@ cppParallelBodyClass_init_impl <- function(cppDef,
     sym$ref <- TRUE
     newSymTab$addSymbol(sym)  
   }
+  if(length(aux$localMethods)) 
+    newSymTab$addSymbol(cppVarFullClass$new(name = selfNameInLiftedBlock,
+                                            baseType = aux$class,
+                                            ref = TRUE))
+    
   ## Create operator()
   generalForExpr <- exprClass$new(name = 'GeneralFor', isCall = TRUE,
                                   isName = FALSE, isAssign = FALSE, isLiteral = FALSE)
@@ -304,3 +314,5 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                    join = join))
   invisible(NULL)
 }
+
+

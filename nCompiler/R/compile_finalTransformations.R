@@ -54,23 +54,28 @@ inFinalTransformationsEnv(
     shareVars <- replace_nameSubList(shareVars, auxEnv$nameSubList)
 
     ## Add default vars:
-    ## Any argument, class method, class member variable, nFunction local variable by default is shared.
+    ## Any argument, class member variable, nFunction local variable by default is shared.
     ## Any local variable in the loop body by default is copied.
     vars <- all.vars(code$args[[3]]$Rexpr)
-    vars <- vars[vars != nDeparse(code$args[[1]])]  # Omit index variable.
-    inST <- vars %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
+    vars2 <- vars[vars != nDeparse(code$args[[1]])]  # Omit index variable.
+    inST <- vars2 %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
     defaultCopyVars <- code$aux$localVars  # Local vars in for loop body.
     defaultCopyVars <- defaultCopyVars[!defaultCopyVars %in% shareVars]
-    defaultShareVars <- vars[inST]     # All other vars.
+    defaultShareVars <- vars2[inST]     # All other vars.
     defaultShareVars <- defaultShareVars[!defaultShareVars %in% code$aux$localVars]
     defaultShareVars <- defaultShareVars[!defaultShareVars %in% copyVars]
-    shareVars <- unique(c(shareVars, defaultShareVars))
+
+    ## Find nClass objects (if methods are used; members would have been found above).
+    nms <- all.names(code$args[[3]]$Rexpr)
+    nms <- nms[!nms %in% vars]
+    objects <- nms[nms %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())]
+    ## Make sure the items are actually nClass objects.
+    if(length(objects))  
+      objects <- objects[sapply(objects, 
+         function(x) !is.null(symTab$getSymbol(x)$NCgenerator) || !is.null(parentST$getSymbol(x)$NCgenerator))]
+    
+    shareVars <- unique(c(shareVars, defaultShareVars, objects))
     copyVars  <- unique(c(copyVars, defaultCopyVars))
-      
-    ## Look for methods.
-    #localMethods <- c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))
-    #nms <- all.names(code$args[[3]]$Rexpr)
-    #shareVars <- c(shareVars, nms[nms %in% localMethods])  
       
     ## NULL cannot hold a position in `code$args`.
     if(is.null(copyVars)) copyVars <- character(0)
@@ -79,7 +84,7 @@ inFinalTransformationsEnv(
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
     names(code$args)[4:5] <- c('copyVars','shareVars')
-      
+   
     auxEnv[[auxEnv_field]] <- c(auxEnv[[auxEnv_field]], code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
     ## blocked_range_expr will be blocked_range<int>(start, end + 1)
@@ -116,6 +121,8 @@ inFinalTransformationsEnv(
              exprClass$new(name = thisVar, 
                            isCall = FALSE, isName = TRUE, isLiteral = FALSE, isAssign = FALSE))
     }
+    if(length(code$aux$localMethods))
+      setArg(loop_body_expr, iv+1, nParse('cppLiteral("*this")'))
     setArg(parallel_expr, 2, loop_body_expr)
     setArg(code$caller, code$callerArgID, parallel_expr)
     NULL

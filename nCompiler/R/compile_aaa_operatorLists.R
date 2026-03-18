@@ -12,6 +12,8 @@ returnTypeCodes <- list(
   promoteToDoubleOrAD = 6L,
   promoteNoLogical = 7L)
 
+liftedBlockOperatorsArg <- c("parallel_for" = 3, "parallel_reduce" = 1) # These are used for flagging when methods in lifted code block will need to have their object reference them explicitly via `obj__.<methodname>`. The values are the argID where the method needs to occur.
+
 returnTypeString2Code <- function(returnTypeString) {
   if(is.character(returnTypeString))
     do.call('switch', c(list("double"), returnTypeCodes))
@@ -159,6 +161,16 @@ assignOperatorDef(
       handler = 'nFunction_or_method_call'),
     cppOutput = list(
       handler = 'Generic_nFunction')
+  )
+)
+
+assignOperatorDef(
+  'nClass_method_in_lifted', # This is used for local method calls in the body of lifted code blocks (currently `parallel_{for,reduce}`).
+  list(
+    labelAbstractTypes = list(
+      handler = 'nFunction_or_method_call'),
+    cppOutput = list(
+      handler = 'nClass_method_in_lifted')
   )
 )
 
@@ -315,7 +327,8 @@ assignOperatorDef(
 
 assignOperatorDef(
   c('parallel_reduce'),
-  list(
+  list(  
+    matchDef = function(operator, object, init) {},
     labelAbstractTypes = list(
       handler = 'ParallelReduce'),
     finalTransformations = list(

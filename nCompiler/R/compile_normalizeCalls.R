@@ -163,7 +163,9 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         obj <- NC_find_method(where, code$name, inherits=TRUE)
         if(!is.null(obj)) {
           if(isNF(obj)) {
-            cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            if(!checkForLiftedBody(code)) {  # Current lifted body cases are `parallel_{for,reduce}`.
+              cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            } else cachedOpInfo$case <- "nClass method in lifted"  # a method call in a code block that will be lifted out of the class def and wil
             cachedOpInfo$obj_internals <- NFinternals(obj)
             opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
           } else {
@@ -224,6 +226,10 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
       if(cachedOpInfo$case == "nFunction" || cachedOpInfo$case == "nClass method") {
         opDef <- getOperatorDef("nFunction_default")
       }
+      if(cachedOpInfo$case == "nClass method in lifted") {
+        opDef <- getOperatorDef("nClass_method_in_lifted")
+      }
+      
     }
   }
   if(is.null(opDef)) {
@@ -245,3 +251,14 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
   code$aux$cachedOpInfo <- cachedOpInfo
   cachedOpInfo
 }
+
+checkForLiftedBody <- function(code) {
+  while(!is.null(code$caller)) {  # Caller needs to be in specific set of operators and method in particular argument.
+    if(code$caller$isCall && code$caller$name %in% names(liftedBlockOperatorsArg))
+      if(code$callerArgID %in% liftedBlockOperatorsArg[[code$caller$name]])
+       return(TRUE) else return(FALSE)
+    return(checkForLiftedBody(code$caller))
+  }
+  return(FALSE)
+}
+    

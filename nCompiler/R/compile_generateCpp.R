@@ -259,6 +259,20 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  nClass_method_in_lifted <- function(code, symTab) {
+    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$cpp_code_name
+    paste0(selfNameInLiftedBlock, ".", cpp_code_name,
+           '(', paste0(unlist(lapply(code$args,
+                                     compile_generateCpp,
+                                     symTab,
+                                     asArg = TRUE) ),
+                       collapse = ', '),
+           ')' )
+  }
+)
+
+
+inGenCppEnv(
   nClass_constructor <- function(code, symTab) {
     paste0("nClass_builder<" , code$type$name ,">()")
   }
@@ -419,7 +433,7 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  ## Member(A, x) -> A.x
+  ## PtrMember(A, x) -> A->x
   PtrMember <- function(code, symTab) {
     Member(code, symTab, connector = '->')
   }
