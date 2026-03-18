@@ -242,7 +242,8 @@ cpp_nClassClass <- R6::R6Class(
                                                    loop_var = parallelContent[[j]]$args[[1]],
                                                    symbolTable = memberCppDefs[[i]]$code$symbolTable,
                                                    copyVars = parallelContent[[j]]$args[[4]],
-                                                   noncopyVars = parallelContent[[j]]$args[[5]])
+                                                   noncopyVars = parallelContent[[j]]$args[[5]],
+                                                   aux = parallelContent[[j]]$aux)
             ## The name is hard-wired expecting only a single case of parallel content.
             ## TO-DO: generalize the name with unique identifier.
             self$memberCppDefs[["parallel_loop_body"]] <<- cppDef_TBB

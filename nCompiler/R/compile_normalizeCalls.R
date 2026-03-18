@@ -144,7 +144,9 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         obj <- NC_find_method(where, code$name, inherits=TRUE)
         if(!is.null(obj)) {
           if(isNF(obj)) {
-            cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            if(!checkForLiftedBody(code)) {  # Current lifted body cases are `parallel_{for,reduce}`.
+              cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            } else cachedOpInfo$case <- "nClass method in lifted"  # a method call in a code block that will be lifted out of the class def and will need to reference the method via the local object
           } else {
             stop(exprClassProcessingErrorMsg(code,
                                               paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
@@ -195,6 +197,10 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
       if(cachedOpInfo$case == "nFunction" || cachedOpInfo$case == "nClass method") {
         opDef <- getOperatorDef("nFunction_default")
       }
+      if(cachedOpInfo$case == "nClass method in lifted") {
+        opDef <- getOperatorDef("nClass_method_in_lifted")
+      }
+      
     }
   }
   if(is.null(opDef)) {
@@ -254,3 +260,14 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
 #       NULL
 #     }
 # )
+
+checkForLiftedBody <- function(code) {
+  while(!is.null(code$caller)) {  # Caller needs to be in specific set of operators and method in particular argument.
+    if(code$caller$isCall && code$caller$name %in% names(liftedBlockOperatorsArg))
+      if(code$callerArgID %in% liftedBlockOperatorsArg[[code$caller$name]])
+       return(TRUE) else return(FALSE)
+    return(checkForLiftedBody(code$caller))
+  }
+  return(FALSE)
+}
+    

@@ -218,6 +218,7 @@ wrapExprClassOperator <- function(code, funName, isName = FALSE, isCall = TRUE,
   newExpr
 }
 
+          
 insertIndexingBracket <- function(code, argID, index) {
   insertExprClassLayer(code, argID, 'index[')
   setArg(code$args[[argID]], 2, index)
