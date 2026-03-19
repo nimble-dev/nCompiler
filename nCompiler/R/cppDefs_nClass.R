@@ -261,18 +261,14 @@ cpp_nClassClass <- R6::R6Class(
       for(i in seq_along(Compiler$NFcompilers)) {
         parallelContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelContent
         if(length(parallelContent)) {
-          for(j in seq_along(parallelContent)) {
-            nm <- "parallel_loop_body"
-            if(j > 1)
-              nm <- paste0(nm, "_", j)
-            cppDef_TBB <- cppParallelBodyClass$new(name = nm, 
-                                                   loop_body = parallelContent[[j]]$args[[3]],
+            for(j in seq_along(parallelContent)) {
+             cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
                                                    loop_var = parallelContent[[j]]$args[[1]],
                                                    symbolTable = memberCppDefs[[i]]$code$symbolTable,
                                                    copyVars = parallelContent[[j]]$args[[4]],
                                                    noncopyVars = parallelContent[[j]]$args[[5]],
                                                    aux = parallelContent[[j]]$aux)
-            self$memberCppDefs[[nm]] <<- cppDef_TBB
+            self$memberCppDefs[[parallelContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
         }
         parallelReduceContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelReduceContent
