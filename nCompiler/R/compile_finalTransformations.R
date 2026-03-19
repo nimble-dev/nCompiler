@@ -84,7 +84,7 @@ inFinalTransformationsEnv(
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
     names(code$args)[4:5] <- c('copyVars','shareVars')
-   
+
     auxEnv[[auxEnv_field]] <- c(auxEnv[[auxEnv_field]], code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
     ## blocked_range_expr will be blocked_range<int>(start, end + 1)
@@ -107,6 +107,8 @@ inFinalTransformationsEnv(
                                    isAssign = FALSE)
     setArg(parallel_expr, 1, blocked_range_expr)
     ## loop_body_expr will be parallel_loop_body(var1, var2, etc.)
+    if(length(auxEnv$parallelContent) > 1)  # Unique names if multiple parfor loops.
+      loop_body_name <- paste0(loop_body_name, "_", length(auxEnv$parallelContent))
     loop_body_expr <- exprClass$new(name = loop_body_name,
                                     isCall = TRUE,
                                     isName = FALSE, isLiteral = FALSE, isAssign = FALSE)

@@ -7,13 +7,15 @@ cppParallelBodyClass <- R6::R6Class(
   inherit = cppClassClass,
   portable = FALSE,
   public = list(
-    initialize = function(loop_body,
+    initialize = function(name = "parallel_loop_body",
+                          loop_body,
                           loop_var,
                           symbolTable,
                           copyVars = character(),
                           noncopyVars = character(),
                           aux = list()) {
       cppParallelBodyClass_init_impl(self,
+                                     name = name,
                                      loop_body = loop_body,
                                      loop_var = loop_var,
                                      symbolTable = symbolTable,
