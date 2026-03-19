@@ -2,20 +2,20 @@
 
 selfNameInLiftedBlock <- "obj__"
 
+parforBodyLabelMaker <- labelFunctionCreator('parallel_loop_body')
+
 cppParallelBodyClass <- R6::R6Class(
   'cppParallelBodyClass',
   inherit = cppClassClass,
   portable = FALSE,
   public = list(
-    initialize = function(name = "parallel_loop_body",
-                          loop_body,
+    initialize = function(loop_body,
                           loop_var,
                           symbolTable,
                           copyVars = character(),
                           noncopyVars = character(),
                           aux = list()) {
       cppParallelBodyClass_init_impl(self,
-                                     name = name,
                                      loop_body = loop_body,
                                      loop_var = loop_var,
                                      symbolTable = symbolTable,
@@ -52,7 +52,6 @@ cppParallelBodyClass <- R6::R6Class(
 )
 
 cppParallelBodyClass_init_impl <- function(cppDef,
-                                           name = "parallel_loop_body",
                                            orig_loop_code = orig_loop_code,
                                            loop_body = orig_loop_code$args[[3]],
                                            loop_var = orig_loop_code$args[[1]],
@@ -145,7 +144,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                                  list(X = as.name(thisSymName),
                                                       X_ = as.name(thisArgName))))
   }
-  constructor <- cppFunctionClass$new(name = name,
+  constructor <- cppFunctionClass$new(name = aux$bodyName,
                                       args = ctorArgSymTab,
                                       code = cppCodeBlockClass$new(
                                         code = nParse(quote({})),
@@ -153,7 +152,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                       ),
                                       initializerList = initializerList,
                                       returnType = cppBlank())
-  cppDef$name <- name
+  cppDef$name <- aux$bodyName
   cppDef$memberCppDefs <- list(`operator()` = `operator()`,
                                  constructor = constructor)
   cppDef$symbolTable <- newSymTab

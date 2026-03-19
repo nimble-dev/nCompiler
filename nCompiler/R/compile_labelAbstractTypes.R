@@ -779,6 +779,8 @@ inLabelAbstractTypesEnv(
     code$aux$localMethods <- nms[nms %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))]
     code$aux$class <- auxEnv$where$classname
 
+    code$aux$bodyName <- parforBodyLabelMaker()
+
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
