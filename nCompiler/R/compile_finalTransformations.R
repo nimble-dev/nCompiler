@@ -30,8 +30,9 @@ inFinalTransformationsEnv(
                            code, symTab, auxEnv, info) {
     ## TODO: not sure if we will do more work on arg matching such that
     ## code$args[[4]] and code$args[[5]] will always exist and correspond to `copyVars` and `shareVars`
-    ## respectively. But if so, we might rework/simplify this.
-    ## Check for "" is because it seems valid to do: `parallel_for(i,1:5,{},}` or `parallel_for(i,1:5,{},,}`.  
+    ## respectively for `parallel_for`. But if so, we might rework/simplify this.
+    ## Check for "" is because it seems valid to do: `parallel_for(i,1:5,{},}` or `parallel_for(i,1:5,{},,}`.
+    if(parallel_expr_name == "parallel_for") {  
     if(!'copyVars' %in% names(code$args) || nDeparse(code$args[['copyVars']]) == "") {
       copyVars <- NULL
     } else copyVars <- eval(nDeparse(code$args[['copyVars']], toR = TRUE), 
@@ -80,11 +81,27 @@ inFinalTransformationsEnv(
     ## NULL cannot hold a position in `code$args`.
     if(is.null(copyVars)) copyVars <- character(0)
     if(is.null(shareVars)) shareVars <- character(0)
-      
+        
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
     names(code$args)[4:5] <- c('copyVars','shareVars')
+    allVars <- c(copyVars, shareVars)
+    }
+    if(parallel_expr_name == "parallel_reduce") {
+      inputVar <-  eval(nDeparse(code$args[[4]], toR = TRUE), 
+                     envir = auxEnv$where)
+      outputVar <- eval(nDeparse(code$args[[5]], toR = TRUE),
+                      envir = auxEnv$where)
+      ## Look for a mangled argument name in nameSubList.
+      ## It is unfortunate to have to do this here instead of earlier
+      ## when other names are replaced, but here the names are given
+      ## as character objects (potentially from R evaluation).
+      inputVar <- replace_nameSubList(inputVar, auxEnv$nameSubList)
 
+      code$args[[4]] <- inputVar  ## This is no longer an exprClass
+      code$args[[5]] <- outputVar ## Ditto
+      allVars <- c(inputVar, outputVar)
+    }
     auxEnv[[auxEnv_field]] <- c(auxEnv[[auxEnv_field]], code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
     ## blocked_range_expr will be blocked_range<int>(start, end + 1)
@@ -107,10 +124,9 @@ inFinalTransformationsEnv(
                                    isAssign = FALSE)
     setArg(parallel_expr, 1, blocked_range_expr)
     ## loop_body_expr will be parallel_loop_body_<id>(var1, var2, etc.)
-    loop_body_expr <- exprClass$new(name = code$aux$bodyName,
+    loop_body_expr <- exprClass$new(name = loop_body_name,
                                     isCall = TRUE,
                                     isName = FALSE, isLiteral = FALSE, isAssign = FALSE)
-    allVars <- c(copyVars, shareVars)
     for(iv in seq_along(allVars)) {
       ## Look for a mangled argument name in nameSubList.
       ## It is unfortunate to have to do this here instead of earlier
@@ -131,7 +147,7 @@ inFinalTransformationsEnv(
 
 inFinalTransformationsEnv(
   ParallelFor <- function(code, symTab, auxEnv, info) {
-    ParallelExpr('parallel_for', 'parallel_loop_body', 'parallelContent', code,
+    ParallelExpr('parallel_for', code$aux$bodyName, 'parallelContent', code,
                  symTab, auxEnv, info)
   }
 )
@@ -208,11 +224,9 @@ inFinalTransformationsEnv(
       symTab$addSymbol(value_type)
     }
 
-    ## The class name is hard-wired expecting only a single case of parallel
-    ## reduce content.
-    ## TO-DO: generalize the name with unique identifier.
+    instName <- sub("_body", "_inst__", code$aux$bodyName)
     ParallelExpr('parallel_reduce',
-                 'parallel_reduce_body parallel_reduce_inst__',
+                 paste(code$aux$bodyName, instName, collapse = ' '),
                  'parallelReduceContent', code, symTab, auxEnv, info)
 
     if (isTRUE(code$caller$isAssign)) {
@@ -225,12 +239,12 @@ inFinalTransformationsEnv(
       setArg(instance_expr, 2, init_arg)
       ## TODO: this doesn't have the effect I hoped for... is there a way to
       ## add type annotation to a call (such as object instantiation)?
-      instance_expr$type <- symbolBase$new(name = 'parallel_reduce_body',
+      instance_expr$type <- symbolBase$new(name = code$aux$bodyName,
                                            type = 'parallel_reduce_body')
       ## the parallel_reduce_body instance name is the second arg to the
       ## parallel_reduce call (note that this isn't an exprClass)
       setArg(parallel_reduce_expr, 2,
-             exprClass$new(name = 'parallel_reduce_inst__', isName = TRUE,
+             exprClass$new(name = instName, isName = TRUE,
                            isCall = FALSE, isLiteral = FALSE, isAssign = FALSE))
       ## move the parallel_reduce_body instantiation to before the assignment
       insertArg(code$caller$caller, assign_argID, instance_expr)
@@ -240,7 +254,7 @@ inFinalTransformationsEnv(
       ## now the RHS of the assign is the aggregation value after the
       ## parallel_reduce
       setArg(code$caller, 2,
-             nParse(paste0('cppLiteral("parallel_reduce_inst__.value__;")')))
+             nParse(paste0('cppLiteral("', instName, '.value__")')))
     }
     NULL
   }
