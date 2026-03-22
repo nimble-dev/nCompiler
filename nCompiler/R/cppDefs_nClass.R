@@ -260,11 +260,9 @@ cpp_nClassClass <- R6::R6Class(
               symbolTable = memberCppDefs[[i]]$code$symbolTable,
               copyVars = list(),
               noncopyVars = list(parallelReduceContent[[j]]$args[[4]],
-                                 parallelReduceContent[[j]]$args[[5]])
-            )
-            ## The name is hard-wired expecting only a single case of parallel content.
-            ## TO-DO: generalize the name with unique identifier.
-            self$memberCppDefs[["parallel_reduce_body"]] <<- cppDef_TBB
+                                 parallelReduceContent[[j]]$args[[5]]),
+              aux = parallelReduceContent[[j]]$aux)
+            self$memberCppDefs[[parallelReduceContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
         }
       }

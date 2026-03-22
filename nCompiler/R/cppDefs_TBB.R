@@ -2,7 +2,8 @@
 
 selfNameInLiftedBlock <- "obj__"
 
-parforBodyLabelMaker <- labelFunctionCreator('parallel_loop_body')
+parallelForBodyLabelMaker <- labelFunctionCreator('parallel_loop_body')
+parallelReduceBodyLabelMaker <- labelFunctionCreator('parallel_reduce_body')   
 
 cppParallelBodyClass <- R6::R6Class(
   'cppParallelBodyClass',
@@ -52,9 +53,8 @@ cppParallelBodyClass <- R6::R6Class(
 )
 
 cppParallelBodyClass_init_impl <- function(cppDef,
-                                           orig_loop_code = orig_loop_code,
-                                           loop_body = orig_loop_code$args[[3]],
-                                           loop_var = orig_loop_code$args[[1]],
+                                           loop_body,
+                                           loop_var,
                                            symbolTable,
                                            copyVars,
                                            noncopyVars,
@@ -168,13 +168,15 @@ cppParallelReduceBodyClass <- R6::R6Class(
                           loop_var,
                           symbolTable,
                           copyVars = character(),
-                          noncopyVars = character()) {
+                          noncopyVars = character(),
+                          aux = list()) {
       cppParallelReduceBodyClass_init_impl(self,
                                            loop_body = loop_body,
                                            loop_var = loop_var,
                                            symbolTable = symbolTable,
                                            copyVars = copyVars,
-                                           noncopyVars = noncopyVars)
+                                           noncopyVars = noncopyVars,
+                                           aux = aux)
     },
     generate = function(declaration = FALSE, ...) {
       ## This version of generate creates a fully inlined version
@@ -207,13 +209,12 @@ cppParallelReduceBodyClass <- R6::R6Class(
 )
 
 cppParallelReduceBodyClass_init_impl <- function(cppDef,
-                                                 name = "parallel_reduce_body",
-                                                 orig_loop_code = orig_loop_code,
-                                                 loop_body = orig_loop_code$args[[3]],
-                                                 loop_var = orig_loop_code$args[[1]],
+                                                 loop_body,
+                                                 loop_var,
                                                  symbolTable,
                                                  copyVars,
-                                                 noncopyVars) {
+                                                 noncopyVars,
+                                                 aux) {
   ## 1. call cppParallelBodyClass_init_impl which creates GeneralFor
   ## 2. make some minor alterations to the body of `operator()`
   ## 3. Create split constructor
@@ -223,8 +224,8 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   ## loop_body's caller
   orig_caller <- loop_body$caller
 
-  cppParallelBodyClass_init_impl(cppDef, name, orig_loop_code, loop_body,
-                                 loop_var, symbolTable, copyVars, noncopyVars)
+  cppParallelBodyClass_init_impl(cppDef, loop_body, loop_var,
+                                   symbolTable, copyVars, noncopyVars, aux)
 
   ## get the local aggregation var copy variable
   val_expr <- copyExprClass(loop_body$args[[1]])
@@ -258,7 +259,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   init_arg <- copyExprClass(orig_caller$caller$caller$args[[1]]$args[[2]])
 
   split_ctor_symTab <- symbolTableClass$new()
-  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'parent', baseType = name,
+  split_ctor_symTab$addSymbol(cppVarClass$new(name = 'parent', baseType = aux$bodyName,
                                               ref = TRUE))
   split_ctor_symTab$addSymbol(cppVarClass$new(name = 'tbb::split'))
   ## Get the name of the vector we're working with, which together with the
@@ -272,8 +273,13 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   initializerList[[2]] <- nParse(
     substitute(X(X_), list(X = as.name(vector_name),
                            X_ = as.name(paste0('parent.', vector_name)))))
+  if(length(aux$localMethods)) 
+    initializerList[[3]] <- nParse(
+      substitute(X(X_), list(X = selfNameInLiftedBlock, 
+                             X_ = as.name(paste0('parent.', selfNameInLiftedBlock)))))
 
-  split_constructor <- cppFunctionClass$new(name = name,
+    
+  split_constructor <- cppFunctionClass$new(name = aux$bodyName,
                                             args = split_ctor_symTab,
                                             code = cppCodeBlockClass$new(
                                               code = nParse(quote({})),
@@ -285,9 +291,17 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   ## join_symTab is the symbolTable for the arguments to join
   join_symTab <- symbolTableClass$new()
   join_symTab$addSymbol(cppVarFullClass$new(name = 'target',
-                                            baseType = name,
+                                            baseType = aux$bodyName,
                                             ref = TRUE,
                                             const = TRUE))
+
+
+ if(F){ newSymTab <- symbolTableClass$new()
+  if(length(aux$localMethods)) 
+    newSymTab$addSymbol(cppVarFullClass$new(name = selfNameInLiftedBlock,
+                                            baseType = aux$class,
+                                            ref = TRUE))
+    }
   ## make the reduce code
   ## `aux` needed so that user-defined reduction functions will be replaced with `cpp_code_name`. 
   reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, aux = loop_body$args[[2]]$aux,
