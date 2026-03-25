@@ -74,7 +74,8 @@ compile_normalizeCalls <- function(code,
         ## but we do not as a way to avoid having many references to R6 objects
         ## in a blind attempt to facilitate garbage collection based on past experience.
         ## Instead, we provide what is needed to look up the nFunction again later.
-        auxEnv$needed_nFunctions[[uniqueName]] <- list(code$args[[fxnArg]]$name, auxEnv$where)
+        if(is.null(fxnArg)) nm <- code$name else nm <- code$args[[fxnArg]]$name
+        auxEnv$needed_nFunctions[[uniqueName]] <- list(nm, auxEnv$where)
       }
     }
     # In the case of an nClassBuilder call, we evaluate that in R right here, right now,
