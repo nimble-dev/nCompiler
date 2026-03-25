@@ -272,3 +272,8 @@ test_that("reduction cases that don't work", {
 })
 
 
+## test parallel_reduce(o$adder) with o either passed as arg or as member data and from nc1 class; check it works in R too
+
+## error trapping for o$foo$foo as reducer
+
+## o$foo as reducer, o2$x as vector

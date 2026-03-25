@@ -222,7 +222,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
 
   ## need to save this here because cppParallelBodyClass_init_impl will change
   ## loop_body's caller
-  orig_caller <- loop_body$caller
+  orig_caller <- copyExprClass(loop_body$caller)
 
   cppParallelBodyClass_init_impl(cppDef, loop_body, loop_var,
                                    symbolTable, copyVars, noncopyVars, aux)
@@ -253,11 +253,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
     cppVarClass$new(name = val_expr$name, baseType = val_expr$type$type))
   ## remove 'const' from the `operator()` declaration
   cppDef$memberCppDefs[['operator()']]$const <- FALSE
-
-  ## get the reduce op's identity element which is guaranteed to be a literal
-  ## by the labelAbstractTypes ParallelReduce handler
-  init_arg <- copyExprClass(orig_caller$caller$caller$args[[1]]$args[[2]])
-
+    
   split_ctor_symTab <- symbolTableClass$new()
   split_ctor_symTab$addSymbol(cppVarClass$new(name = 'parent', baseType = aux$bodyName,
                                               ref = TRUE))
@@ -269,7 +265,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   initializerList[[1]] <- nParse(
     substitute(X(X_), list(X = as.name(value_name))))
   ## Need to directly parse the init value to handle various numeric cases, e.g., `Inf`.
-  setArg(initializerList[[1]], 1, init_arg) 
+  setArg(initializerList[[1]], 1, orig_caller$aux$init) 
   initializerList[[2]] <- nParse(
     substitute(X(X_), list(X = as.name(vector_name),
                            X_ = as.name(paste0('parent.', vector_name)))))
@@ -277,6 +273,11 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
     initializerList[[3]] <- nParse(
       substitute(X(X_), list(X = selfNameInLiftedBlock, 
                              X_ = as.name(paste0('parent.', selfNameInLiftedBlock)))))
+  if(length(orig_caller$args) == 6 && length(orig_caller$args[[6]]))  # This is the object if using an object method as the operator.
+    initializerList[[3]] <- nParse(
+      substitute(X(X_), list(X = orig_caller$args[[6]], 
+                             X_ = as.name(paste0('parent.', orig_caller$args[[6]])))))
+        
 
     
   split_constructor <- cppFunctionClass$new(name = aux$bodyName,
@@ -295,20 +296,19 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                             ref = TRUE,
                                             const = TRUE))
 
-
- if(F){ newSymTab <- symbolTableClass$new()
-  if(length(aux$localMethods)) 
-    newSymTab$addSymbol(cppVarFullClass$new(name = selfNameInLiftedBlock,
-                                            baseType = aux$class,
-                                            ref = TRUE))
-    }
   ## make the reduce code
-  ## `aux` needed so that user-defined reduction functions will be replaced with `cpp_code_name`. 
-  reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, aux = loop_body$args[[2]]$aux,
+  ## `aux` needed so that user-defined reduction functions will be replaced with `cpp_code_name`.
+  if(loop_body$args[[2]]$name == 'chainedCall') {
+    reduce_op <- copyExprClass(loop_body$args[[2]]) 
+    inc <- 1
+  } else {
+    reduce_op <- exprClass$new(name = loop_body$args[[2]]$name, aux = loop_body$args[[2]]$aux,
                              isCall = TRUE, isName = FALSE, isAssign = FALSE,
                              isLiteral = FALSE)
-  setArg(reduce_op, 1, copyExprClass(value_expr))
-  setArg(reduce_op, 2, nParse(paste0('cppLiteral("target.', value_name, '")')))
+    inc <- 0
+  }
+  setArg(reduce_op, 1+inc, copyExprClass(value_expr))
+  setArg(reduce_op, 2+inc, nParse(paste0('cppLiteral("target.', value_name, '")')))
   join_code <- newAssignmentExpression()
   setArg(join_code, 1, copyExprClass(value_expr))
   setArg(join_code, 2, reduce_op)

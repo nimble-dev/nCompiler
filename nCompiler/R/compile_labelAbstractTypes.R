@@ -786,7 +786,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
+  ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
     if(is.null(symTab$parentST))   #  TODO: this seems kludgey and perhaps should be done at a different processing stage.
       stop(exprClassProcessingErrorMsg(
         code,
@@ -794,7 +794,7 @@ inLabelAbstractTypesEnv(
                'parallel_reduce must be used in a method of an nClass, not in a stand-alone nFunction.')),
         call. = FALSE)          
     operatorDef <- operatorDefEnv[[code$args[[1]]$name]]
-    if (!is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
+    if (code$args[[1]]$name != '$' && !is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
     # TODO: perhaps this should just be a warning.        
       stop(exprClassProcessingErrorMsg(
         code,
@@ -843,12 +843,35 @@ inLabelAbstractTypesEnv(
       code$args[[1]]$isLiteral <- FALSE
       code$args[[1]]$isCall <- TRUE
     }
+    if(code$args[[1]]$name == "$") {
+      if(code$args[[1]]$args[[1]]$name == "$")
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'too many levels of class hierarchy in reduction operator',
+                deparse(code$args[[1]]$Rexpr))),
+          call. = FALSE)  
+      code$args[[1]] <- wrapInExprClass(code$args[[1]], 'chainedCall')
+      inserts <- c(inserts, compile_labelAbstractTypes(code$args[[1]], symTab, auxEnv))
+    }
+    
     ## give reduce operator the same return type as the input vector.
     ## TODO: Maybe symbolNF is the right type for the reduction op.
     code$args[[1]]$type <-
       symbolBasic$new(name = code$args[[1]]$name,
                       nDim = 0, type = code$args[[2]]$type$type)
     ## finish by processing the vector arg
+    ## TODO: we want to handle if vector is an expression (including obj$x),
+    ## presumably by lifting.
+    if(!code$args[[2]]$isName)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'vector argument for parallel_reduce must be a variable, but found an expression `',
+              deparse(code$args[[2]]$Rexpr),
+              '`. Please create a temporary variable to use as the second argument.')),
+        call. = FALSE)
+            
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
     if (code$args[[2]]$type$nDim != 1)
       stop(exprClassProcessingErrorMsg(
@@ -867,7 +890,7 @@ inLabelAbstractTypesEnv(
     ## This information is used later to ensure that the self object is passed into the lifted TBB code.
     ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
     nm <- code$args[[1]]$Rexpr
-    if(nm %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods)))
+    if(is.character(nm) && nm %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods)))
       code$aux$localMethods <- nm else code$aux$localMethods <- character(0)
     code$aux$class <- auxEnv$where$classname
 

@@ -259,8 +259,9 @@ cpp_nClassClass <- R6::R6Class(
               loop_var = parallelReduceContent[[j]]$args[[1]],
               symbolTable = memberCppDefs[[i]]$code$symbolTable,
               copyVars = list(),
-              noncopyVars = list(parallelReduceContent[[j]]$args[[4]],
-                                 parallelReduceContent[[j]]$args[[5]]),
+              noncopyVars = as.list(c(parallelReduceContent[[j]]$args[[4]],
+                                      parallelReduceContent[[j]]$args[[5]],
+                                      parallelReduceContent[[j]]$args[[6]])),
               aux = parallelReduceContent[[j]]$aux)
             self$memberCppDefs[[parallelReduceContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
