@@ -31,11 +31,37 @@ nc1 <- nClass(
 )
 cnc1 <- nCompile(nc1)
 #
-junk <- nCompile(nList2Base_nClass, control=list(generate_predefined=TRUE))
-is.null(junk) #TRUE b/c createFromR = FALSE
+#junk <- nCompile(nList2Base_nClass, control=list(generate_predefined=TRUE))
+#is.null(junk) #TRUE b/c createFromR = FALSE
 
-junk2 <- nCompiler:::nList2_nClass("numericScalar", "double")
+#junk2 <- nCompiler:::nList2_nClass("numericScalar", "double")
+junk2 <- nList2_nClass("numericScalar", "double")
+junk2 <- nList2("numericScalar")
+#junk2 <- nList("numericScalar", "double")
 junk3 <- nCompile(junk2)
+obj <- junk3$new()
+
+obj$setLength(3)
+length(obj)
+length(obj) <- 4
+length(obj)
+obj[[1]]
+as.list(obj[c(1, 2, 1)])
+obj$setOne(2, 4)
+obj[[1]] <- 3
+
+foo <- nFunction(
+  fun = function() {
+    obj <- nList2("numericScalar")$new()
+    x <- obj[[1]]
+    #obj$setLength(3)
+    #return(obj)
+    #returnType("nList2('numericScalar')")
+  }
+)
+debug(nCompiler:::check_built_types)
+cfoo <- nCompile(foo)
+
 ## nList2_nClass <- function(type) {
 ##   ans <- substitute(
 ##     nClass(Cpublic = list(x = TYPE)),

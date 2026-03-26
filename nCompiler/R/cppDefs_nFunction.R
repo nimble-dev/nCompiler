@@ -178,7 +178,7 @@ cpp_include_needed_nClasses <- function(cppDef,
   new_Hincludes <- character()
   for(i in seq_along(symTab$symbols)) {
     if(inherits(symTab$symbols[[i]], "symbolNC")) {
-      needed_nClass_cppname <- symTab$symbols[[i]]$NCgenerator$classname
+      needed_nClass_cppname <- NCinternals(symTab$symbols[[i]]$NCgenerator)$cpp_classname
       new_Hincludes <- c(new_Hincludes,
                          paste0('\"',
                                 make_cpp_filebase(needed_nClass_cppname),
@@ -190,7 +190,7 @@ cpp_include_needed_nClasses <- function(cppDef,
     auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
     for(i in seq_along(auxEnv_needed_nClasses)) {
       if(isNCgenerator(auxEnv_needed_nClasses[[i]])) {
-        needed_nClass_cppname <- auxEnv_needed_nClasses[[i]]$classname
+        needed_nClass_cppname <- NCinternals(auxEnv_needed_nClasses[[i]])$cpp_classname
         new_Hincludes <- c(new_Hincludes,
                            paste0('\"',
                                   make_cpp_filebase(needed_nClass_cppname),

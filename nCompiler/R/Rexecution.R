@@ -339,7 +339,8 @@ nRep <- function(x, ...) {
 
 #' Converts a dense matrix or vector to a sparse matrix or vector
 #'
-#' @importFrom Matrix Matrix as
+#' @importFrom Matrix Matrix drop0
+#' @importFrom methods as
 #' @param x object to convert to sparse representation
 #' @param prune TRUE to remove 0's from an object if it is already stored in a 
 #'   sparse format

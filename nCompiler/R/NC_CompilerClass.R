@@ -138,18 +138,18 @@ NC_CompilerClass <- R6::R6Class(
       # list() |> unique() retruns list(), what we want.
       needed_nClasses1 <- nCompile_gather_needed_nClasses(cppDef, self$symbolTable)
       needed_nClasses2 <- lapply(NFcompilers,
-                                  \(x) x$gather_needed_nClasses()) |> 
-                          unlist(recursive = FALSE) |> unique()
+                                  \(x) x$gather_needed_nClasses()) |>
+                          unlist(recursive = FALSE) |> unique_units()
       needed_nFunctions <- lapply(NFcompilers,
-                                  \(x) x$gather_needed_nFunctions()) |> 
+                                  \(x) x$gather_needed_nFunctions()) |>
                           unlist(recursive = FALSE) |> unique()
       compileInfo_needed_units <- nCompile_process_manual_needed_units(
                                     NCinternals(self$NCgenerator),
                                     self$NCgenerator$parent_env, isNC = TRUE)
       list(
-        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2 %||% list(),
-                                   compileInfo_needed_units$needed_nClasses)),
-        needed_nFunctions = unique(c(needed_nFunctions %||% list(), 
+        needed_nClasses = unique_units(c(needed_nClasses1, needed_nClasses2 %||% list(),
+                                         compileInfo_needed_units$needed_nClasses)),
+        needed_nFunctions = unique(c(needed_nFunctions %||% list(),
                                      compileInfo_needed_units$needed_nFunctions))
       )
     }

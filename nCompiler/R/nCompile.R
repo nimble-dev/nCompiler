@@ -1,5 +1,34 @@
 cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 
+## Compare two compilation units for identity, preferring classID over identical().
+## For NCgenerators, classID (a digest hash) is always set and gives stable identity
+## even for dynamically generated parameterised types like nList2 where two separate
+## R objects can represent the same logical type.
+unit_is_duplicate <- function(a, b) {
+  if(isNCgenerator(a) && isNCgenerator(b)) {
+    id_a <- NCinternals(a)$classID
+    id_b <- NCinternals(b)$classID
+    if(!is.null(id_a) && !is.null(id_b))
+      return(id_a == id_b)
+  }
+  identical(a, b)
+}
+
+## classID-aware replacement for unique() on lists of compilation units.
+unique_units <- function(units) {
+  if(length(units) <= 1L) return(units)
+  keep <- rep(TRUE, length(units))
+  for(i in seq(2L, length(units))) {
+    for(j in seq(1L, i - 1L)) {
+      if(keep[j] && unit_is_duplicate(units[[i]], units[[j]])) {
+        keep[i] <- FALSE
+        break
+      }
+    }
+  }
+  units[keep]
+}
+
 # How names are handled through nCompile
 #
 # When nCompile is called with an nClass generator (as an argument):
@@ -474,7 +503,7 @@ nCompile <- function(...,
     cppDefs <- c(cppDefs, new_cppDefs)
     cpp_names <- c(cpp_names, new_cpp_names)
 
-    new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique()
+    new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique_units()
     new_needed_nFunctions <- do.call("c", cppDefs_info$needed_nFunctions) |> unique()
     names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
@@ -483,15 +512,14 @@ nCompile <- function(...,
     # but we are going to mix them together as if they were an arbitrary
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
-    ## We need to make our own version of setdiff as it won't work on these types.
-    ## For now we rely on identical(). If this gets clunky or inefficient,
-    ## we can refine, but that would then need looking at types of each comparison
-    ## to decide how to do the comparison.
+    ## Use unit_is_duplicate() rather than identical() so that parameterised nClass
+    ## types (e.g. nList2) are correctly identified as duplicates even when they
+    ## are represented by different R objects with the same classID hash.
     keep_new_unit <- rep(TRUE, length(new_units))
     for(i in seq_along(new_units)) {
       this_new_unit <- new_units[[i]]
       for(j in seq_along(units)) {
-        if(identical(this_new_unit, units[[j]])) {
+        if(unit_is_duplicate(this_new_unit, units[[j]])) {
           keep_new_unit[i] <- FALSE
           break
         }

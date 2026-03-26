@@ -219,7 +219,7 @@ symbolNC <- R6::R6Class(
     },
     genCppVar = function() {
       cppSharedPtrToNC(name = self$name,
-                       NCtype = self$NCgenerator$classname)
+                       NCtype = NCinternals(self$NCgenerator)$cpp_classname)
     }
   )
 )
@@ -244,7 +244,7 @@ symbolNCgenerator <- R6::R6Class(
     },
     genCppVar = function() {
       cppNCgenerator(name = self$name,
-                     baseType = self$NCgenerator$classname)
+                     baseType = NCinternals(self$NCgenerator)$cpp_classname)
     })
 )
 

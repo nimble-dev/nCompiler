@@ -64,7 +64,11 @@ SVDDecomp <- nClass(
 )
 
 
-#' @export
+#' @keywords internal2
+#' @noRd
+#' @rawNamespace export(OptimControlList)
+NULL
+
 OptimControlList <- nClass(
   classname = 'OptimControlList',
   predefined = "OptimControlList_pkg",

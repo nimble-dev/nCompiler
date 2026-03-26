@@ -63,6 +63,29 @@ NF_InternalsClass <- R6::R6Class(
         fun_to_use <- fun
       } else {
         self$R_fun <- fun
+        ## Check that fun and C_fun agree on argument names and order,
+        ## up to the number of arguments in C_fun.  fun may have additional
+        ## arguments beyond those (e.g. for uncompiled-only bookkeeping).
+        c_arg_names <- names(formals(compileInfo$C_fun))
+        r_arg_names <- names(formals(fun))
+        n_c <- length(c_arg_names)
+        n_r <- length(r_arg_names)
+        if(n_r < n_c) {
+          stop(paste0("In nFunction '", name, "': fun has ", n_r,
+                      " argument(s) but compileInfo$C_fun has ", n_c,
+                      ". fun must have at least as many arguments as C_fun,",
+                      " in the same order."),
+               call. = FALSE)
+        }
+        mismatches <- which(r_arg_names[seq_len(n_c)] != c_arg_names)
+        if(length(mismatches) > 0) {
+          stop(paste0("In nFunction '", name, "': argument name mismatch between",
+                      " fun and compileInfo$C_fun at position(s) ",
+                      paste(mismatches, collapse = ", "), ". ",
+                      "fun: (", paste(r_arg_names[seq_len(n_c)], collapse = ", "), "); ",
+                      "C_fun: (", paste(c_arg_names, collapse = ", "), ")."),
+               call. = FALSE)
+        }
         fun_to_use <- compileInfo$C_fun
       }
       if(!is.null(compileInfo$initializers)) {

@@ -40,7 +40,7 @@ compile_labelAbstractTypes <- function(code,
         code$type <- thisSymbolObject
       } else {
         ## Look up NCgenerators
-        obj <- nGet(code$name, where = auxEnv$where, project_env = project_env)
+        obj <- nGet(code$name, where = auxEnv$where, project_env = auxEnv$project_env)
         if(!is.null(obj)) {
           if(isNCgenerator(obj)) {
             newSym <- symbolNCgenerator$new(name = code$name,
@@ -228,6 +228,14 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  nList2_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
+    browser()
+    inserts <- NULL
+    if(length(inserts) == 0) NULL else inserts
+  }
+)
+
 # nCompiler:::inLabelAbstractTypesEnv(
 #   nClassBuilder <- function(code, symTab, auxEnv, handlingInfo) {
 #     this_builder <- code$aux$cachedOpInfo$obj_internals
@@ -288,7 +296,7 @@ inLabelAbstractTypesEnv(
                                   type = code$args[[1]]$type$name,
                                   isArg = FALSE,
                                   NCgenerator = code$args[[1]]$type$NCgenerator)
-        newSym <- symbolNF$new(name = code$args[[1]]$type$NCgenerator$classname,
+        newSym <- symbolNF$new(name = NCinternals(code$args[[1]]$type$NCgenerator)$cpp_classname,
                                returnSym = returnSym)
         code$name <- 'construct_new_nClass'
         code$type <- newSym

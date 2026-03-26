@@ -80,18 +80,6 @@ compile_normalizeCalls <- function(code,
       code$aux$cachedOpInfo <- NULL
       return(NULL) # Now we have made it a name, not a call.
     }
-    if(is.null(NCgen)) {
-      NCgen <- do.call(this_builder, args)
-      auxEnv$nClassBuilder_built <- c(auxEnv$nClassBuilder_built, list(NCgen))
-    }
-
-    newSym <- symbolNCgenerator$new(name = ID,
-                                    type = ID,
-                                    NCgenerator = NCgen)
-    code$type <- newSym
-    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, NCgen)
-
-    }
 
     opDef <- cachedOpInfo$opDef
     matchDef <- opDef[["matchDef"]]

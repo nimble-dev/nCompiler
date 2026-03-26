@@ -610,10 +610,10 @@ check_built_types <- function(builder, Rexpr, project_env) {
  #     Rexpr <- code$Rexpr
   args <- as.list(Rexpr)[-1]
   args2 <- c(args, .ID=TRUE)
-  ID <- do.call(this_builder, args2)
+  ID <- do.call(builder, args2)
   NCgen <- project_env$built_types[[ID]]
   if(is.null(NCgen)) {
-    NCgen <- do.call(this_builder, args)
+    NCgen <- do.call(builder, args)
     project_env$built_types[[ID]] <- NCgen
   }
   list(NCgen) |> setNames(ID)

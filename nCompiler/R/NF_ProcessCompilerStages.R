@@ -117,7 +117,6 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
   NFcompiler$auxEnv[['uses_nList']] <- FALSE
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
   NFcompiler$auxEnv[['needed_nClasses']] <- list()
-  NFcompiler$auxEnv[['nClassBuilder_built']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()
   NFcompiler$auxEnv[["derivsContent"]] <- list()
   NFcompiler$auxEnv[["class_env"]] <- class_env # used for sharing information among methods in a class

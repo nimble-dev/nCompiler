@@ -1,5 +1,10 @@
 nClassLabelMaker <- labelFunctionCreator('nClass')
 
+#' @keywords internal3
+#' @noRd
+#' @rawNamespace export(nClassClass)
+NULL
+
 nClassClass <- R6::R6Class(
   classname = "nClass",
   portable = FALSE,
@@ -12,6 +17,11 @@ nClassClass <- R6::R6Class(
     }
   )
 )
+
+#' @keywords internal3
+#' @noRd
+#' @rawNamespace export(CpubClass)
+NULL
 
 CpubClass <- R6::R6Class(
   classname = "CpubClass",
@@ -333,7 +343,7 @@ make_nClass_code <- function(internals,
          ACTIVE = activeBindings_list_code,
          INHERIT =
            if(inherit_provided) inheritQ
-         else quote(nCompiler::nClassClass))
+         else quote(nCompiler::nClassClass)) # devtools::document() problem if we use :: instead of ::: for first run, then can change
   )
 }
 

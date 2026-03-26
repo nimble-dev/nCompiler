@@ -1,0 +1,590 @@
+# Tests for nList2 — the new higher-level nList2 implementation.
+# Uncompiled tests use the R-execution path (Rcontents proxy).
+# Compiled tests exercise the C++ methods via nCompile.
+#
+# Note: uncompiled obj[inds] returns a plain R list (Rcontents[inds]);
+# compiled obj[inds] returns an nList2.  as.list() normalises both cases.
+
+rNL <- nList2("numericScalar")
+cNL <- nCompile(rNL)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+make_uncompiled <- function() {
+  obj <- rNL$new()
+  length(obj) <- 4
+  for(i in 1:4) obj[[i]] <- i * 10.0
+  obj
+}
+
+make_compiled <- function() {
+  obj <- cNL$new()
+  obj$setLength(4L)
+  for(i in 1:4) obj[[i]] <- i * 10.0
+  obj
+}
+
+# ---------------------------------------------------------------------------
+# Uncompiled: length
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: length, setLength, length<-", {
+  obj <- rNL$new()
+  expect_equal(length(obj), 0)
+  length(obj) <- 4
+  expect_equal(length(obj), 4)
+  length(obj) <- 2
+  expect_equal(length(obj), 2)
+  obj$setLength(6L)
+  expect_equal(obj$getLength(), 6L)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: double-bracket get / set
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: [[ get and set", {
+  obj <- rNL$new()
+  length(obj) <- 3
+  obj[[1]] <- 1.1
+  obj[[2]] <- 2.2
+  obj[[3]] <- 3.3
+  expect_equal(obj[[1]], 1.1)
+  expect_equal(obj[[2]], 2.2)
+  expect_equal(obj[[3]], 3.3)
+  obj[[2]] <- 99.9
+  expect_equal(obj[[2]], 99.9)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: single-bracket get
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: [ get with integer indices", {
+  obj <- make_uncompiled()
+  expect_equal(as.list(obj[c(1L, 3L)]),     list(10.0, 30.0))
+  expect_equal(as.list(obj[c(4L, 2L, 1L)]), list(40.0, 20.0, 10.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 uncompiled: [ get with numeric indices", {
+  obj <- make_uncompiled()
+  expect_equal(as.list(obj[c(2.0, 4.0)]), list(20.0, 40.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 uncompiled: [ get with logical indices", {
+  obj <- make_uncompiled()
+  expect_equal(as.list(obj[c(TRUE, FALSE, TRUE, FALSE)]), list(10.0, 30.0))
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: single-bracket set with list values
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: [<- with list values", {
+  obj <- rNL$new()
+  length(obj) <- 4
+  obj[c(1L, 3L)] <- list(100.0, 300.0)
+  expect_equal(obj[[1]], 100.0)
+  expect_equal(obj[[3]], 300.0)
+  rm(obj); gc()
+})
+
+test_that("nList2 uncompiled: [<- with list, recycling rule", {
+  obj <- rNL$new()
+  length(obj) <- 4
+  obj[1:4] <- list(1.0, 2.0)   # 2 values recycled over 4 positions
+  expect_equal(obj[[1]], 1.0)
+  expect_equal(obj[[2]], 2.0)
+  expect_equal(obj[[3]], 1.0)
+  expect_equal(obj[[4]], 2.0)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: single-bracket set with a single scalar value (recycling)
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: [<- with single scalar value", {
+  obj <- rNL$new()
+  length(obj) <- 4
+  obj[c(1L, 2L, 3L)] <- 7.7
+  expect_equal(obj[[1]], 7.7)
+  expect_equal(obj[[2]], 7.7)
+  expect_equal(obj[[3]], 7.7)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: single-bracket set with another nList2
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: [<- with nList2 value", {
+  src <- rNL$new()
+  length(src) <- 2
+  src[[1]] <- 200.0
+  src[[2]] <- 400.0
+
+  dst <- rNL$new()
+  length(dst) <- 4
+  for(i in 1:4) dst[[i]] <- 0.0
+  dst[c(1L, 3L)] <- src   # src IS an nList2 -> singleBracket_set_nList path
+  expect_equal(dst[[1]], 200.0)
+  expect_equal(dst[[3]], 400.0)
+  expect_equal(dst[[2]], 0.0)
+  expect_equal(dst[[4]], 0.0)
+  rm(src, dst); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Uncompiled: as.list
+# ---------------------------------------------------------------------------
+
+test_that("nList2 uncompiled: as.list", {
+  obj <- make_uncompiled()
+  expect_equal(as.list(obj), list(10.0, 20.0, 30.0, 40.0))
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: length
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: length, setLength, length<-", {
+  obj <- cNL$new()
+  expect_equal(length(obj), 0L)
+  length(obj) <- 4
+  expect_equal(length(obj), 4L)
+  length(obj) <- 2
+  expect_equal(length(obj), 2L)
+  obj$setLength(6L)
+  expect_equal(obj$getLength(), 6L)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: double-bracket get / set
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [[ get and set", {
+  obj <- cNL$new()
+  obj$setLength(3L)
+  obj[[1]] <- 1.1
+  obj[[2]] <- 2.2
+  obj[[3]] <- 3.3
+  expect_equal(obj[[1]], 1.1)
+  expect_equal(obj[[2]], 2.2)
+  expect_equal(obj[[3]], 3.3)
+  obj[[2]] <- 99.9
+  expect_equal(obj[[2]], 99.9)
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [[ with numeric and logical index", {
+  obj <- make_compiled()
+  expect_equal(obj[[2.0]],  20.0)  # numeric index
+  expect_equal(obj[[TRUE]], 10.0)  # logical TRUE -> first element
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: single-bracket get
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [ get with integer indices", {
+  obj <- make_compiled()
+  expect_equal(as.list(obj[c(1L, 3L)]),     list(10.0, 30.0))
+  expect_equal(as.list(obj[c(4L, 2L, 1L)]), list(40.0, 20.0, 10.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [ get with numeric indices", {
+  obj <- make_compiled()
+  expect_equal(as.list(obj[c(2.0, 4.0)]), list(20.0, 40.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [ get with logical indices", {
+  obj <- make_compiled()
+  expect_equal(as.list(obj[c(TRUE, FALSE, TRUE, FALSE)]), list(10.0, 30.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [ get, logical index recycled over contents", {
+  obj <- make_compiled()                      # length 4: 10,20,30,40
+  expect_equal(as.list(obj[c(TRUE, FALSE)]),  list(10.0, 30.0))
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: single-bracket set with list values
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [<- with list values, integer indices", {
+  obj <- make_compiled()
+  obj[c(1L, 3L)] <- list(100.0, 300.0)
+  expect_equal(obj[[1]], 100.0)
+  expect_equal(obj[[2]], 20.0)
+  expect_equal(obj[[3]], 300.0)
+  expect_equal(obj[[4]], 40.0)
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- with list values, numeric indices", {
+  obj <- make_compiled()
+  obj[c(2.0, 4.0)] <- list(200.0, 400.0)
+  expect_equal(obj[[2]], 200.0)
+  expect_equal(obj[[4]], 400.0)
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- with list values, logical indices", {
+  obj <- make_compiled()
+  obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(11.0, 33.0)
+  expect_equal(obj[[1]], 11.0)
+  expect_equal(obj[[2]], 20.0)
+  expect_equal(obj[[3]], 33.0)
+  expect_equal(obj[[4]], 40.0)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: single-bracket set — recycling rule
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [<- list recycled over integer indices", {
+  obj <- make_compiled()
+  obj[1:4] <- list(1.0, 2.0)
+  expect_equal(as.list(obj), list(1.0, 2.0, 1.0, 2.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- list recycled over logical indices", {
+  obj <- make_compiled()
+  obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(99.0)  # single value -> recycled
+  expect_equal(obj[[1]], 99.0)
+  expect_equal(obj[[3]], 99.0)
+  expect_equal(obj[[2]], 20.0)   # untouched
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- logical index recycled over contents", {
+  obj <- make_compiled()                    # length 4: 10,20,30,40
+  obj[c(TRUE, FALSE)] <- list(11.0, 33.0)  # bools recycled to T,F,T,F
+  expect_equal(obj[[1]], 11.0)
+  expect_equal(obj[[2]], 20.0)
+  expect_equal(obj[[3]], 33.0)
+  expect_equal(obj[[4]], 40.0)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: single-bracket set with single scalar value
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [<- single scalar recycled over positions", {
+  obj <- make_compiled()
+  obj[c(1L, 2L, 3L)] <- 7.7
+  expect_equal(obj[[1]], 7.7)
+  expect_equal(obj[[2]], 7.7)
+  expect_equal(obj[[3]], 7.7)
+  expect_equal(obj[[4]], 40.0)   # untouched
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: single-bracket set with another nList2
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [<- with same-type nList2", {
+  src <- cNL$new()
+  src$setLength(2L)
+  src[[1]] <- 200.0
+  src[[2]] <- 400.0
+
+  dst <- make_compiled()
+  dst[c(1L, 3L)] <- src
+  expect_equal(dst[[1]], 200.0)
+  expect_equal(dst[[2]], 20.0)
+  expect_equal(dst[[3]], 400.0)
+  expect_equal(dst[[4]], 40.0)
+  rm(src, dst); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: automatic expansion of contents on out-of-bounds [<-
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: integer [<- auto-expands contents", {
+  obj <- cNL$new()
+  obj$setLength(2L)
+  obj[[1]] <- 1.0; obj[[2]] <- 2.0
+  obj[c(1L, 5L)] <- list(10.0, 50.0)   # index 5 is out of bounds
+  expect_equal(length(obj), 5L)
+  expect_equal(obj[[1]], 10.0)
+  expect_equal(obj[[5]], 50.0)
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: numeric [<- auto-expands contents", {
+  obj <- cNL$new()
+  obj$setLength(2L)
+  obj[[1]] <- 1.0; obj[[2]] <- 2.0
+  obj[c(1.0, 6.0)] <- list(10.0, 60.0)  # index 6 is out of bounds
+  expect_equal(length(obj), 6L)
+  expect_equal(obj[[1]], 10.0)
+  expect_equal(obj[[6]], 60.0)
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: logical [<- auto-expands when bools longer than contents", {
+  obj <- cNL$new()
+  obj$setLength(2L)
+  obj[[1]] <- 1.0; obj[[2]] <- 2.0
+  obj[c(TRUE, FALSE, TRUE, FALSE, TRUE)] <- list(10.0, 30.0, 50.0)  # bools longer -> resize to 5
+  expect_equal(length(obj), 5L)
+  expect_equal(obj[[1]], 10.0)
+  expect_equal(obj[[3]], 30.0)
+  expect_equal(obj[[5]], 50.0)
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Compiled: as.list
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: as.list", {
+  obj <- make_compiled()
+  expect_equal(as.list(obj), list(10.0, 20.0, 30.0, 40.0))
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Error cases: invalid indices for [[
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [[ NA index errors", {
+  obj <- make_compiled()
+  expect_error(obj[[NA_integer_]])
+  expect_error(obj[[NA_real_]])
+  expect_error(obj[[NA]])            # logical NA
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [[ out-of-bounds errors", {
+  obj <- make_compiled()
+  expect_error(obj[[0L]])
+  expect_error(obj[[5L]])            # length is 4
+  expect_error(obj[[-1L]])
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [[ FALSE logical errors", {
+  obj <- make_compiled()
+  expect_error(obj[[FALSE]])
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [[ multi-element index errors", {
+  obj <- make_compiled()
+  expect_error(obj[[c(1L, 2L)]])
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [[ non-finite numeric errors", {
+  obj <- make_compiled()
+  expect_error(obj[[Inf]])
+  expect_error(obj[[NaN]])
+  rm(obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Error cases: invalid indices / values for [<-
+# ---------------------------------------------------------------------------
+
+test_that("nList2 compiled: [<- NA index errors", {
+  obj <- make_compiled()
+  expect_error(obj[NA_integer_]  <- list(1.0))
+  expect_error(obj[NA_real_]     <- list(1.0))
+  expect_error(obj[NA]           <- list(1.0))   # logical NA
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- zero or negative integer index errors", {
+  obj <- make_compiled()
+  expect_error(obj[0L]  <- list(1.0))
+  expect_error(obj[-1L] <- list(1.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- non-finite numeric index errors", {
+  obj <- make_compiled()
+  expect_error(obj[Inf] <- list(1.0))
+  expect_error(obj[NaN] <- list(1.0))
+  rm(obj); gc()
+})
+
+test_that("nList2 compiled: [<- zero-length replacement errors", {
+  obj <- make_compiled()
+  expect_error(obj[1:2] <- list())
+  rm(obj); gc()
+})
+
+test_that("nList2: [<- wrong nList2 element type is rejected", {
+  rNL_int <- nList2("integerScalar")
+  cNL_int <- nCompile(rNL_int)
+  src <- cNL_int$new()
+  src$setLength(2L)
+  dst <- make_compiled()   # numericScalar nList2
+  expect_error(dst[1:2] <- src)
+  rm(src, dst); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Same-type identity: multiple generators of the same type
+# ---------------------------------------------------------------------------
+# Following tests do not work yet.
+test_that("nList2: two generators of same type have equal classID", {
+  rNL1 <- nList2("numericScalar")
+  rNL2 <- nList2("numericScalar")
+  expect_equal(NCinternals(rNL1)$classID, NCinternals(rNL2)$classID)
+  rm(rNL1, rNL2); gc()
+})
+
+test_that("nList2: duplicate units in nCompile are deduplicated", {
+  rNL1 <- nList2("numericScalar")
+  rNL2 <- nList2("numericScalar")
+  # Both generators have the same classID; nCompile should deduplicate and
+  # produce exactly one compiled nList2 class without error.
+  comp <- nCompile(rNL1, rNL2)
+  obj <- comp$nList2$new()
+  obj$setLength(3L)
+  obj[[1]] <- 1.0; obj[[2]] <- 2.0; obj[[3]] <- 3.0
+  expect_equal(as.list(obj), list(1.0, 2.0, 3.0))
+  rm(rNL1, rNL2, comp, obj); gc()
+})
+
+test_that("nList2: nClass member of nList2 type compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_holds_nList2",
+    Cpublic = list(
+      lst = 'rNL',
+      init = nFunction(function() {
+        lst <<- rNL$new()
+        lst$setLength(3L)
+        lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
+      }),
+      getLen = nFunction(
+        function() { return(lst$getLength()) },
+        returnType = 'integerScalar'
+      )
+    )
+  )
+  comp <- nCompile(rNL, nc)
+  obj <- comp$nc_holds_nList2$new()
+  obj$init()
+  expect_equal(obj$getLen(), 3L)
+  rm(rNL, nc, comp, obj); gc()
+})
+
+test_that("nList2: nFunction return type of nList2 compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_returns_nList2",
+    Cpublic = list(
+      lst = 'rNL',
+      init = nFunction(function() {
+        lst <<- rNL$new()
+        lst$setLength(2L)
+        lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
+      }),
+      getLst = nFunction(
+        function() { return(lst) },
+        returnType = 'rNL'
+      )
+    )
+  )
+  comp <- nCompile(rNL, nc)
+  obj <- comp$nc_returns_nList2$new()
+  obj$init()
+  got <- obj$getLst()
+  expect_equal(got[[1]], 100.0)
+  expect_equal(got[[2]], 200.0)
+  rm(rNL, nc, comp, obj, got); gc()
+})
+
+test_that("nList2: nFunction argument of nList2 type compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_nList2_arg",
+    Cpublic = list(
+      lenOf = nFunction(
+        function(x = 'rNL') { return(x$getLength()) },
+        returnType = 'integerScalar'
+      )
+    )
+  )
+  comp <- nCompile(rNL, nc)
+  obj  <- comp$nc_nList2_arg$new()
+  lst  <- comp$nList2$new()
+  lst$setLength(5L)
+  expect_equal(obj$lenOf(lst), 5L)
+  rm(rNL, nc, comp, obj, lst); gc()
+})
+
+test_that("nList2: nList2 created internally in nFunction code compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_creates_nList2",
+    Cpublic = list(
+      makeAndSum = nFunction(
+        function() {
+          tmp <- rNL$new()
+          tmp$setLength(3L)
+          tmp[[1]] <- 1.0; tmp[[2]] <- 2.0; tmp[[3]] <- 3.0
+          s <- tmp[[1]] + tmp[[2]] + tmp[[3]]
+          return(s)
+        },
+        returnType = 'numericScalar'
+      )
+    )
+  )
+  comp <- nCompile(rNL, nc)
+  obj  <- comp$nc_creates_nList2$new()
+  expect_equal(obj$makeAndSum(), 6.0)
+  rm(rNL, nc, comp, obj); gc()
+})
+
+test_that("nList2: objects from two same-type generators are interchangeable", {
+  # Two independent nCompile calls, each producing a nList2<double>.
+  # An object from one DLL should be passable to a method compiled in the
+  # other DLL, because they share the same C++ classname (and thus RTTI).
+  rNL1 <- nList2("numericScalar")
+  rNL2 <- nList2("numericScalar")
+
+  cNL1 <- nCompile(rNL1)
+  rNL3 <- nList2("numericScalar")   # fresh generator, same type
+  nc <- nClass(
+    classname = "nc_accept_nList2",
+    Cpublic = list(
+      lenOf = nFunction(
+        function(x = 'rNL3') { return(x$getLength()) },
+        returnType = 'integerScalar'
+      )
+    )
+  )
+  comp2 <- nCompile(rNL3, nc)
+
+  src <- cNL1$nList2$new()
+  src$setLength(4L)
+  obj <- comp2$nc_accept_nList2$new()
+  expect_equal(obj$lenOf(src), 4L)
+  rm(rNL1, rNL2, rNL3, cNL1, nc, comp2, src, obj); gc()
+})

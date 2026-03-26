@@ -49,7 +49,8 @@ NC_InternalsClass <- R6::R6Class(
       self$inheritQ <- inheritQ
       self$compileInfo <- compileInfo
       self$classname <- classname
-      self$cpp_classname <- Rname2CppName(classname)
+      self$cpp_classname <- if(!is.null(compileInfo$cpp_classname)) compileInfo$cpp_classname else Rname2CppName(classname)
+      self$classID <- digest::digest(classname, algo = "xxhash64")
       self$RpublicNames <- RpublicNames
       self$isOnlyC = length(RpublicNames) == 0
       numEntries <- length(Cpublic)

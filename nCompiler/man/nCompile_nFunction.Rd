@@ -9,7 +9,9 @@ nCompile_nFunction(
   dir = file.path(tempdir(), "nCompiler_generatedCode"),
   cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
   env = parent.frame(),
+  compileInfo = NULL,
   control = list(),
+  project_env = new.env(),
   ...
 )
 }

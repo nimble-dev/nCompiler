@@ -5,6 +5,12 @@
 #' @export
 nList <- function(type, length) vector("list", length)
 
+
+#' @keywords internal
+#' @noRd
+#' @rawNamespace export(nList2Base_nClass)
+NULL
+
 nList2Base_nClass <- nClass(
   classname = "nList2Base_nClass",
   Cpublic = list(
@@ -25,8 +31,14 @@ nList2Base_nClass <- nClass(
                    )
 )
 
-nList2_nClass <- function(Rtype, Ctype) {
+#' @export
+nList2_nClass <- function(type) {
+  Rtype <- type
+  sym <- argType2symbol(type)
+  Ctype <- sym$genCppVar()$generate()
+
   classname <- "nList2"
+  cpp_classname <- Rname2CppName(paste0("nList2_", as.character(type)))
   baseclass <- paste0("nList2_<", Ctype, ">")
   RtypeObj <- eval(substitute(nMakeType(TYPE), list(TYPE = Rtype)))
 #  classTypeObj <- eval(substitute(nMakeType(TYPE), list(TYPE = classname)))
@@ -50,138 +62,211 @@ nList2_nClass <- function(Rtype, Ctype) {
         C_fun = function()
         {cppLiteral('return getLength_()')}
       )),
-    setOne = nFunction(
-      name = "setOne",
-      function(i, v) {
-        Rcontents[[i]] <<- v; v},
-      returnType = Rtype,
+    as_list = nFunction(
+      name = "as_list",
+      function() {
+        Rcontents
+      },
+      returnType = 'RcppList',
       compileInfo=list(
-        C_fun = function(i = 'integerScalar', v=T(RtypeObj))
-        {cppLiteral('return setOne_(i, v)')}
+        C_fun = function()
+        {cppLiteral('return as_list_()')}
       )),
-    getOne = nFunction(
-      name = "getOne",
+    singleBracket_get = nFunction(
+      name = "singleBracket_get",
+      function(inds) {
+        Rcontents[inds]},
+      compileInfo=list(
+        C_fun = function(inds = 'SEXP') {
+          returnType("myclass")
+          res <- myclass$new()
+          cppLiteral('res->contents() = singleBracket_get_(inds); return res;')
+        }
+      )),
+    doubleBracket_get = nFunction(
+      name = "doubleBracket_get",
       function(i) {
         Rcontents[[i]]},
       returnType = Rtype,
       compileInfo=list(
-        C_fun = function(i = 'integerScalar')
-        {cppLiteral('return getOne_(i)')}
+        C_fun = function(i = 'SEXP')
+        {cppLiteral('return doubleBracket_get_(i)')}
       )),
-    getMany = nFunction(
-      name = "getMany",
-      function(inds) {
-        Rcontents[inds]
+    singleBracket_set = nFunction(
+      name = "singleBracket_set",
+      function(inds, values) {
+        Rcontents[inds] <<- values
       },
-#      returnType = quote(T(classTypeObj)),
       compileInfo = list(
-        C_fun = function(inds = 'integerVector') {
-          returnType("myclass")
-          res <- myclass$new()
-          cppLiteral('res->contents() = getMany_(inds); return res;')
+        C_fun = function(inds = 'SEXP', values = 'RcppList') {
+          cppLiteral('singleBracket_set_(inds, values);')
         }
       )),
-    getManyToList = nFunction(
-      name = "getManyToList",
-      function(inds) {
-        Rcontents[inds]
+    singleBracket_set_single = nFunction(
+      name = "singleBracket_set_single",
+      function(inds, value) {
+        Rcontents[inds] <<- value
       },
       compileInfo = list(
-        C_fun = function(inds = 'integerVector') {
-          returnType("RcppList")
-          cppLiteral('return getManyToList_(inds);')
+        C_fun = function(inds = 'SEXP', value = T(RtypeObj)) {
+          cppLiteral('singleBracket_set_single_(inds, value);')
         }
       )),
-    getManyLogical = nFunction(
-      name = "getManyLogical",
-      function(inds) {
-        Rcontents[inds]
+    singleBracket_set_nList = nFunction(
+      name = "singleBracket_set_nList",
+      function(inds, values) {
+        Rcontents[inds] <<- as.list(values)
       },
       compileInfo = list(
-        C_fun = function(bools = 'logicalVector') {
-          returnType("myclass")
-          res <- myclass$new()
-          cppLiteral('res->contents() = getManyLogical_(bools); return res;')
+        C_fun = function(inds = 'SEXP', values = 'myclass') {
+          cppLiteral('singleBracket_set_(inds, values->contents());')
         }
       )),
-    getManyToListLogical = nFunction(
-      name = "getManyToListLogical",
-      function(inds) {
-        Rcontents[inds]
+    doubleBracket_set = nFunction(
+      name = "doubleBracket_set",
+      function(i, value) {
+        Rcontents[[i]] <<- value; value
       },
+      returnType = Rtype,
       compileInfo = list(
-        C_fun = function(bools = 'logicalVector') {
-          returnType("RcppList")
-          cppLiteral('return getManyToListLogical_(bools);')
-        }
-      )),
-    setMany = nFunction(
-      name = "setMany",
-      function(inds, vals) {
-        Rcontents[inds] <<- vals; vals
-      },
-      compileInfo = list(
-        C_fun = function(inds = 'integerVector', vals = 'myclass') {
-          returnType("myclass")
-          cppLiteral('setMany_(inds, vals->contents()); return vals;')
-        }
-      )),
-    setManySingle = nFunction(
-      name = "setManySingle",
-      function(inds, val) {
-        Rcontents[inds] <<- val; val
-      },
-      compileInfo = list(
-        C_fun = function(inds = 'integerVector', val = T(RtypeObj)) {
-          returnType(T(RtypeObj))
-          cppLiteral('return setManySingle_(inds, val);')
-        }
-      )),
-    setManyFromList = nFunction(
-      name = "setManyFromList",
-      function(inds, vals) {
-        Rcontents[inds] <<- vals; vals
-      },
-      compileInfo = list(
-        C_fun = function(inds = 'integerVector', vals = 'RcppList') {
-          returnType("RcppList")
-          cppLiteral('return setManyFromList_(inds, vals);')
-        }
-      )),
-    setManyLogical = nFunction(
-      name = "setManyLogical",
-      function(bools, val) {
-        Rcontents[bools] <<- val; val
-      },
-      compileInfo = list(
-        C_fun = function(bools = 'logicalVector', vals = 'myclass') {
-          returnType("myclass")
-          cppLiteral('setManyLogical_(bools, vals->contents()); return vals;')
-        }
-      )),
-    setManyFromListLogical = nFunction(
-      name = "setManyFromListLogical",
-      function(bools, vals) {
-        Rcontents[bools] <<- vals; vals
-      },
-      compileInfo = list(
-        C_fun = function(bools = 'logicalVector', vals = 'RcppList') {
-          returnType("RcppList")
-          cppLiteral('return setManyFromListLogical_(bools, vals);')
-        }
-      )),
-    setManyLogicalSingle = nFunction(
-      name = "setManyLogicalSingle",
-      function(bools, val) {
-        Rcontents[bools] <<- val; val
-      },
-      compileInfo = list(
-        C_fun = function(bools = 'logicalVector', val = T(RtypeObj)) {
-          returnType(T(RtypeObj))
-          cppLiteral('return setManyLogicalSingle_(bools, val);')
+        C_fun = function(i = 'SEXP', value = T(RtypeObj)) {
+          cppLiteral('return doubleBracket_set_(i, value)')
         }
       ))
     )
+    ## Superseded by doubleBracket_get / doubleBracket_set:
+    # setOne = nFunction(
+    #   name = "setOne",
+    #   function(i, v) {
+    #     Rcontents[[i]] <<- v; v},
+    #   returnType = Rtype,
+    #   compileInfo=list(
+    #     C_fun = function(i = 'integerScalar', v=T(RtypeObj))
+    #     {cppLiteral('return setOne_(i, v)')}
+    #   )),
+    # getOne = nFunction(
+    #   name = "getOne",
+    #   function(i) {
+    #     Rcontents[[i]]},
+    #   returnType = Rtype,
+    #   compileInfo=list(
+    #     C_fun = function(i = 'integerScalar')
+    #     {cppLiteral('return getOne_(i)')}
+    #   )),
+    ## Superseded by singleBracket_get:
+    # getMany = nFunction(
+    #   name = "getMany",
+    #   function(inds) {
+    #     Rcontents[inds]
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(inds = 'integerVector') {
+    #       returnType("myclass")
+    #       res <- myclass$new()
+    #       cppLiteral('res->contents() = getMany_(inds); return res;')
+    #     }
+    #   )),
+    # getManyToList = nFunction(
+    #   name = "getManyToList",
+    #   function(inds) {
+    #     Rcontents[inds]
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(inds = 'integerVector') {
+    #       returnType("RcppList")
+    #       cppLiteral('return getManyToList_(inds);')
+    #     }
+    #   )),
+    # getManyLogical = nFunction(
+    #   name = "getManyLogical",
+    #   function(inds) {
+    #     Rcontents[inds]
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(bools = 'logicalVector') {
+    #       returnType("myclass")
+    #       res <- myclass$new()
+    #       cppLiteral('res->contents() = getManyLogical_(bools); return res;')
+    #     }
+    #   )),
+    # getManyToListLogical = nFunction(
+    #   name = "getManyToListLogical",
+    #   function(inds) {
+    #     Rcontents[inds]
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(bools = 'logicalVector') {
+    #       returnType("RcppList")
+    #       cppLiteral('return getManyToListLogical_(bools);')
+    #     }
+    #   )),
+    ## Superseded by singleBracket_set / singleBracket_set_single / singleBracket_set_nList:
+    # setMany = nFunction(
+    #   name = "setMany",
+    #   function(inds, vals) {
+    #     Rcontents[inds] <<- vals; vals
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(inds = 'integerVector', vals = 'myclass') {
+    #       returnType("myclass")
+    #       cppLiteral('setMany_(inds, vals->contents()); return vals;')
+    #     }
+    #   )),
+    # setManySingle = nFunction(
+    #   name = "setManySingle",
+    #   function(inds, val) {
+    #     Rcontents[inds] <<- val; val
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(inds = 'integerVector', val = T(RtypeObj)) {
+    #       returnType(T(RtypeObj))
+    #       cppLiteral('return setManySingle_(inds, val);')
+    #     }
+    #   )),
+    # setManyFromList = nFunction(
+    #   name = "setManyFromList",
+    #   function(inds, vals) {
+    #     Rcontents[inds] <<- vals; vals
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(inds = 'integerVector', vals = 'RcppList') {
+    #       returnType("RcppList")
+    #       cppLiteral('return setManyFromList_(inds, vals);')
+    #     }
+    #   )),
+    # setManyLogical = nFunction(
+    #   name = "setManyLogical",
+    #   function(bools, val) {
+    #     Rcontents[bools] <<- val; val
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(bools = 'logicalVector', vals = 'myclass') {
+    #       returnType("myclass")
+    #       cppLiteral('setManyLogical_(bools, vals->contents()); return vals;')
+    #     }
+    #   )),
+    # setManyFromListLogical = nFunction(
+    #   name = "setManyFromListLogical",
+    #   function(bools, vals) {
+    #     Rcontents[bools] <<- vals; vals
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(bools = 'logicalVector', vals = 'RcppList') {
+    #       returnType("RcppList")
+    #       cppLiteral('return setManyFromListLogical_(bools, vals);')
+    #     }
+    #   )),
+    # setManyLogicalSingle = nFunction(
+    #   name = "setManyLogicalSingle",
+    #   function(bools, val) {
+    #     Rcontents[bools] <<- val; val
+    #   },
+    #   compileInfo = list(
+    #     C_fun = function(bools = 'logicalVector', val = T(RtypeObj)) {
+    #       returnType(T(RtypeObj))
+    #       cppLiteral('return setManyLogicalSingle_(bools, val);')
+    #     }
+    #   ))
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
@@ -191,15 +276,30 @@ nList2_nClass <- function(Rtype, Ctype) {
             x = TYPE),
           CpublicMethods
         ),
+        Rpublic = list(
+          initialize = function(...) { # ... needed to allow init from compiled code to return an object of the class.
+            super$initialize(...)
+            self$Rcontents <- list()
+          }
+        ),
         compileInfo = list(
+          cpp_classname = CPP_CLASSNAME,
 #          needed_units = list("nList2Base_nClass"),
-          nClass_inherit = list(base=BASECLASS)
+          nClass_inherit = list(base=BASECLASS),
+          opDefs = list(
+            "[[" = list(
+              matchDef = function(i) {},
+              labelAbstractTypes = list(handler = "nList2_doubleBracket"),
+              cppOutput = list(handler = "nList2_doubleBracket")
+            )
+          )
         )
     ),
     list(
       CLASSNAME = classname,
       TYPE = Rtype,
-      BASECLASS = baseclass
+      BASECLASS = baseclass,
+      CPP_CLASSNAME = cpp_classname
     )
   )
   myclass <- eval(ans)
@@ -208,22 +308,64 @@ nList2_nClass <- function(Rtype, Ctype) {
 
 ## Actually double bracket is only for one value and single bracket for multiple
 
+#' @exportS3Method
+#' @method as.list nList2
+as.list.nList2 <- function(x) {
+  x$as_list()
+}
+
+#' @exportS3Method
+#' @method length nList2
+length.nList2 <- function(x) {
+  x$getLength()
+}
+
+#' @exportS3Method
+#' @method `length<-` nList2
+`length<-.nList2` <- function(x, value) {
+  x$setLength(value)
+  x
+}
+
+#' @exportS3Method
+#' @method `[` nList2
+`[.nList2` <- function(x, inds) {
+  x$singleBracket_get(inds)
+#  if(is.logical(inds)) return(x$getManyLogical(inds))
+#  if(length(inds) == 1) return(x$getOne(inds))
+#  else return(x$getMany(inds))
+}
+
+#' @exportS3Method
+#' @method `[[` nList2
 `[[.nList2` <- function(x, i) {
-  if(is.logical(i)) return(x$getManyLogical(i))
-  if(length(i) == 1) return(x$getOne(i))
-  else return(x$getMany(i))
+  x$doubleBracket_get(i)
+#  if(is.logical(i)) return(x$getManyLogical(i))
+#  if(length(i) == 1) return(x$getOne(i))
+#  else return(x$getMany(i))
 }
 
+#' @exportS3Method
+#' @method `[<-` nList2
+`[<-.nList2` <- function(x, inds, value) {
+  if(inherits(value, "nList2"))  x$singleBracket_set_nList(inds, value)
+  else if(is.list(value))        x$singleBracket_set(inds, value)
+  else                           x$singleBracket_set_single(inds, value)
+  x
+}
+
+#' @exportS3Method
+#' @method `[[<-` nList2
 `[[<-.nList2` <- function(x, i, value) {
-  if(length(i) == 1) return(x$setOne(i, value))
-  else return(x$setMany(i, value))
+  x$doubleBracket_set(i, value)
+  x
 }
-
-
 
 # Draft for a new version of nList.
+#' @export
 nList2 <- function(type, .ID = FALSE) {
-  classID <- paste0("nList2_", as.character(type))
+  canonical <- list(builder = "nList2", type = as.character(type))
+  classID <- digest::digest(canonical, algo = "xxhash64")
   if(isTRUE(.ID))
     return(classID)
   ans <- nList2_nClass(type)
