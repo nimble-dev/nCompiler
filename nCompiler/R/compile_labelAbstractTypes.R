@@ -265,9 +265,55 @@ inLabelAbstractTypesEnv(
 # )
 
 inLabelAbstractTypesEnv(
+  CheckOverload <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) == 0) return(NULL)
+    arg1 <- code$args[[1]]
+    if(inherits(arg1$type, "symbolNC")) {
+      overload <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
+      if(!is.null(overload)) {
+        if(is.function(overload))
+          ans <- overload(code, symTab,  auxEnv, handlingInfo)
+        else
+          ans <- eval(call(overload, code, symTab, auxEnv, handlingInfo),
+                      envir = labelAbstractTypesEnv)
+        return(ans)
+      }
+    }
+    NULL
+  }
+)
+
+inLabelAbstractTypesEnv(
+  recurse_labelAbstractTypes_overloaded <- function(code, symTab, auxEnv, handlingInfo) {
+    useArgs <- rep(FALSE, length(code$args))
+    useArgs[1] <- TRUE
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo, useArgs = useArgs)
+    inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
+    handled <- TRUE
+    if(is.null(inserts2)) {
+      inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo, useArgs = !useArgs)
+      handled <- FALSE
+    }
+    if(isTRUE(inserts2)) inserts2 <- NULL
+    list(inserts = c(inserts, inserts2), handled = handled)
+  }
+)
+
+inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- code$args[[1]]$type$elementSym$clone()
+    useArgs <- rep(FALSE, length(code$args))
+    useArgs[1] <- TRUE
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo, useArgs = useArgs)
+    inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
+    if(is.null(inserts2)) {
+      inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo, useArgs = !useArgs)
+      code$type <- code$args[[1]]$type$elementSym$clone()
+    }
+    inserts <- c(inserts, inserts2)
     if(length(inserts) == 0) NULL else inserts
   }
 )

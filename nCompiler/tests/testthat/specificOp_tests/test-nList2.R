@@ -450,6 +450,19 @@ test_that("nList2: [<- wrong nList2 element type is rejected", {
 # Same-type identity: multiple generators of the same type
 # ---------------------------------------------------------------------------
 # Following tests do not work yet.
+
+foo <- nFunction(
+  fun = function() {
+    ans <- nList2("integerScalar")$new()
+    return(ans)
+    returnType("nList2('integerScalar')")
+  }
+)
+cfoo <- nCompile(foo)
+NL2 <- nList2("integerScalar")
+cfoo <- nCompile(NL2)
+cfoo <- nCompile(NL2, foo)
+
 test_that("nList2: two generators of same type have equal classID", {
   rNL1 <- nList2("numericScalar")
   rNL2 <- nList2("numericScalar")
@@ -462,12 +475,8 @@ test_that("nList2: duplicate units in nCompile are deduplicated", {
   rNL2 <- nList2("numericScalar")
   # Both generators have the same classID; nCompile should deduplicate and
   # produce exactly one compiled nList2 class without error.
-  comp <- nCompile(rNL1, rNL2)
-  obj <- comp$nList2$new()
-  obj$setLength(3L)
-  obj[[1]] <- 1.0; obj[[2]] <- 2.0; obj[[3]] <- 3.0
-  expect_equal(as.list(obj), list(1.0, 2.0, 3.0))
-  rm(rNL1, rNL2, comp, obj); gc()
+  expect_error(comp <- nCompile(rNL1, rNL2))
+  rm(rNL1, rNL2); gc()
 })
 
 test_that("nList2: nClass member of nList2 type compiles and works", {
@@ -478,8 +487,9 @@ test_that("nList2: nClass member of nList2 type compiles and works", {
       lst = 'rNL',
       init = nFunction(function() {
         lst <<- rNL$new()
-        lst$setLength(3L)
-        lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
+        A <- lst[[1]]
+       # lst$setLength(3L)
+        #lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
       }),
       getLen = nFunction(
         function() { return(lst$getLength()) },
@@ -487,6 +497,7 @@ test_that("nList2: nClass member of nList2 type compiles and works", {
       )
     )
   )
+  #debug(nCompiler:::labelAbstractTypesEnv$DoubleBracket)
   comp <- nCompile(rNL, nc)
   obj <- comp$nc_holds_nList2$new()
   obj$init()

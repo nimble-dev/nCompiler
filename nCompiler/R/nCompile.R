@@ -438,6 +438,18 @@ nCompile_prepare_units <- function(...,
      packageNames = packageNames)
 }
 
+update_built_types <- function(new_units, new_unitTypes, cppDefs_project_env) {
+  built_types <- cppDefs_project_env$built_types
+  for(i in seq_along(new_units)) {
+    if(new_unitTypes[i] == "nCgen") {
+      classID <- NCinternals(new_units[[i]])$classID
+      if(exists(classID, envir = built_types, inherits = FALSE)) next
+      built_types[[classID]] <- new_units[[i]]
+    }
+  }
+  built_types
+}
+
 #' @export
 nCompile <- function(...,
                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
@@ -467,6 +479,11 @@ nCompile <- function(...,
   new_returnNames <- unit_info$returnNames # names for returning to user from nCompile
   new_packageNames <- unit_info$packageNames
 
+  unique_new_units <- unique_units(new_units)
+  if(!identical(unique_new_units, new_units)) {
+    stop("All compilation units must be unique.")
+  }
+
   # if package = TRUE, call package steps either with units or original ... (above)
   # after packing up control list (e.g. from interfaces)
   # (2) Create cppDefs
@@ -487,8 +504,10 @@ nCompile <- function(...,
   new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
 
   cppDefs_project_env <- new.env()
+  cppDefs_project_env$built_types <- new.env()
 
   while(!done_finding_units) {
+    update_built_types(new_units, new_unitTypes, cppDefs_project_env)
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos, cppDefs_project_env)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names

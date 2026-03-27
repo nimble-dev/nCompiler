@@ -177,9 +177,11 @@ symbolTBD <- R6::R6Class(
   inherit = symbolBase,
   portable = TRUE,
   public = list(
-    initialize = function(...) {
+    initialize = function(..., funName = NULL) {
       super$initialize(...)
+      self$funName <- funName
     },
+    funName = NULL,
     print = function() {
       writeLines(paste0(self$name,
                         ": symbolTBD of type '",

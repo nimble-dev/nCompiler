@@ -427,7 +427,8 @@ argType2symbol <- function(argType,
       ## We defer type lookup until compiler stage labelAbstractTypes
       if(inputAsCharacter) {
         symbol <- symbolTBD$new(name = name,
-                                type = funName,
+                                type = deparse(typeToUse), #funName,
+                                funName = funName,
                                 isArg = isArg)
       } else {
         ## Case 4: Type can be determined by evaluating the default
@@ -610,20 +611,22 @@ check_built_types <- function(builder, Rexpr, project_env) {
  #     Rexpr <- code$Rexpr
   args <- as.list(Rexpr)[-1]
   args2 <- c(args, .ID=TRUE)
-  ID <- do.call(builder, args2)
+  ID <- do.call(builder, args2) # get the classID for this type
   NCgen <- project_env$built_types[[ID]]
   if(is.null(NCgen)) {
-    NCgen <- do.call(builder, args)
+    NCgen <- do.call(builder, args) # get the NCgenerator for this type
     project_env$built_types[[ID]] <- NCgen
   }
-  list(NCgen) |> setNames(ID)
+  cpp_classname <- NCinternals(NCgen)$cpp_classname
+  list(NCgen) |> setNames(cpp_classname)
 }
 
 resolveOneTBDsymbol <- function(symbol, env = parent.frame(), project_env = new.env()) {
   if(inherits(symbol, "symbolTBD")) {
    # symbol$name is the name of the code object, like "x".
     symbol_type <- symbol$type # The name of the type or expression to get the type
-    candidate <- nGet(symbol_type,
+    symbol_funName <- symbol$funName 
+    candidate <- nGet(symbol_funName,
                       where = env,
                       project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
     if(!isNCgenerator(candidate)) {
@@ -633,7 +636,7 @@ resolveOneTBDsymbol <- function(symbol, env = parent.frame(), project_env = new.
         builder <- nGet(funName, where = env, project_env = project_env)
         if(inherits(builder, "nClassBuilder")) {
           types_res <- check_built_types(builder, type_expr, project_env)
-          candidate <- type_res[[1]]
+          candidate <- types_res[[1]]
           symbol_type <- names(types_res)[1]
         }
       }

@@ -14,7 +14,7 @@ nc0 <- nClass(
         return(1:5)
         returnType(numericVector())
       }
-    )
+
   )
 )
 nc1 <- nClass(

@@ -74,8 +74,8 @@ compile_normalizeCalls <- function(code,
     if(cachedOpInfo$case == "nClassBuilder") {
       this_builder <- cachedOpInfo$obj_internals
       type_res <- check_built_types(this_builder, code$Rexpr, auxEnv$project_env)
-      ID <- names(type_res)[1]
-      new_code <- exprClass$new(name = ID, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+      cpp_classname <- names(type_res)[1]
+      new_code <- exprClass$new(name = cpp_classname, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
       replaceArgInCaller(code, new_code)
       code$aux$cachedOpInfo <- NULL
       return(NULL) # Now we have made it a name, not a call.

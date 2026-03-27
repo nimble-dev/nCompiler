@@ -267,33 +267,40 @@ nList2_nClass <- function(type) {
     #       cppLiteral('return setManyLogicalSingle_(bools, val);')
     #     }
     #   ))
+  nList2_doubleBracket_LAT <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) != 2) return(NULL)
+    arg1 <- code$args[[1]]
+    NCgen <- arg1$type$NCgenerator
+    elementSym <- NCinternals(NCgen)$symbolTable$getSymbol("x")
+    code$type <- elementSym$clone(deep=TRUE)
+    TRUE
+    # should return something non-null, either an inserts list or list() or TRUE. TRUE is more distinct so we use that.
+  }
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
-        inherit = nList2Base_nClass,
-        Cpublic = c(
-          list(
-            x = TYPE),
-          CpublicMethods
-        ),
-        Rpublic = list(
-          initialize = function(...) { # ... needed to allow init from compiled code to return an object of the class.
-            super$initialize(...)
-            self$Rcontents <- list()
-          }
-        ),
-        compileInfo = list(
-          cpp_classname = CPP_CLASSNAME,
+      inherit = nList2Base_nClass,
+      Cpublic = c(
+        list(
+          x = TYPE),
+        CpublicMethods
+      ),
+      Rpublic = list(
+        initialize = function(...) { # ... needed to allow init from compiled code to return an object of the class.
+          super$initialize(...)
+          self$Rcontents <- list()
+        }
+      ),
+      compileInfo = list(
+        cpp_classname = CPP_CLASSNAME,
 #          needed_units = list("nList2Base_nClass"),
-          nClass_inherit = list(base=BASECLASS),
-          opDefs = list(
-            "[[" = list(
-              matchDef = function(i) {},
-              labelAbstractTypes = list(handler = "nList2_doubleBracket"),
-              cppOutput = list(handler = "nList2_doubleBracket")
-            )
+        nClass_inherit = list(base=BASECLASS),
+        overloadDefs = list(
+          "[[" = list(
+            labelAbstractTypes = list(handler = nList2_doubleBracket_LAT)
           )
         )
+      )
     ),
     list(
       CLASSNAME = classname,
@@ -364,12 +371,10 @@ length.nList2 <- function(x) {
 # Draft for a new version of nList.
 #' @export
 nList2 <- function(type, .ID = FALSE) {
-  canonical <- list(builder = "nList2", type = as.character(type))
-  classID <- digest::digest(canonical, algo = "xxhash64")
   if(isTRUE(.ID))
-    return(classID)
+    return(Rname2CppName(paste0("nList2_", as.character(type))))
   ans <- nList2_nClass(type)
-  NCinternals(ans)$classID <- classID
+  # classID is set to cpp_classname by NC_InternalsClass initialize; no override needed
   ans
 }
 class(nList2) <- c("function", "nClassBuilder")

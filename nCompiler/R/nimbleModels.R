@@ -164,21 +164,6 @@ nm_addModelDollarSign <- function(expr, exceptionNames = character(0)) {
     return(expr)
 }
 
-## test <- nClass(
-##   inherit = modelBase_nClass,
-##   classname = "my_model",
-##   Cpublic = list(
-##     simulate = nFunction(function(nodes=SEXP()) {cppLiteral('Rprintf("In Derived simulate")')})
-##   ),
-##   compileInfo = list(
-##     nClass_inherit = list(base="modelClass_<my_model>")
-##   )
-## )
-
-## comp <- nCompile(test, modelBase_nClass, nodeFxnBase_nClass)
-## obj <- comp$test$new()
-## obj$calculate(NULL)
-
 # Turn variables and methods into a nodeFxn nClass
 make_node_nClass <- function(varInfo = list(),
                             methods = list(),

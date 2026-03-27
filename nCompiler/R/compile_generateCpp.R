@@ -396,8 +396,16 @@ inGenCppEnv(
 
 inGenCppEnv(
   IndexingBracket <- function(code, symTab, brackets = c('[', ']')) {
+    # It seems universal that an indexing operation on an NC must be
+    # using operator[ in C++ and must want the shared_ptr to be derefenced.
+    # If that turns out not to be universal, then overloadDefs can be utilized
+    # to specify different handlers for different cases.
+    arg1res <- compile_generateCpp(code$args[[1]], symTab)
+    if(inherits(code$args[[1]]$type, "symbolNC")) {
+      arg1res <- paste0('(*', arg1res, ')')
+    }
     paste0(
-      compile_generateCpp(code$args[[1]], symTab),
+      arg1res,
       brackets[1],
       paste0(
         unlist(
