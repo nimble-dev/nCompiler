@@ -130,7 +130,19 @@ inFinalTransformationsEnv(
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
     names(code$args)[4:5] <- c('copyVars','shareVars')
-    
+
+    ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
+    ## such that C++ calls to the method will be handled by cppOutput handler.
+    ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
+    ## Perhaps there is a better way to get this information.
+    ## This information is used to ensure that the self object is passed into the lifted TBB code.
+    ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
+    nms <- all.names(code$args[[3]]$Rexpr)
+    code$aux$localMethods <- nms[nms %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))]
+    code$aux$class <- auxEnv$where$classname
+
+    code$aux$bodyName <- parallelForBodyLabelMaker()
+      
     ParallelExpr('parallel_for', code$aux$bodyName, 'parallelContent', code,
                  symTab, auxEnv, info)
   }
@@ -150,7 +162,20 @@ inFinalTransformationsEnv(
     ## shareVars <- replace_nameSubList(shareVars, auxEnv$nameSubList)
     ## code$args[[4]] <- copyVars ## This is no longer an exprClass
     ## code$args[[5]] <- shareVars ## Ditto
-            
+
+    ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
+    ## such that C++ calls to the method will be handled by cppOutput handler.
+    ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
+    ## Perhaps there is a better way to get this information.
+    ## This information is used to ensure that the self object is passed into the lifted TBB code.
+    ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
+    nm <- code$args[[1]]$Rexpr
+    if(is.character(nm) && nm %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods)))
+      code$aux$localMethods <- nm else code$aux$localMethods <- character(0)
+    code$aux$class <- auxEnv$where$classname
+
+    code$aux$bodyName <- parallelReduceBodyLabelMaker()
+
     ## remove the vector and initial value arg and save for later
     vector_arg <- removeArg(code, 2)
     ## TODO: don't remove the init arg unless isTRUE(code$caller$isAssign)
@@ -243,7 +268,7 @@ inFinalTransformationsEnv(
     code$args[[4]] <- inputVar  ## This is no longer an exprClass
     code$args[[5]] <- outputVar ## Ditto
     code$args[[6]] <- object 
-        
+      
     ParallelExpr('parallel_reduce',
                  paste(code$aux$bodyName, instName, collapse = ' '),
                  'parallelReduceContent', code, symTab, auxEnv, info)
