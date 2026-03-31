@@ -56,8 +56,8 @@ compile_normalizeCalls <- function(code,
     # What gets cached in the aux of the exprClass for the call:
     #   cachedOpInfo = list(opDef, name, obj_internals, case)
     #   We defer: uniqueName, cpp_code_name
-    fxnArg <- normalizeCallsFunctionArgs[[code$name]]
-    if(!is.null(fxnArg)) {  # Handle arguments that are functions (`parallel_reduce`).
+    fxnArg <- normalizeCallsFunctionArgs[[code$caller$name]]
+    if(!is.null(fxnArg) && fxnArg == code$callerArgID) {  # Handle arguments that are functions (`parallel_reduce`).
       cachedOpInfo <- update_cachedOpInfo(code$args[[fxnArg]], auxEnv$where)
     } else cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
     if(cachedOpInfo$case == "nFunction") {
@@ -79,7 +79,7 @@ compile_normalizeCalls <- function(code,
       }
     }
 
-    if(is.null(fxnArg)) {
+    if(is.null(fxnArg) || fxnArg != code$callerArgID) {  # Only first condition should really be relevant.
       opDef <- cachedOpInfo$opDef
       matchDef <- opDef[["matchDef"]]
       if(is.null(matchDef))

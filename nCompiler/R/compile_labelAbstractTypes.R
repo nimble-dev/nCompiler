@@ -733,6 +733,7 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
+        if(exists('paciorek')) browser()
     if(length(code$args) < 3 || !identical(names(code$args)[1:3],
                                                c('index','range','body')))
       stop(exprClassProcessingErrorMsg(
@@ -769,6 +770,8 @@ inLabelAbstractTypesEnv(
     symbols <- symTab$getSymbolNames()
     code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
 
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nworkers']], symTab, auxEnv))
+    
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
@@ -791,11 +794,11 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
     if(length(code$args) == 2 && !is.null(operatorDef$reduction))
       setArg(code, 3, nParse(operatorDef$reduction))
-    if (length(code$args) != 3) 
+    if (length(code$args) < 3 || length(code$args) > 4) 
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected 3 arguments but got', length(code$args))),
+              'expected 3-4 arguments but got', length(code$args))),
         call. = FALSE)
     if(code$args[[1]]$isName) {  ## Handle reduction function as function not char.        
       code$args[[1]]$isName <- FALSE
@@ -870,6 +873,8 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
     code$type <- symbolBasic$new(name = code$name, nDim = 0,
                                  type = code$args[[2]]$type$type)
+
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nworkers']], symTab, auxEnv))
     
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }

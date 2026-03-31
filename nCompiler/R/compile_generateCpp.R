@@ -612,3 +612,9 @@ inGenCppEnv(
     compile_generateCpp(code, symTab)
   }
 )
+
+inGenCppEnv(
+  ParallelExpr <- function(code, symTab) {
+      if(exists('paciorek')) browser()
+  }
+)
