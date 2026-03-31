@@ -760,7 +760,7 @@ inLabelAbstractTypesEnv(
         symTab$addSymbol(code$args[[1]]$type)
         
     ## Now the 3rd arg, the body of the loop, can be processed.
-    ## For now, we will handle local vars in body as `copyVars` that are vars
+    ## For now, we will handle local vars in body as `copyVars` that become vars
     ## in the encompassing method, but consider setting up local symbol table for
     ## the loop body with the loop body C++ function declaring its own variables.
     symbolsNoBody <- symTab$getSymbolNames()
@@ -768,18 +768,6 @@ inLabelAbstractTypesEnv(
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
     symbols <- symTab$getSymbolNames()
     code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
-
-    ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
-    ## such that C++ calls to the method will be handled by cppOutput handler.
-    ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
-    ## Perhaps there is a better way to get this information.
-    ## This information is used later to ensure that the self object is passed into the lifted TBB code.
-    ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
-    nms <- all.names(code$args[[3]]$Rexpr)
-    code$aux$localMethods <- nms[nms %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))]
-    code$aux$class <- auxEnv$where$classname
-
-    code$aux$bodyName <- parallelForBodyLabelMaker()
 
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
@@ -882,19 +870,6 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
     code$type <- symbolBasic$new(name = code$name, nDim = 0,
                                  type = code$args[[2]]$type$type)
-
-    ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
-    ## such that C++ calls to the method will be handled by cppOutput handler.
-    ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
-    ## Perhaps there is a better way to get this information.
-    ## This information is used later to ensure that the self object is passed into the lifted TBB code.
-    ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
-    nm <- code$args[[1]]$Rexpr
-    if(is.character(nm) && nm %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods)))
-      code$aux$localMethods <- nm else code$aux$localMethods <- character(0)
-    code$aux$class <- auxEnv$where$classname
-
-    code$aux$bodyName <- parallelReduceBodyLabelMaker()
     
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
