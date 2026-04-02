@@ -733,7 +733,6 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
-        if(exists('paciorek')) browser()
     if(length(code$args) < 3 || !identical(names(code$args)[1:3],
                                                c('index','range','body')))
       stop(exprClassProcessingErrorMsg(
@@ -770,7 +769,7 @@ inLabelAbstractTypesEnv(
     symbols <- symTab$getSymbolNames()
     code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
 
-    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nworkers']], symTab, auxEnv))
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
     
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
@@ -874,7 +873,7 @@ inLabelAbstractTypesEnv(
     code$type <- symbolBasic$new(name = code$name, nDim = 0,
                                  type = code$args[[2]]$type$type)
 
-    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nworkers']], symTab, auxEnv))
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
     
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }

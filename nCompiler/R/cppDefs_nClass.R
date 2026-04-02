@@ -241,8 +241,8 @@ cpp_nClassClass <- R6::R6Class(
              cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
                                                    loop_var = parallelContent[[j]]$args[[1]],
                                                    symbolTable = memberCppDefs[[i]]$code$symbolTable,
-                                                   copyVars = parallelContent[[j]]$args[[4]],
-                                                   noncopyVars = parallelContent[[j]]$args[[5]],
+                                                   copyVars = parallelContent[[j]]$args[['copyVars']],
+                                                   noncopyVars = parallelContent[[j]]$args[['shareVars']],
                                                    aux = parallelContent[[j]]$aux)
             self$memberCppDefs[[parallelContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
@@ -259,9 +259,9 @@ cpp_nClassClass <- R6::R6Class(
               loop_var = parallelReduceContent[[j]]$args[[1]],
               symbolTable = memberCppDefs[[i]]$code$symbolTable,
               copyVars = list(),
-              noncopyVars = as.list(c(parallelReduceContent[[j]]$args[[4]],
-                                      parallelReduceContent[[j]]$args[[5]],
-                                      parallelReduceContent[[j]]$args[[6]])),
+              noncopyVars = as.list(c(parallelReduceContent[[j]]$args[['input']],
+                                      parallelReduceContent[[j]]$args[['output']],
+                                      parallelReduceContent[[j]]$args[['object']])),              
               aux = parallelReduceContent[[j]]$aux)
             self$memberCppDefs[[parallelReduceContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }

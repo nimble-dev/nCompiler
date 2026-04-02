@@ -289,12 +289,12 @@ assignOperatorDef(
 assignOperatorDef(
   c('parallel_for'),
   list(
-    matchDef = function(index, range, body, copyVars, shareVars, nworkers=0) {},
+    matchDef = function(index, range, body, copyVars, shareVars, nThreads=0) {},
     labelAbstractTypes = list(
       handler = 'ParallelFor'),
     finalTransformations = list(
       handler = "ParallelFor"), ## Creates GeneralFor in the parallel_loop_body class
-    generateCpp = list(
+    cppOutput = list(
       handler = 'ParallelExpr')  
   )
 )
@@ -302,12 +302,12 @@ assignOperatorDef(
 assignOperatorDef(
   c('parallel_reduce'),
   list(  
-    matchDef = function(operator, object, init, nworkers=0) {},
+    matchDef = function(operator, object, init, nThreads=0) {},
     labelAbstractTypes = list(
       handler = 'ParallelReduce'),
     finalTransformations = list(
       handler = 'ParallelReduce'),
-    generateCpp = list(
+    cppOutput = list(
       handler = 'ParallelExpr')      
   )
 )
