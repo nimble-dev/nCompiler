@@ -58,7 +58,7 @@ compile_normalizeCalls <- function(code,
     #   We defer: uniqueName, cpp_code_name
     fxnArg <- normalizeCallsFunctionArgs[[code$caller$name]]
     if(!is.null(fxnArg) && fxnArg == code$callerArgID) {  # Handle arguments that are functions (`parallel_reduce`).
-      cachedOpInfo <- update_cachedOpInfo(code$args[[fxnArg]], auxEnv$where)
+      cachedOpInfo <- update_cachedOpInfo(code$caller$args[[fxnArg]], auxEnv$where)
     } else cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
     if(cachedOpInfo$case == "nFunction") {
       uniqueName <- cachedOpInfo$obj_internals$uniqueName2
