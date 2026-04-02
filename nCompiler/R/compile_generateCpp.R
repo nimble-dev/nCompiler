@@ -728,6 +728,12 @@ inGenCppEnv(
 
 inGenCppEnv(
   ParallelExpr <- function(code, symTab) {
-      if(exists('paciorek')) browser()
+    nThreads_arg <- removeArg(code, 3)
+    paste0('{',
+      paste0('tbb::global_control gc(tbb::global_control::max_allowed_parallelism, getNumThreads(',
+             compile_generateCpp(nThreads_arg, symTab),
+             '));'),
+      paste0(eval(call("AsIs", code, symTab), envir = genCppEnv), ';'),
+      '}', collapse = '\n')
   }
 )

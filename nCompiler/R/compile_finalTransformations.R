@@ -27,8 +27,7 @@ inFinalTransformationsEnv(
 
 inFinalTransformationsEnv(
   ParallelExpr <- function(parallel_expr_name, loop_body_name, auxEnv_field,
-                           code, symTab, auxEnv, info) {
-    allVars <- unlist(code$args[4:length(code$args)])  
+                           code, symTab, auxEnv, allVars, info) {
     auxEnv[[auxEnv_field]] <- c(auxEnv[[auxEnv_field]], code)
     ##  parallel_for(blocked_range<size_t>(0, n), parallel_loop_body(x));
     ## blocked_range_expr will be blocked_range<int>(start, end + 1)
@@ -68,12 +67,16 @@ inFinalTransformationsEnv(
       setArg(loop_body_expr, iv+1, nParse('cppLiteral("*this")'))
     setArg(parallel_expr, 2, loop_body_expr)
     setArg(code$caller, code$callerArgID, parallel_expr)
+
+    nThreads_arg <- removeArg(code, 'nThreads')
+    setArg(parallel_expr, 3, nThreads_arg)
     NULL
   }
 )
 
 inFinalTransformationsEnv(
   ParallelFor <- function(code, symTab, auxEnv, info) {
+    nThreads_arg <- removeArg(code, 'nThreads')
     ## TODO: not sure if we will do more work on arg matching such that
     ## code$args[[4]] and code$args[[5]] will always exist and correspond to `copyVars` and `shareVars`
     ## respectively for `parallel_for`. But if so, we might rework/simplify this.
@@ -129,8 +132,10 @@ inFinalTransformationsEnv(
         
     code$args[[4]] <- copyVars ## This is no longer an exprClass
     code$args[[5]] <- shareVars ## Ditto
-    names(code$args)[4:5] <- c('copyVars','shareVars')
+    setArg(code, 6, nThreads_arg)
+    names(code$args)[4:6] <- c('copyVars','shareVars','nThreads')
 
+      
     ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
     ## such that C++ calls to the method will be handled by cppOutput handler.
     ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
@@ -144,7 +149,7 @@ inFinalTransformationsEnv(
     code$aux$bodyName <- parallelForBodyLabelMaker()
       
     ParallelExpr('parallel_for', code$aux$bodyName, 'parallelContent', code,
-                 symTab, auxEnv, info)
+                 symTab, auxEnv, allVars = c(copyVars, shareVars), info)
   }
 )
 
@@ -176,10 +181,10 @@ inFinalTransformationsEnv(
 
     code$aux$bodyName <- parallelReduceBodyLabelMaker()
 
-    ## remove the vector and initial value arg and save for later
+    ## remove the vector, initial value, and nThreads args and save for later
     vector_arg <- removeArg(code, 2)
-    ## TODO: don't remove the init arg unless isTRUE(code$caller$isAssign)
     init_arg <- removeArg(code, 2)
+    nThreads_arg <- removeArg(code, 2)  
     ## add an index var
     index_arg <- exprClass$new(name = 'i__', isName = TRUE, isCall = FALSE,
                                isLiteral = FALSE, isAssign = FALSE)
@@ -267,11 +272,13 @@ inFinalTransformationsEnv(
     ## `args`, which was really set up for `parallel_for`.
     code$args[[4]] <- inputVar  ## This is no longer an exprClass
     code$args[[5]] <- outputVar ## Ditto
-    code$args[[6]] <- object 
-      
+    code$args[[6]] <- object    ## Ditto
+    setArg(code, 7, nThreads_arg)
+    names(code$args)[4:7] <- c('input','output','object','nThreads')    
+
     ParallelExpr('parallel_reduce',
                  paste(code$aux$bodyName, instName, collapse = ' '),
-                 'parallelReduceContent', code, symTab, auxEnv, info)
+                 'parallelReduceContent', code, symTab, auxEnv, allVars = c(inputVar, outputVar, object), info)
   
     outerCall <- code$caller
     level <- 1  
@@ -319,7 +326,7 @@ inFinalTransformationsEnv(
                                          type = 'parallel_reduce_body')
     ## the parallel_reduce_body instance name is the second arg to the
     ## parallel_reduce call (note that this isn't an exprClass)
-    setArg(parallel_reduce_expr, 2,
+    insertArg(parallel_reduce_expr, 2,
            exprClass$new(name = instName, isName = TRUE,
                          isCall = FALSE, isLiteral = FALSE, isAssign = FALSE))
     ## move the parallel_reduce_body instantiation to before the assignment    
