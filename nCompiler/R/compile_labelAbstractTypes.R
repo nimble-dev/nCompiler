@@ -776,102 +776,107 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
+    ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
+        if(exists('paciorek')) browser()
+    inserts <- NULL
     if(is.null(symTab$parentST))   #  TODO: this seems kludgey and perhaps should be done at a different processing stage.
       stop(exprClassProcessingErrorMsg(
         code,
         paste0('In labelAbstractTypes handler ParallelReduce: ',
                'parallel_reduce must be used in a method of an nClass, not in a stand-alone nFunction.')),
         call. = FALSE)          
-    operatorDef <- operatorDefEnv[[code$args[[1]]$name]]
-    if (code$args[[1]]$name != '$' && !is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
+    operatorDef <- operatorDefEnv[[code$args[['operator']]$name]]
+    if (code$args[['operator']]$name != '$' && !is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
     # TODO: perhaps this should just be a warning.        
       stop(exprClassProcessingErrorMsg(
         code,
         paste0('In labelAbstractTypes handler ParallelReduce: ',
-               'function/operator `', code$args[[1]]$name, '` is not a valid reduction function/operator.')),
+               'function/operator `', code$args[['operator']]$name, '` is not a valid reduction function/operator.')),
         call. = FALSE)
-    if(length(code$args) == 2 && !is.null(operatorDef$reduction))
-      setArg(code, 3, nParse(operatorDef$reduction))
-    if (length(code$args) < 3 || length(code$args) > 4) 
+    if (length(code$args) < 3 || !'operator' %in% names(code$args) || !'object' %in% names(code$args))
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected 3-4 arguments but got', length(code$args))),
+              'unexpected arguments -- at least two arguments (`operator` and `object`) are required.')),
         call. = FALSE)
-    if(code$args[[1]]$isName) {  ## Handle reduction function as function not char.        
-      code$args[[1]]$isName <- FALSE
-      code$args[[1]]$isLiteral <- TRUE
-      code$args[[1]]$Rexpr <- deparse(code$args[[1]]$Rexpr)
+    if(code$args[['operator']]$isName) {  ## Handle reduction function as function not char.        
+      code$args[['operator']]$isName <- FALSE
+      code$args[['operator']]$isLiteral <- TRUE
+      code$args[['operator']]$Rexpr <- deparse(code$args[['operator']]$Rexpr)
     }
-    ## process the initial value
-    inserts <- compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv)
-    if (code$args[[3]]$type$nDim != 0)
+    ## Process the reduce operator.
+    if (isTRUE(code$args[['operator']]$isLiteral)) {
+      if (!is.character(code$args[['operator']]$name))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'do not know how to use a reduce operator of type',
+                typeof(code$args[['operator']]$name))),
+          call. = FALSE)
+      code$args[['operator']]$isLiteral <- FALSE
+      code$args[['operator']]$isCall <- TRUE
+    }
+    if(code$args[['operator']]$name == "$") {
+      if(code$args[['operator']]$args[['operator']]$name == "$")
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'too many levels of class hierarchy in reduction operator',
+                deparse(code$args[['operator']]$Rexpr))),
+          call. = FALSE)  
+      code$args[['operator']] <- wrapInExprClass(code$args[['operator']], 'chainedCall')
+      inserts <- c(inserts, compile_labelAbstractTypes(code$args[['operator']], symTab, auxEnv))
+    }
+    
+    ## Give reduce operator the same return type as the input vector.
+    ## TODO: Maybe symbolNF is the right type for the reduction op.
+    code$args[['opperator']]$type <-
+      symbolBasic$new(name = code$args[['operator']]$name,
+                      nDim = 0, type = code$args[['object']]$type$type)
+    ## Process the vector arg.
+    ## TODO: we want to handle if vector is an expression (including obj$x),
+    ## presumably by lifting.
+    if(!code$args[['object']]$isName)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'vector argument for parallel_reduce must be a variable, but found an expression `',
+              deparse(code$args[['object']]$Rexpr),
+              '`. Please create a temporary variable to use as the second argument.')),
+        call. = FALSE)
+            
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['object']], symTab, auxEnv))
+    if (code$args[['object']]$type$nDim != 1)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'expected the `object` argument to be a vector but got nDim = ',
+              code$args[['object']]$type$nDim)),
+        call. = FALSE)
+    code$type <- symbolBasic$new(name = code$name, nDim = 0,
+                                 type = code$args[['object']]$type$type)
+
+
+    ## Process the initial value.
+    if(!'init' %in% names(code$args) && !is.null(operatorDef$reduction))
+      setArg(code, 'init', nParse(operatorDef$reduction))
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['init']], symTab, auxEnv))
+    if (code$args[['init']]$type$nDim != 0)
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
               'initial value for parallel_reduce should be scalar but got',
               ' nDim = ', code$args[[3]]$type$nDim)),
         call. = FALSE)
-    if (isFALSE(code$args[[3]]$isLiteral)) {
-      if(!(code$args[[3]]$name == "-" && isTRUE(code$args[[3]]$args[[1]]$isLiteral)))  # Handle negative init.
+    if (isFALSE(code$args[['init']]$isLiteral)) {
+      if(!(code$args[['init']]$name == "-" && isTRUE(code$args[['init']]$args[[1]]$isLiteral)))  # Handle negative init.
         stop(exprClassProcessingErrorMsg(
           code,
           paste('In labelAbstractTypes handler ParallelReduce:',
                 'initial value for parallel_reduce must be a literal value, not a variable or expression')),
           call. = FALSE)
     }
-    ## process the reduce operator
-    if (isTRUE(code$args[[1]]$isLiteral)) {
-      if (!is.character(code$args[[1]]$name))
-        stop(exprClassProcessingErrorMsg(
-          code,
-          paste('In labelAbstractTypes handler ParallelReduce:',
-                'do not know how to use a reduce operator of type',
-                typeof(code$args[[1]]$name))),
-          call. = FALSE)
-      code$args[[1]]$isLiteral <- FALSE
-      code$args[[1]]$isCall <- TRUE
-    }
-    if(code$args[[1]]$name == "$") {
-      if(code$args[[1]]$args[[1]]$name == "$")
-        stop(exprClassProcessingErrorMsg(
-          code,
-          paste('In labelAbstractTypes handler ParallelReduce:',
-                'too many levels of class hierarchy in reduction operator',
-                deparse(code$args[[1]]$Rexpr))),
-          call. = FALSE)  
-      code$args[[1]] <- wrapInExprClass(code$args[[1]], 'chainedCall')
-      inserts <- c(inserts, compile_labelAbstractTypes(code$args[[1]], symTab, auxEnv))
-    }
-    
-    ## give reduce operator the same return type as the input vector.
-    ## TODO: Maybe symbolNF is the right type for the reduction op.
-    code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[2]]$type$type)
-    ## finish by processing the vector arg
-    ## TODO: we want to handle if vector is an expression (including obj$x),
-    ## presumably by lifting.
-    if(!code$args[[2]]$isName)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'vector argument for parallel_reduce must be a variable, but found an expression `',
-              deparse(code$args[[2]]$Rexpr),
-              '`. Please create a temporary variable to use as the second argument.')),
-        call. = FALSE)
-            
-    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
-    if (code$args[[2]]$type$nDim != 1)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected the second argument to be a vector but got nDim = ',
-              code$args[[2]]$type$nDim)),
-        call. = FALSE)
-    code$type <- symbolBasic$new(name = code$name, nDim = 0,
-                                 type = code$args[[2]]$type$type)
+       
 
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
     

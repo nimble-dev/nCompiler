@@ -180,11 +180,11 @@ inFinalTransformationsEnv(
     code$aux$class <- auxEnv$where$classname
 
     code$aux$bodyName <- parallelReduceBodyLabelMaker()
-
+if(exists('paciorek')) browser()
     ## remove the vector, initial value, and nThreads args and save for later
-    vector_arg <- removeArg(code, 2)
-    init_arg <- removeArg(code, 2)
-    nThreads_arg <- removeArg(code, 2)  
+    vector_arg <- removeArg(code, 'object')
+    init_arg <- removeArg(code, 'init')
+    nThreads_arg <- removeArg(code, 'nThreads')  
     ## add an index var
     index_arg <- exprClass$new(name = 'i__', isName = TRUE, isCall = FALSE,
                                isLiteral = FALSE, isAssign = FALSE)
@@ -255,30 +255,30 @@ inFinalTransformationsEnv(
     inputVar <- replace_nameSubList(inputVar, auxEnv$nameSubList)
 
     nms <- all.vars(code$Rexpr)
-    object <- nms[nms %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames()) &
+    nClass_object <- nms[nms %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames()) &
                   !nms %in% inputVar]
-    if(length(object) > 1)
+    if(length(nClass_object) > 1)
             stop(exprClassProcessingErrorMsg(
                 code$Rexpr,
                 paste('In finalTransformations handler ParallelReduce:',
                       'Unexpectedly found multiple objects in parallel_reduce reduction function')),
                 call. = FALSE)
     ## Make sure the items are actually nClass objects.
-    if(length(object) && is.null(symTab$getSymbol(object)$NCgenerator) &&
-       !is.null(parentST$getSymbol(object)$NCgenerator))
-      object <- character(0)
+    if(length(nClass_object) && is.null(symTab$getSymbol(nClass_object)$NCgenerator) &&
+       !is.null(parentST$getSymbol(nClass_object)$NCgenerator))
+      nClass_object <- character(0)
     
     ## TODO: consider reworking how we handle these items as it doesn't map cleanly onto the
     ## `args`, which was really set up for `parallel_for`.
     code$args[[4]] <- inputVar  ## This is no longer an exprClass
     code$args[[5]] <- outputVar ## Ditto
-    code$args[[6]] <- object    ## Ditto
+    code$args[[6]] <- nClass_object    ## Ditto
     setArg(code, 7, nThreads_arg)
-    names(code$args)[4:7] <- c('input','output','object','nThreads')    
+    names(code$args)[4:7] <- c('input','output','nClass_object','nThreads')    
 
     ParallelExpr('parallel_reduce',
                  paste(code$aux$bodyName, instName, collapse = ' '),
-                 'parallelReduceContent', code, symTab, auxEnv, allVars = c(inputVar, outputVar, object), info)
+                 'parallelReduceContent', code, symTab, auxEnv, allVars = c(inputVar, outputVar, nClass_object), info)
   
     outerCall <- code$caller
     level <- 1  
