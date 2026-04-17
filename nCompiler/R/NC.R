@@ -347,6 +347,7 @@ make_nClass_code <- function(internals,
   )
 }
 
+#' @export
 connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
   # The NCgen at this point has been created by R6::R6Class
   # with "parent_env = new.env()".

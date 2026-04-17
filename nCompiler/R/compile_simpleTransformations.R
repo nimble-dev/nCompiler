@@ -106,9 +106,15 @@ inSimpleTransformationsEnv(
   CheckOpAssignment <-
     function(code, symTab, auxEnv, info) {
       arg1 <- code$args[[1]]
+      arg1_opInfo <- check_cachedOpInfo(arg1, where=auxEnv$where, update=TRUE, allowFail = TRUE)
+      arg1_useOpAssign <- isTRUE(arg1_opInfo$useOpAssign)
+      if(!arg1_useOpAssign) return(invisible(NULL))
+
       if(isTRUE(arg1$isCall)) {
         # change `<-`(length(x), 5) to `length<-`(x, 5)
         name <- arg1$name
+
+
         assign_name <- paste0(name, "<-")
         code$name <- assign_name
         arg2 <- code$args[[2]]

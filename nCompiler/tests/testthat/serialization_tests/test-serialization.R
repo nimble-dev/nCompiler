@@ -135,7 +135,7 @@ test_that("Basic serialization works (via writePackage, with generic interface, 
   dir.create(lib, showWarnings=FALSE, recursive=TRUE)
   withr::with_libpaths(lib, action = "prefix", code = {
     devtools::install(file.path(tempdir(), "nc1Package"), quiet=TRUE,
-                      upgrade = "never", quick=TRUE)
+                      upgrade = FALSE, quick=TRUE)
     # more evasion of setup-r-dependencies used in CI testing.
     # Write loadNamespace("nc1Package") indirectly so it
     # doesn't think nc1Package is a CRAN package
@@ -327,7 +327,7 @@ test_that("Basic serialization works (via writePackage, with full interface, for
   dir.create(lib, showWarnings=FALSE, recursive=TRUE)
   withr::with_libpaths(lib, action = "prefix", code = {
     devtools::install(file.path(tempdir(), "nc1PackageB"), quiet=TRUE,
-                      upgrade = "never", quick=TRUE, force=TRUE)
+                      upgrade = FALSE, quick=TRUE, force=TRUE)
     # more evasion of setup-r-dependencies used in CI testing.
     # Write loadNamespace("nc1PackageB") indirectly so it
     # doesn't think nc1PackageB is a CRAN package

@@ -14,6 +14,7 @@
 
 ## a model will inherit from model_nClass
 
+#' @export
 nodeInstr_nClass <- nClass(
   classname = "nodeInstr_nClass",
   Cpublic = list(
@@ -29,6 +30,7 @@ nodeInstr_nClass <- nClass(
                    )
 )
 
+#' @export
 calcInstr_nClass <- nClass(
   classname = "calcInstr_nClass",
   Cpublic = list(
@@ -52,6 +54,7 @@ calcInstr_nClass <- nClass(
                    )
 )
 
+#' @export
 calcInstrList_nClass <- nClass(
   classname = "calcInstrList_nClass",
   Cpublic = list(
@@ -68,6 +71,7 @@ calcInstrList_nClass <- nClass(
                    )
 )
 
+#' @export
 nodeFxnBase_nClass <- nClass(
   classname = "nodeFxnBase_nClass",
   Cpublic = list(
@@ -95,6 +99,7 @@ nodeFxnBase_nClass <- nClass(
 
 # nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
 
+#' @export
 modelBase_nClass <- nClass(
   classname = "modelBase_nClass",
   Cpublic = list(

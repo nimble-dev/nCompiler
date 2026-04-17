@@ -43,7 +43,7 @@ test_that("nimble model prototype works", {
       }
     )
   )
-  my_nodeFxn <- make_node_nClass(nodeVarInfo, list(calc_one=calc_one), "test_node")
+  my_nodeFxn <- nCompiler:::make_node_nClass(nodeVarInfo, list(calc_one=calc_one), "test_node")
   my_nodeInfo <- nCompiler:::make_node_info_for_model_nClass("beta_NF1", "my_nodeFxn", "test_node", nodeVarInfo)
 
   modelVarInfo <- list(list(name="x", nDim = 1),
@@ -51,7 +51,7 @@ test_that("nimble model prototype works", {
                        list(name = "sd", nDim = 0),
                        list(name = "gamma", nDim = 2))
   #debug(makeModel_nClass)
-  ncm1 <- makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model", env=environment())
+  ncm1 <- nCompiler:::makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model", env=environment())
   #undebug(nCompiler:::addGenericInterface_impl)
   #undebug(nCompiler:::nCompile_finish_nonpackage)
   for(package in c(FALSE, TRUE)) {

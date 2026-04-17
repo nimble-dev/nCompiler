@@ -343,6 +343,7 @@ assignOperatorDef(
   c('['),
   list(
     matchDef = function(x, i, j, ..., drop=TRUE) {},
+    useOpAssign = TRUE,
     compileArgs = c("drop"),
     isGeneric = TRUE,
     simpleTransformations = list(
