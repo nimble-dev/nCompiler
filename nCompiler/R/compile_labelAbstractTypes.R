@@ -86,8 +86,6 @@ compile_labelAbstractTypes <- function(code,
   }
 
   if(code$isCall) {
-    # Note that nFunction or nClass method calls are already (from simpleTransformations)
-    # embedded in NFCALL_, for which the opDef is then looked up.
     if(code$name == '{') {
       ## recurse over lines
       for(i in seq_along(code$args)) {
@@ -100,29 +98,41 @@ compile_labelAbstractTypes <- function(code,
     }
 
     opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
-    handlingInfo <- getOperatorField(opInfo$opDef, "labelAbstractTypes")
-
-#    handlingInfo <- getOperatorDef(code$name, "labelAbstractTypes")
-    # opInfo <- operatorDefEnv[[code$name]]
-    # if(!is.null(opInfo)) {
-    #   handlingInfo <- opInfo[["labelAbstractTypes"]]
-      if(!is.null(handlingInfo)) {
-        handler <- handlingInfo[['handler']]
-        if(!is.null(handler)) {
-          if (logging)
-            appendToLog(paste('Calling handler', handler, 'for', code$name))
-          if(is.function(handler))
-            ans <- handler(code, symTab,  auxEnv, handlingInfo)
-          else
-            ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                        envir = labelAbstractTypesEnv)
-          nErrorEnv$stateInfo <- character()
-          if (logging) {
-            appendToLog(paste('Finished handling', handler, 'for', code$name))
-            logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-          }
-          return(ans)
+    isGeneric <- isTRUE(opInfo$opDef$isGeneric)
+    handler <- NULL
+    if(isGeneric) {
+      if(length(code$args) > 0) {
+        arg1 <- code$args[[1]]
+        inserts <- labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                              handlingInfo, useArgs = c(TRUE, rep(FALSE, length(code$args)-1)))
+        inserts <- NULL # highlighting that currently these are thrown out -- possibly a problem.
+        if(inherits(arg1$type, "symbolNC")) {
+          handler <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
         }
+      }
+    }
+    if(is.null(handler)) {
+      handlingInfo <- getOperatorField(opInfo$opDef, "labelAbstractTypes")
+      if(!is.null(handlingInfo))
+        handler <- handlingInfo[['handler']]
+    }
+ 
+    # if(!is.null(handlingInfo)) {
+    #   handler <- handlingInfo[['handler']]
+      if(!is.null(handler)) {
+        if (logging)
+          appendToLog(paste('Calling handler', handler, 'for', code$name))
+        if(is.function(handler))
+          ans <- handler(code, symTab,  auxEnv, handlingInfo)
+        else
+          ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
+                      envir = labelAbstractTypesEnv)
+        nErrorEnv$stateInfo <- character()
+        if (logging) {
+          appendToLog(paste('Finished handling', handler, 'for', code$name))
+          logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
+        }
+        return(ans)
       }
     # }
   }
@@ -205,7 +215,6 @@ inLabelAbstractTypesEnv(
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo)
       ## TO-DO: Add check that first arg is symbolNF
-      ## code$name <- 'NFCALL_'
       if(!inherits(code$args[[1]]$type, "symbolNF"))
         stop(exprClassProcessingErrorMsg(
           code,
@@ -264,56 +273,53 @@ inLabelAbstractTypesEnv(
 #   }
 # )
 
-inLabelAbstractTypesEnv(
-  CheckOverload <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) == 0) return(NULL)
-    arg1 <- code$args[[1]]
-    if(inherits(arg1$type, "symbolNC")) {
-      overload <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
-      if(!is.null(overload)) {
-        if(is.function(overload))
-          ans <- overload(code, symTab,  auxEnv, handlingInfo)
-        else
-          ans <- eval(call(overload, code, symTab, auxEnv, handlingInfo),
-                      envir = labelAbstractTypesEnv)
-        return(ans)
-      }
-    }
-    NULL
-  }
-)
+# inLabelAbstractTypesEnv(
+#   CheckOverload <- function(code, symTab, auxEnv, handlingInfo) {
+#     if(length(code$args) == 0) return(NULL)
+#     arg1 <- code$args[[1]]
+#     if(inherits(arg1$type, "symbolNC")) {
+#       overload <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
+#       if(!is.null(overload)) {
+#         if(is.function(overload))
+#           ans <- overload(code, symTab,  auxEnv, handlingInfo)
+#         else
+#           ans <- eval(call(overload, code, symTab, auxEnv, handlingInfo),
+#                       envir = labelAbstractTypesEnv)
+#         return(ans)
+#       }
+#     }
+#     NULL
+#   }
+# )
 
-inLabelAbstractTypesEnv(
-  recurse_labelAbstractTypes_overloaded <- function(code, symTab, auxEnv, handlingInfo) {
-    useArgs <- rep(FALSE, length(code$args))
-    useArgs[1] <- TRUE
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo, useArgs = useArgs)
-    inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
-    handled <- TRUE
-    if(is.null(inserts2)) {
-      inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo, useArgs = !useArgs)
-      handled <- FALSE
-    }
-    if(isTRUE(inserts2)) inserts2 <- NULL
-    list(inserts = c(inserts, inserts2), handled = handled)
-  }
-)
+# inLabelAbstractTypesEnv(
+#   recurse_labelAbstractTypes_overloaded <- function(code, symTab, auxEnv, handlingInfo) {
+#     useArgs <- rep(FALSE, length(code$args))
+#     useArgs[1] <- TRUE
+#     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+#                                           handlingInfo, useArgs = useArgs)
+#     inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
+#     handled <- TRUE
+#     if(is.null(inserts2)) {
+#       inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+#                                             handlingInfo, useArgs = !useArgs)
+#       handled <- FALSE
+#     }
+#     if(isTRUE(inserts2)) inserts2 <- NULL
+#     list(inserts = c(inserts, inserts2), handled = handled)
+#   }
+# )
 
 inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
-    useArgs <- rep(FALSE, length(code$args))
-    useArgs[1] <- TRUE
+    # specializations from generic will have already been handled
+    # e.g obj[[1]] where obj defines its own "[[" operator definition (opDef).
+    # what remains is singleton indexing and nPlainList (original version of nList).
+    useArgs <- rep(TRUE, length(code$args))
+    useArgs[1] <- FALSE
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo, useArgs = useArgs)
-    inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
-    if(is.null(inserts2)) {
-      inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo, useArgs = !useArgs)
-      code$type <- code$args[[1]]$type$elementSym$clone()
-    }
-    inserts <- c(inserts, inserts2)
+    code$type <- code$args[[1]]$type$elementSym$clone()
     if(length(inserts) == 0) NULL else inserts
   }
 )
@@ -716,11 +722,12 @@ inLabelAbstractTypesEnv(
         inserts <- c(inserts,
                      recurse_labelAbstractTypes(code, symTab, auxEnv,
                                                 handlingInfo, useArgs = c(TRUE, FALSE)))
-        auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
+        # auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
         inserts <- c(inserts,
                      AssignAfterRecursing(code, symTab, auxEnv,
                                           handlingInfo))
       }
+      auxEnv$.AllowUnknowns <- FALSE
       if(length(inserts) == 0) NULL else inserts
     }
 )
@@ -1202,6 +1209,17 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  LengthAssign <- 
+    function(code, symTab, auxEnv, handlingInfo) {
+      # We have `length<-`(x, v) from length(x) <- v
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      code$type <- symbolBasic$new(nDim = 0,
+                                   type = 'integer')
+      if(length(inserts) == 0) NULL else inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
@@ -1271,16 +1289,27 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Bracket <- function(code, symTab, auxEnv, handlingInfo) {
-    # To-Do: Mark "drop" as a compile-time arg in the op entry.
+    # Drop is already extracted as a compile-time arg.
+    isAssign <- isTRUE(handlingInfo$isAssign)
+# To-do: Do we really need to clear and reconstruct args?
+#   drop_arg will need evaluation and updated handling below.
+    # Even in assignment case, we can never create a new variable
+    # so we do not need to work with .AllowUnknowns here.
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
     ## drop must be named if provided, so this should work
-    drop_arg <- code$args$drop
-    code$args$drop <- NULL ## remove from AST
+    drop <- isTRUE(code$aux$compileArgs$drop)
+    #drop_arg <- code$args$drop
+    #code$args$drop <- NULL ## remove from AST
 
     ## the indexed object should be the first arg among those other than drop
     obj <- code$args[[1]]
-    index_args <- code$args[-1]
+    if(isAssign) {
+      index_args <- code$args[-c(1, length(code$args))]
+      value_obj <- code$args[[length(code$args)]]
+    } else {
+      index_args <- code$args[-1]
+    }
     nDim <- obj$type$nDim
 
     code$args <- NULL ## reset args
@@ -1294,11 +1323,20 @@ inLabelAbstractTypesEnv(
     #   index_args[[1]]$isName &&
     #   index_args[[1]]$name == ""
 
-    if (brackets_empty) {
-      ## no indexing is happening, so just replace [ with the obj in the AST
-      ## and return
-      setArg(code$caller, code$callerArgID, obj)
-      return(invisible(NULL))
+    # Is this really completely valid?:
+    # This handles a case like x[]
+    # In R, y <- x[] creates a copy of x, dimensions and all.
+    # And y[] <- x uses recycling rule assignment and does
+    # not change the dims or sizes of y.
+    # I don't think this will work for BracketAssign so am
+    # excluding that
+    if(!isAssign) {
+      if (brackets_empty) {
+        ## no indexing is happening, so just replace [ with the obj in the AST
+        ## and return
+        setArg(code$caller, code$callerArgID, obj)
+        return(invisible(NULL))
+      }
     }
 
     ## at this point, the indexing args are not empty
@@ -1330,7 +1368,6 @@ inLabelAbstractTypesEnv(
     }
 
     setArg(code, 1, obj) ## put indexed object back as first arg
-
     # Here we only determine if dropping will occur and for how many
     # index dimensions. The actual dropping occurs in the implementation
     # during eigenization.
@@ -1339,21 +1376,6 @@ inLabelAbstractTypesEnv(
     for (i in seq_along(index_args)) {
       ## ensure that indexing args appear before drop in AST
       setArg(code, i + 1, index_args[[i]])
-
-      ## Temp work: disable lots of checking, some of which will become moot
-      ##
-      ## ## do a bunch of indexing arg error checking
-      ## if (index_args[[i]]$isCall)
-      ##   ## for now, can't handle indexing args of nDim > 0 other than those
-      ##   ## created via ':'
-      ##   ## TODO: allow for (more) general expressions
-      ##   if (index_args[[i]]$name != ':' && index_args[[i]]$type$nDim != 0)
-      ##     stop(
-      ##       exprClassProcessingErrorMsg(
-      ##         code,
-      ##         "In Bracket: non-scalar indexing expressions other than ':' not currently supported."
-      ##       ), call. = FALSE
-      ##     )
 
       if (index_args[[i]]$name != '') {
         # Possible checks to add (from nimble)
@@ -1383,43 +1405,45 @@ inLabelAbstractTypesEnv(
         }
       }
     }
-    drop <- TRUE
-    if (nDim == 0) {
-                                        # If we're indexing a scalar, any drop arg provided is ignored.
-      drop <- FALSE
-    } else if (inherits(drop_arg, 'exprClass')) {
-      if (drop_arg$isLiteral) {
-        ## if the user provided a literal NA or NaN drop arg and even when drop
-        ## is passed in explicity as NA or NaN R treats it as TRUE
-        if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
-          drop_arg <- literalLogicalExpr()
-        } else if (is.null(drop_arg$type) || drop_arg$type$type != 'logical') {
-          drop <- as.logical(drop_arg$name)
-          drop_arg <- literalLogicalExpr(drop)
-        } else { ## drop is logical
-          drop <- drop_arg$name
-        }
-      } else {
-        ## TODO: what if user provided a vector? R would use first element...
-        stop(
-          exprClassProcessingErrorMsg(
-            code,
-            'In Bracket: the drop argument must be a literal.'
-          ), call. = FALSE
-        )
-      }
-    } else if (is.null(drop_arg)) { ## drop arg wasn't provided
-      drop_arg <- literalLogicalExpr()
-    }
+    if(isAssign) setArg(code, "value", value_obj, add = TRUE) ## put value back as last arg in assignment case
+    if(nDim==0) drop <- FALSE
+    # drop <- TRUE
+    # if (nDim == 0) {
+    #                                     # If we're indexing a scalar, any drop arg provided is ignored.
+    #   drop <- FALSE
+    # } else if (inherits(drop_arg, 'exprClass')) {
+    #   if (drop_arg$isLiteral) {
+    #     ## if the user provided a literal NA or NaN drop arg and even when drop
+    #     ## is passed in explicity as NA or NaN R treats it as TRUE
+    #     if (is.na(drop_arg$name) || is.nan(drop_arg$name)) {
+    #       drop_arg <- literalLogicalExpr()
+    #     } else if (is.null(drop_arg$type) || drop_arg$type$type != 'logical') {
+    #       drop <- as.logical(drop_arg$name)
+    #       drop_arg <- literalLogicalExpr(drop)
+    #     } else { ## drop is logical
+    #       drop <- drop_arg$name
+    #     }
+    #   } else {
+    #     ## TODO: what if user provided a vector? R would use first element...
+    #     stop(
+    #       exprClassProcessingErrorMsg(
+    #         code,
+    #         'In Bracket: the drop argument must be a literal.'
+    #       ), call. = FALSE
+    #     )
+    #   }
+    # } else if (is.null(drop_arg)) { ## drop arg wasn't provided
+    #   drop_arg <- literalLogicalExpr()
+    # }
 
     if (isTRUE(drop)) {
       nDim <- nDim - nDrop
     }
 
-    if (nDim != 0) {
-      ## set 'drop' as the last arg in the AST
-      setArg(code, 'drop', drop_arg, add = TRUE)
-    }
+    # if (nDim != 0) {
+    #   ## set 'drop' as the last arg in the AST
+    #   setArg(code, 'drop', drop_arg, add = TRUE)
+    # }
 
                                         # TODO: double check the assumption that output will always be a
                                         # symbolBasic type as it is understood today.  this is handling for the

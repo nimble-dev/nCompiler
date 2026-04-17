@@ -160,12 +160,25 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  nList2_doubleBracket <- function(code, symTab) {
-    browser()
-    inserts <- NULL
-    if(length(inserts) == 0) NULL else inserts
+  Assign <- function(code, symTab) {
+    code$name <- ' = '
+    MidOperator(code, symTab)
   }
 )
+
+inGenCppEnv(
+  MakeScalar <- function(code, symTab) {
+    compile_generateCpp(code$args[[1]], symTab)
+  }
+)
+
+# inGenCppEnv(
+#   nList2_doubleBracket <- function(code, symTab) {
+#     browser()
+#     inserts <- NULL
+#     if(length(inserts) == 0) NULL else inserts
+#   }
+# )
 
 inGenCppEnv(
   nList <- function(code, symTab) {

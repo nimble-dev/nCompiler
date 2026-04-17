@@ -13,7 +13,7 @@ exprClass <- R6::R6Class(
   'exprClass',
   portable = FALSE,
   public = list(
-    Rexpr = NULL, ## optional: original R expr. 
+    Rexpr = NULL, ## optional: original R expr.
     isName = NULL, ## is it a name
     isCall = NULL, ## is it a call
     isAssign =  NULL, ## is it an assignment (all assignments are also calls)
@@ -29,7 +29,7 @@ exprClass <- R6::R6Class(
     ##toEigenize =  'unknown',
     caller = NULL, ## exprClass object to which this is an argument(or NULL)
     callerArgID =  NULL, ## index in the calling object's args list for this object.
-    insertions =  list(), 
+    insertions =  list(),
     cppADCode = FALSE, ## is expr in code generated for cppad?
     aux = list(), ## auxiliary list of additional info to be used as needed
     initialize = function(...) {
@@ -177,7 +177,7 @@ exprClassProcessingErrorMsg <- function(code, msg) {
 dropSingleSizes <- function(sizeList) {
   drop <- logical(length(sizeList))
   for(i in seq_along(sizeList)) {
-    drop[i] <- if(is.numeric(sizeList[[i]])) sizeList[[i]] == 1 else FALSE 
+    drop[i] <- if(is.numeric(sizeList[[i]])) sizeList[[i]] == 1 else FALSE
   }
   sizeList[drop] <- NULL
   list(sizeExprs = sizeList, drop = drop)
@@ -207,10 +207,10 @@ wrapInExprClass <- function(code, funName, argName=NULL) {
 
 ## Sometimes we have an expr foo(a, b) and we want to make it g(foo(a, b))
 ## We do that by wrapExprClassOperator(code, 'g'), where code is the 'foo' expClass.
-wrapExprClassOperator <- function(code, funName, isName = FALSE, isCall = TRUE, 
+wrapExprClassOperator <- function(code, funName, isName = FALSE, isCall = TRUE,
                                   isAssign = FALSE, ...) {
-  newExpr <- exprClass$new(name = funName, isName = isName, isCall = isCall, 
-                           isAssign = isAssign, args = list(code), ...)  
+  newExpr <- exprClass$new(name = funName, isName = isName, isCall = isCall,
+                           isAssign = isAssign, args = list(code), ...)
   if(!is.null(code$caller)) {
     setArg(code$caller, code$callerArgID, newExpr)
   }
@@ -366,16 +366,16 @@ removeArg <- function(expr, ID, allow_missing = FALSE) {
 reorderArgs <- function(expr, perm) {
   # Change the order of an exprClass object's arguments.  Useful for placing
   # arguments into canonical order for dispatch via associated C calls.
-  # 
+  #
   # Parameters:
   #  expr - exprClass object whose arguments should be reordered
   #  perm - vector of integers indicating where each argument should be moved to
-  
+
   # extract arguments
   args <- expr$args
   argNames <- names(args)
   nArgs <- length(args)
-  
+
   # temporarily remove arguments from expr
   for(i in 1:nArgs) {
     removeArg(expr = expr, ID = 1)
@@ -390,7 +390,7 @@ reorderArgs <- function(expr, perm) {
     # add that argument
     insertArg(expr = expr, ID = i, value = args[[tgt]], name = argNames[tgt])
   }
-  
+
   invisible(expr)
 }
 
@@ -454,9 +454,9 @@ buildSimpleIntermCall <- function(code) {
 
   ## change my argument from the caller to the new temp
   setArg(code$caller, code$callerArgID, nParse(as.name(newName)))
-  
+
   newExpr <- newAssignmentExpression()
-  setArg(newExpr, 1, nParse(as.name(newName))) 
+  setArg(newExpr, 1, nParse(as.name(newName)))
   setArg(newExpr, 2, code) ## The setArg function should set code$caller (to newExpr) and code$callerArgID (to 3)
 
   return(newExpr)
@@ -500,7 +500,7 @@ exprClass_match_call <- function(def, expr) {
   # match.call(function(a , b , c ){}, call("foo", b = 1, 2, 3))
   # resulting in foo(a = 2, b = 1, c = 3),
   # from which we can see that the expr arguments need to be re-orded by c(2, 1, 3).
-  # The object foo(a = 2, b = 1, c = 3) is returned, so that exprClass_put_args_in_order 
+  # The object foo(a = 2, b = 1, c = 3) is returned, so that exprClass_put_args_in_order
   #   can do the further work needed using the ordering.
   # We can also see what expected arguments are missing and store that information
   #  for potential later handling.
@@ -517,13 +517,13 @@ exprClass_match_call <- function(def, expr) {
   }
   # Make list of artificial arg values starting from 1,  with provided names
   exprArgs <- structure( as.list(seq_along(expr$args)), names = names(expr$args) )
-  result <- try(match.call(def, do.call("call", c(list("foo"), exprArgs ))))
+  result <- try(match.call(def, do.call("call", c(list("foo"), exprArgs )), expand.dots=FALSE))
   if(inherits(result, "try-error"))
     stop("error in matching arguments for ", expr$name)
   result
 }
 
-exprClass_put_args_in_order <- function(def, expr, 
+exprClass_put_args_in_order <- function(def, expr,
                                 compileArgs = NULL, insertDefaults = TRUE) {
   match_res <- exprClass_match_call(def, expr)
   # there is a function reorderArgs above which appears to have been written
@@ -531,28 +531,55 @@ exprClass_put_args_in_order <- function(def, expr,
   # However its behavior is slightly different than needed here, so we don't use it.
   args <- expr$args
   expr$args <- NULL
+  iRes <- 1
   for(i in seq_along(match_res)) {
     if(i==1) next # "foo"
-    insertArg(expr = expr, ID=i-1, value = args[[match_res[[i]] ]],
-              name = names(match_res)[i] )
+    if(names(match_res)[i] != "...") {
+      insertArg(expr = expr, ID=iRes, value = args[[match_res[[i]] ]],
+                name = names(match_res)[i] )
+      iRes <- iRes + 1
+    } else {
+      dotsArg <- match_res[[i]]
+      for(j in seq_along(dotsArg)) {
+        insertArg(expr = expr, ID=iRes, value  = args[[dotsArg[[j]] ]],
+                  name = names(dotsArg)[j])
+        iRes <- iRes + 1
+      }
+    }
   }
   formals_def <- formals(def)
+  # We rely on ordering of missing_names below in any cases
+  # where we need to fill in defaults and some missing names
+  # don't have defaults so the position of a later arg
+  # with a default needs to be shifted
   missing_names <- setdiff(names(formals_def), names(match_res)[-1] )
+  # was missing in original expression
   expr$aux[["provided_as_missing"]] <- missing_names
+  # is missing possibly even after filling in defaults (will be
+  # replaced below if insertDefaults is TRUE)
   expr$aux[["missing"]] <- missing_names
   # match.call DOES NOT insert defaults for missing arguments,
   # but we want to do so.
+  i_dots <- which(names(formals_def) == "...")
+  num_dots <- length(match_res[["..."]])
+  if(length(i_dots) == 0) i_dots <- Inf
+  num_unfilled_missing <- 0
   if(insertDefaults) {
     new_missing_names <- character()
     for(mname in missing_names) {
+      if(mname == "...") next
       if(!is.blank(formals_def[[mname]])) {
         i <- which(mname == names(formals_def))
-        if(i > length(expr$args))
-          i <- length(expr$args)+1
-        insertArg(expr, i,
+        iRes <- i
+        if(iRes > i_dots) iRes <- iRes + num_dots - 1
+        iRes <- iRes - num_unfilled_missing
+        if(iRes > length(expr$args))
+           iRes <- length(expr$args)+1
+        insertArg(expr, iRes,
                   value = nParse(formals_def[[mname]], recursing=TRUE), # recursing=TRUE prevents parsing if the default is a string
                   name = mname)
       } else {
+        num_unfilled_missing <- num_unfilled_missing + 1
         new_missing_names <- c(new_missing_names, mname)
       }
     }
@@ -561,6 +588,7 @@ exprClass_put_args_in_order <- function(def, expr,
   # separate compile-time arguments.
   # This is done AFTER inserting defaults, so that compile-time args can have defaults.
   # The nParse-ing of compileTime args was superfluous, so we throw it out in this step.
+  expr$aux[["compileArgs"]] <- list()
   if(length(compileArgs)>0) {
     aux_compileArgs <- list()
     iRes <- 1
@@ -576,10 +604,3 @@ exprClass_put_args_in_order <- function(def, expr,
   }
   expr
 }
-
-## expr <- nParse(quote(foo(a = 1, NULL)))
-## def <- \(a, b, c = 1) {}
-## exprClass_match_call(def, expr)
-## test <- exprClass_put_args_in_order(def, expr)
-## test
-## test$aux

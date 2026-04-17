@@ -216,9 +216,10 @@ inEigenizeEnv(
 inEigenizeEnv(
   scalarCast <- function(code, argIndex, newType) {
     castExpr <- insertExprClassLayer(code, argIndex, 'scalarcast')
-    cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
-                             name = scalarTypeToCppType(newType))
-    setArg(castExpr, 2, cppType)
+#    cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
+#                             name = scalarTypeToCppType(newType))
+#    setArg(castExpr, 2, cppType)
+    castExpr$aux$compileArgs <- list(scalar_type = scalarTypeToCppType(newType))
     castExpr$type <- symbolBasic$new(name = castExpr$name,
                                      type = newType,
                                      nDim = castExpr$args[[1]]$type$nDim)
@@ -304,6 +305,15 @@ inEigenizeEnv(
 ## )
 
 inEigenizeEnv(
+  LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    # length(x) <- value becomes .method(x, "setLength", value)
+    scalarcast(code, 2, 'int')
+    maybe_convertToMethod(code, handlingInfo, force = TRUE)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   Assign_Before <- function(code, symTab, auxEnv, workEnv,
                            handlingInfo) {
     LHS <- code$args[[1]]
@@ -314,13 +324,15 @@ inEigenizeEnv(
     ## aliasRisk <- checkRHSaliasing(code$args[[2]], LHSvarInfo)
     ##
     ## Default for now to always assuming alias risk!
+    # This is also used in Bracket for the `[<-]` case
     aliasRisk <- TRUE
     workEnv$aliasRisk <- aliasRisk
     # If the LHS has no indexing, use nEval_
     ##
     ## We have a template nEval_ needed when the LHS is the entire object.
     ## See note in C++ code for nEval_.
-    if(LHS$name != "[") workEnv$need_nEval <- TRUE
+    #if(LHS$name != "[") 
+    workEnv$need_nEval <- TRUE
     ##    if(!isTRUE(LHSvarInfo[[2]])) workEnv$need_nEval <- TRUE
     invisible(NULL)
   }
@@ -377,6 +389,8 @@ inEigenizeEnv(
   maybe_convertToMethod <- function(code, handlingInfo, force = FALSE) {
     if(isTRUE(handlingInfo$method) || isTRUE(force)) {
       methodName <- code$name
+      if(!is.null(handlingInfo$methodName))
+        methodName <- handlingInfo$methodName
       code$name <- '.method'
       if(length(code$args) > 1) {
         for(i in length(code$args):2) {
@@ -589,6 +603,13 @@ inEigenizeEnv(
     } else
       maybe_convertToMethod(code, handlingInfo) # used for mean(vector) = vector.mean() if method=TRUE
     scalarCast(code$caller, code$callerArgID, code$type$type)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  Method <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    maybe_convertToMethod(code, handlingInfo, force=TRUE) # used for mean(vector) = vector.mean() if method=TRUE
     invisible(NULL)
   }
 )
@@ -837,6 +858,29 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Bracket <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    isAssign <- isTRUE(handlingInfo$isAssign)
+    drop <- isTRUE(code$aux$compileArgs$drop)
+   # We will revert to `<-`(LHS, RHS)
+    if(isAssign) {
+      newExpr <- exprClass$new(name = "<-", isName = FALSE, isCall = TRUE, isAssign = TRUE,
+                               type = code$type)
+      firstArg <- exprClass$new(name = "[", isName = FALSE, isCall = TRUE, isAssign = FALSE,
+                                type = code$type)
+      iArgs <- seq_along(code$args)
+      iArgs <- iArgs[-length(iArgs)]
+      for(i in iArgs) {
+        insertArg(firstArg, i, code$args[[i]], names(code$args)[i])
+      }
+      update_cachedOpInfo(firstArg, auxEnv$where)
+      setArg(newExpr, 1, firstArg)
+      setArg(newExpr, 2, code$args[[length(code$args)]])
+      update_cachedOpInfo(newExpr, auxEnv$where)
+      setArg(code$caller, code$callerArgID, newExpr)
+      code <- firstArg
+    }
+
+    iArgs <- seq_along(code$args)[-1]
+    # if(isAssign) iArgs <- iArgs[-length(iArgs)]
     if (code$type$nDim == 0) {
       # Either we're indexing a vector and we keep '[' in the AST, or we're
       # indexing a non-vector object and we use 'index(' instead.
@@ -850,7 +894,7 @@ inEigenizeEnv(
       ## type. We could more generally use EigenType::Index where EigenType is the type
       ## of the indexed variable, assuming it can't be an expression.
       if(length(code$args)>1) {
-        for(i in 2:length(code$args)) {
+        for(i in iArgs) {
           insertExprClassLayer(code, i, "static_cast<long>")
         }
       }
@@ -865,7 +909,7 @@ inEigenizeEnv(
     indexSeq_inds <- integer()
     indexSeq_info <- list()
     indexVec_info <- list()
-    drop <- code$args$drop$name
+    # drop <- code$args$drop$name
     if(!is.logical(drop))
       warning("Problem determining whether to drop dimensions.")
     
@@ -881,12 +925,12 @@ inEigenizeEnv(
       ##   There are also cases where a name is deparsed or not, and
       ##    I am not sure which arises when or what I might be missing.
       if(drop) {
-        for(argInd in 2:(length(code$args)-1)) {
+        for(argInd in iArgs) {
           if(code$args[[argInd]]$type$nDim > 0
              && !is.null(code$args[[argInd]]$type$knownSize)
              && code$args[[argInd]]$type$knownSize == 1) {
               if(code$args[[argInd]]$isCall) {
-                if(code$args[[argInd]]$name %in% c(':', 'nC')) {
+                if(code$args[[argInd]]$name %in% c(':', 'nC', 'nSeqFromTo')) {
                   singleValueArg <- code$args[[argInd]]$args[[1]]$clone()
                   setArg(code, argInd, singleValueArg)
                 }
@@ -896,7 +940,11 @@ inEigenizeEnv(
       }
     }
 
-    for(argInd in 2:(length(code$args)-1)) {
+    # The clone() method calls in this block of code produce broken exprClass ASTs
+    # because the caller and callerArgID fields are not set. We do have a copyExprClass
+    # function that could be used (and we could consider making a proper clone method).
+    # But for not it works to allow broken ASTs here because the next step is generating C++.
+    for(argInd in iArgs) {
       ind <- argInd - 1
       isBlank <- code$args[[argInd]]$isName & code$args[[argInd]]$name == ""
       if(!isBlank) {
@@ -910,7 +958,7 @@ inEigenizeEnv(
                                                      code$args[[argInd]]$clone()))) # could flag this in some other way
           }
         } else if(this_nDim == 1) {
-          if(code$args[[argInd]]$name == ':') {
+          if(code$args[[argInd]]$name %in% c(':', 'nSeqFromTo')) {
             indexSeq_inds <- c(indexSeq_inds, ind)
             indexSeq_info <- c(indexSeq_info, list(c(code$args[[argInd]]$args[[1]]$clone(),
                                                      code$args[[argInd]]$args[[2]]$clone())))
@@ -946,8 +994,27 @@ inEigenizeEnv(
     }
 
     newExpr$type <- code$type
+    # if(isAssign) {
+    #   newAssignExpr <- exprClass$new(name = '<-', isName = FALSE, isCall = TRUE, isAssign = TRUE,
+    #                             type = code$type)
+    #   setArg(newAssignExpr, 1, newExpr)
+    #   setArg(newAssignExpr, 2, code$args[[length(code$args)]]) # value
+    #   newExpr <- newAssignExpr
+    #   update_cachedOpInfo(newExpr, auxEnv$where)
+    # }
     setArg(code$caller, code$callerArgID, newExpr)
 
+    if(isAssign) {
+      # At this point we have replaced original code with
+      # `<-`(LHS, RHS) and we will now recurse for the `<-`
+      # code is LHS, so we want code$caller
+      workEnv$aliasRisk <- TRUE
+      # We could pull out the handlingInfo but instead for now
+      # we go straight to Assign and don't need handlingInfo
+    #  opInfo <- check_cachedOpInfo(code$caller, where=auxEnv$where, update=TRUE)
+    #  handlingInfo <- getOperatorField(opInfo$opDef, "eigenImpl")
+      Assign(code$caller, symTab, auxEnv, workEnv, handlingInfo = list())
+    }
     # index vecs have dim == 1 and are not ':'
     # singletons have dim == 0
     # index seqs have dim == 1 and are ':'
@@ -1106,11 +1173,9 @@ inEigenizeEnv(
 
 inEigenizeEnv(
  Colon <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    if (!code$caller$name == '[') { # To check: A '[' case might no longer ever come here.
-      code$name <- "nSeqFromTo"
-      promoteTypes(code) # redundant in this case
-      return(invisible(NULL))
-    }
+    code$name <- "nSeqFromTo"
+    promoteTypes(code) # redundant in this case
+    return(invisible(NULL))
     invisible(NULL)
   }
 )

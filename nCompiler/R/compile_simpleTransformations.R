@@ -5,7 +5,6 @@
 ## System to processSpecificCalls ##
 ####################################
 
-
 compile_simpleTransformations <- function(code,
                                           symTab,
                                           auxEnv,
@@ -49,43 +48,93 @@ compile_simpleTransformations <- function(code,
 simpleTransformationsEnv <- new.env()
 simpleTransformationsEnv$.debug <- FALSE
 
+inSimpleTransformationsEnv <- function(expr) {
+  expr <- substitute(expr)
+  eval(expr, envir = simpleTransformationsEnv)
+}
+
 ## for min(V), no change.  for min(v1, v2), change to pairmin(v1, v2)
-simpleTransformationsEnv$minMax <-
-  function(code, symTab, auxEnv, info) {
-    if(length(code$args) == 2) code$name <- paste0('pair',code$name)
-  }
+inSimpleTransformationsEnv(
+  minMax <-
+    function(code, symTab, auxEnv, info) {
+      if(length(code$args) == 2) code$name <- paste0('pair',code$name)
+    }
+)
 
 ## Used e.g. for invisible(foo(x)) --> foo(x)
-simpleTransformationsEnv$RemoveLayer <-
-  function(code, symTab, auxEnv, info) {
-    removeExprClassLayer(code)
-  }
-
-
-simpleTransformationsEnv$replace <-
-  function(code, symTab, auxEnv, info) {
-    repl <- info$replacement
-    if(is.null(repl))
-      stop(paste0("No valid replacement for ",
-                  code$name),
-           call. = FALSE)
-    code$name <- repl
-  }
-
-simpleTransformationsEnv$replaceAndNormalize <-
-  function(code, symTab, auxEnv, info) {
-    repl <- info$replacement
-    if(is.null(repl))
-      stop(paste0("No valid replacement for ",
-                  code$name),
-           call. = FALSE)
-    code$name <- repl
-    compile_normalizeCalls(code, symTab, auxEnv)
-  }
-
-simpleTransformationsEnv$Literal <-
-  function(code, symTab, auxEnv, info) {
-    if(!is.null(code$aux$compileArgs$text)) {
-      code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$closure)
+inSimpleTransformationsEnv(
+  RemoveLayer <-
+    function(code, symTab, auxEnv, info) {
+      removeExprClassLayer(code)
     }
-  }
+)
+
+inSimpleTransformationsEnv(
+  replace <-
+    function(code, symTab, auxEnv, info) {
+      repl <- info$replacement
+      if(is.null(repl))
+        stop(paste0("No valid replacement for ",
+                    code$name),
+             call. = FALSE)
+      code$name <- repl
+    }
+)
+
+inSimpleTransformationsEnv(
+  replaceAndNormalize <-
+    function(code, symTab, auxEnv, info) {
+      repl <- info$replacement
+      if(is.null(repl))
+        stop(paste0("No valid replacement for ",
+                    code$name),
+             call. = FALSE)
+      code$name <- repl
+      compile_normalizeCalls(code, symTab, auxEnv)
+    }
+)
+
+inSimpleTransformationsEnv(
+  Literal <-
+    function(code, symTab, auxEnv, info) {
+      if(!is.null(code$aux$compileArgs$text)) {
+        code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$closure)
+      }
+    }
+)
+inSimpleTransformationsEnv(
+  CheckOpAssignment <-
+    function(code, symTab, auxEnv, info) {
+      arg1 <- code$args[[1]]
+      if(isTRUE(arg1$isCall)) {
+        # change `<-`(length(x), 5) to `length<-`(x, 5)
+        name <- arg1$name
+        assign_name <- paste0(name, "<-")
+        code$name <- assign_name
+        arg2 <- code$args[[2]]
+        code$args <- list()
+        arg1names <- names(arg1$args)
+        code$args <- list() # rebuild from scratch
+        for(i in seq_along(arg1$args)) {
+          insertArg(code, i, arg1$args[[i]], arg1names[i])
+        }
+        insertArg(code, length(code$args) + 1, arg2, "value")
+        compile_normalizeCalls(code, symTab, auxEnv)
+      } 
+    }
+)
+
+inSimpleTransformationsEnv(
+  EvalDrop <-
+    function(code, symTab, auxEnv, info) {
+      # The drop argument to brackets has weird behavior in R
+      # It is TRUE unless it is FALSE, "FALSE", or "F", or 0
+      # These are all results from as.logical.
+      # NA and NaN result in TRUE, so we go through isFALSE.
+      drop_arg <- code$aux$compileArgs$drop
+      drop_arg <- eval(drop_arg, envir = auxEnv$where)
+      drop_arg <- as.logical(drop_arg)
+      drop_arg <- !isFALSE(drop_arg)
+      code$aux$compileArgs$drop <- drop_arg
+    }
+)

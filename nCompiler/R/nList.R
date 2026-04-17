@@ -268,13 +268,20 @@ nList2_nClass <- function(type) {
     #     }
     #   ))
   nList2_doubleBracket_LAT <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 2) return(NULL)
+    # used for both getting and setting so be careful if checking args
+    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     arg1 <- code$args[[1]]
     NCgen <- arg1$type$NCgenerator
     elementSym <- NCinternals(NCgen)$symbolTable$getSymbol("x")
     code$type <- elementSym$clone(deep=TRUE)
-    TRUE
+    if(is.null(inserts)) list() else inserts
     # should return something non-null, either an inserts list or list() or TRUE. TRUE is more distinct so we use that.
+  }
+  nList2_length_LAT <- function(code, symTab, auxEnv, handlingInfo) {
+    # used for both getting and setting so be careful if checking args
+    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- symbolBasic$new(nDim = 0, type = 'integer')
+    if(is.null(inserts)) list() else inserts
   }
   ans <- substitute(
     nClass(
@@ -297,7 +304,19 @@ nList2_nClass <- function(type) {
         nClass_inherit = list(base=BASECLASS),
         overloadDefs = list(
           "[[" = list(
+            labelAbstractTypes = list(handler = nList2_doubleBracket_LAT),
+            cppOutput = list(handler = 'IndexingBracket')
+          ),
+          "[[<-" = list(
             labelAbstractTypes = list(handler = nList2_doubleBracket_LAT)
+          ),
+          length = list(
+            labelAbstractTypes = list(handler = nList2_length_LAT),
+            eigenImpl = list(handler = 'Method'),
+            cppOutput = list(cppString = 'getLength')
+          ),
+          "length<-" = list(
+            labelAbstractTypes = list(handler = nList2_length_LAT)
           )
         )
       )

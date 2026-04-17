@@ -121,8 +121,8 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
   NFcompiler$auxEnv[["derivsContent"]] <- list()
   NFcompiler$auxEnv[["class_env"]] <- class_env # used for sharing information among methods in a class
   NFcompiler$auxEnv[["project_env"]] <- project_env # used for sharing information among compilation units in a project
-  NFcompiler$auxEnv[['.AllowUnknowns']] <- TRUE ## will be FALSE for RHS recursion in setSizes
-  NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.
+  NFcompiler$auxEnv[['.AllowUnknowns']] <- FALSE ## nimble note: will be FALSE for RHS recursion in setSizes
+  # NFcompiler$auxEnv[['.ensureNimbleBlocks']] <- FALSE ## will be TRUE for LHS recursion after RHS sees rmnorm and other vector dist "r" calls.
   ##NFcompiler$auxEnv[['.nCompilerProject']] <- nimbleProject
   passedArgNames <- symbolTable_getArgNames(NFcompiler$symbolTable)
   passedArgNames <- structure(as.list(passedArgNames),

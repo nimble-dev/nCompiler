@@ -487,8 +487,10 @@ test_that("nList2: nClass member of nList2 type compiles and works", {
       lst = 'rNL',
       init = nFunction(function() {
         lst <<- rNL$new()
-        A <- lst[[1]]
        # lst$setLength(3L)
+        A <- lst[[1]]
+        length(lst) <- 4
+        len <- length(lst)
         #lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
       }),
       getLen = nFunction(
@@ -497,9 +499,9 @@ test_that("nList2: nClass member of nList2 type compiles and works", {
       )
     )
   )
-  #debug(nCompiler:::labelAbstractTypesEnv$DoubleBracket)
+  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
   comp <- nCompile(rNL, nc)
-  obj <- comp$nc_holds_nList2$new()
+  obj <- comp$nc$new()
   obj$init()
   expect_equal(obj$getLen(), 3L)
   rm(rNL, nc, comp, obj); gc()
