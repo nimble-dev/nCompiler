@@ -110,7 +110,7 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage")
     test_foo(access_dynamic_package("testpackage", "foo"))
@@ -172,7 +172,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassingb")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackageb"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackageb")
     Cobj <- access_dynamic_package("testpackageb", "nc1")$new()
@@ -228,7 +228,7 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2")
     test_foo(testpackage2::foo)
@@ -292,7 +292,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2b")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2b"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2b")
     Cobj <- testpackage2b::nc1$new()
@@ -348,7 +348,7 @@ test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3")
     test_foo(testpackage3::foo)
@@ -413,7 +413,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3b")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3b"),
-                                              upgrade = FALSE, quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3b")
     Cobj <- testpackage3b::nc1$new()

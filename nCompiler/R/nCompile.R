@@ -631,7 +631,7 @@ nCompile <- function(...,
         devtools::install(pkgDir,
                           quick = TRUE,
                           quiet = !isTRUE(get_nOption("showCompilerOutput")),
-                          upgrade = FALSE) # Make quiet follow showCompilerOutput
+                          upgrade = FALSE, dependencies = FALSE) # Make quiet follow showCompilerOutput
         withr::with_libpaths(lib, action="prefix",
                             code = loadNamespace(temppkgname))
       })

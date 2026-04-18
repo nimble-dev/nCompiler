@@ -311,10 +311,24 @@ get_ops_values <- function(field, subfield = NULL) {
 ##
 return_type_string <- function(op, argTypes) {
 
+  opDef <- `:::`("nCompiler", "getOperatorDef")(op)
+  if(is.null(opDef))
+    stop(paste0('No operator definition found for operator: ', op), call. = FALSE)
+  simpTrans <- opDef$simpleTransformations
+  if(!is.null(simpTrans)) {
+    if(identical(simpTrans$handler, "replace")) {
+      if(!is.null(simpTrans$replacement))
+       op <- simpTrans$replacement
+    }
+  }
+
   returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'labelAbstractTypes',
                                                'returnTypeCode')
   recycling_rule_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing',
                                                   'recyclingRuleOp')
+
+  if (is.null(returnTypeCode))
+    returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'returnTypeCode')
 
   if (is.null(returnTypeCode))
     if (!isTRUE(recycling_rule_op)) return(argTypes[1])
