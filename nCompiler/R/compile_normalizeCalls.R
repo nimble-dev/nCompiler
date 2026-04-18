@@ -146,6 +146,8 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         if(!is.null(obj)) {
           if(isNF(obj)) {
             cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            cachedOpInfo$obj_internals <- NFinternals(obj)
+            opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
           } else {
             stop(exprClassProcessingErrorMsg(code,
                                               paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
@@ -167,6 +169,8 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
           # There is no error trapping if obj is not an nFunction, because
           # it could be simply an R function, since nGet (via get0) may traverse up to R_GlobalEnv.
           cachedOpInfo$case <- "nFunction"
+          cachedOpInfo$obj_internals <- NFinternals(obj)
+          opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
         } else if(inherits(obj, "nClassBuilder")) {
           cachedOpInfo$case <- "nClassBuilder"
           opDef <- getOperatorDef("nClassBuilder") # a dummy to be non-null below
@@ -176,13 +180,13 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         }
       }
     }
-    if(!is.null(obj)) {
-      if(cachedOpInfo$case == "nFunction") {
-      # We found an nFunction object that is either a method or not.
-        cachedOpInfo$obj_internals <- NFinternals(obj)
-        opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
-      }
-    }
+    # if(!is.null(obj)) {
+    #   if(cachedOpInfo$case == "nFunction") {
+    #   # We found an nFunction object that is either a method or not.
+    #     cachedOpInfo$obj_internals <- NFinternals(obj)
+    #     opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
+    #   }
+    # }
   }
   if(is.null(opDef)) {
     ## At this point, we have not found an nFunction or nClass method.

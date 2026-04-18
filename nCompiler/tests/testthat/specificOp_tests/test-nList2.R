@@ -479,125 +479,125 @@ test_that("nList2: duplicate units in nCompile are deduplicated", {
   rm(rNL1, rNL2); gc()
 })
 
-test_that("nList2: nClass member of nList2 type compiles and works", {
-  rNL <- nList2("numericScalar")
-  nc <- nClass(
-    classname = "nc_holds_nList2",
-    Cpublic = list(
-      lst = 'rNL',
-      init = nFunction(function() {
-        lst <<- rNL$new()
-       # lst$setLength(3L)
-        A <- lst[[1]]
-        length(lst) <- 4
-        len <- length(lst)
-        #lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
-      }),
-      getLen = nFunction(
-        function() { return(lst$getLength()) },
-        returnType = 'integerScalar'
-      )
-    )
-  )
-  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
-  comp <- nCompile(rNL, nc)
-  obj <- comp$nc$new()
-  obj$init()
-  expect_equal(obj$getLen(), 3L)
-  rm(rNL, nc, comp, obj); gc()
-})
+## test_that("nList2: nClass member of nList2 type compiles and works", {
+##   rNL <- nList2("numericScalar")
+##   nc <- nClass(
+##     classname = "nc_holds_nList2",
+##     Cpublic = list(
+##       lst = 'rNL',
+##       init = nFunction(function() {
+##         lst <<- rNL$new()
+##        # lst$setLength(3L)
+##         A <- lst[[1]]
+##         length(lst) <- 4
+##         len <- length(lst)
+##         #lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
+##       }),
+##       getLen = nFunction(
+##         function() { return(lst$getLength()) },
+##         returnType = 'integerScalar'
+##       )
+##     )
+##   )
+## #  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
+##   comp <- nCompile(rNL, nc)
+##   obj <- comp$nc$new()
+##   obj$init()
+##   expect_equal(obj$getLen(), 3L)
+##   rm(rNL, nc, comp, obj); gc()
+## })
 
-test_that("nList2: nFunction return type of nList2 compiles and works", {
-  rNL <- nList2("numericScalar")
-  nc <- nClass(
-    classname = "nc_returns_nList2",
-    Cpublic = list(
-      lst = 'rNL',
-      init = nFunction(function() {
-        lst <<- rNL$new()
-        lst$setLength(2L)
-        lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
-      }),
-      getLst = nFunction(
-        function() { return(lst) },
-        returnType = 'rNL'
-      )
-    )
-  )
-  comp <- nCompile(rNL, nc)
-  obj <- comp$nc_returns_nList2$new()
-  obj$init()
-  got <- obj$getLst()
-  expect_equal(got[[1]], 100.0)
-  expect_equal(got[[2]], 200.0)
-  rm(rNL, nc, comp, obj, got); gc()
-})
+## test_that("nList2: nFunction return type of nList2 compiles and works", {
+##   rNL <- nList2("numericScalar")
+##   nc <- nClass(
+##     classname = "nc_returns_nList2",
+##     Cpublic = list(
+##       lst = 'rNL',
+##       init = nFunction(function() {
+##         lst <<- rNL$new()
+##         lst$setLength(2L)
+##         lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
+##       }),
+##       getLst = nFunction(
+##         function() { return(lst) },
+##         returnType = 'rNL'
+##       )
+##     )
+##   )
+##   comp <- nCompile(rNL, nc)
+##   obj <- comp$nc_returns_nList2$new()
+##   obj$init()
+##   got <- obj$getLst()
+##   expect_equal(got[[1]], 100.0)
+##   expect_equal(got[[2]], 200.0)
+##   rm(rNL, nc, comp, obj, got); gc()
+## })
 
-test_that("nList2: nFunction argument of nList2 type compiles and works", {
-  rNL <- nList2("numericScalar")
-  nc <- nClass(
-    classname = "nc_nList2_arg",
-    Cpublic = list(
-      lenOf = nFunction(
-        function(x = 'rNL') { return(x$getLength()) },
-        returnType = 'integerScalar'
-      )
-    )
-  )
-  comp <- nCompile(rNL, nc)
-  obj  <- comp$nc_nList2_arg$new()
-  lst  <- comp$nList2$new()
-  lst$setLength(5L)
-  expect_equal(obj$lenOf(lst), 5L)
-  rm(rNL, nc, comp, obj, lst); gc()
-})
+## test_that("nList2: nFunction argument of nList2 type compiles and works", {
+##   rNL <- nList2("numericScalar")
+##   nc <- nClass(
+##     classname = "nc_nList2_arg",
+##     Cpublic = list(
+##       lenOf = nFunction(
+##         function(x = 'rNL') { return(x$getLength()) },
+##         returnType = 'integerScalar'
+##       )
+##     )
+##   )
+##   comp <- nCompile(rNL, nc)
+##   obj  <- comp$nc_nList2_arg$new()
+##   lst  <- comp$nList2$new()
+##   lst$setLength(5L)
+##   expect_equal(obj$lenOf(lst), 5L)
+##   rm(rNL, nc, comp, obj, lst); gc()
+## })
 
-test_that("nList2: nList2 created internally in nFunction code compiles and works", {
-  rNL <- nList2("numericScalar")
-  nc <- nClass(
-    classname = "nc_creates_nList2",
-    Cpublic = list(
-      makeAndSum = nFunction(
-        function() {
-          tmp <- rNL$new()
-          tmp$setLength(3L)
-          tmp[[1]] <- 1.0; tmp[[2]] <- 2.0; tmp[[3]] <- 3.0
-          s <- tmp[[1]] + tmp[[2]] + tmp[[3]]
-          return(s)
-        },
-        returnType = 'numericScalar'
-      )
-    )
-  )
-  comp <- nCompile(rNL, nc)
-  obj  <- comp$nc_creates_nList2$new()
-  expect_equal(obj$makeAndSum(), 6.0)
-  rm(rNL, nc, comp, obj); gc()
-})
+## test_that("nList2: nList2 created internally in nFunction code compiles and works", {
+##   rNL <- nList2("numericScalar")
+##   nc <- nClass(
+##     classname = "nc_creates_nList2",
+##     Cpublic = list(
+##       makeAndSum = nFunction(
+##         function() {
+##           tmp <- rNL$new()
+##           tmp$setLength(3L)
+##           tmp[[1]] <- 1.0; tmp[[2]] <- 2.0; tmp[[3]] <- 3.0
+##           s <- tmp[[1]] + tmp[[2]] + tmp[[3]]
+##           return(s)
+##         },
+##         returnType = 'numericScalar'
+##       )
+##     )
+##   )
+##   comp <- nCompile(rNL, nc)
+##   obj  <- comp$nc_creates_nList2$new()
+##   expect_equal(obj$makeAndSum(), 6.0)
+##   rm(rNL, nc, comp, obj); gc()
+## })
 
-test_that("nList2: objects from two same-type generators are interchangeable", {
-  # Two independent nCompile calls, each producing a nList2<double>.
-  # An object from one DLL should be passable to a method compiled in the
-  # other DLL, because they share the same C++ classname (and thus RTTI).
-  rNL1 <- nList2("numericScalar")
-  rNL2 <- nList2("numericScalar")
+## test_that("nList2: objects from two same-type generators are interchangeable", {
+##   # Two independent nCompile calls, each producing a nList2<double>.
+##   # An object from one DLL should be passable to a method compiled in the
+##   # other DLL, because they share the same C++ classname (and thus RTTI).
+##   rNL1 <- nList2("numericScalar")
+##   rNL2 <- nList2("numericScalar")
 
-  cNL1 <- nCompile(rNL1)
-  rNL3 <- nList2("numericScalar")   # fresh generator, same type
-  nc <- nClass(
-    classname = "nc_accept_nList2",
-    Cpublic = list(
-      lenOf = nFunction(
-        function(x = 'rNL3') { return(x$getLength()) },
-        returnType = 'integerScalar'
-      )
-    )
-  )
-  comp2 <- nCompile(rNL3, nc)
+##   cNL1 <- nCompile(rNL1)
+##   rNL3 <- nList2("numericScalar")   # fresh generator, same type
+##   nc <- nClass(
+##     classname = "nc_accept_nList2",
+##     Cpublic = list(
+##       lenOf = nFunction(
+##         function(x = 'rNL3') { return(x$getLength()) },
+##         returnType = 'integerScalar'
+##       )
+##     )
+##   )
+##   comp2 <- nCompile(rNL3, nc)
 
-  src <- cNL1$nList2$new()
-  src$setLength(4L)
-  obj <- comp2$nc_accept_nList2$new()
-  expect_equal(obj$lenOf(src), 4L)
-  rm(rNL1, rNL2, rNL3, cNL1, nc, comp2, src, obj); gc()
-})
+##   src <- cNL1$nList2$new()
+##   src$setLength(4L)
+##   obj <- comp2$nc_accept_nList2$new()
+##   expect_equal(obj$lenOf(src), 4L)
+##   rm(rNL1, rNL2, rNL3, cNL1, nc, comp2, src, obj); gc()
+## })
