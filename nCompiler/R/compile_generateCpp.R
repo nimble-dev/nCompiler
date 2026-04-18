@@ -578,8 +578,9 @@ inGenCppEnv(
 
 inGenCppEnv(
   ScalarCast <- function(code, symTab) {
+    newType <- code$aux$compileArgs$type
     paste0('scalar_cast_<',
-           compile_generateCpp(code$args[[2]]),
+           newType,
            '>::cast(',
            compile_generateCpp(code$args[[1]], symTab),
            ')')

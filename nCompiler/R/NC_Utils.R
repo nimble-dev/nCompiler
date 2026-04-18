@@ -97,7 +97,6 @@ NCinternals <- function(x) {
 }
 
 NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
-  browser()
   if(!isNCgenerator(NCgenerator))
     stop("Input must be a nClass generator.")
   current_NCgen <- NCgenerator

@@ -219,7 +219,7 @@ inEigenizeEnv(
 #    cppType <- exprClass$new(isName = TRUE, isCall = FALSE, isAssign = FALSE,
 #                             name = scalarTypeToCppType(newType))
 #    setArg(castExpr, 2, cppType)
-    castExpr$aux$compileArgs <- list(scalar_type = scalarTypeToCppType(newType))
+    castExpr$aux$compileArgs <- list(type = scalarTypeToCppType(newType))
     castExpr$type <- symbolBasic$new(name = castExpr$name,
                                      type = newType,
                                      nDim = castExpr$args[[1]]$type$nDim)

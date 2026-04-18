@@ -5,7 +5,7 @@
 # for different kinds of numeric objects
 
 library(testthat)
-#library(nCompiler)
+library(nCompiler)
 
 message("More test coverage of argument passing cases is needed. See comments.")
 # need cases of multiple function call layers
