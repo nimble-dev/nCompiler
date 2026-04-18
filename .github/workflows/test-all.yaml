@@ -100,7 +100,7 @@ jobs:
         env:
           GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
-          run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
         run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
       - name: Build Package
