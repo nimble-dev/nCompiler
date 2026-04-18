@@ -95,8 +95,12 @@ jobs:
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
+      - name: Install nimbleModel
+        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel", auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
+        env:
+          GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
-        run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
+          run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
         run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
       - name: Build Package
