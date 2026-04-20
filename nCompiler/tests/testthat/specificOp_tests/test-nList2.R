@@ -205,10 +205,10 @@ test_that("nList2 uncompiled: as.list", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: length
+# Compiled object used from R: length
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: length, setLength, length<-", {
+test_that("nList2 compiled obj used from R: length, setLength, length<-", {
   obj <- cNL$new()
   expect_equal(length(obj), 0L)
   length(obj) <- 4
@@ -221,10 +221,10 @@ test_that("nList2 compiled: length, setLength, length<-", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: double-bracket get / set
+# Compiled object used from R: double-bracket get / set
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [[ get and set", {
+test_that("nList2 compiled obj used from R: [[ get and set", {
   obj <- cNL$new()
   obj$setLength(3L)
   obj[[1]] <- 1.1
@@ -238,14 +238,14 @@ test_that("nList2 compiled: [[ get and set", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ with numeric and logical index", {
+test_that("nList2 compiled obj used from R: [[ with numeric and logical index", {
   obj <- make_compiled()
   expect_equal(obj[[2.0]],  20.0)  # numeric index
   expect_equal(obj[[TRUE]], 10.0)  # logical TRUE -> first element
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ get gives and error and set expands", {
+test_that("nList2 compiled obj used from R: [[ get gives and error and set expands", {
   obj <- cNL$new()
   expect_error(obj[[1]])
   obj[[2]] <- 2.2
@@ -265,39 +265,39 @@ test_that("nList2 uncompiled: [[ set chains correctly", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: single-bracket get
+# Compiled object used from R: single-bracket get
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [ get with integer indices", {
+test_that("nList2 compiled obj used from R: [ get with integer indices", {
   obj <- make_compiled()
   expect_equal(as.list(obj[c(1L, 3L)]),     list(10.0, 30.0))
   expect_equal(as.list(obj[c(4L, 2L, 1L)]), list(40.0, 20.0, 10.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [ get with numeric indices", {
+test_that("nList2 compiled obj used from R: [ get with numeric indices", {
   obj <- make_compiled()
   expect_equal(as.list(obj[c(2.0, 4.0)]), list(20.0, 40.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [ get with logical indices", {
+test_that("nList2 compiled obj used from R: [ get with logical indices", {
   obj <- make_compiled()
   expect_equal(as.list(obj[c(TRUE, FALSE, TRUE, FALSE)]), list(10.0, 30.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [ get, logical index recycled over contents", {
+test_that("nList2 compiled obj used from R: [ get, logical index recycled over contents", {
   obj <- make_compiled()                      # length 4: 10,20,30,40
   expect_equal(as.list(obj[c(TRUE, FALSE)]),  list(10.0, 30.0))
   rm(obj); gc()
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: single-bracket set with list values
+# Compiled object used from R: single-bracket set with list values
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [<- with list values, integer indices", {
+test_that("nList2 compiled obj used from R: [<- with list values, integer indices", {
   obj <- make_compiled()
   obj[c(1L, 3L)] <- list(100.0, 300.0)
   expect_equal(obj[[1]], 100.0)
@@ -307,7 +307,7 @@ test_that("nList2 compiled: [<- with list values, integer indices", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- with list values, numeric indices", {
+test_that("nList2 compiled obj used from R: [<- with list values, numeric indices", {
   obj <- make_compiled()
   obj[c(2.0, 4.0)] <- list(200.0, 400.0)
   expect_equal(obj[[2]], 200.0)
@@ -315,7 +315,7 @@ test_that("nList2 compiled: [<- with list values, numeric indices", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- with list values, logical indices", {
+test_that("nList2 compiled obj used from R: [<- with list values, logical indices", {
   obj <- make_compiled()
   obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(11.0, 33.0)
   expect_equal(obj[[1]], 11.0)
@@ -326,17 +326,17 @@ test_that("nList2 compiled: [<- with list values, logical indices", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: single-bracket set — recycling rule
+# Compiled object used from R: single-bracket set — recycling rule
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [<- list recycled over integer indices", {
+test_that("nList2 compiled obj used from R: [<- list recycled over integer indices", {
   obj <- make_compiled()
   obj[1:4] <- list(1.0, 2.0)
   expect_equal(as.list(obj), list(1.0, 2.0, 1.0, 2.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- list recycled over logical indices", {
+test_that("nList2 compiled obj used from R: [<- list recycled over logical indices", {
   obj <- make_compiled()
   obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(99.0)  # single value -> recycled
   expect_equal(obj[[1]], 99.0)
@@ -345,7 +345,7 @@ test_that("nList2 compiled: [<- list recycled over logical indices", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- logical index recycled over contents", {
+test_that("nList2 compiled obj used from R: [<- logical index recycled over contents", {
   obj <- make_compiled()                    # length 4: 10,20,30,40
   obj[c(TRUE, FALSE)] <- list(11.0, 33.0)  # bools recycled to T,F,T,F
   expect_equal(obj[[1]], 11.0)
@@ -356,10 +356,10 @@ test_that("nList2 compiled: [<- logical index recycled over contents", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: single-bracket set with single scalar value
+# Compiled object used from R: single-bracket set with single scalar value
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [<- single scalar recycled over positions", {
+test_that("nList2 compiled obj used from R: [<- single scalar recycled over positions", {
   obj <- make_compiled()
   obj[c(1L, 2L, 3L)] <- 7.7
   expect_equal(obj[[1]], 7.7)
@@ -370,10 +370,10 @@ test_that("nList2 compiled: [<- single scalar recycled over positions", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: single-bracket set with another nList2
+# Compiled object used from R: single-bracket set with another nList2
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [<- with same-type nList2", {
+test_that("nList2 compiled obj used from R: [<- with same-type nList2", {
   src <- cNL$new()
   src$setLength(2L)
   src[[1]] <- 200.0
@@ -389,10 +389,10 @@ test_that("nList2 compiled: [<- with same-type nList2", {
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: automatic expansion of contents on out-of-bounds [<-
+# Compiled object used from R: automatic expansion of contents on out-of-bounds [<-
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: integer [<- auto-expands contents", {
+test_that("nList2 compiled obj used from R: integer [<- auto-expands contents", {
   obj <- cNL$new()
   obj$setLength(2L)
   obj[[1]] <- 1.0; obj[[2]] <- 2.0
@@ -403,7 +403,7 @@ test_that("nList2 compiled: integer [<- auto-expands contents", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: numeric [<- auto-expands contents", {
+test_that("nList2 compiled obj used from R: numeric [<- auto-expands contents", {
   obj <- cNL$new()
   obj$setLength(2L)
   obj[[1]] <- 1.0; obj[[2]] <- 2.0
@@ -414,7 +414,7 @@ test_that("nList2 compiled: numeric [<- auto-expands contents", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: logical [<- auto-expands when bools longer than contents", {
+test_that("nList2 compiled obj used from R: logical [<- auto-expands when bools longer than contents", {
   obj <- cNL$new()
   obj$setLength(2L)
   obj[[1]] <- 1.0; obj[[2]] <- 2.0
@@ -427,10 +427,10 @@ test_that("nList2 compiled: logical [<- auto-expands when bools longer than cont
 })
 
 # ---------------------------------------------------------------------------
-# Compiled: as.list
+# Compiled object used from R: as.list
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: as.list", {
+test_that("nList2 compiled obj used from R: as.list", {
   obj <- make_compiled()
   expect_equal(as.list(obj), list(10.0, 20.0, 30.0, 40.0))
   rm(obj); gc()
@@ -440,7 +440,7 @@ test_that("nList2 compiled: as.list", {
 # Error cases: invalid indices for [[
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [[ NA index errors", {
+test_that("nList2 compiled obj used from R: [[ NA index errors", {
   obj <- make_compiled()
   expect_error(obj[[NA_integer_]])
   expect_error(obj[[NA_real_]])
@@ -448,7 +448,7 @@ test_that("nList2 compiled: [[ NA index errors", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ out-of-bounds errors", {
+test_that("nList2 compiled obj used from R: [[ out-of-bounds errors", {
   obj <- make_compiled()
   expect_error(obj[[0L]])
   expect_error(obj[[5L]])            # length is 4
@@ -456,19 +456,19 @@ test_that("nList2 compiled: [[ out-of-bounds errors", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ FALSE logical errors", {
+test_that("nList2 compiled obj used from R: [[ FALSE logical errors", {
   obj <- make_compiled()
   expect_error(obj[[FALSE]])
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ multi-element index errors", {
+test_that("nList2 compiled obj used from R: [[ multi-element index errors", {
   obj <- make_compiled()
   expect_error(obj[[c(1L, 2L)]])
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [[ non-finite numeric errors", {
+test_that("nList2 compiled obj used from R: [[ non-finite numeric errors", {
   obj <- make_compiled()
   expect_error(obj[[Inf]])
   expect_error(obj[[NaN]])
@@ -479,7 +479,7 @@ test_that("nList2 compiled: [[ non-finite numeric errors", {
 # Error cases: invalid indices / values for [<-
 # ---------------------------------------------------------------------------
 
-test_that("nList2 compiled: [<- NA index errors", {
+test_that("nList2 compiled obj used from R: [<- NA index errors", {
   obj <- make_compiled()
   expect_error(obj[NA_integer_]  <- list(1.0))
   expect_error(obj[NA_real_]     <- list(1.0))
@@ -487,21 +487,21 @@ test_that("nList2 compiled: [<- NA index errors", {
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- zero or negative integer index errors", {
+test_that("nList2 compiled obj used from R: [<- zero or negative integer index errors", {
   obj <- make_compiled()
   expect_error(obj[0L]  <- list(1.0))
   expect_error(obj[-1L] <- list(1.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- non-finite numeric index errors", {
+test_that("nList2 compiled obj used from R: [<- non-finite numeric index errors", {
   obj <- make_compiled()
   expect_error(obj[Inf] <- list(1.0))
   expect_error(obj[NaN] <- list(1.0))
   rm(obj); gc()
 })
 
-test_that("nList2 compiled: [<- zero-length replacement errors", {
+test_that("nList2 compiled obj used from R: [<- zero-length replacement errors", {
   obj <- make_compiled()
   expect_error(obj[1:2] <- list())
   rm(obj); gc()
@@ -550,7 +550,11 @@ test_that("nList2: duplicate units in nCompile are deduplicated", {
   rm(rNL1, rNL2); gc()
 })
 
-test_that("nList2 single-bracket compiled works",
+# ---------------------------------------------------------------------------
+# Compiled: various [ an [[ get and set operations compile and work
+# ---------------------------------------------------------------------------
+
+test_that("nList2 various bracket get and set operations compile and work",
 {
   rNL <- nList2("numericScalar")
   nc <- nClass(

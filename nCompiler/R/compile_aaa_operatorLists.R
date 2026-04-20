@@ -387,8 +387,9 @@ assignOperatorDef(
     isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DoubleBracket'),
-    eigenImpl = list(
-      handler = 'Bracket'),
+    # eigenImpl = list(
+    #   handler = 'Bracket',
+    #   ),
     cppOutput = list(
       handler = 'IndexingBracket') # generates to single bracket for C++
   )
@@ -404,10 +405,11 @@ assignOperatorDef(
       handler = 'DoubleBracket',
       isAssign = TRUE),
     eigenImpl = list(
-      handler = 'Bracket',
-      isAssign = TRUE),
-    cppOutput = list(
-      handler = 'IndexingBracket') # generates to single bracket for C++
+      handler = 'revert_OpAssign')#,
+#      isAssign = TRUE),
+# cppOutput will go back to `[[` opDef after reverse_OpAssign
+#    cppOutput = list(
+#      handler = 'IndexingBracket') # generates to single bracket for C++
   )
 )
 

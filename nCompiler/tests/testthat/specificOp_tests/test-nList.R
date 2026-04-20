@@ -4,82 +4,6 @@ message("nList needs tests of nLists of nClass types or even other nLists")
 
 # working here on nList2, a working step towards a new more fully featured nList
 
-## # side project:
-## # Can an nClass method return an object of its own class?
-## nc0 <- nClass(
-##   Cpublic = list(
-##     x = 'numericVector',
-##     hw = nFunction(
-##       function() {
-##         return(1:5)
-##         returnType(numericVector())
-##       }
-
-##   )
-## )
-## nc1 <- nClass(
-##   Cpublic = list(
-##     x = 'numericVector',
-##     spawn = nFunction(
-##       function() {
-##         ans <- nc1$new()
-##         return(ans)
-##         returnType('nc1')
-##       }
-##     )
-##   )
-## )
-## cnc1 <- nCompile(nc1)
-## #
-## #junk <- nCompile(nList2Base_nClass, control=list(generate_predefined=TRUE))
-## #is.null(junk) #TRUE b/c createFromR = FALSE
-
-## #junk2 <- nCompiler:::nList2_nClass("numericScalar", "double")
-## junk2 <- nList2_nClass("numericScalar", "double")
-## junk2 <- nList2("numericScalar")
-## #junk2 <- nList("numericScalar", "double")
-## junk3 <- nCompile(junk2)
-## obj <- junk3$new()
-
-## obj$setLength(3)
-## length(obj)
-## length(obj) <- 4
-## length(obj)
-## obj[[1]]
-## as.list(obj[c(1, 2, 1)])
-## obj$setOne(2, 4)
-## obj[[1]] <- 3
-
-## foo <- nFunction(
-##   fun = function() {
-##     obj <- nList2("numericScalar")$new()
-##     x <- obj[[1]]
-##     #obj$setLength(3)
-##     #return(obj)
-##     #returnType("nList2('numericScalar')")
-##   }
-## )
-## debug(nCompiler:::check_built_types)
-## cfoo <- nCompile(foo)
-
-## ## nList2_nClass <- function(type) {
-## ##   ans <- substitute(
-## ##     nClass(Cpublic = list(x = TYPE)),
-## ##     list(TYPE = type)
-## ##   )
-## ##   eval(ans)
-## ## }
-
-## # Draft for a new version of nList.
-## nList2 <- function(type, .ID = FALSE) {
-##   classID <- paste0("nList2_", as.character(type))
-##   if(isTRUE(.ID))
-##     return(classID)
-##   ans <- nList2_nClass(type)
-##   NCinternals(ans)$classID <- classID
-##   ans
-## }
-## class(nList2) <- c("function", "nClassBuilder")
 
 ## # To-do:
 ## #  polish the many set and get cases
@@ -99,21 +23,6 @@ message("nList needs tests of nLists of nClass types or even other nLists")
 ## #   Then resolveSymbolTBD will need to invoke the nClassBuilder etc.
 ## #
 ## # figure out to manage output more
-
-## library(nCompiler)
-## foo <- nFunction(
-##   function() {
-##     ans <- nList2("numericScalar")$new()
-##   #  return(ans)
-##     return(1.2)
-##   },
-##   returnType = "numericScalar",
-## #  returnType = "nList2('numericScalar')"
-## )
-## undebug(nCompiler:::compile_normalizeCalls)
-## undebug(nCompiler:::update_cachedOpInfo)
-## debug(nCompiler:::labelAbstractTypesEnv$nClassBuilder)
-## cfoo <- nCompile(foo)
 
 test_that("nList('numericScalar') works in nFunction", {
   foo <- nFunction(
