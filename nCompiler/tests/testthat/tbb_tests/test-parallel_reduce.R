@@ -1,6 +1,4 @@
 test_that("basic usage of parallel_reduce", {
-    ## newly failing with threads stuff
-    library(nCompiler);paciorek=7
   nc <- nClass(
     Cpublic = list(
       go = nFunction(
@@ -86,7 +84,9 @@ test_that("basic usage of parallel_reduce", {
       )
   )
   Cnc <- nCompile(nc)
+  obj <- nc$new()
   Cobj <- Cnc$new()
+  expect_identical(obj$go(1:3), exp(6)+3)
   expect_identical(Cobj$go(1:3), exp(6)+3)
 
   ## Use in `return()`.
@@ -101,8 +101,10 @@ test_that("basic usage of parallel_reduce", {
     )
   )
   Cnc <- nCompile(nc)
+  obj <- nc$new()
   Cobj <- Cnc$new()
   expect_identical(Cobj$go(1:3), 9)
+  expect_identical(obj$go(1:3), 9)
   
 })
 
@@ -141,7 +143,7 @@ test_that("error trapping for parallel_reduce", {
       )
     )
   )
-  expect_error(Cnc <- nCompile(nc, mypairmin)[[1]], "expected 3 arguments")
+  expect_error(Cnc <- nCompile(nc, mypairmin), "no default `init`")
   obj <- nc$new()
   expect_error(obj$go(1:5), "no default value provided")
 
@@ -226,7 +228,7 @@ test_that("user-defined reduction functions", {
                 },
                 returnType = 'numericScalar'
             ),
-            parallel_fun = nFunction(
+            go = nFunction(
                 fun = function(x = 'numericVector') {
                     y <- parallel_reduce(reduction_fun, x, 0) 
                     return(y)
@@ -236,10 +238,11 @@ test_that("user-defined reduction functions", {
         )
     )
     Cnc <- nCompile(nc)
+    obj <- nc$new()
     Cobj = Cnc$new()
-    Cobj$go(1:5)
-
-
+    expect_identical(obj$go(1:5), 15)
+    expect_identical(Cobj$go(1:5), 15)
+    
     nc0 <- nClass(
         Cpublic = list(
             reduction_fun = nFunction(
@@ -253,7 +256,7 @@ test_that("user-defined reduction functions", {
     
     nc <- nClass(
         Cpublic = list(
-            parallel_fun = nFunction(
+            go = nFunction(
                 fun = function(x = 'numericVector', obj = 'nc0') {
                     y <- parallel_reduce(obj$reduction_fun, x, 0) 
                     return(y)
@@ -262,15 +265,20 @@ test_that("user-defined reduction functions", {
             )
         )
     )
+
+    obj0 <- nc0$new()
+    obj = nc$new()
+    expect_identical(obj$go(1:5, obj0), 15)
+    
     Cnc <- nCompile(nc, nc0)
     Cobj0 <- Cnc[[2]]$new()
     Cobj = Cnc[[1]]$new()
-    Cobj$go(1:5, Cobj0)
+    expect_identical(Cobj$go(1:5, Cobj0), 15)
 
     nc <- nClass(
         Cpublic = list(
             obj = 'nc0',
-            parallel_fun = nFunction(
+            go = nFunction(
                 fun = function(x = 'numericVector') {
                     y <- parallel_reduce(obj$reduction_fun, x, 0) 
                     return(y)
@@ -279,15 +287,17 @@ test_that("user-defined reduction functions", {
             )
         )
     )
+    obj <- nc$new()
+    obj$obj <- nc0$new()
+    expect_identical(obj$go(1:5), 15)
+    
     Cnc <- nCompile(nc, nc0)
     Cobj = Cnc[[1]]$new()
-    Cobj$obj <- Cnc[[2]]$new()
-    Cobj$go(1:5, Cobj0)
+    expect_identical(Cobj$go(1:5), 15)
     
     nc <- nClass(
         Cpublic = list(
-            obj = 'nc0',
-            parallel_fun = nFunction(
+            go = nFunction(
                 fun = function(x = 'numericVector') {
                     obj <<- nc0$new()
                     y <- parallel_reduce(obj$reduction_fun, x, 0) 
@@ -297,14 +307,17 @@ test_that("user-defined reduction functions", {
             )
         )
     )
+    obj <- nc$new()
+    expect_identical(obj$go(1:5), 15)
+    
     Cnc <- nCompile(nc, nc0)
     Cobj = Cnc[[1]]$new()
-    Cobj$obj <- Cnc[[2]]$new()
-    Cobj$go(1:5, Cobj0)
+    expect_identical(Cobj$go(1:5), 15)
 })
 
 
 test_that("reduction cases that don't work", {
+  ## This doesn't work at present but we should make it work, presumably by lifting the `object` expression.  
   nc <- nClass(
     Cpublic = list(
       go = nFunction(
@@ -316,11 +329,29 @@ test_that("reduction cases that don't work", {
       )
     )
   )
-  expect_error(Cnc <- nCompile(nc))
-  obj <- nc$new()
-  obj$go(1:5, 6:10)
-  expect_identical(obj$go(1:5, 6:10) , as.numeric(55))
+  expect_error(Cnc <- nCompile(nc), 'found an expression')
 
+  ## Similar issue for this use case.
+  nc1 <- nClass(
+      Cpublic = list(
+          x = 'numericVector'
+      )
+  )
+  
+  nc <- nClass(
+      Cpublic = list(
+          go = nFunction(
+              fun = function(o = 'nc1') {
+                  y <- parallel_reduce('+', o$x, 0)
+                  return(y)
+              },
+              returnType = 'numericScalar'
+          )
+      )
+  )
+  expect_error(Cnc <- nCompile(nc,nc1), 'found an expression')
+  
+  ## Issue 136. This should work, but some type issue.
   nc <- nClass(
     Cpublic = list(
       go = nFunction(
@@ -332,56 +363,37 @@ test_that("reduction cases that don't work", {
       )
     )
   )
-  expect_error(Cnc <- nCompile(nc))  ## Lots of C++ compiler output.
-  
-nc1 <- nClass(
-    Cpublic = list(
-        x = 'numericVector'
-        )
-)
+  expect_error(out <- capture.output(nCompile(nc)))  ## Lots of C++ compiler output.
 
-nc <- nClass(
-    Cpublic = list(
-      go = nFunction(
-        fun = function(o = 'nc1') {
-            y <- parallel_reduce('+', o$x, 0)
-            return(y)
-        },
-        returnType = 'numericScalar'
-      )
-    )
-)
-Cnc <- nCompile(nc,nc1)
-
-nc1 <- nClass(
-    Cpublic = list(
-        y = 'nc2'
+  nc1 <- nClass(
+      Cpublic = list(
+          y = 'nc2'
     ))
 
-nc2 <- nClass(
-    Cpublic = list(
-        plus = nFunction(
-          fun = function(x = 'numericScalar', y = 'numericScalar') {
-              ans <- x + y
-              return(ans)
-          },
-          returnType = 'numericScalar'
-        )
-    )
-)
-
-nc <- nClass(
-    Cpublic = list(
-      go = nFunction(
-        fun = function(x = 'numericVector', o = 'nc1') {
-            y <- parallel_reduce(o$y$plus, x, 0)
-            return(y)
-        },
-        returnType = 'numericScalar'
+  nc2 <- nClass(
+      Cpublic = list(
+          plus = nFunction(
+              fun = function(x = 'numericScalar', y = 'numericScalar') {
+                  ans <- x + y
+                  return(ans)
+              },
+              returnType = 'numericScalar'
+          )
       )
-    )
-)
-Cnc <- nCompile(nc,nc1, nc2)
+  )
+  
+  nc <- nClass(
+      Cpublic = list(
+          go = nFunction(
+              fun = function(x = 'numericVector', o = 'nc1') {
+                  y <- parallel_reduce(o$y$plus, x)
+                  return(y)
+              },
+              returnType = 'numericScalar'
+          )
+      )
+  )
+  expect_error(Cnc <- nCompile(nc,nc1, nc2),  'too many levels of class hierarchy')
 
 })
 
@@ -392,13 +404,16 @@ test_that("reduction without assignment", {
             go = nFunction(
                 fun = function(x = 'numericVector') {
                     tmp <- 7
-                    parallel_reduce('+', x, 0)
+                    parallel_reduce('+', x)
                     return(0)
                 },
                 returnType = 'numericScalar'
             )
         )
     )
+    obj <- nc$new()
+    expect_identical(obj$go(1:3), 0)
+    
     Cnc <- nCompile(nc)
     Cobj <- Cnc$new()
     expect_identical(Cobj$go(1:3), 0)
@@ -408,13 +423,15 @@ test_that("reduction without assignment", {
         Cpublic = list(
             go = nFunction(
                 fun = function(x = 'numericVector') {
-                    3 + exp(parallel_reduce('+', x, 0))
+                    3 + exp(parallel_reduce('+', x))
                     return(0)
                 },
                 returnType = 'numericScalar'
             )
         )
     )
+    obj <- nc$new()
+    expect_identical(obj$go(1:3), 0)
     Cnc <- nCompile(nc)
     Cobj <- Cnc$new()
     expect_identical(Cobj$go(1:3), 0)
@@ -422,64 +439,68 @@ test_that("reduction without assignment", {
 
 test_that("multiple reduction functions", {
     nc <- nClass(
-    Cpublic = list(
-        go = nFunction(
-        fun = function(x = 'numericVector', z = 'numericVector') {
-          y <- parallel_reduce('+', x, 0) + 3*parallel_reduce('+',z,0)
-          return(y)
-        },
-        returnType = 'numericScalar'
-      )
+        Cpublic = list(
+            go = nFunction(
+                fun = function(x = 'numericVector', z = 'numericVector') {
+                    y <- parallel_reduce('+', x) + 3*parallel_reduce('+',z)
+                    return(y)
+                },
+                returnType = 'numericScalar'
+            )
+        )
     )
-    )
+    obj <- nc$new()
     Cnc <- nCompile(nc)
     Cobj <- Cnc$new()
-    expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7)))
+    expect_identical(obj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
+    expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
 
     nc <- nClass(
-    Cpublic = list(
-        go = nFunction(
-        fun = function(x = 'numericVector', z = 'numericVector') {
-          y <- parallel_reduce('+', x, 0) 
-          return(y + 3*parallel_reduce('+',z,0))
-        },
-        returnType = 'numericScalar'
-      )
+        Cpublic = list(
+            go = nFunction(
+                fun = function(x = 'numericVector', z = 'numericVector') {
+                    y <- parallel_reduce('+', x) 
+                    return(y + 3*parallel_reduce('+',z,0))
+                },
+                returnType = 'numericScalar'
+            )
+        )
     )
-    )
+    obj <- nc$new()
     Cnc <- nCompile(nc)
     Cobj <- Cnc$new()
-    expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7)))
+    expect_identical(obj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
+    expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
 
-## Nested case.
-nc <- nClass(
-    Cpublic = list(
-        adder = nFunction(
-            fun = function(x = 'numericScalar', y = 'numericScalar') {
-                z <- 1:5
-                tmp <- parallel_reduce('+',z,0)
-              ans <- x + y + tmp
-              return(ans)
-          },
-          returnType = 'numericScalar'
-    ),
-        go = nFunction(
-        fun = function(x = 'numericVector') {
-            y <- parallel_reduce('adder', x, 0)
-          return(y)
-        },
-        returnType = 'numericScalar'
-      )
+    ## Nested case.
+    nc <- nClass(
+        Cpublic = list(
+            adder = nFunction(
+                fun = function(x = 'numericScalar', y = 'numericScalar') {
+                    z <- 1:5
+                    tmp <- parallel_reduce('+',z)
+                    ans <- x + y + tmp
+                    return(ans)
+                },
+                returnType = 'numericScalar'
+            ),
+            go = nFunction(
+                fun = function(x = 'numericVector') {
+                    y <- parallel_reduce(adder, x, 0)
+                    return(y)
+                },
+                returnType = 'numericScalar'
+            )
+        )
     )
-  )
-Cnc <- nCompile(nc)
-o = Cnc$new()
-o$go(1:5)
-
-
+    obj <- nc$new() 
+    Cnc <- nCompile(nc)
+    Cobj = Cnc$new()
+    expect_identical(obj$go(1:5), 90) # Note that this would not work if use `parallel_reduce('adder', x, 0)`.
+    expect_identical(Cobj$go(1:5), 90)
+    
 })
 
-    ## test parallel_reduce(o$adder) with o either passed as arg or as member data and from nc1 class; check it works in R too
 
 
 
