@@ -297,6 +297,7 @@ test_that("user-defined reduction functions", {
     
     nc <- nClass(
         Cpublic = list(
+            obj = 'nc0',
             go = nFunction(
                 fun = function(x = 'numericVector') {
                     obj <<- nc0$new()
