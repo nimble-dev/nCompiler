@@ -372,7 +372,7 @@ assignOperatorDef(
       isAssign = TRUE),
     eigenImpl = list(
       handler = 'Bracket',
-      isAssign = TRUE), ## converts `[` to `index[`
+      isAssign = TRUE), ## converts `[` to `index[` or `index(`
     cppOutput = list(
       handler = 'IndexingBracket') ## needed for generated code such as for AD.
   )
@@ -381,9 +381,31 @@ assignOperatorDef(
 assignOperatorDef(
   c('[['),
   list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i) {},
+    useOpAssign = TRUE,
     isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DoubleBracket'),
+    eigenImpl = list(
+      handler = 'Bracket'),
+    cppOutput = list(
+      handler = 'IndexingBracket') # generates to single bracket for C++
+  )
+)
+
+assignOperatorDef(
+  c('[[<-'),
+  list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i, value) {},
+    isGeneric = TRUE,
+    labelAbstractTypes = list(
+      handler = 'DoubleBracket',
+      isAssign = TRUE),
+    eigenImpl = list(
+      handler = 'Bracket',
+      isAssign = TRUE),
     cppOutput = list(
       handler = 'IndexingBracket') # generates to single bracket for C++
   )

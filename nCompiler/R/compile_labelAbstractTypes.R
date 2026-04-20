@@ -100,6 +100,7 @@ compile_labelAbstractTypes <- function(code,
     opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
     isGeneric <- isTRUE(opInfo$opDef$isGeneric)
     handler <- NULL
+    handlingInfo <- NULL
     if(isGeneric) {
       if(length(code$args) > 0) {
         arg1 <- code$args[[1]]
@@ -107,11 +108,14 @@ compile_labelAbstractTypes <- function(code,
                                               handlingInfo, useArgs = c(TRUE, rep(FALSE, length(code$args)-1)))
         inserts <- NULL # highlighting that currently these are thrown out -- possibly a problem.
         if(inherits(arg1$type, "symbolNC")) {
-          handler <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
+          handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
+          if(!is.null(handlingInfo)) {
+            handler <- handlingInfo[['handler']]
+          }
         }
       }
     }
-    if(is.null(handler)) {
+    if(is.null(handlingInfo)) {
       handlingInfo <- getOperatorField(opInfo$opDef, "labelAbstractTypes")
       if(!is.null(handlingInfo))
         handler <- handlingInfo[['handler']]
@@ -237,13 +241,13 @@ inLabelAbstractTypesEnv(
   }
 )
 
-inLabelAbstractTypesEnv(
-  nList2_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
-    browser()
-    inserts <- NULL
-    if(length(inserts) == 0) NULL else inserts
-  }
-)
+# inLabelAbstractTypesEnv(
+#   nList2_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
+#     browser()
+#     inserts <- NULL
+#     if(length(inserts) == 0) NULL else inserts
+#   }
+# )
 
 # nCompiler:::inLabelAbstractTypesEnv(
 #   nClassBuilder <- function(code, symTab, auxEnv, handlingInfo) {
@@ -316,9 +320,12 @@ inLabelAbstractTypesEnv(
     # e.g obj[[1]] where obj defines its own "[[" operator definition (opDef).
     # what remains is singleton indexing and nPlainList (original version of nList).
     useArgs <- rep(TRUE, length(code$args))
-    useArgs[1] <- FALSE
+    useArgs[1] <- FALSE # already processed
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo, useArgs = useArgs)
+    # return type of x[[i]] is the element type of x
+    # and return type of `[[<-`(x, i, value) is the type of value,
+    #.  which is also the element type of x, so both cases have same return type
     code$type <- code$args[[1]]$type$elementSym$clone()
     if(length(inserts) == 0) NULL else inserts
   }

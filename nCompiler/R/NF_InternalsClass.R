@@ -71,7 +71,7 @@ NF_InternalsClass <- R6::R6Class(
         n_c <- length(c_arg_names)
         n_r <- length(r_arg_names)
         if(n_r < n_c) {
-          stop(paste0("In nFunction '", name, "': fun has ", n_r,
+          stop(paste0("In nFunction '", self$uniqueName, "': fun has ", n_r,
                       " argument(s) but compileInfo$C_fun has ", n_c,
                       ". fun must have at least as many arguments as C_fun,",
                       " in the same order."),
@@ -79,7 +79,7 @@ NF_InternalsClass <- R6::R6Class(
         }
         mismatches <- which(r_arg_names[seq_len(n_c)] != c_arg_names)
         if(length(mismatches) > 0) {
-          stop(paste0("In nFunction '", name, "': argument name mismatch between",
+          stop(paste0("In nFunction '", self$uniqueName, "': argument name mismatch between",
                       " fun and compileInfo$C_fun at position(s) ",
                       paste(mismatches, collapse = ", "), ". ",
                       "fun: (", paste(r_arg_names[seq_len(n_c)], collapse = ", "), "); ",
@@ -138,7 +138,7 @@ NF_InternalsClass <- R6::R6Class(
           returnTypeDecl <- returnType
       } else {
         if(!is.null(returnType))
-          stop(paste0("Return type was declared in code and by returnType argument.\n",
+          stop(paste0("Return type for ", name, " was declared in code and by returnType argument.\n",
                       "Use one or the other.  Providing both is not allowed.\n"),
                call. = FALSE)
         self$code <- returnTypeInfo$code ## with returnType() line stripped

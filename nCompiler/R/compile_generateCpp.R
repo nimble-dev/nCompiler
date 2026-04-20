@@ -95,7 +95,19 @@ compile_generateCpp <- function(code,
   # An example is changes made in eigenization, such as inserting `index[`.
   # This is a core operator so it will be found in the check_cachedOpInfo with update=TRUE.
   opInfo <- check_cachedOpInfo(code, where=baseenv(), update=TRUE, allowFail = TRUE)
-  handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
+  handlingInfo <- NULL
+  isGeneric <- isTRUE(opInfo$opDef$isGeneric)
+  if(isGeneric) {
+    if(length(code$args) > 0) {
+      arg1 <- code$args[[1]]
+      if(inherits(arg1$type, "symbolNC")) {
+        handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "cppOutput", inherits=TRUE)
+      }
+      handler <- handlingInfo[['handler']]
+    }
+  }
+  if(is.null(handlingInfo))
+    handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
   #  handler <- getOperatorDef(code$name, "cppOutput", "handler")
   # opInfo <- operatorDefEnv[[code$name]]
   # if(!is.null(opInfo)) {

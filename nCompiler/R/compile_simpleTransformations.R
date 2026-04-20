@@ -107,7 +107,7 @@ inSimpleTransformationsEnv(
     function(code, symTab, auxEnv, info) {
       arg1 <- code$args[[1]]
       arg1_opInfo <- check_cachedOpInfo(arg1, where=auxEnv$where, update=TRUE, allowFail = TRUE)
-      arg1_useOpAssign <- isTRUE(arg1_opInfo$useOpAssign)
+      arg1_useOpAssign <- isTRUE(arg1_opInfo$opDef$useOpAssign)
       if(!arg1_useOpAssign) return(invisible(NULL))
 
       if(isTRUE(arg1$isCall)) {

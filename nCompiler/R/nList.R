@@ -72,10 +72,82 @@ nList2_nClass <- function(type) {
         C_fun = function()
         {cppLiteral('return as_list_()')}
       )),
+    # Note that returning from the cpp set methods
+    # vs the R set methods is different, inconsistent, and intentional.
+    # In C++: a = b = c, the return value of b = c is c.
+    # In R: a = b = c, the return value of b = c is b (the object being assigned to).
+    # In R, this is necessary for chained assignments, like
+    # a$b$c <- v: `$<-`(a, "b", `$<-`(a$b, "c", v))
+    # In C++, we don't want to return nList2 objects when we
+    # don't need to (semantically) because there is some construction innvolved
+    # in doing so, whereas returning the value is free.
+    singleBracket_get_cpp = nFunction(
+      name = "singleBracket_get_cpp",
+      function(inds) {
+        stop("singleBracket_get_cpp is for internal compiled use only.")},
+      compileInfo=list(
+        callFromR = FALSE,
+        template = "template<typename EigenDerived, int AccessLevel>",
+        C_fun = function(inds = 'nCpp("Eigen::TensorBase<EigenDerived, AccessLevel>", const=TRUE, ref=TRUE )'){
+          returnType("myclass")
+          res <- myclass$new()
+          cppLiteral('res->contents() = singleBracket_get_cpp_(inds); return res;')
+        }
+      )),
+    singleBracket_set_cpp = nFunction(
+      name = "singleBracket_set_cpp",
+      function(inds, values) {
+        stop("singleBracket_set_cpp is for internal compiled use only.")},
+      compileInfo=list(
+        callFromR = FALSE,
+        template = "template<typename EigenDerived, int AccessLevel>",
+        C_fun = function(inds = 'nCpp("Eigen::TensorBase<EigenDerived, AccessLevel>", const=TRUE, ref=TRUE )',
+                         values = 'myclass') {
+          returnType("myclass")
+          cppLiteral('singleBracket_set_nList_cpp_(inds, values);')
+          cppLiteral('return values;')
+        }
+      )),
+    # The next two might be superfluous; the handler could directly insert the internal call.
+    doubleBracket_get_cpp = nFunction(
+      name = "doubleBracket_get_cpp",
+      function(inds) {
+        stop("doubleBracket_get_cpp is for internal compiled use only.")},
+      returnType = Rtype,
+      compileInfo=list(
+        callFromR = FALSE,
+        C_fun = function(inds = integer()) {
+          cppLiteral('return doubleBracket_get_cpp_(inds);')
+        }
+      )),
+    doubleBracket_set_cpp = nFunction(
+      name = "doubleBracket_set_cpp",
+      function(inds, value) {
+        stop("doubleBracket_set_cpp is for internal compiled use only.")},
+      returnType = Rtype,
+      compileInfo=list(
+        callFromR = FALSE,
+        C_fun = function(inds = integer(),
+                         value = T(RtypeObj)) {
+          cppLiteral('return doubleBracket_set_cpp_(inds, value);')
+        }
+      )),
     singleBracket_get = nFunction(
       name = "singleBracket_get",
       function(inds) {
-        Rcontents[inds]},
+        if(is.numeric(inds)) {
+          r_inds <- range(inds)
+          if(r_inds[1] < 1 || r_inds[2] > length(Rcontents))
+            stop("Index out of bounds.")
+        } else if (is.logical(inds)) {
+          if(length(inds) > length(Rcontents))
+            stop("Logical index is too long.")
+        } else {
+          stop("Invalid index type.")
+        }
+        res <- myclass$new()
+        res$Rcontents <- self$Rcontents[inds]
+        res},
       compileInfo=list(
         C_fun = function(inds = 'SEXP') {
           returnType("myclass")
@@ -92,10 +164,13 @@ nList2_nClass <- function(type) {
         C_fun = function(i = 'SEXP')
         {cppLiteral('return doubleBracket_get_(i)')}
       )),
+    # This setter does not need to return anything
+    # Because the `[<-.nList` method will do that.
     singleBracket_set = nFunction(
       name = "singleBracket_set",
       function(inds, values) {
         Rcontents[inds] <<- values
+        self
       },
       compileInfo = list(
         C_fun = function(inds = 'SEXP', values = 'RcppList') {
@@ -106,6 +181,7 @@ nList2_nClass <- function(type) {
       name = "singleBracket_set_single",
       function(inds, value) {
         Rcontents[inds] <<- value
+        self
       },
       compileInfo = list(
         C_fun = function(inds = 'SEXP', value = T(RtypeObj)) {
@@ -116,6 +192,7 @@ nList2_nClass <- function(type) {
       name = "singleBracket_set_nList",
       function(inds, values) {
         Rcontents[inds] <<- as.list(values)
+        self
       },
       compileInfo = list(
         C_fun = function(inds = 'SEXP', values = 'myclass') {
@@ -125,7 +202,8 @@ nList2_nClass <- function(type) {
     doubleBracket_set = nFunction(
       name = "doubleBracket_set",
       function(i, value) {
-        Rcontents[[i]] <<- value; value
+        Rcontents[[i]] <<- value
+        self
       },
       returnType = Rtype,
       compileInfo = list(
@@ -267,7 +345,14 @@ nList2_nClass <- function(type) {
     #       cppLiteral('return setManyLogicalSingle_(bools, val);')
     #     }
     #   ))
-  nList2_doubleBracket_LAT <- function(code, symTab, auxEnv, handlingInfo) {
+  nList2_singleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    arg1 <- code$args[[1]]
+    # Return type is the same nClass type as the list (contrast with [[ which returns the element type)
+    code$type <- arg1$type$clone(deep=TRUE)
+    if(is.null(inserts)) list() else inserts
+  }
+  nList2_doubleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
     # used for both getting and setting so be careful if checking args
     inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     arg1 <- code$args[[1]]
@@ -303,12 +388,21 @@ nList2_nClass <- function(type) {
 #          needed_units = list("nList2Base_nClass"),
         nClass_inherit = list(base=BASECLASS),
         overloadDefs = list(
+          "[" = list(
+            labelAbstractTypes = list(handler = nList2_singleBracket_labelAbsTypes),
+            eigenImpl = list(handler = 'PtrMethod', methodName = 'singleBracket_get_cpp')
+          ),
+          "[<-" = list(
+            labelAbstractTypes = list(handler = nList2_singleBracket_labelAbsTypes),
+            eigenImpl = list(handler = 'PtrMethod', methodName = 'singleBracket_set_cpp')
+          ),
           "[[" = list(
-            labelAbstractTypes = list(handler = nList2_doubleBracket_LAT),
-            cppOutput = list(handler = 'IndexingBracket')
+            labelAbstractTypes = list(handler = nList2_doubleBracket_labelAbsTypes),
+            eigenImpl = list(handler = 'PtrMethod', methodName = 'doubleBracket_get_cpp')
           ),
           "[[<-" = list(
-            labelAbstractTypes = list(handler = nList2_doubleBracket_LAT)
+            labelAbstractTypes = list(handler = nList2_doubleBracket_labelAbsTypes),
+            eigenImpl = list(handler = 'PtrMethod', methodName = 'doubleBracket_set_cpp')
           ),
           length = list(
             labelAbstractTypes = list(handler = nList2_length_LAT),

@@ -1,18 +1,18 @@
-template<class Derived>
+template<class Element>
 class nList2_ : public nList2Base_nClass {
 public:
     nList2_() {};
-    std::vector<Derived> contents_;
-    std::vector<Derived> &contents() {return contents_;}
-    const std::vector<Derived> &contents() const {return contents_;}
+    std::vector<Element> contents_;
+    std::vector<Element> &contents() {return contents_;}
+    const std::vector<Element> &contents() const {return contents_;}
     virtual int setLength_(int length) {
         contents_.resize(length);
         return length;
     }
     virtual int getLength_() {
-        return contents_.size();
+        return static_cast<int>(contents_.size());
     }
-    size_t doubleBracket_inds_2_size_t(const Rcpp::RObject &inds) {
+    size_t doubleBracket_inds_2_size_t(const Rcpp::RObject &inds, bool check_upper = true) {
       if (Rf_xlength(inds) != 1) {
         Rcpp::stop("single-bracket getter expects index of length 1");
       }
@@ -34,7 +34,7 @@ public:
           }
           idx1 = static_cast<int>(std::floor(d));
           break;
-        } 
+        }
         case LGLSXP: {
           Rcpp::LogicalVector v(inds);   // view/wrapper
           if (v[0] == NA_LOGICAL) Rcpp::stop("logical index is NA");
@@ -46,22 +46,39 @@ public:
           Rcpp::stop("index type must be integer, double, or logical");
       }
 
-      if (idx1 < 1 || static_cast<size_t>(idx1) > contents_.size()) {
+      if (idx1 < 1 || (check_upper ? static_cast<size_t>(idx1) > contents_.size() : false)) {
         Rcpp::stop("index out of bounds");
       }
       return static_cast<size_t>(idx1 - 1); // convert to 0-based
     }
-    Derived doubleBracket_get_(const Rcpp::RObject &inds) {
+    Element doubleBracket_get_(const Rcpp::RObject &inds) {
       size_t idx1 = doubleBracket_inds_2_size_t(inds);
-      return contents_[idx1]; 
+      return contents_[idx1];
     }
-    Derived doubleBracket_set_(const Rcpp::RObject &inds, const Derived &value) {
-      size_t idx1 = doubleBracket_inds_2_size_t(inds);
-      return (contents_[idx1] = value); 
+    Element doubleBracket_set_(const Rcpp::RObject &inds, const Element &value) {
+      size_t idx1 = doubleBracket_inds_2_size_t(inds, false);
+      if(idx1 >= static_cast<int>(contents_.size())) contents_.resize(idx1 + 1);
+      return (contents_[idx1] = value);
+    }
+    Element doubleBracket_get_cpp_(
+            int i) {
+        if(i < 1 || static_cast<size_t>(i) > contents_.size()) {
+            throw std::out_of_range("index out of bounds");
+        }
+        return contents_[i-1];
+    }
+    Element doubleBracket_set_cpp_(
+            int i,
+            const Element& value) {
+        if(i < 1) {
+          throw std::out_of_range("index out of bounds");
+        }
+        if(i > static_cast<int>(contents_.size())) contents_.resize(i);
+        return (contents_[i-1] = value);
     }
 
-    std::vector<Derived> singleBracket_get_(const Rcpp::RObject &inds) {
-      std::vector<Derived> res;
+    std::vector<Element> singleBracket_get_(const Rcpp::RObject &inds) {
+      std::vector<Element> res;
       switch (inds.sexp_type()) {
         case INTSXP: {
           // Integer indexing
@@ -117,7 +134,7 @@ public:
       }
       return res;
     }
-    
+
     template<typename VALUES>
     void singleBracket_set_(const Rcpp::RObject &inds, const VALUES &values) {
       size_t n = 0;
@@ -205,42 +222,107 @@ public:
     void singleBracket_set_(const Rcpp::RObject &inds, const Rcpp::List &values) {
       singleBracket_set_<Rcpp::List>(inds, values);
     }
-    void singleBracket_set_(const Rcpp::RObject &inds, const std::vector<Derived> &values) {
-      singleBracket_set_<std::vector<Derived>>(inds, values);
+    void singleBracket_set_(const Rcpp::RObject &inds, const std::vector<Element> &values) {
+      singleBracket_set_<std::vector<Element>>(inds, values);
     }
-    void singleBracket_set_single_(const Rcpp::RObject &inds, const Derived &value) {
-      singleBracket_set_(inds, std::vector<Derived>{value});
+    void singleBracket_set_single_(const Rcpp::RObject &inds, const Element &value) {
+      singleBracket_set_(inds, std::vector<Element>{value});
     }
 
-    Derived setOne_(size_t i, const Derived& v) {
-        // add error trapping
-        return (contents_[i-1] = v);
-    }
-    Derived getOne_(size_t i) {
-        // add error trapping
-        return contents_[i-1];
-    }
-    template<typename INDS>
-    std::vector<Derived> getMany_(const INDS &inds) {
-        // To-do: we would need to scan over inds if we want to
-        // respect omitting zeros. Currently we ignore.
-        std::vector<Derived> res;
-        res.resize(inds.size());
-        for(size_t i = 0; i < inds.size(); ++i) {
-            res[i] = contents_[inds[i] - 1];
+    // C++-side single-bracket setter: accepts any 1-D Eigen tensor or unevaluated
+    // Eigen op for inds, with Scalar == int, double, or bool.
+    // VALUES must support .size() and operator[].
+    // bool  → logical indexing (recycles over contents_, extends if bools longer)
+    // int / double → 1-based positional indexing (doubles are floor()ed, extends contents_)
+    // values are recycled over the selected positions, matching R semantics.
+    template<typename EigenElement, int AccessLevel, typename VALUES>
+    void singleBracket_set_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            const VALUES& values) {
+        using Scalar = typename EigenElement::Scalar;
+        if (values.size() == 0) Rcpp::stop("nList: replacement has length zero");
+        size_t vals_n = static_cast<size_t>(values.size());
+        Eigen::Tensor<Scalar, 1> evaluated = inds;
+        size_t n = static_cast<size_t>(evaluated.size());
+
+        if (std::is_same<Scalar, bool>::value) {
+            // Logical indexing: extend contents_ if bools is longer, recycle over contents_n
+            if (n > contents_.size()) contents_.resize(n);
+            size_t contents_n = contents_.size();
+            size_t count = 0;
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n))) ++count;
+            if (count == 0) return;
+            if (count % vals_n != 0)
+                Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+            size_t val_j = 0;
+            for (size_t i = 0; i < contents_n; ++i) {
+                if (evaluated(static_cast<Eigen::Index>(i % n))) {
+                    contents_[i] = values[val_j % vals_n];
+                    ++val_j;
+                }
+            }
+        } else {
+            // Positional indexing (int or double), 1-based
+            if (n == 0) return;
+            if (n % vals_n != 0)
+                Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+            // Validate and find max index before any assignment
+            size_t max_idx = 1;
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                if (idx1 < 1) Rcpp::stop("nList: index out of bounds");
+                max_idx = std::max(max_idx, idx1);
+            }
+            if (max_idx > contents_.size()) contents_.resize(max_idx);
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                contents_[idx1 - 1] = values[i % vals_n];
+            }
         }
-        return res;
     }
-    template<typename INDS>
-    Rcpp::List getManyToList_(const INDS &inds) {
-        // To-do: we would need to scan over inds if we want to
-        // respect omitting zeros. Currently we ignore.
-        Rcpp::List res(inds.size());
-        for(size_t i = 0; i < inds.size(); ++i) {
-            res[i] = contents_[inds[i] - 1];
-        }
-        return res;
+    template<typename EigenElement, int AccessLevel>
+    void singleBracket_set_nList_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            std::shared_ptr<nList2_<Element>> values) {
+        singleBracket_set_cpp_(inds, values->contents());
     }
+    template<typename EigenElement, int AccessLevel>
+    void singleBracket_set_single_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            const Element& value) {
+        singleBracket_set_cpp_(inds, std::vector<Element>{value});
+    }
+
+    // Superseded by doubleBracket_get_ / doubleBracket_set_:
+    // Element setOne_(size_t i, const Element& v) {
+    //     return (contents_[i-1] = v);
+    // }
+    // Element getOne_(size_t i) {
+    //     return contents_[i-1];
+    // }
+
+    // Superseded by singleBracket_get_:
+    // template<typename INDS>
+    // std::vector<Element> getMany_(const INDS &inds) {
+    //     std::vector<Element> res;
+    //     res.resize(inds.size());
+    //     for(size_t i = 0; i < inds.size(); ++i) {
+    //         res[i] = contents_[inds[i] - 1];
+    //     }
+    //     return res;
+    // }
+    // template<typename INDS>
+    // Rcpp::List getManyToList_(const INDS &inds) {
+    //     Rcpp::List res(inds.size());
+    //     for(size_t i = 0; i < inds.size(); ++i) {
+    //         res[i] = contents_[inds[i] - 1];
+    //     }
+    //     return res;
+    // }
+
     Rcpp::List as_list_() {
       Rcpp::List res(contents_.size());
       for(size_t i = 0; i < contents_.size(); ++i) {
@@ -248,97 +330,98 @@ public:
       }
       return res;
     }
-    template<typename BOOLS>
-    std::vector<Derived> getManyLogical_(const BOOLS &bools) {
-        // oops, Eigen::Tensor<bool> does not having begin() and end(), so we do it ourselves
-        // size_t n = std::count(bools.begin(), bools.end(), true);
-        size_t n = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) n++;
-        }
-        std::vector<Derived> res;
-        res.resize(n);
-        size_t j = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) {
-                res[j++] = contents_[i];
+    // Superseded by singleBracket_get_ (logical case):
+    // template<typename BOOLS>
+    // std::vector<Element> getManyLogical_(const BOOLS &bools) {
+    //     // Eigen::Tensor<bool> lacks begin()/end(), so iterate by index
+    //     size_t n = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) n++;
+    //     std::vector<Element> res(n);
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) res[j++] = contents_[i];
+    //     return res;
+    // }
+    // template<typename BOOLS>
+    // Rcpp::List getManyToListLogical_(const BOOLS &bools) {
+    //     size_t n = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) n++;
+    //     Rcpp::List res(n);
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) res[j++] = contents_[i];
+    //     return res;
+    // }
+
+    // Superseded by singleBracket_set_:
+    // template<typename INDS, typename VALS>
+    // VALS setMany_(const INDS &inds, const VALS &vals) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = vals[i];
+    //     return vals;
+    // }
+    // template<typename INDS>
+    // Element setManySingle_(const INDS &inds, const Element &val) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = val;
+    //     return val;
+    // }
+    // template<typename INDS>
+    // Rcpp::List setManyFromList_(const INDS &inds, const Rcpp::List &vals) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = vals[i];
+    //     return vals;
+    // }
+    // template<typename BOOLS, typename VALS>
+    // VALS setManyLogical_(const BOOLS &bools, const VALS &vals) {
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = vals[j++];
+    //     return vals;
+    // }
+    // template<typename BOOLS>
+    // Rcpp::List setManyFromListLogical_(const BOOLS &bools, const Rcpp::List &vals) {
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = vals[j++];
+    //     return vals;
+    // }
+    // template<typename BOOLS>
+    // Element setManyLogicalSingle_(const BOOLS &bools, const Element &val) {
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = val;
+    //     return val;
+    // }
+
+    // C++-side single-bracket getter: accepts any 1-D Eigen tensor or unevaluated
+    // Eigen op with Scalar == int, double, or bool.
+    // bool  → logical indexing (recycles over contents_, matching R semantics)
+    // int / double → 1-based positional indexing (doubles are floor()ed)
+    template<typename EigenElement, int AccessLevel>
+    std::vector<Element> singleBracket_get_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds) {
+        using Scalar = typename EigenElement::Scalar;
+        Eigen::Tensor<Scalar, 1> evaluated = inds;
+        size_t n = static_cast<size_t>(evaluated.size());
+
+        if (std::is_same<Scalar, bool>::value) {
+            // Logical indexing: recycle bool tensor over contents_
+            size_t contents_n = contents_.size();
+            if (n == 0) return std::vector<Element>{};
+            size_t count = 0;
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n))) ++count;
+            std::vector<Element> res;
+            res.reserve(count);
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n)))
+                    res.push_back(contents_[i]);
+            return res;
+        } else {
+            // Positional indexing (int or double), 1-based
+            std::vector<Element> res;
+            res.resize(n);
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                if (idx1 < 1 || idx1 > contents_.size())
+                    Rcpp::stop("nList: index out of bounds");
+                res[i] = contents_[idx1 - 1];
             }
+            return res;
         }
-        return res;
-    }
-    template<typename BOOLS>
-    Rcpp::List getManyToListLogical_(const BOOLS &bools) {
-        size_t n = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) n++;
-        }
-        Rcpp::List res(n);
-        size_t j = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) {
-                res[j++] = contents_[i];
-            }
-        }
-        return res;
-    }
-    // setMany_ with a vector of values
-    // To-do: do we want recycling rule behavior?
-    template<typename INDS, typename VALS>
-    VALS setMany_(const INDS &inds, const VALS &vals) {
-        for(size_t i = 0; i < inds.size(); ++i) {
-            contents_[inds[i] - 1] = vals[i];
-        }
-        return vals;
-    }
-    // setMany_ from a single value
-    template<typename INDS>
-    Derived setManySingle_(const INDS &inds, const Derived &val) {
-        for(size_t i = 0; i < inds.size(); ++i) {
-            contents_[inds[i] - 1] = val;
-        }
-        return val;
-    }
-    // setManyFromList_ from a list of values
-    // To-do: could this use the VALS template above?
-    template<typename INDS>
-    Rcpp::List setManyFromList_(const INDS &inds, const Rcpp::List &vals) {
-        for(size_t i = 0; i < inds.size(); ++i) {
-            contents_[inds[i] - 1] = vals[i];
-        }
-        return vals;
-    }
-    
-    // setManyLogical_ with a vector of values
-    template<typename BOOLS, typename VALS>
-    VALS setManyLogical_(const BOOLS &bools, const VALS &vals) {
-        size_t j = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) {
-                contents_[i] = vals[j++];
-            }
-        }
-        return vals;
-    }
-    // setManyFromListLogical_
-    template<typename BOOLS>
-    Rcpp::List setManyFromListLogical_(const BOOLS &bools, const Rcpp::List &vals) {
-        size_t j = 0;
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) {
-                contents_[i] = vals[j++];
-            }
-        }
-        return vals;
-    }
-    // setManyLogical_ from a single value
-    template<typename BOOLS>
-    Derived setManyLogicalSingle_(const BOOLS &bools, const Derived &val) {
-        for(size_t i = 0; i < bools.size(); ++i) {
-            if(bools[i]) {
-                contents_[i] = val;
-            }
-        }
-        return val;
     }
 
     auto begin() noexcept       { return contents_.begin(); }

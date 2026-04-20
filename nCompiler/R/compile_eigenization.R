@@ -74,29 +74,40 @@ compile_eigenize <- function(code,
     }
 
     opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
-    handlingInfo <- getOperatorField(opInfo$opDef, "eigenImpl")
+    handlingInfo <- NULL
+    isGeneric <- isTRUE(opInfo$opDef$isGeneric)
+    if(isGeneric) {
+      if(length(code$args) > 0) {
+        arg1 <- code$args[[1]]
+        if(inherits(arg1$type, "symbolNC")) {
+          handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "eigenImpl", inherits=TRUE)
+        }
+      }
+    }
+    if(is.null(handlingInfo))
+      handlingInfo <- getOperatorField(opInfo$opDef, "eigenImpl")
 #    handlingInfo <- getOperatorDef(code$name, "eigenImpl")
     # operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["eigenImpl"]]
-      if(!is.null(handlingInfo)) {
-        beforeHandler <- handlingInfo[['beforeHandler']]
-        if(!is.null(beforeHandler)) {
-          if(is.function(beforeHandler))
-            setupExprs <- c(setupExprs,
-                            beforeHandler(code, symTab, auxEnv, workEnv, handlingInfo))
-          else
-            setupExprs <- c(setupExprs,
-                            eval(call(beforeHandler,
-                                      code,
-                                      symTab,
-                                      auxEnv,
-                                      workEnv,
-                                      handlingInfo),
-                                envir = eigenizeEnv))
-          # return(if(length(setupExprs) == 0) NULL else setupExprs)
-        }
+    if(!is.null(handlingInfo)) {
+      beforeHandler <- handlingInfo[['beforeHandler']]
+      if(!is.null(beforeHandler)) {
+        if(is.function(beforeHandler))
+          setupExprs <- c(setupExprs,
+                          beforeHandler(code, symTab, auxEnv, workEnv, handlingInfo))
+        else
+          setupExprs <- c(setupExprs,
+                          eval(call(beforeHandler,
+                                    code,
+                                    symTab,
+                                    auxEnv,
+                                    workEnv,
+                                    handlingInfo),
+                              envir = eigenizeEnv))
+        # return(if(length(setupExprs) == 0) NULL else setupExprs)
       }
+    }
     # }
 
     iArgs <- seq_along(code$args)
@@ -113,23 +124,23 @@ compile_eigenize <- function(code,
     ## finally, call any special handlers
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["eigenImpl"]]
-      if(!is.null(handlingInfo)) {
-        handler <- handlingInfo[['handler']]       
-        if(!is.null(handler)) {
-          if(is.function(handler))
-            setupExprs <- c(setupExprs,
-                            handler(code, symTab, auxEnv, workEnv, handlingInfo))
-          else
-            setupExprs <- c(setupExprs,
-                            eval(call(handler,
-                                      code,
-                                      symTab,
-                                      auxEnv,
-                                      workEnv,
-                                      handlingInfo),
-                                envir = eigenizeEnv))
-        }
+    if(!is.null(handlingInfo)) {
+      handler <- handlingInfo[['handler']]       
+      if(!is.null(handler)) {
+        if(is.function(handler))
+          setupExprs <- c(setupExprs,
+                          handler(code, symTab, auxEnv, workEnv, handlingInfo))
+        else
+          setupExprs <- c(setupExprs,
+                          eval(call(handler,
+                                    code,
+                                    symTab,
+                                    auxEnv,
+                                    workEnv,
+                                    handlingInfo),
+                              envir = eigenizeEnv))
       }
+    }
     # }
   }
   return(if(length(setupExprs) == 0) NULL else setupExprs)
@@ -386,12 +397,13 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  maybe_convertToMethod <- function(code, handlingInfo, force = FALSE) {
+  maybe_convertToMethod <- function(code, handlingInfo, force = FALSE, ptr=FALSE) {
     if(isTRUE(handlingInfo$method) || isTRUE(force)) {
       methodName <- code$name
       if(!is.null(handlingInfo$methodName))
         methodName <- handlingInfo$methodName
-      code$name <- '.method'
+      if(isTRUE(ptr)) code$name <- '->method' 
+      else code$name <- '.method'
       if(length(code$args) > 1) {
         for(i in length(code$args):2) {
           setArg(code, i+1, code$args[[i]])
@@ -610,6 +622,13 @@ inEigenizeEnv(
 inEigenizeEnv(
   Method <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     maybe_convertToMethod(code, handlingInfo, force=TRUE) # used for mean(vector) = vector.mean() if method=TRUE
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  PtrMethod <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    maybe_convertToMethod(code, handlingInfo, force=TRUE, ptr=TRUE) # used by nList2
     invisible(NULL)
   }
 )

@@ -106,9 +106,9 @@ NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
   # overloadDefs[[name]][[stage]]$handler
   # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
   while(!done) {
-    OLDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
-    if(!is.null(OLDefs)) {
-      overload <- OLDefs[[name]][[stage]]$handler
+    overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
+    if(!is.null(overloadDefs)) {
+      overload <- overloadDefs[[name]][[stage]]
       done <- !is.null(overload)
     }
     if(!done) {
