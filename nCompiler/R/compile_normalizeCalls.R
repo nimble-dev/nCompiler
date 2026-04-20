@@ -30,9 +30,19 @@ compile_normalizeCalls <- function(code,
   logging <- get_nOption('compilerOptions')[['logging']]
   if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
 
-  if(code$isLiteral) return(NULL)
-  if(code$isName) return(NULL)
-  if(code$isCall) {
+  ## Handle arguments that are functions (`parallel_reduce`).
+  ## Do this by looking for parallel_reduce as the caller rather than as the call
+  ## so that other args are handled as usual.
+  fxnArg <- NULL
+  if(!is.null(code$caller)) {
+    fxnArg <- normalizeCallsFunctionArgs[[code$caller$name]]
+    if(!is.null(fxnArg) && fxnArg != code$callerArgID)
+      fxnArg <- NULL
+  }
+  
+  if(code$isLiteral && is.null(fxnArg)) return(NULL)
+  if(code$isName && is.null(fxnArg)) return(NULL)
+  if(code$isCall || !is.null(fxnArg)) {
     if(code$name == '{') {
       ## recurse over lines
       for(i in seq_along(code$args)) {
@@ -56,10 +66,7 @@ compile_normalizeCalls <- function(code,
     # What gets cached in the aux of the exprClass for the call:
     #   cachedOpInfo = list(opDef, name, obj_internals, case)
     #   We defer: uniqueName, cpp_code_name
-    fxnArg <- normalizeCallsFunctionArgs[[code$caller$name]]
-    if(!is.null(fxnArg) && fxnArg == code$callerArgID) {  # Handle arguments that are functions (`parallel_reduce`).
-      cachedOpInfo <- update_cachedOpInfo(code$caller$args[[fxnArg]], auxEnv$where)
-    } else cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
+    cachedOpInfo <- update_cachedOpInfo(code, auxEnv$where)
     if(cachedOpInfo$case == "nFunction") {
       uniqueName <- cachedOpInfo$obj_internals$uniqueName2
       if(length(uniqueName)==0)
@@ -74,12 +81,11 @@ compile_normalizeCalls <- function(code,
         ## but we do not as a way to avoid having many references to R6 objects
         ## in a blind attempt to facilitate garbage collection based on past experience.
         ## Instead, we provide what is needed to look up the nFunction again later.
-        if(is.null(fxnArg)) nm <- code$name else nm <- code$args[[fxnArg]]$name
-        auxEnv$needed_nFunctions[[uniqueName]] <- list(nm, auxEnv$where)
+        auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
       }
     }
 
-    if(is.null(fxnArg) || fxnArg != code$callerArgID) {  # Only first condition should really be relevant.
+    if(is.null(fxnArg)) {
       opDef <- cachedOpInfo$opDef
       matchDef <- opDef[["matchDef"]]
       if(is.null(matchDef))

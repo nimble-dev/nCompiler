@@ -776,8 +776,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
-        if(exists('paciorek')) browser()
+  ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- NULL
     if(is.null(symTab$parentST))   #  TODO: this seems kludgey and perhaps should be done at a different processing stage.
       stop(exprClassProcessingErrorMsg(
@@ -817,7 +816,7 @@ inLabelAbstractTypesEnv(
       code$args[['operator']]$isCall <- TRUE
     }
     if(code$args[['operator']]$name == "$") {
-      if(code$args[['operator']]$args[['operator']]$name == "$")
+      if(code$args[['operator']]$args[[1]]$name == "$")
         stop(exprClassProcessingErrorMsg(
           code,
           paste('In labelAbstractTypes handler ParallelReduce:',
@@ -830,7 +829,7 @@ inLabelAbstractTypesEnv(
     
     ## Give reduce operator the same return type as the input vector.
     ## TODO: Maybe symbolNF is the right type for the reduction op.
-    code$args[['opperator']]$type <-
+    code$args[['operator']]$type <-
       symbolBasic$new(name = code$args[['operator']]$name,
                       nDim = 0, type = code$args[['object']]$type$type)
     ## Process the vector arg.
@@ -859,7 +858,14 @@ inLabelAbstractTypesEnv(
 
     ## Process the initial value.
     if(!'init' %in% names(code$args) && !is.null(operatorDef$reduction))
-      setArg(code, 'init', nParse(operatorDef$reduction))
+      setArg(code, 'init', nParse(operatorDef$reduction), add = TRUE)
+    if(!'init' %in% names(code$args))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              '`init` argument not provided and no default `init` is available for the operator')),
+        call. = FALSE)
+            
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['init']], symTab, auxEnv))
     if (code$args[['init']]$type$nDim != 0)
       stop(exprClassProcessingErrorMsg(

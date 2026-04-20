@@ -121,7 +121,7 @@ inFinalTransformationsEnv(
     ## Make sure the items are actually nClass objects.
     if(length(objects))  
       objects <- objects[sapply(objects, 
-         function(x) !is.null(symTab$getSymbol(x)$NCgenerator) || !is.null(parentST$getSymbol(x)$NCgenerator))]
+         function(x) !is.null(symTab$getSymbol(x)$NCgenerator) || !is.null(symTab$parentST$getSymbol(x)$NCgenerator))]
     
     shareVars <- unique(c(shareVars, defaultShareVars, objects))
     copyVars  <- unique(c(copyVars, defaultCopyVars))
@@ -180,7 +180,6 @@ inFinalTransformationsEnv(
     code$aux$class <- auxEnv$where$classname
 
     code$aux$bodyName <- parallelReduceBodyLabelMaker()
-if(exists('paciorek')) browser()
     ## remove the vector, initial value, and nThreads args and save for later
     vector_arg <- removeArg(code, 'object')
     init_arg <- removeArg(code, 'init')
@@ -265,7 +264,7 @@ if(exists('paciorek')) browser()
                 call. = FALSE)
     ## Make sure the items are actually nClass objects.
     if(length(nClass_object) && is.null(symTab$getSymbol(nClass_object)$NCgenerator) &&
-       !is.null(parentST$getSymbol(nClass_object)$NCgenerator))
+       is.null(symTab$parentST$getSymbol(nClass_object)$NCgenerator))
       nClass_object <- character(0)
     
     ## TODO: consider reworking how we handle these items as it doesn't map cleanly onto the
