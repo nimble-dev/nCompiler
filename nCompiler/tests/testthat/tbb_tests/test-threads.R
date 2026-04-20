@@ -136,6 +136,7 @@ test_that("basic usage of setting number of threads", {
     Cnc <- nCompile(nc)
     
     Cnc1 <- Cnc$new()
+    ## Issue 152.
     ## expect_silent(out <- Cnc1$go(100, 100, 10))
     ## Error: C stack usage  14983114845556 is too close to the limit
     ## Error: no more error handlers available (recursive errors?); invoking 'abort' restart
