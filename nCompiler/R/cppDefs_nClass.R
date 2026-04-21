@@ -206,6 +206,9 @@ cpp_nClassClass <- R6::R6Class(
       }
       # This may not get used much or at all but here it is if needed.
       for(oneInheritance in Compiler$compileInfo$nClass_inherit) {
+        if(is.function(oneInheritance)) {
+          oneInheritance <- oneInheritance()
+        }
         self$add_nClass_inheritance(oneInheritance)
       }
       inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals

@@ -541,7 +541,7 @@ test_that("nList2: two generators of same type have equal classID", {
   rm(rNL1, rNL2); gc()
 })
 
-test_that("nList2: duplicate units in nCompile are deduplicated", {
+test_that("nList2: duplicate units in nCompile are error-trapped", {
   rNL1 <- nList2("numericScalar")
   rNL2 <- nList2("numericScalar")
   # Both generators have the same classID; nCompile should deduplicate and
@@ -549,6 +549,39 @@ test_that("nList2: duplicate units in nCompile are deduplicated", {
   expect_error(comp <- nCompile(rNL1, rNL2))
   rm(rNL1, rNL2); gc()
 })
+
+test_that("nList2: multiple ways to indicate the same nList2 are de-duplicated", {
+  rNL1 <- nList2("numericScalar")
+  rNL2 <- nList2("integerScalar")
+  foo <- nFunction(
+    name = "foo",
+    function(nl = 'rNL1') {
+      return(nl)
+    },
+    returnType = "nList2('numericScalar')"
+  )
+  comp <- nCompile(rNL1, rNL2, foo)
+  cNL1a <- comp$rNL1$new()
+  cNL2a <- comp$rNL2$new()
+  expect_error(comp$foo(cNL2a))
+  expect_no_error(comp$foo(cNL1a))
+  # By manually verifying that a different type would error out
+  # we can see that the rNL1 is the same type.
+})
+
+message("FIX ME: Type de-duplication for nList2 is not complete.")
+## test_that("nList2: multiple ways to indicate the same nList2 are WRONGLY NOT de-duplicated", {
+##   rNL1 <- nList2("double()") # equivalent to numericScalar but not seen as the same - FIX ME
+##   foo <- nFunction(
+##     name = "foo",
+##     function(nl = 'rNL1') {
+##       return(nl)
+##     },
+##     returnType = "nList2('numericScalar')"
+##   )
+##   comp <- expect_error(nCompile(rNL1, foo))
+## })
+
 
 # ---------------------------------------------------------------------------
 # Compiled: various [ an [[ get and set operations compile and work
@@ -655,6 +688,45 @@ test_that("nList2 various bracket get and set operations compile and work",
   expect_error(obj$get_double_bracket(0))
   expect_error(obj$get_single_bracket(c(1, 2, 8)))
   expect_error(obj$get_single_bracket(c(1, 2, 0)))
+})
+
+pause_<-function(){browser(); NULL}
+test_that("nList2 of nClass elements works", {
+  element_nc <- nClass(
+    classname = "element_nc_",
+    Cpublic = list(
+      x = 'numericVector',
+      foo = nFunction(
+        function(a = double()) {
+        return(a+1)
+        returnType(double())
+        }
+      )
+    )
+  )
+  rNL <- nList2('element_nc')
+  use_NL <- nFunction(
+    function(nl = "nList2('element_nc')", i = integer()) {
+      nl[[i]]$x <- 1:3
+    }
+  )
+  comp <- nCompile(use_NL, rNL, element_nc)
+  nl1 <- comp$rNL$new()
+  cat("a\n")
+  cat(tempdir())
+  pause_()
+  nl1[[1]] <- comp$element_nc$new()
+  cat("a\n")
+  cat(tempdir())
+  pause_()
+  nl1[[1]]$x <- 11:14
+  expect_error(nl2 <- use_NL(nl1, 2))
+  comp$use_NL(nl1, 1)
+  expect_equal(nl1[[1]]$x, 1:3)
+  length(nl1) <- 3
+  nl1[[3]] <- comp$element_nc$new()
+  comp$use_NL(nl1, 3)
+  expect_equal(nl1[[3]]$x, 1:3)
 })
 
 ## The following tests might be made to work fine.
