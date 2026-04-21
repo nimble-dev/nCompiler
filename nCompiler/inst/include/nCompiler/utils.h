@@ -7,7 +7,7 @@
 
 using std::string;
 
-std::ostringstream _nCompiler_global_output;
+inline std::ostringstream _nCompiler_global_output;
 
 // Values as defined by R `logger` package.
 typedef enum {
@@ -20,13 +20,13 @@ typedef enum {
   TRACE = 600
 } LogLevel;
 
-void nCompiler_print_to_R(std::ostringstream &input) {
+inline void nCompiler_print_to_R(std::ostringstream &input) {
   PRINTF("%s", input.str().c_str());
   input.str("");
   input.clear();
 }
 
-void Rmessage(LogLevel level, std::ostringstream &input) {
+inline void Rmessage(LogLevel level, std::ostringstream &input) {
   Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
   Rcpp::Function message = nc["nMessage"];
   message(int(level), input.str().c_str());
@@ -35,7 +35,7 @@ void Rmessage(LogLevel level, std::ostringstream &input) {
   return;
 }
 
-void Rwarning(std::ostringstream &input) {
+inline void Rwarning(std::ostringstream &input) {
   Rcpp::Environment base = Rcpp::Environment::namespace_env("base");
   Rcpp::Function warning = base["warning"];
   warning(input.str().c_str());
@@ -44,21 +44,21 @@ void Rwarning(std::ostringstream &input) {
   return;
 }
 
-void nStop(std::ostringstream &input) {
+inline void nStop(std::ostringstream &input) {
   NERROR("%s", input.str().c_str());
   input.str("");
   input.clear();
   return;
 }
 
-void Rprogress_bar(string msg, int total) {
+inline void Rprogress_bar(string msg, int total) {
     Rcpp::Environment cli = Rcpp::Environment::namespace_env("cli");
     Rcpp::Function progress_bar = cli["cli_progress_bar"];
     progress_bar("", msg, "iterator", total);
     return;
 }
 
-void Rprogress_update() {
+inline void Rprogress_update() {
     Rcpp::Environment cli = Rcpp::Environment::namespace_env("cli");
     Rcpp::Function progress_update = cli["cli_progress_update"];
     progress_update();
