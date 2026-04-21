@@ -1,4 +1,4 @@
-int getNumThreads(double value_) {
+inline int getNumThreads(double value_) {
   int value = (int) value_;
   Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
   Rcpp::Function get_nOption = nc["get_nOption"];
