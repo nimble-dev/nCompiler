@@ -1109,6 +1109,7 @@ assignOperatorDef(
   list(
     matchDef <- function(x) {},
     isGeneric = TRUE,
+    useOpAssign = TRUE,
     labelAbstractTypes = list(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$integer
@@ -1136,7 +1137,7 @@ assignOperatorDef(
     ),
     eigenImpl = list(
       handler = 'LengthAssign',
-      methodName = 'setLength'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
+      methodName = 'resize'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
     cppOutput = list(
       #handler = 'OpAssign'
       #cppString = 'setLength'

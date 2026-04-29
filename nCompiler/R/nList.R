@@ -11,7 +11,39 @@ nList <- function(type, length) vector("list", length)
 #' @rawNamespace export(nList2Base_nClass)
 NULL
 
-nList2Base_nClass <- nClass(
+# Normally set this flag to NULL
+# Setting it non-null supports
+# development work on nClass itself
+# by allowing package building 
+# even if nClass is broken.
+NLdevel <- NULL
+
+nList2_singleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
+  inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+  arg1 <- code$args[[1]]
+  # Return type is the same nClass type as the list (contrast with [[ which returns the element type)
+  code$type <- arg1$type$clone(deep=TRUE)
+  if(is.null(inserts)) list() else inserts
+}
+nList2_doubleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
+  # used for both getting and setting so be careful if checking args
+  inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+  arg1 <- code$args[[1]]
+  NCgen <- arg1$type$NCgenerator
+  elementSym <- NCinternals(NCgen)$symbolTable$getSymbol("x")
+  elementSym <- nCompiler:::resolveOneTBDsymbol(elementSym, env = env)
+  code$type <- elementSym$clone(deep=TRUE)
+  if(is.null(inserts)) list() else inserts
+  # should return something non-null, either an inserts list or list() or TRUE. TRUE is more distinct so we use that.
+}
+nList2_length_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
+  # used for both getting and setting so be careful if checking args
+  inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+  code$type <- symbolBasic$new(nDim = 0, type = 'integer')
+  if(is.null(inserts)) list() else inserts
+}
+
+nList2Base_nClass <- NLdevel %||% nClass(
   classname = "nList2Base_nClass",
   Cpublic = list(
     ping = nFunction(
@@ -31,25 +63,30 @@ nList2Base_nClass <- nClass(
                    )
 )
 
+rm(NLdevel)
+
 #' @export
 nList2_nClass <- function(type, env = parent.frame()) {
+  ttype <- nCaptureType(type)
   Rtype <- type
 
   classname <- "nList2"
-  cpp_classname <- Rname2CppName(paste0("nList2_", as.character(type)))
+  inner_cpp_typename <- type2cpp_typename({{ttype}}, where = env)
+  cpp_classname <- Rname2CppName(paste0("nList2_", type2uniqueID({{ttype}}, where = env)))
   # We need the C++ type for the nClass_inherit$base class,
   # but we can defer determining that until code generation
   # by providing a function. The reason to do this is so that
   # the type need not actually be defined and function at the
   # time one creates this nList2 generator.
   baseclassfun <- function() {
-    sym <- nCompiler:::argType2symbol(type)
-    sym <- nCompiler:::resolveOneTBDsymbol(sym, env = env)
-    Ctype <- sym$genCppVar()$generate()
-    baseclass <- paste0("nList2_<", Ctype, ">")
+#    sym <- nCompiler:::type2symbol(type)
+#    sym <- nCompiler:::resolveOneTBDsymbol(sym, env = env)
+#    Ctype <- sym$genCppVar()$generate()
+    baseclass <- paste0("nList2_<", inner_cpp_typename, ">")
     baseclass
   }
-  RtypeObj <- eval(substitute(nMakeType(TYPE), list(TYPE = Rtype)))
+  RtypeObj <- nType({{ttype}})
+  # RtypeObj <- eval(substitute(nMakeType(TYPE), list(TYPE = Rtype)))
 #  classTypeObj <- eval(substitute(nMakeType(TYPE), list(TYPE = classname)))
   CpublicMethods <- list(
     Rcontents = 'RcppList', # used only for uncompiled
@@ -122,7 +159,7 @@ nList2_nClass <- function(type, env = parent.frame()) {
       name = "doubleBracket_get_cpp",
       function(inds) {
         stop("doubleBracket_get_cpp is for internal compiled use only.")},
-      returnType = Rtype,
+      returnType = {{RtypeObj}},
       compileInfo=list(
         callFromR = FALSE,
         C_fun = function(inds = integer()) {
@@ -133,11 +170,11 @@ nList2_nClass <- function(type, env = parent.frame()) {
       name = "doubleBracket_set_cpp",
       function(inds, value) {
         stop("doubleBracket_set_cpp is for internal compiled use only.")},
-      returnType = Rtype,
+      returnType = {{RtypeObj}},
       compileInfo=list(
         callFromR = FALSE,
         C_fun = function(inds = integer(),
-                         value = T(RtypeObj)) {
+                         value = {{RtypeObj}}) {
           cppLiteral('return doubleBracket_set_cpp_(inds, value);')
         }
       )),
@@ -168,7 +205,7 @@ nList2_nClass <- function(type, env = parent.frame()) {
       name = "doubleBracket_get",
       function(i) {
         Rcontents[[i]]},
-      returnType = Rtype,
+      returnType = {{RtypeObj}},
       compileInfo=list(
         C_fun = function(i = 'SEXP')
         {cppLiteral('return doubleBracket_get_(i)')}
@@ -193,7 +230,7 @@ nList2_nClass <- function(type, env = parent.frame()) {
         self
       },
       compileInfo = list(
-        C_fun = function(inds = 'SEXP', value = T(RtypeObj)) {
+        C_fun = function(inds = 'SEXP', value = {{RtypeObj}}) {
           cppLiteral('singleBracket_set_single_(inds, value);')
         }
       )),
@@ -214,37 +251,13 @@ nList2_nClass <- function(type, env = parent.frame()) {
         Rcontents[[i]] <<- value
         self
       },
-      returnType = Rtype,
+      returnType = {{RtypeObj}},
       compileInfo = list(
-        C_fun = function(i = 'SEXP', value = T(RtypeObj)) {
+        C_fun = function(i = 'SEXP', value = {{RtypeObj}}) {
           cppLiteral('return doubleBracket_set_(i, value)')
         }
       ))
     )
-  nList2_singleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    arg1 <- code$args[[1]]
-    # Return type is the same nClass type as the list (contrast with [[ which returns the element type)
-    code$type <- arg1$type$clone(deep=TRUE)
-    if(is.null(inserts)) list() else inserts
-  }
-  nList2_doubleBracket_labelAbsTypes <- function(code, symTab, auxEnv, handlingInfo) {
-    # used for both getting and setting so be careful if checking args
-    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    arg1 <- code$args[[1]]
-    NCgen <- arg1$type$NCgenerator
-    elementSym <- NCinternals(NCgen)$symbolTable$getSymbol("x")
-    elementSym <- nCompiler:::resolveOneTBDsymbol(elementSym, env = env)
-    code$type <- elementSym$clone(deep=TRUE)
-    if(is.null(inserts)) list() else inserts
-    # should return something non-null, either an inserts list or list() or TRUE. TRUE is more distinct so we use that.
-  }
-  nList2_length_LAT <- function(code, symTab, auxEnv, handlingInfo) {
-    # used for both getting and setting so be careful if checking args
-    inserts <- nCompiler:::labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- symbolBasic$new(nDim = 0, type = 'integer')
-    if(is.null(inserts)) list() else inserts
-  }
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
@@ -282,12 +295,12 @@ nList2_nClass <- function(type, env = parent.frame()) {
             eigenImpl = list(handler = 'PtrMethod', methodName = 'doubleBracket_set_cpp')
           ),
           length = list(
-            labelAbstractTypes = list(handler = nList2_length_LAT),
-            eigenImpl = list(handler = 'Method'),
-            cppOutput = list(cppString = 'getLength')
+            labelAbstractTypes = list(handler = nList2_length_labelAbsTypes),
+            eigenImpl = list(handler = 'PtrMethod', methodName = "getLength")
           ),
           "length<-" = list(
-            labelAbstractTypes = list(handler = nList2_length_LAT)
+            labelAbstractTypes = list(handler = nList2_length_labelAbsTypes ),
+            eigenImpl = list(handler = 'LengthAssign', ptr=TRUE, methodName = "setLength")
           )
         )
       )
@@ -361,9 +374,12 @@ length.nList2 <- function(x) {
 # Draft for a new version of nList.
 #' @export
 nList2 <- function(type, .ID = FALSE, env = parent.frame()) {
-  if(isTRUE(.ID))
-    return(Rname2CppName(paste0("nList2_", as.character(type))))
-  ans <- nList2_nClass(type, env = env)
+  ttype <- nCaptureType(type)
+  if(isTRUE(.ID)) {
+#    uID <- type2uniqueID({{type}})
+    return(Rname2CppName(paste0("nList2_", type2uniqueID({{ttype}}, where = env))))
+  }
+  ans <- nList2_nClass({{ttype}}, env = env)
   # classID is set to cpp_classname by NC_InternalsClass initialize; no override needed
   ans
 }

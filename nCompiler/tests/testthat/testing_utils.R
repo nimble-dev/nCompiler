@@ -71,8 +71,9 @@ add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4),
 }
 
 argType_2_input <- function(argType, input_gen_fun = NULL) {
+  targType <- nCaptureType(argType)
   argSymbol <- add_missing_size(
-    `:::`("nCompiler", "argType2symbol")(argType)
+    `:::`("nCompiler", "type2symbol")({{targType}})
   )
   type <- argSymbol$type
   nDim <- argSymbol$nDim
@@ -343,10 +344,12 @@ return_type_string <- function(op, argTypes) {
   ##   'logical'  # 3
   ## )
 
-  args <- lapply(
-    argTypes, function(argType)
-      `:::`("nCompiler", "argType2symbol")(argType)
-  )
+  argSymTab <- nCompiler:::typeList2symbolTable(argTypes)
+  args <- lapply(names(argTypes), function(name) argSymTab$getSymbol(name))
+  # args <- lapply(
+  #   argTypes, function(argType)
+  #     `:::`("nCompiler", "type2symbol")(argType)
+  # )
 
   scalarTypeString <-
     if (length(argTypes) == 1) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type,

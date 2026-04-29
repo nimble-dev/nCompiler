@@ -520,19 +520,186 @@ test_that("nList2: [<- wrong nList2 element type is rejected", {
 # ---------------------------------------------------------------------------
 # Same-type identity: multiple generators of the same type
 # ---------------------------------------------------------------------------
-# Following tests do not work yet.
 
-## foo <- nFunction(
-##   fun = function() {
-##     ans <- nList2("integerScalar")$new()
-##     return(ans)
-##     returnType("nList2('integerScalar')")
-##   }
-## )
-## cfoo <- nCompile(foo)
-## NL2 <- nList2("integerScalar")
-## cfoo <- nCompile(NL2)
-## cfoo <- nCompile(NL2, foo)
+# Some testing of new type handling that can eventually move to a type testing file
+
+test_that("type2uniqueID works", {
+  v1 <- nCompiler:::type2uniqueID("double()")
+  v2 <- nCompiler:::type2uniqueID("numericScalar")
+  v3 <- nCompiler:::type2uniqueID(quote(double(0)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+
+  v1 <- nCompiler:::type2uniqueID("nList('double()')")
+  v2 <- nCompiler:::type2uniqueID("nList(double())")
+  myt <- nType(nList(double()))
+  v3 <- nCompiler:::type2uniqueID({{myt}})
+  myt2 <- nType(nList(double()))
+  v4 <- nCompiler:::type2uniqueID(T(myt2))
+  v5 <- nCompiler:::type2uniqueID(nList(double()))
+  v6 <- nCompiler:::type2uniqueID(nList("double()"))
+  myt3 <- nType(double())
+  v7 <- nCompiler:::type2uniqueID(nList(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v1, v4)
+  expect_identical(v1, v5)
+  expect_identical(v1, v6)
+  expect_identical(v1, v7)
+
+  # when a TBD needs to be resolved, quosure scoping must work
+  # so the input should not be a literal.
+  v1 <- nCompiler:::type2uniqueID("nList2('double()')")
+  v2 <- nCompiler:::type2uniqueID("nList2(double())")
+  myt <- nType(nList2(double()))
+  v3 <- nCompiler:::type2uniqueID({{myt}})
+  myt2 <- nType(nList2(double()))
+  v4 <- nCompiler:::type2uniqueID(T(myt2))
+  v5 <- nCompiler:::type2uniqueID(nList2(double()))
+  v6 <- nCompiler:::type2uniqueID(nList2("double()"))
+  myt3 <- nType(double())
+  rm(v7)
+  v7 <- nCompiler:::type2uniqueID(nList2(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v3, v4)
+  expect_identical(v3, v5)
+  expect_identical(v3, v6)
+  expect_identical(v3, v7)
+
+  v1 <- nCompiler:::type2uniqueID("nList('nList(double())')")
+  v2 <- nCompiler:::type2uniqueID("nList(nList(double()))")
+  myt <- nType(nList(nList(double())))
+  v3 <- nCompiler:::type2uniqueID({{myt}})
+  myt2 <- nType(nList(nList(double())))
+  v4 <- nCompiler:::type2uniqueID(T(myt2))
+  v5 <- nCompiler:::type2uniqueID(nList(nList(double())))
+  v6 <- nCompiler:::type2uniqueID(nList(nList("double()")))
+  myt3 <- nType(nList(double()))
+  v7 <- nCompiler:::type2uniqueID(nList(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v3, v4)
+  expect_identical(v4, v5)
+  expect_identical(v5, v6)
+  expect_identical(v6, v7)
+
+  v1 <- nCompiler:::type2uniqueID("nList2('nList2(double())')")
+  v2 <- nCompiler:::type2uniqueID("nList2(nList2(double()))")
+  myt <- nType(nList2(nList2(double())))
+  v3 <- nCompiler:::type2uniqueID({{myt}})
+  myt2 <- nType(nList2(nList2(double())))
+  v4 <- nCompiler:::type2uniqueID(T(myt2))
+  v5 <- nCompiler:::type2uniqueID(nList2(nList2(double())))
+  v6 <- nCompiler:::type2uniqueID(nList2(nList2("double()")))
+  myt3 <- nType(nList2(double()))
+  v7 <- nCompiler:::type2uniqueID(nList2(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v3, v4)
+  expect_identical(v3, v5)
+  expect_identical(v3, v6)
+  expect_identical(v3, v7)
+})
+
+test_that("limits of T() notation vs {{}} in nested cases", {
+  # This example shows the limits of T()
+  # versus {{}}
+  # First, we see that a nested type
+  # specified by T() fails because
+  # when used as RtypeObj inside of nList2_nClass
+  # the scoping to myt3 is lost.
+  problem <- quote({  myt3 <- nType(double())
+  v7 <- nCompiler:::type2cpp_typename(nList2(T(myt3)))})
+  myenv <- new.env()
+  expect_error(eval(problem, envir = myenv))
+  #myenv$v7
+
+  # then we see that by full use of rlang, with {{}}
+  # to pass expressions with environments,
+  # there is no problem
+  problem <- quote({  myt3 <- nType(double())
+  v7 <- nCompiler:::type2cpp_typename(nList2({{myt3}}))})
+  myenv <- new.env()
+  expect_no_error(eval(problem, envir = myenv))
+  expect_identical(myenv$v7, "std::shared_ptr<nList2_D0>")
+})
+
+test_that("type2cpp_typename works", {
+  v1 <- nCompiler:::type2cpp_typename("double()")
+  v2 <- nCompiler:::type2cpp_typename("numericScalar")
+  v3 <- nCompiler:::type2cpp_typename(quote(double(0)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+
+  v1 <- nCompiler:::type2cpp_typename("nList('double()')")
+  v2 <- nCompiler:::type2cpp_typename("nList(double())")
+  myt <- nType(nList(double()))
+  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  myt2 <- nType(nList(double()))
+  v4 <- nCompiler:::type2cpp_typename(T(myt2))
+  v5 <- nCompiler:::type2cpp_typename(nList(double()))
+  v6 <- nCompiler:::type2cpp_typename(nList("double()"))
+  myt3 <- nType(double())
+  v7 <- nCompiler:::type2cpp_typename(nList(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v1, v4)
+  expect_identical(v1, v5)
+  expect_identical(v1, v6)
+  expect_identical(v1, v7)
+
+  v1 <- nCompiler:::type2cpp_typename("nList2('double()')")
+  v2 <- nCompiler:::type2cpp_typename("nList2(double())")
+  myt <- nType(nList2(double()))
+  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  myt2 <- nType(nList2(double()))
+  v4 <- nCompiler:::type2cpp_typename(T(myt2))
+  v5 <- nCompiler:::type2cpp_typename(nList2(double()))
+  v6 <- nCompiler:::type2cpp_typename(nList2("double()"))
+  myt3 <- nType(double())
+  v7 <- nCompiler:::type2cpp_typename(nList2({{myt3}})) ## see limits of T() vs {{}} above. T() fails here, only when run through testthat because then scoping matters.
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v3, v4)
+  expect_identical(v3, v5)
+  expect_identical(v3, v6)
+  expect_identical(v3, v7)
+
+  v1 <- nCompiler:::type2cpp_typename("nList('nList(double())')")
+  v2 <- nCompiler:::type2cpp_typename("nList(nList(double()))")
+  myt <- nType(nList(nList(double())))
+  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  myt2 <- nType(nList(nList(double())))
+  v4 <- nCompiler:::type2cpp_typename(T(myt2))
+  v5 <- nCompiler:::type2cpp_typename(nList(nList(double())))
+  v6 <- nCompiler:::type2cpp_typename(nList(nList("double()")))
+  myt3 <- nType(nList(double()))
+  v7 <- nCompiler:::type2cpp_typename(nList(T(myt3)))
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v1, v4)
+  expect_identical(v1, v5)
+  expect_identical(v1, v6)
+  expect_identical(v1, v7)
+
+  v1 <- nCompiler:::type2cpp_typename("nList2('nList2(double())')")
+  v2 <- nCompiler:::type2cpp_typename("nList2(nList2(double()))")
+  myt <- nType(nList2(nList2(double())))
+  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  myt2 <- nType(nList2(nList2(double())))
+  v4 <- nCompiler:::type2cpp_typename(T(myt2))
+  v5 <- nCompiler:::type2cpp_typename(nList2(nList2(double())))
+  v6 <- nCompiler:::type2cpp_typename(nList2(nList2("double()")))
+  myt3 <- nType(nList2(double()))
+  v7 <- nCompiler:::type2cpp_typename(nList2({{myt3}})) ## ditto
+  expect_identical(v1, v2)
+  expect_identical(v1, v3)
+  expect_identical(v3, v4)
+  expect_identical(v3, v5)
+  expect_identical(v3, v6)
+  expect_identical(v3, v7)
+})
 
 test_that("nList2: two generators of same type have equal classID", {
   rNL1 <- nList2("numericScalar")
@@ -560,6 +727,7 @@ test_that("nList2: multiple ways to indicate the same nList2 are de-duplicated",
     },
     returnType = "nList2('numericScalar')"
   )
+#  comp <- nCompile(foo)
   comp <- nCompile(rNL1, rNL2, foo)
   cNL1a <- comp$rNL1$new()
   cNL2a <- comp$rNL2$new()
@@ -569,19 +737,20 @@ test_that("nList2: multiple ways to indicate the same nList2 are de-duplicated",
   # we can see that the rNL1 is the same type.
 })
 
-message("FIX ME: Type de-duplication for nList2 is not complete.")
-## test_that("nList2: multiple ways to indicate the same nList2 are WRONGLY NOT de-duplicated", {
-##   rNL1 <- nList2("double()") # equivalent to numericScalar but not seen as the same - FIX ME
-##   foo <- nFunction(
-##     name = "foo",
-##     function(nl = 'rNL1') {
-##       return(nl)
-##     },
-##     returnType = "nList2('numericScalar')"
-##   )
-##   comp <- expect_error(nCompile(rNL1, foo))
-## })
-
+test_that("nList2: multiple ways to indicate the same nList2 are correctly de-duplicated", {
+  rNL1 <- nList2("double()") # equivalent to numericScalar but not seen as the same - FIX ME
+  foo <- nFunction(
+    name = "foo",
+    function(nl = 'rNL1') {
+      return(nl)
+    },
+    returnType = "nList2('numericScalar')"
+  )
+  comp <- nCompile(rNL1, foo)
+  obj <- comp$rNL1$new()
+  obj2 <- comp$foo(obj)
+  expect_equal(obj, obj2)
+})
 
 # ---------------------------------------------------------------------------
 # Compiled: various [ an [[ get and set operations compile and work
@@ -594,6 +763,20 @@ test_that("nList2 various bracket get and set operations compile and work",
     classname = "nc_holds_nList2",
     Cpublic = list(
       lst = 'rNL',
+      set_length = nFunction(
+        function(len = integerScalar()) {
+          length(lst) <- len
+          return(length(lst))
+          returnType("integerScalar")
+        }
+      ),
+      get_length = nFunction(
+        function() {
+          res <- length(lst)
+          return(res)
+          returnType("integerScalar")
+        }
+      ),
       get_single_bracket_int = nFunction(
         function(inds = integer(1)) {
           res <- lst[inds]
@@ -688,9 +871,12 @@ test_that("nList2 various bracket get and set operations compile and work",
   expect_error(obj$get_double_bracket(0))
   expect_error(obj$get_single_bracket(c(1, 2, 8)))
   expect_error(obj$get_single_bracket(c(1, 2, 0)))
+
+  expect_equal(obj$get_length(), 4)
+  expect_equal(obj$set_length(5), 5)
+  expect_equal(obj$get_length(), 5)
 })
 
-pause_<-function(){browser(); NULL}
 test_that("nList2 of nClass elements works", {
   element_nc <- nClass(
     classname = "element_nc_",
@@ -704,23 +890,17 @@ test_that("nList2 of nClass elements works", {
       )
     )
   )
-  rNL <- nList2('element_nc')
+  rNL <- nList2(element_nc())
   use_NL <- nFunction(
-    function(nl = "nList2('element_nc')", i = integer()) {
+    function(nl = nList2(element_nc()), i = integer()) {
       nl[[i]]$x <- 1:3
     }
   )
   comp <- nCompile(use_NL, rNL, element_nc)
   nl1 <- comp$rNL$new()
-  cat("a\n")
-  cat(tempdir())
-  pause_()
   nl1[[1]] <- comp$element_nc$new()
-  cat("a\n")
-  cat(tempdir())
-  pause_()
   nl1[[1]]$x <- 11:14
-  expect_error(nl2 <- use_NL(nl1, 2))
+  expect_error(nl2 <- comp$use_NL(nl1, 2))
   comp$use_NL(nl1, 1)
   expect_equal(nl1[[1]]$x, 1:3)
   length(nl1) <- 3
@@ -733,125 +913,80 @@ test_that("nList2 of nClass elements works", {
 ## At the time of working on this I ran out of time to pursue further tests,
 ## so these were left incompletely worked out.
 ##
-## test_that("nList2: nClass member of nList2 type compiles and works", {
-##   rNL <- nList2("numericScalar")
-##   nc <- nClass(
-##     classname = "nc_holds_nList2",
-##     Cpublic = list(
-##       lst = 'rNL',
-##       init = nFunction(function() {
-##         lst <<- rNL$new()
-##        # lst$setLength(3L)
-##         A <- lst[[1]]
-##         length(lst) <- 4
-##         len <- length(lst)
-##         #lst[[1]] <<- 10.0; lst[[2]] <<- 20.0; lst[[3]] <<- 30.0
-##       }),
-##       getLen = nFunction(
-##         function() { return(lst$getLength()) },
-##         returnType = 'integerScalar'
-##       )
-##     )
-##   )
-## #  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
-##   comp <- nCompile(rNL, nc)
-##   obj <- comp$nc$new()
-##   obj$init()
-##   expect_equal(obj$getLen(), 3L)
-##   rm(rNL, nc, comp, obj); gc()
-## })
+test_that("nList2: nClass member of nList2 type compiles and works", {
+  elemT <- nType("numericScalar")
+  rNL <- nList2({{elemT}})
+  nc <- nClass(
+    classname = "nc_holds_nList2",
+    Cpublic = list(
+      lst = 'rNL',
+      init = nFunction(function() {
+        lst <<- rNL$new()
+        length(lst) <- 3
+        lst[[1]] <- 3
+        A <- lst[[1]]
+        length(lst) <- 4
+        len <- length(lst)
+        return(A)
+        returnType({{elemT}})
+      }),
+      getLen = nFunction(
+        function() {return(length(lst))},
+        returnType = integerScalar()
+      )
+    )
+  )
+#  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
+  comp <- nCompile(rNL, nc)
+  obj <- comp$nc$new()
+  obj$init()
+  expect_equal(obj$getLen(), 4L)
+  rm(rNL, nc, comp, obj); gc()
+})
 
-## test_that("nList2: nFunction return type of nList2 compiles and works", {
-##   rNL <- nList2("numericScalar")
-##   nc <- nClass(
-##     classname = "nc_returns_nList2",
-##     Cpublic = list(
-##       lst = 'rNL',
-##       init = nFunction(function() {
-##         lst <<- rNL$new()
-##         lst$setLength(2L)
-##         lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
-##       }),
-##       getLst = nFunction(
-##         function() { return(lst) },
-##         returnType = 'rNL'
-##       )
-##     )
-##   )
-##   comp <- nCompile(rNL, nc)
-##   obj <- comp$nc_returns_nList2$new()
-##   obj$init()
-##   got <- obj$getLst()
-##   expect_equal(got[[1]], 100.0)
-##   expect_equal(got[[2]], 200.0)
-##   rm(rNL, nc, comp, obj, got); gc()
-## })
+test_that("nList2: nFunction return type of nList2 compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_returns_nList2",
+    Cpublic = list(
+      lst = 'rNL',
+      init = nFunction(function() {
+        lst <<- rNL$new()
+        length(lst) <- 2
+        lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
+      }),
+      getLst = nFunction(
+        function() { return(lst) },
+        returnType = 'rNL'
+      )
+    )
+  )
+  # Also test that rNL will be auto-included
+  comp <- nCompile(nc, returnList = TRUE)
+  #  comp <- nCompile(nc, rNL)
+  obj <- comp$nc$new()
+  obj$init()
+  got <- obj$getLst()
+  expect_equal(got[[1]], 100.0)
+  expect_equal(got[[2]], 200.0)
+  rm(rNL, nc, comp, obj, got); gc()
+})
 
-## test_that("nList2: nFunction argument of nList2 type compiles and works", {
-##   rNL <- nList2("numericScalar")
-##   nc <- nClass(
-##     classname = "nc_nList2_arg",
-##     Cpublic = list(
-##       lenOf = nFunction(
-##         function(x = 'rNL') { return(x$getLength()) },
-##         returnType = 'integerScalar'
-##       )
-##     )
-##   )
-##   comp <- nCompile(rNL, nc)
-##   obj  <- comp$nc_nList2_arg$new()
-##   lst  <- comp$nList2$new()
-##   lst$setLength(5L)
-##   expect_equal(obj$lenOf(lst), 5L)
-##   rm(rNL, nc, comp, obj, lst); gc()
-## })
-
-## test_that("nList2: nList2 created internally in nFunction code compiles and works", {
-##   rNL <- nList2("numericScalar")
-##   nc <- nClass(
-##     classname = "nc_creates_nList2",
-##     Cpublic = list(
-##       makeAndSum = nFunction(
-##         function() {
-##           tmp <- rNL$new()
-##           tmp$setLength(3L)
-##           tmp[[1]] <- 1.0; tmp[[2]] <- 2.0; tmp[[3]] <- 3.0
-##           s <- tmp[[1]] + tmp[[2]] + tmp[[3]]
-##           return(s)
-##         },
-##         returnType = 'numericScalar'
-##       )
-##     )
-##   )
-##   comp <- nCompile(rNL, nc)
-##   obj  <- comp$nc_creates_nList2$new()
-##   expect_equal(obj$makeAndSum(), 6.0)
-##   rm(rNL, nc, comp, obj); gc()
-## })
-
-## test_that("nList2: objects from two same-type generators are interchangeable", {
-##   # Two independent nCompile calls, each producing a nList2<double>.
-##   # An object from one DLL should be passable to a method compiled in the
-##   # other DLL, because they share the same C++ classname (and thus RTTI).
-##   rNL1 <- nList2("numericScalar")
-##   rNL2 <- nList2("numericScalar")
-
-##   cNL1 <- nCompile(rNL1)
-##   rNL3 <- nList2("numericScalar")   # fresh generator, same type
-##   nc <- nClass(
-##     classname = "nc_accept_nList2",
-##     Cpublic = list(
-##       lenOf = nFunction(
-##         function(x = 'rNL3') { return(x$getLength()) },
-##         returnType = 'integerScalar'
-##       )
-##     )
-##   )
-##   comp2 <- nCompile(rNL3, nc)
-
-##   src <- cNL1$nList2$new()
-##   src$setLength(4L)
-##   obj <- comp2$nc_accept_nList2$new()
-##   expect_equal(obj$lenOf(src), 4L)
-##   rm(rNL1, rNL2, rNL3, cNL1, nc, comp2, src, obj); gc()
-## })
+test_that("nList2: nFunction argument of nList2 type compiles and works", {
+  rNL <- nList2("numericScalar")
+  nc <- nClass(
+    classname = "nc_nList2_arg",
+    Cpublic = list(
+      lenOf = nFunction(
+        function(x = 'rNL') { return(length(x)) },
+        returnType = 'integerScalar'
+      )
+    )
+  )
+  comp <- nCompile(nc, rNL)
+  obj  <- comp$nc$new()
+  lst  <- comp$rNL$new()
+  length(lst) <- 5
+  expect_equal(obj$lenOf(lst), 5L)
+  rm(rNL, nc, comp, obj, lst); gc()
+})

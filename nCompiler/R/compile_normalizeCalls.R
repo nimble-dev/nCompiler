@@ -73,12 +73,19 @@ compile_normalizeCalls <- function(code,
     # This is a candidate for a new compilation stage, but it might work fine to bundle it here.
     if(cachedOpInfo$case == "nClassBuilder") {
       this_builder <- cachedOpInfo$obj_internals
-      type_res <- check_built_types(this_builder, code$Rexpr, auxEnv$project_env)
-      cpp_classname <- names(type_res)[1]
-      new_code <- exprClass$new(name = cpp_classname, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
-      replaceArgInCaller(code, new_code)
-      code$aux$cachedOpInfo <- NULL
-      return(NULL) # Now we have made it a name, not a call.
+      type_res <- check_built_types(Rexpr = code$Rexpr,
+                                    candidate = this_builder, 
+                                    where = auxEnv$where,
+                                    project_env = auxEnv$project_env)
+      if(isNCgenerator(type_res)) {
+        cpp_classname <- NCinternals(type_res)$cpp_classname
+        new_code <- exprClass$new(name = cpp_classname, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+        replaceArgInCaller(code, new_code)
+        code$aux$cachedOpInfo <- NULL
+      } else {
+        stop("During normalizeCalls, could not resolve an nClass type from an nClassBuilder.")
+      }
+      return(NULL)
     }
 
     opDef <- cachedOpInfo$opDef

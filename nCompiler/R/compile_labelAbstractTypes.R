@@ -197,7 +197,7 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   type_is <- function(code, symTab, auxEnv, handlingInfo) {
     type <- eval(code$aux$compileArgs$type, envir = auxEnv$where)
-    sym <- argType2symbol(type)
+    sym <- type2symbol(type)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo)
     code$args[["value"]]$type <- sym
@@ -231,7 +231,9 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   nList <- function(code, symTab, auxEnv, handlingInfo) {
-    sym <- argType2symbol(code$aux$compileArgs$type)
+    inner_type <- nType(expr = code$aux$compileArgs$type, env = auxEnv$where)
+    sym <- type2symbol({{inner_type}}, where = auxEnv$where)
+    sym <- resolveOneTBDsymbol(sym, env = auxEnv$where, project_env = auxEnv$project_env)
     code$type <- symbolNlist$new(elementSym = sym)
     removeArg(code, "type", allow_missing=TRUE)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
@@ -1467,7 +1469,7 @@ inLabelAbstractTypesEnv(
       types <- code$aux$compileArgs$types
       if(!is.null(types)) {
         if(!is.list(types)) types <- eval(types)
-        symbols <- argTypeList2symbolTable(types, evalEnv=auxEnv$closure)$getSymbols()
+        symbols <- typeList2symbolTable(types, where=auxEnv$closure)$getSymbols()
         for (sym in symbols) symTab$addSymbol(sym)
       }
     }

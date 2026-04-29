@@ -24,6 +24,13 @@ symbolBase <- R6::R6Class(
     shortPrint = function() {
       self$type
     },
+    resolveSym = function(...) self,
+    uniqueID = function(...) {
+      stop("uniqueID() is not yet implemented for a symbol of class ", class(self)[1], ".")
+    },
+    cpp_typename = function(...) {
+      self$genCppVar()$generate("") |> trimws()
+    },
     generateUse = function(...) self$name
   )
 )
@@ -67,6 +74,9 @@ symbolBasic <-
                       AD = 'AD',
                       'Other'),
                self$nDim)
+      },
+      uniqueID = function(...) {
+        self$shortPrint()
       },
       print = function() {
         if(is.null(self$size)) {
@@ -163,6 +173,9 @@ symbolNF <- R6::R6Class(
     print = function() {
       writeLines(paste0(self$name, ': nFunction'))
     },
+    uniqueID = function(...) {
+      self$name # we don't seem to have a type?
+    },
     genCppVar = function() {
       stop("Attempting to create a cppVar for a symbolNF")
     }
@@ -176,16 +189,93 @@ symbolTBD <- R6::R6Class(
   classname = "symbolTBD",
   inherit = symbolBase,
   portable = TRUE,
+  # The where (formerly evalEnv) should be known
+  # when the symbol is created. The project_env
+  # may not be known until used, so it is a compile-time
+  # (not declaration-time)
+  # argument of some methods.
   public = list(
-    initialize = function(..., funName = NULL) {
+    initialize = function(..., typeSpec = NULL, 
+                          quo = NULL, 
+                          where = NULL) {
       super$initialize(...)
-      self$funName <- funName
+      self$typeSpec <- typeSpec
+      self$quo <- quo
+      self$where <- where
     },
-    funName = NULL,
+    # type will be the deparsed normalized input (i.e. converted to a call)
+    typeSpec = NULL, # result of nTypeSpec
+    quo = NULL, # original captured quosure (with any quote() layer removed)
+    where = NULL, # environment from nFunction or nClass scoping
     print = function() {
       writeLines(paste0(self$name,
                         ": symbolTBD of type '",
                         self$type, "'"))
+    },
+    check_unknown_types = function(returnID = FALSE,
+                                  project_env = NULL) {
+      ttype <- self$quo
+      candidate <- check_unknown_types(type = {{ttype}},
+                                project_env = project_env %||% self$project_env,
+                                where = self$where,
+                                returnID = returnID,
+                                typeSpec = self$typeSpec)
+    },
+    resolveSym = function(project_env = NULL, ...) {
+      # This is needed when called from genCppVar as an inner variable such as for nList
+      # Possible redundance with these env's, which if provided
+      # can over-rule the member env's
+      candidate <- self$check_unknown_types(returnID = FALSE,
+                                            project_env = project_env)
+      if(isNCgenerator(candidate)) {
+        newSym <- symbolNC$new(name = self$name,
+                             type = NCinternals(candidate)$cpp_classname, # will this work for the type field??
+                             isArg = self$isArg,
+                             NCgenerator = candidate)
+        return(newSym)
+      } else {
+        stop("In resolveSym method for symbolTBD (", self$name, ", ", self$type, "), could not resolve an nClass generator.")
+      }
+    },
+    cpp_typename = function(project_env = NULL, ...) {
+      sym <- self$resolveSym(project_env, ...)
+      return(sym$cpp_typename(project_env, ...))
+      # candidate <- self$check_unknown_types(returnID = FALSE,
+      #                                       project_env = project_env)
+      # if(isNCgenerator(candidate)) {
+
+      #   return(NCinternals(candidate)$cpp_classname |> trimws())
+      # } else {
+      #   stop("In cpp_classname method for symbolTBD (", self$name, ", ", self$type, "), could not resolve an nClass generator.")
+      # }
+    },
+    uniqueID = function(project_env = NULL, ...) {
+      # If the type was provided like "nlist(some_custom_type())",
+      # the string literal aspect will make the quosure have
+      # env = emptyenv() and if an env is needed for the
+      # inner type it is essentially lost. For now to cover
+      # basic cases we use evalEnv or (if NULL) default to .GlobalEnv,
+      # which will cover
+      # cases where the inner type is a base type.
+      # This will fail if a user provides "nList2(T(mytype))"
+      # as a character string.
+      # where mytype only exists in the environment where 
+      # mytype was created by nType(). That environment
+      # will not be retained in the quosure and is also not
+      # the environment of the nFunction or nClass call. 
+      # A user
+      # can provide the type as an expression, nList2(T(mytype)),
+      # not as character string, to get type scoping.
+      # In future we could either more cleverly grab an 
+      # actual environment when needed (but this will be unstable
+      # for the reasons that quosures grab the PROMISE environment
+      # which is non-trivial in multiple call layers). or we
+      # could deprecate the idea of using strings for types,
+      # or we could document that their use is limited if in 
+      # inner type needs to be found by scoping.
+      ID <- self$check_unknown_types(returnID = TRUE,
+                                    project_env = project_env %||% self$project_env)
+      ID
     },
     genCppVar = function() {
       stop("Trying to generate a C++ type from a TBD type ('",
@@ -198,6 +288,7 @@ symbolTBD <- R6::R6Class(
 
 ## Possible TO-DO: do not store the NCgenerator in the symbol.
 ## Instead, find it by scoping every time it is needed.
+## type is the uniqueID of the NCgenerator.
 symbolNC <- R6::R6Class(
   classname = "symbolNC",
   inherit = symbolBase,
@@ -219,6 +310,9 @@ symbolNC <- R6::R6Class(
     print = function() {
       writeLines(paste0(self$name, ': symbolNC of type ', self$type))
     },
+    uniqueID = function(...) {
+      NCinternals(self$NCgenerator)$classID
+    },
     genCppVar = function() {
       cppSharedPtrToNC(name = self$name,
                        NCtype = NCinternals(self$NCgenerator)$cpp_classname)
@@ -226,6 +320,8 @@ symbolNC <- R6::R6Class(
   )
 )
 
+## type is the unique ID of the NCgenerator.
+## same value as for a symbolNC for an object of the class.
 symbolNCgenerator <- R6::R6Class(
   classname = "symbolNCgenerator",
   inherit = symbolBase,
@@ -243,6 +339,9 @@ symbolNCgenerator <- R6::R6Class(
     },
     print = function() {
       writeLines(paste0(self$name, ': symbolNCgenerator of type ', self$type))
+    },
+    uniqueID = function(...) {
+      NCinternals(self$NCgenerator)$classID
     },
     genCppVar = function() {
       cppNCgenerator(name = self$name,
@@ -267,6 +366,32 @@ symbolNlist <- R6::R6Class(
     shortPrint = function() {
       'nList'
     },
+    resolveSym = function(project_env = NULL, ...) {
+      elemSym <- self$elementSym
+      if(inherits(elemSym, "symbolTBD")) {
+        elemSym <- elemSym$resolveSym(project_env)
+        #resolveOneTBDsymbol(elementSym, env, project_env)
+        newSym <- self$clone(deep=TRUE)
+        newSym$elementSym <- elemSym
+        return(newSym)
+      }
+      self
+    },
+    cpp_typename = function(project_env = NULL, ...) {
+      # This is the same as genCppVar except
+      # that it has the benefit of the project_env
+      elemSym <- self$elementSym
+      if(inherits(elemSym, "symbolTBD")) {
+        elemSym <- elemSym$resolveSym(project_env, ...)
+      }
+      cppVar <- cppNlist(name = self$name,
+                        elementVar = elemSym$genCppVar())
+      return(cppVar$generate("") |> trimws())
+    },
+    uniqueID = function() {
+      elementID <- self$elementSym$uniqueID()
+      paste0("nList_", elementID)
+    },
     print = function() {
       writeLines(
         paste0(self$name, ': ', self$type, '(',
@@ -275,8 +400,19 @@ symbolNlist <- R6::R6Class(
       )
     },
     genCppVar = function() {
+      elemSym <- self$elementSym
+      if(inherits(elemSym, "symbolTBD")) {
+        # temporarily resolve the symbolTBD
+        # This could be repetitive. If elemSym
+        # needs resolution at compile-time,
+        # such as from an nClassBuilder call,
+        # then this will fail. However,
+        # elementSym *should* be resolved by the
+        # time this is used for actual code generation.
+        elemSym <- elemSym$resolveSym()
+      }
       return(cppNlist(name = self$name,
-                      elementVar = self$elementSym$genCppVar()))
+                      elementVar = elemSym$genCppVar()))
     }
   )
 )
@@ -329,6 +465,9 @@ symbolRcppType<- R6::R6Class(
     },
     shortPrint = function() {
       self$type
+    },
+    uniqueID = function() {
+      stop("uniqueID() is not yet implemented for symbolRcppType.")
     },
     print = function() {
       writeLines(
@@ -623,7 +762,7 @@ symbolCppVar <- R6::R6Class(
       self$type <- self$internalCppVar$generate(printName = "")
     },
     print = function() {
-      writeLines(self$internalCppVar$generate())
+      writeLines(paste0(self$name, ': (C++) ', self$internalCppVar$generate()))
     },
     genCppVar = function() {
       self$internalCppVar$name <- self$name

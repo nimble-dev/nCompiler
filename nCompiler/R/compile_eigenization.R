@@ -318,7 +318,7 @@ inEigenizeEnv(
 inEigenizeEnv(
   LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # length(x) <- value becomes .method(x, "setLength", value)
-    scalarcast(code, 2, 'int')
+    scalarCast(code, 2, 'integer')
     maybe_convertToMethod(code, handlingInfo, force = TRUE)
     invisible(NULL)
   }
@@ -402,7 +402,7 @@ inEigenizeEnv(
       methodName <- code$name
       if(!is.null(handlingInfo$methodName))
         methodName <- handlingInfo$methodName
-      if(isTRUE(ptr)) code$name <- '->method' 
+      if(isTRUE(ptr) || isTRUE(handlingInfo$ptr)) code$name <- '->method' 
       else code$name <- '.method'
       if(length(code$args) > 1) {
         for(i in length(code$args):2) {
@@ -907,23 +907,6 @@ nCompiler:::inEigenizeEnv(
       revert_OpAssign(code, symTab, auxEnv, workEnv, handlingInfo)
       code <- caller$args[[callerArgID]] # now `<-`(LHS, RHS)
       code <- code$args[[1]] # LHS, which is the original `[` call
-      # newExpr <- exprClass$new(name = "<-", isName = FALSE, isCall = TRUE, isAssign = TRUE,
-      #                          type = code$type)
-      # newExpr$type <- code$type$clone(deep=TRUE)
-      # firstArg <- exprClass$new(name = "[", isName = FALSE, isCall = TRUE, isAssign = FALSE,
-      #                           type = code$type)
-      # firstArg$type <- code$type$clone(deep=TRUE)
-      # iArgs <- seq_along(code$args)
-      # iArgs <- iArgs[-length(iArgs)]
-      # for(i in iArgs) {
-      #   insertArg(firstArg, i, code$args[[i]], names(code$args)[i])
-      # }
-      # update_cachedOpInfo(firstArg, auxEnv$where)
-      # setArg(newExpr, 1, firstArg)
-      # setArg(newExpr, 2, code$args[[length(code$args)]])
-      # update_cachedOpInfo(newExpr, auxEnv$where)
-      # setArg(code$caller, code$callerArgID, newExpr)
-      # code <- firstArg
     }
 
     iArgs <- seq_along(code$args)[-1]

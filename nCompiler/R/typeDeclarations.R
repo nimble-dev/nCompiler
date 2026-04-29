@@ -1,3 +1,143 @@
+
+## How creating and passing around types works
+## The raw expression information of types is recorded 
+## in rlang quosures. The idiom for programming with 
+## a type as an input is:
+## function(type) {
+##   ttype <- nCaptureType(type)
+##   next_res <- foo({{ttype}})
+## }
+## This also means that the above function can be
+## called with with arguments like "type = numericVector()", 
+##. type = 'numericVector', or type = {{ type_var }},
+## where type_var was either the result of nCaptureType
+## a call like nType(numericVector()) or nType("numericVector")
+
+nTypeSpec <- function(type = NULL) {
+  if(rlang::is_quosure(type)) {
+    texpr <- rlang::quo_get_expr(type)
+  } else {
+    texpr <- type
+  }
+  if(is.null(texpr)) return(NULL)
+  typeToUse <- texpr
+  inputAsCharacter <- FALSE
+  if(is.character(typeToUse)) {
+    typeToUse <- str2lang(typeToUse)
+    inputAsCharacter <- TRUE # This might become unnecessary but in past experience uses have cropped up for it.
+  }
+  ## allow e.g. 'scalarInteger' to become scalarInteger()
+  if(is.name(typeToUse)) {
+    funName <- deparse(typeToUse)
+    args <- list()
+  } else {
+    funName <- deparse(typeToUse[[1]])
+    args <- typeToUse[-1] |> as.list()
+  }
+  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter) |> 
+    structure(class = "nTypeSpec")
+}
+
+#' @export
+nCaptureType <- function(arg) {
+  # Note that for backward compatibility with nimble and convenience,
+  # arg could be a quoted R expr, like quote(double(1))
+  # In that case, the env of the quosure created here will be R_EmptyEnv (emptyenv())
+  # We do not replace it here because at evaluation points we sometimes have
+  # a "where" or "env" from scoping of an nClass or Function and we will use that.
+  arg <- substitute(arg)
+  substitute(rlang::enquo(ARG), list(ARG = arg)) |> eval(parent.frame())
+}
+
+#' @export
+nType <- function(type, expr=NULL, env=parent.frame()) {
+  if(is.null(expr)) {
+    res <- nCaptureType(type)
+    return(res)
+  }
+  res <- substitute(rlang::quo(EXPR), list(EXPR = expr)) |> eval(envir = env)
+  res
+}
+
+#' @export
+nTypeList <- function(..., .list = NULL, .where = parent.frame()) {
+  if(!is.null(.list)) {
+    res <- vector(mode = "list", length = length(.list))
+    #pf <- parent.frame()
+    for(i in seq_along(.list)) {
+      new_quo <- substitute(rlang::quo(EXPR), list(EXPR = .list[[i]])) |> eval(envir = .where)
+      # First idea was to populate this but it is better to leave env
+      # as emptyenv() so later we know there was no properly captured
+      # original env and we can instead use a scoped env from an nFunction or nClass
+      #new_quo <- rlang::quo_set_env(new_quo, pf)
+      res[[i]] <- new_quo
+    }
+    names(res) <- names(.list)
+    return(res)
+  }
+  res <- rlang::enquos(..., .homonyms = "error")
+  res
+}
+
+# nCaptureType <- function(arg, .substitute = TRUE) {
+#   s_arg <- substitute(arg)
+#   if(.substitute)
+#     s_type <- substitute(substitute(ARG), list(ARG=s_arg)) |> eval(parent.frame())
+#   else
+#     s_type <- s_arg |> eval(parent.frame())
+#   if(is.call(s_type)) {
+#     if(length(s_type[[1]]) == 1) {
+#       if(identical(as.character(s_type[[1]]), "T")) {
+#         # In many cases from simple function calls, promise_env
+#         # will be the same as parent.frame(2). However,
+#         # promises could have been passed un-forced through
+#         # additional call frames, and notably that will be the
+#         # case in the initialize method of an R6 class generator
+#         # Hence we obtain the environment of the promise,
+#         # which requires a call to C++.
+#         #
+#         # Checking on .GlobalEnv catches on silly case of
+#         # mis-use (not calling from a function) that we
+#         # make "just work". Other cases of mis-use could
+#         # give untrapped errors
+#         if(identical(parent.frame(), .GlobalEnv))
+#           promise_env <- .GlobalEnv
+#         else
+#           promise_env <- nCompiler:::get_promise_env(s_arg, parent.frame())
+#         res <- s_type[[2]] |> eval(promise_env)
+#         if(!inherits(res, "nTypeSpec"))
+#           res <- nTypeSpec(res)
+#         return(res)
+#       }
+#     }
+#   }
+#   res <- nTypeSpec(s_type)
+#   res
+# }
+
+# #' @export
+# nType <- function(type) {
+#   nCaptureType(type)
+# }
+
+# #' @export
+# nTypeList <- function(..., .list = NULL) {
+#   if(!is.null(.list)) {
+#     res <- .list |> lapply(function(x) nType(T(x)))
+#     return(res)
+#   }
+#   expr <- eval(substitute(alist(...)))
+#   res <- vector(mode = "list", length = length(expr))
+#   for(i in seq_along(expr)) {
+#     res[[i]] <- nCaptureType(expr[[i]], .substitute = FALSE)
+#   }
+#   names(res) <- names(expr)
+#   res
+# }
+
+## The next sections of code handle types to symbols
+##
+
 ## each entry in the typeDeclarationList
 ## gives a function to convert the arguments of a
 ## type declaration into a symbol object.
@@ -16,7 +156,7 @@
 ## a = matrix(type = "integer", nrow = 10, ncol, init = FALSE)
 
 #' @export
-nType <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE,
+nTypeBasic <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE,
                   interface = TRUE, ...) {
   symbolBasic$new(type = scalarType,
                   nDim = nDim,
@@ -35,140 +175,141 @@ nSparseType <- function(scalarType, nDim, isRef = FALSE, ...) {
 
 typeDeclarationList <- list(
   ref = function(internalType) {
-    ans <- argType2symbol(substitute(internalType),
-                          evalEnv = parent.frame(2))
+    tIntT <- nCaptureType(internalType)
+    ans <- type2symbol({{tIntT}},
+                          where = parent.frame(1))
     ans$isRef <- TRUE
     nErrorEnv$.isRef_has_been_set <- TRUE
     ans
   },
   blockRef = function(internalType) {
-    ans <- argType2symbol(substitute(internalType),
-                          evalEnv = parent.frame(2))
+    ans <- type2symbol({{internalType}},
+                          where = parent.frame(1))
     ans$isBlockRef <- TRUE
     nErrorEnv$.isBlockRef_has_been_set <- TRUE
     ans
   },
   ## integer types:
   integerScalar = function(value) {
-    nType("integer", 0)
+    nTypeBasic("integer", 0)
   },
   integerVector = function(length = NA,
                            ...) {
-    nType("integer", 1, ...)
+    nTypeBasic("integer", 1, ...)
   },
   integerMatrix = function(value,
                            ...) {
-    nType("integer", 2, ...)
+    nTypeBasic("integer", 2, ...)
   },
   integerArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("integer", nDim, ...)
+    nTypeBasic("integer", nDim, ...)
   },
   ## logical types
   logicalScalar = function(value) {
-    nType("logical", 0)
+    nTypeBasic("logical", 0)
   },
   logicalVector = function(length = NA,
                            ...) {
-    nType("logical", 1, ...)
+    nTypeBasic("logical", 1, ...)
   },
   logicalMatrix = function(value,
                            ...) {
-    nType("logical", 2)
+    nTypeBasic("logical", 2)
   },
   logicalArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("logical", nDim, ...)
+    nTypeBasic("logical", nDim, ...)
   },
   ## numeric types
   numericScalar = function(value) {
-    nType("double", 0)
+    nTypeBasic("double", 0)
   },
   numericVector = function(length = NA,
                            ...) {
-    nType("double", 1, size = length, ...)
+    nTypeBasic("double", 1, size = length, ...)
   },
   numericMatrix = function(value,
                            ...) {
-    nType("double", 2, ...)
+    nTypeBasic("double", 2, ...)
   },
   numericArray = function(value,
                           nDim = 1,
                           ...) {
-    nType("double", nDim, ...)
+    nTypeBasic("double", nDim, ...)
   },
   ## AD types
   ADScalar = function(value) {
-    nType("AD", 0)
+    nTypeBasic("AD", 0)
   },
   ADVector = function(length = NA,
                       ...) {
-    nType("AD", 1, size = length, ...)
+    nTypeBasic("AD", 1, size = length, ...)
   },
   ADMatrix = function(value,
                       ...) {
-    nType("AD", 2, ...)
+    nTypeBasic("AD", 2, ...)
   },
   ADArray = function(value,
                      nDim = 1,
                      ...) {
-    nType("AD", nDim, ...)
+    nTypeBasic("AD", nDim, ...)
   },
   ## versions with type as a declared argument
   nScalar = function(...,
                      type = "double") {
-    nType(type, 0)
+    nTypeBasic(type, 0)
   },
   nVector = function(value,
                      length,
                      ...,
                      type = "double") {
-    nType(type, 1)
+    nTypeBasic(type, 1)
   },
   nMatrix = function(value,
                      ...,
                      type = "double") {
-    nType(type, 2)
+    nTypeBasic(type, 2)
   },
   nArray = function(value,
                     dim,
                     ...,
                     type = "double") {
-    nType(type, length(dim))
+    nTypeBasic(type, length(dim))
   },
   ## vector versions with type embedded in keyword
   nInteger = function(length = NA,
                       ...) {
-    nType("integer", 1)
+    nTypeBasic("integer", 1)
   },
   nLogical = function(length = NA,
                       ...) {
-    nType("logical", 1)
+    nTypeBasic("logical", 1)
   },
   nNumeric = function(length = NA,
                       ...) {
-    nType("double", 1)
+    nTypeBasic("double", 1)
   },
   ## versions from original nimble
   double = function(nDim = 0,
                     ...) {
-    nType("double", nDim)
+    nTypeBasic("double", nDim)
   },
   integer = function(nDim = 0,
                      ...) {
-    nType("integer", nDim)
+    nTypeBasic("integer", nDim)
   },
   logical = function(nDim = 0,
                      ...) {
-    nType("logical", nDim)
+    nTypeBasic("logical", nDim)
   },
   void = function(...) {
-    nType("void", 0)
+    nTypeBasic("void", 0)
   },
   string = function(...) {
-    nType("string", 0)
+    nTypeBasic("string", 0)
   },
   ##
   SEXP = function(...) {
@@ -269,7 +410,8 @@ typeDeclarationList <- list(
     nSparseType(scalarType = type, nDim = 1)
   },
   nList = function(type) {
-    elementSym <- argType2symbol(type)
+    ttype <- nCaptureType(type)
+    elementSym <- type2symbol({{ttype}}, where = parent.frame())
     symbolNlist$new(elementSym = elementSym)
   },
   ## determine type from an evaluated object
@@ -290,7 +432,12 @@ typeDeclarationList <- list(
       stop(paste0("Invalid number of dimensions used to declare a nCompiler ",
                   "argument.  Dimensions from 0-6 are allowed."),
            call. = FALSE)
-    nType(scalarType, nDim)
+    nTypeBasic(scalarType, nDim)
+  },
+  ## O(obj) allows a syntax for explicitly saying there is an object 
+  ## to look at for the type.
+  O = function(x) {
+    typeDeclarationList$typeDeclarationFromObject(x)
   },
   CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
     symbolCppVar$new(...)
@@ -298,73 +445,90 @@ typeDeclarationList <- list(
   nCpp = function(value, ...) {
     symbolCppVar$new(baseType = value, ...)
   },
-  T = function(symbol) {
+  T = function(symbol) { ## This is semi-defunct but could be resurrected.
+    # The use of T(mytype) indicates that mytype evaluates to an 
+    # existing type object in the evalEnv.
+    # So this is a splice point between base R expression handling
+    # and rlang.
     symbol <- substitute(symbol)
-    symbol <- eval(symbol, envir = parent.frame()$evalEnv)
-    symbol$clone(deep=TRUE)
+    tsymbol <- eval(symbol, envir = parent.frame())
+    # Add error trapping for whether tsymbol is a quosure
+    # whose expr contains T(type_obj). This nested use of T() syntax
+    # will not work if the quosure environments matter because
+    # the inner T will lose its argument's environment because
+    # we use T as a syntax tree marker only (so its arg isn't captured)
+    symbol <- type2symbol({{tsymbol}}, where = parent.frame()) # this is called *from* the evalEnv via do.call with envir
+    #    symbol$clone(deep=TRUE)
   }
   ## universal handler for creating symbolBasic objects
 )
 
 #' @export
-argType2Cpp <- function(...) {
-  argType2symbol(...)$genCppVar()$generate()
+type2cpp <- function(...) {
+  type2symbol(...)$genCppVar()$generate()
 }
 
-#' @export
-nMakeType <- function(type, ...) {
-  evalEnv <- parent.frame()
-  type <- substitute(type)
-  argType2symbol(argType = type, ..., evalEnv = evalEnv)
+quo_strip_quote <- \(qq) {
+#  qq <- q
+  if(identical(rlang::quo_get_expr(qq), rlang::missing_arg())) return(qq)
+  e <- rlang::quo_get_expr(qq)  
+  e <- if(is.call(e) && deparse1(e[[1]])=="quote") e[[2]] else e
+  rlang::quo_set_expr(qq, e)
 }
 
-argType2symbol <- function(argType,
-                           name = character(),
-                           origName = "",
-                           isArg = FALSE,
-                           explicitType = NULL,
-                           isRef = NULL,
-                           isBlockRef = NULL,
-                           evalEnv = parent.frame()) {
+type2symbol <- function(type,
+                        name = character(),
+                        origName = "",
+                        isArg = FALSE,
+                        explicitType = NULL,
+                        isRef = NULL,
+                        isBlockRef = NULL,
+                        where = parent.frame()) {
   nErrorEnv$stateInfo <- paste0("handling argument ", name, ".")
   nErrorEnv$.isRef_has_been_set <- FALSE
   nErrorEnv$.isBlockRef_has_been_set <- FALSE
-  typeToUse <- if(!is.null(explicitType))
-    explicitType
-  else
-    argType
+  ttype <- nCaptureType(type)
+  texplicitType <- nCaptureType(explicitType)
+  ttype <- quo_strip_quote(ttype)
+  texplicitType <- quo_strip_quote(texplicitType)
+  
+  if(!is.null(explicitType)) {
+#    typeToUse <- explicitType
+    ttypeToUse <- texplicitType
+  } else {
+#    typeToUse <- type
+    ttypeToUse <- ttype
+  }
 
+  # The idea here was to check if a symbol itself is provided,
+  # but now using rlang quosures, we don't want to assume we
+  # can evaluate the type argument. 
+  # 
+  ## First check if what was provided is actually a symbol, and if so return a copy.
   ## This could be restricted to inherits(typeToUse, "symbolBase")
   ## but "R6" allows an even wider range of flexibility.
- if(inherits(typeToUse, "R6")) {
-   ans <- typeToUse$clone(deep=TRUE)
-   ans$name <- name
-   return(ans)
- }
+  # if(inherits(typeToUse, "R6")) {
+  #   ans <- typeToUse$clone(deep=TRUE)
+  #   ans$name <- name
+  #   return(ans)
+  # }
 
-  inputAsCharacter <- FALSE
-  if(is.character(typeToUse)) {
-    typeToUse <- parse(text = typeToUse, keep.source = FALSE)[[1]]
-    inputAsCharacter <- TRUE
-  }
+  typeSpec <- nTypeSpec(ttypeToUse)
+  inputAsLiteral <- identical(rlang::quo_get_env(ttypeToUse), emptyenv())
+  inputAsCharacter <- typeSpec$inputAsCharacter
   ## allow e.g. 'scalarInteger' to become scalarInteger()
-  if(is.name(typeToUse))
-    typeToUse <- as.call(list(typeToUse))
-
-  ## argType could be a blank
-  if(is.name(argType))
-    if(as.character(argType)=="")
-      argType <- NULL
+  #if(is.name(typeToUse))
+  #  typeToUse <- as.call(list(typeToUse))
 
   ans <- try({
-    ## TO-DO: Case 1: It is a nType object
+    ## TO-DO: Case 1: It is a nTypeBasic object
     ##    To be implemented
     ##
     ## Case 2: It is a valid declaration
-    funName <- deparse(typeToUse[[1]])
+    funName <- typeSpec$funName # deparse(typeToUse[[1]])
     handler <- typeDeclarationList[[funName]]
     if(!is.null(handler)) {
-      symbol <- do.call(handler, as.list(typeToUse[-1]))
+      symbol <- do.call(handler, typeSpec$args, envir = where) #as.list(typeToUse[-1]))
       symbol$name <- name
       symbol$isArg <- isArg
       if(!is.null(isRef)) {
@@ -395,9 +559,29 @@ argType2symbol <- function(argType,
           }
         }
       }
+      # Next we will check if both a type and explicitType were provided
+      # we evaluate the type and see if it (evaluated) is consistent with the explicitType.
+      # It is not clear if this is really a good idea in all cases.
+      #
+      # Because input could be a quosure already, we need for null based on 
+      # the expression of the quosure, which could be missing_arg or NULL.
+      if(identical(rlang::quo_get_expr(texplicitType), rlang::missing_arg()) ||
+          is.null(rlang::quo_get_expr(texplicitType)))
+        explicitType <- NULL
       if(!is.null(explicitType)) {
-        if(!is.null(argType)) {
-          checkObject <- eval(argType, envir = evalEnv)
+        ## type could be a blank
+        ## ttexpr <- rlang::quo_get_expr(ttype) # It does not even work to hold this in a variable
+        ## because if it is the missing symbol, it explodes with error when used!
+        if(identical(rlang::quo_get_expr(ttype), rlang::missing_arg()) ||
+            is.null(rlang::quo_get_expr(ttype)))
+          type <- NULL
+
+        if(!is.null(type)) {
+          checkObject <- if(!identical(rlang::quo_get_env(ttype), emptyenv()))
+            rlang::eval_tidy(ttype)
+          else
+            eval(rlang::quo_get_expr(ttype), envir=where)
+            # eval(type, envir = evalEnv) # ttype is a quosure of a default value, since the type spec is in explicitType
           checkSymbol <- typeDeclarationList[["typeDeclarationFromObject"]](checkObject)
           need_warning <- !identical(symbol$type, checkSymbol$type)
           ## If dimensions don't match, trigger an error...
@@ -425,14 +609,25 @@ argType2symbol <- function(argType,
     } else {
       ## Case 3: It is a nClass type or possibly other "to-be-determined" type.
       ## We defer type lookup until compiler stage labelAbstractTypes
-      if(inputAsCharacter) {
+      ## We allow that character input could be a type specification, but other
+      ## literal input should not be.
+      ## Again it is not clear if this is really fully general.
+      if(inputAsCharacter || !inputAsLiteral) {
         symbol <- symbolTBD$new(name = name,
-                                type = deparse(typeToUse), #funName,
-                                funName = funName,
-                                isArg = isArg)
+                                # this type string normalized to appear as a deparsed call.
+                                type = typeSpec$funName,
+                                typeSpec = typeSpec,
+                                quo = ttypeToUse,
+                                isArg = isArg,
+                                where = where)
       } else {
         ## Case 4: Type can be determined by evaluating the default
-        demoObject <- eval(argType, envir = evalEnv)
+        ## This will really only work for scalar non-character literals,
+        ## i.e. a number or logical, so it is not very useful.
+        demoObject <- if(!identical(rlang::quo_get_env(ttype), emptyenv()))
+          rlang::eval_tidy(ttype)
+        else
+          eval(rlang::quo_get_expr(ttype), envir=where) # eval(type, envir = evalEnv)
         symbol <-
           typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
         symbol$name <- name
@@ -469,30 +664,30 @@ argType2symbol <- function(argType,
   ans
 }
 
-argTypeList2symbolTable <- function(argTypeList,
-                                    origNames = NULL,
-                                    isArg = rep(FALSE, length(argTypeList)),
-                                    isRef = list(),
-                                    isBlockRef = list(),
-                                    explicitTypeList = list(),
-                                    evalEnv = parent.frame()
-                                    ) {
-  ## argTypeList is the argument-type list from run-time args to compile_simpleTransformations.RnCompiler function
+typeList2symbolTable <- function(typeList,
+                                origNames = NULL,
+                                isArg = rep(FALSE, length(typeList)),
+                                isRef = list(),
+                                isBlockRef = list(),
+                                explicitTypeList = list(),
+                                where = parent.frame()
+                                ) {
+  ## typeList is the argument-type list from run-time args to compile_simpleTransformations.RnCompiler function
   ## This function creates a symbolTable from the argument-type list.
 
   ## Begin error-trapping on arguments
-  ## 1. Check that argTypeList is named list
-  if(!is.list(argTypeList)) {
-    stop(paste0("In argTypeList2symbolTable, ",
-                "argTypeList must be a list."),
+  ## 1. Check that typeList is named list
+  if(!is.list(typeList)) {
+    stop(paste0("In typeList2symbolTable, ",
+                "typeList must be a list."),
          call. = FALSE)
   }
-  if(length(argTypeList) == 0) {
+  if(length(typeList) == 0) {
     return(symbolTableClass$new())
   }
-  if(is.null(names(argTypeList)))
-    stop(paste0("In argTypeList2symbolTable, ",
-                "argTypeList must have named elements."),
+  if(is.null(names(typeList)))
+    stop(paste0("In typeList2symbolTable, ",
+                "typeList must have named elements."),
          call. = FALSE)
   ## check that isArg is valid
   if(!is.list(isArg)) {
@@ -502,19 +697,19 @@ argTypeList2symbolTable <- function(argTypeList,
       isArg <- as.list(isArg)
     }
     if(!ok) {
-      stop(paste0("In argTypeList2symbolTable, ",
+      stop(paste0("In typeList2symbolTable, ",
                   "isArg must be a list or logical vector."),
            call. = FALSE)
     }
   }
-  if(length(isArg) != length(argTypeList)) {
+  if(length(isArg) != length(typeList)) {
     if(length(isArg) > 0)
-      stop(paste0("In argTypeList2symbolTable, ",
-                  "isArg must be the same length as argTypeList."),
+      stop(paste0("In typeList2symbolTable, ",
+                  "isArg must be the same length as typeList."),
            call. = FALSE)
   }
   if(is.null(names(isArg)))
-    names(isArg) <- names(argTypeList)
+    names(isArg) <- names(typeList)
 
   ## Check that isRef is valid
   if(!is.list(isRef)) {
@@ -524,7 +719,7 @@ argTypeList2symbolTable <- function(argTypeList,
       isRef <- as.list(isRef)
     }
     if(!ok) {
-      stop(paste0("In argTypeList2symbolTable, ",
+      stop(paste0("In typeList2symbolTable, ",
                   "isRef must be a list or logical vector."),
            call. = FALSE)
     }
@@ -537,126 +732,160 @@ argTypeList2symbolTable <- function(argTypeList,
       isBlockRef <- as.list(isBlockRef)
     }
     if(!ok) {
-      stop(paste0("In argTypeList2symbolTable, ",
+      stop(paste0("In typeList2symbolTable, ",
                   "isBlockRef must be a list or logical vector."),
            call. = FALSE)
     }
   }
   if(is.null(names(isRef))) {
     ok <- FALSE
-    if(length(isRef) == length(argTypeList)) {
+    if(length(isRef) == length(typeList)) {
       ok <- TRUE
-      names(isRef) <- names(argTypeList)
+      names(isRef) <- names(typeList)
     }
     if(!ok) {
       if(length(isRef) > 0)
-        stop(paste0("In argTypeList2symbolTable, ",
-                    "isRef must be named or be the same length as argTypeList."),
+        stop(paste0("In typeList2symbolTable, ",
+                    "isRef must be named or be the same length as typeList."),
              call. = FALSE)
     }
   }
   if(is.null(names(isBlockRef))) {
     ok <- FALSE
-    if(length(isBlockRef) == length(argTypeList)) {
+    if(length(isBlockRef) == length(typeList)) {
       ok <- TRUE
-      names(isBlockRef) <- names(argTypeList)
+      names(isBlockRef) <- names(typeList)
     }
     if(!ok) {
       if(length(isBlockRef) > 0)
-        stop(paste0("In argTypeList2symbolTable, ",
-                    "isBlockRef must be named or be the same length as argTypeList."),
+        stop(paste0("In typeList2symbolTable, ",
+                    "isBlockRef must be named or be the same length as typeList."),
              call. = FALSE)
     }
   }
   if(!is.list(explicitTypeList)) {
-    stop(paste0("In argTypeList2symbolTable, ",
+    stop(paste0("In typeList2symbolTable, ",
                 "explicitTypeList must be a list."),
          call. = FALSE)
   }
   if(is.null(names(explicitTypeList))) {
     ok <- FALSE
-    if(length(explicitTypeList) == length(argTypeList)) {
+    if(length(explicitTypeList) == length(typeList)) {
       ok <- TRUE
-      names(explicitTypeList) <- names(argTypeList)
+      names(explicitTypeList) <- names(typeList)
     }
     if(!ok) {
       if(length(explicitTypeList) > 0)
-        stop(paste0("In argTypeList2symbolTable, ",
-                    "explicitTypeList must be named or be the same length as argTypeList."),
+        stop(paste0("In typeList2symbolTable, ",
+                    "explicitTypeList must be named or be the same length as typeList."),
              call. = FALSE)
     }
   }
   ## End error-trapping on arguments
+
+  ttypeList <- nTypeList(.list = typeList, .where = where)
+  texplicitTypeList <- nTypeList(.list = explicitTypeList, .where = where)
+
   symTab <- symbolTableClass$new()
   if(is.null(origNames))
-    origNames <- names(argTypeList)
-  for(i in seq_along(argTypeList)) {
-    thisName <- names(argTypeList)[i]
+    origNames <- names(ttypeList)
+  for(i in seq_along(ttypeList)) {
+    thisName <- names(ttypeList)[i]
+    this_ttype <- ttypeList[[i]]
+    this_texplicitType <- texplicitTypeList[[thisName]]
     symTab$addSymbol(
-      argType2symbol(argTypeList[[i]],
-                     thisName,
-                     origNames[i],
-                     isArg = isArg[[thisName]],
-                     isRef = isRef[[thisName]],
-                     isBlockRef = isBlockRef[[thisName]],
-                     explicitType = explicitTypeList[[thisName]],
-                     evalEnv = evalEnv)
-    )
+      type2symbol({{this_ttype}},
+                  thisName,
+                  origNames[i],
+                  isArg = isArg[[thisName]],
+                  isRef = isRef[[thisName]],
+                  isBlockRef = isBlockRef[[thisName]],
+                  explicitType = {{this_texplicitType}},
+                  where = where)
+)
   }
   symTab
 }
 
-check_built_types <- function(builder, Rexpr, project_env) {
- # this_builder <- cachedOpInfo$obj_internals
- #     Rexpr <- code$Rexpr
-  args <- as.list(Rexpr)[-1]
-  args2 <- c(args, .ID=TRUE)
-  ID <- do.call(builder, args2) # get the classID for this type
-  NCgen <- project_env$built_types[[ID]]
-  if(is.null(NCgen)) {
-    NCgen <- do.call(builder, args) # get the NCgenerator for this type
-    project_env$built_types[[ID]] <- NCgen
+# take an Rexpr OR a type (quosure or ready to become one)
+# and look for NCgenerator or nClassBuilder
+check_unknown_types <- function(type, where = parent.frame(),
+                                project_env = new.env(), returnID = FALSE,
+                                typeSpec = NULL) {
+
+  ttype <- nCaptureType(type)
+  if(is.null(typeSpec)) {
+    typeSpec <- nTypeSpec(ttype)
   }
-  cpp_classname <- NCinternals(NCgen)$cpp_classname
-  list(NCgen) |> setNames(cpp_classname)
+  funName <- typeSpec$funName
+  if(!identical(rlang::quo_get_env(ttype), emptyenv())) {
+    where <- rlang::quo_get_env(ttype)
+  }
+  candidate <- nGet(funName,
+                  where = where,
+                  project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
+  if(!isNCgenerator(candidate)) {
+    candidate <- check_built_types(candidate = candidate,
+            typeSpec = typeSpec, where = where,
+            project_env = project_env,
+            returnID = returnID)
+    if(returnID) return(candidate)
+  }
+  if(isNCgenerator(candidate)) {
+    if(returnID) {
+      return(NCinternals(candidate)$classID)
+    }
+    return(candidate)
+  }
+  invisible(NULL)
 }
 
-resolveOneTBDsymbol <- function(symbol, env = parent.frame(), project_env = new.env()) {
-  if(inherits(symbol, "symbolTBD")) {
-   # symbol$name is the name of the code object, like "x".
-    symbol_type <- symbol$type # The name of the type or expression to get the type
-    symbol_funName <- symbol$funName 
-    candidate <- nGet(symbol_funName,
-                      where = env,
-                      project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
-    if(!isNCgenerator(candidate)) {
-      type_expr <- parse(text = symbol_type, keep.source = FALSE)[[1]]
-      if(is.call(type_expr)) {
-        funName <- deparse(type_expr[[1]])
-        builder <- nGet(funName, where = env, project_env = project_env)
-        if(inherits(builder, "nClassBuilder")) {
-          types_res <- check_built_types(builder, type_expr, project_env)
-          candidate <- types_res[[1]]
-          symbol_type <- names(types_res)[1]
-        }
-      }
+check_built_types <- function(Rexpr = NULL, candidate = NULL,
+                              typeSpec = NULL,
+                              where = parent.frame(),
+                              project_env = new.env(), returnID = FALSE) {
+  if(!is.null(Rexpr)) {
+    if(!is.null(typeSpec)) {
+      stop("In check_built_types, either Rexpr or typeSpec should be NULL.")
     }
-    if(isNCgenerator(candidate)) {
-      newSym <- symbolNC$new(name = symbol$name,
-                             type = symbol_type,
-                             isArg = symbol$isArg,
-                             NCgenerator = candidate)
-      return(newSym)
-    }
-  } else if(inherits(symbol, "symbolNlist")) {
-    elementSym <- symbol$elementSym
-    if(inherits(elementSym, "symbolTBD")) {
-      elementSym <- resolveOneTBDsymbol(elementSym, env, project_env)
-      newSym <- symbol$clone(deep=TRUE)
-      newSym$elementSym <- elementSym
-      return(newSym)
-    }
+    ttype <- nType(expr = Rexpr, env = where)
+    typeSpec <- nTypeSpec(ttype)
+    if(!is.null(candidate))
+      candidate <- nGet(typeSpec$funName, where = where) #project_env not useful here
   }
+
+  if(inherits(candidate, "nClassBuilder")) {
+    args <- typeSpec$args
+    args2 <- c(args, .ID=TRUE)
+    ID <- do.call(candidate, args2, envir = where) # get the classID for this type
+    if(returnID) return(ID)
+    NCgen <- project_env$built_types[[ID]]
+    if(is.null(NCgen)) {
+      NCgen <- do.call(candidate, args, envir = where) # get the NCgenerator for this type
+      project_env$built_types[[ID]] <- NCgen
+    }
+    ##cpp_classname <- NCinternals(NCgen)$cpp_classname
+    ##list(NCgen) |> setNames(cpp_classname)
+    NCgen
+  } else 
+    NULL
+}
+
+type2uniqueID <- function(type, where = parent.frame()) {
+  ttype <- nCaptureType(type)
+  symbol <- type2symbol({{ttype}}, where = where)
+  symbol$uniqueID()
+}
+
+type2cpp_typename <- function(type, where = parent.frame()) {
+  ttype <- nCaptureType(type)
+  symbol <- type2symbol({{ttype}}, where = where)
+  symbol$cpp_typename()
+}
+
+resolveOneTBDsymbol <- function(symbol, env = parent.frame(),
+                                project_env = new.env()) {
+  symbol <- symbol$resolveSym(project_env = project_env)
   symbol #return unmodified symbol if nothing to do
 }
 

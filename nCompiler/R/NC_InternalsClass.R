@@ -72,7 +72,7 @@ NC_InternalsClass <- R6::R6Class(
         }
         has_Cpublic_init <- "initialize" %in% names(Cpublic)
         self$virtualMethodNames <- names(Cpublic)[isVirtual]
-        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
+        self$symbolTable <- typeList2symbolTable(Cpublic[!isMethod], where = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
         if(has_Cpublic_init) {

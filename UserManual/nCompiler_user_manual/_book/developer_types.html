@@ -287,8 +287,8 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="from-type-declarations-to-type-symbols" class="level2" data-number="10.4">
 <h2 data-number="10.4" class="anchored" data-anchor-id="from-type-declarations-to-type-symbols"><span class="header-section-number">10.4</span> From type declarations to type symbols</h2>
-<p>A type declaration takes a form like the character string <code>"nVector(type='integer')"</code> or the code <code>nVector(type='integer')</code>. The function <code>argType2symbol</code> converts a type declaration (and possibly other information) into a type symbol. Since multiples types to compose a symbol table often start as a list of type declarations, there is a function <code>argTypeList2symbolTable</code>.</p>
-<p><code>argType2symbol</code> takes the following steps:</p>
+<p>A type declaration takes a form like the character string <code>"nVector(type='integer')"</code> or the code <code>nVector(type='integer')</code>. The function <code>type2symbol</code> converts a type declaration (and possibly other information) into a type symbol. Since multiples types to compose a symbol table often start as a list of type declarations, there is a function <code>typeList2symbolTable</code>.</p>
+<p><code>type2symbol</code> takes the following steps:</p>
 <ul>
 <li><p>If the type declaration is already a symbol object, return a named clone of it.</p></li>
 <li><p>If the type declarations is character, parse it.</p></li>

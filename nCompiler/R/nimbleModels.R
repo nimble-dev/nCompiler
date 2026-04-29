@@ -14,8 +14,17 @@
 
 ## a model will inherit from model_nClass
 
+# When doing development work on nClass
+# if things are broken then having nClasses
+# defined in the package prohibits package
+# building and makes development harder.
+# This flag should normally be NULL
+# but may be false for some development work
+# on nClasses.
+NMdevel <- NULL
+
 #' @export
-nodeInstr_nClass <- nClass(
+nodeInstr_nClass <- NMdevel %||% nClass(
   classname = "nodeInstr_nClass",
   Cpublic = list(
     methodInstr = 'integerVector',
@@ -31,7 +40,7 @@ nodeInstr_nClass <- nClass(
 )
 
 #' @export
-calcInstr_nClass <- nClass(
+calcInstr_nClass <- NMdevel %||% nClass(
   classname = "calcInstr_nClass",
   Cpublic = list(
     nodeIndex = 'integerScalar',
@@ -55,7 +64,7 @@ calcInstr_nClass <- nClass(
 )
 
 #' @export
-calcInstrList_nClass <- nClass(
+calcInstrList_nClass <- NMdevel %||% nClass(
   classname = "calcInstrList_nClass",
   Cpublic = list(
     calcInstrList = "nList('calcInstr_nClass')"
@@ -72,7 +81,7 @@ calcInstrList_nClass <- nClass(
 )
 
 #' @export
-nodeFxnBase_nClass <- nClass(
+nodeFxnBase_nClass <- NMdevel %||% nClass(
   classname = "nodeFxnBase_nClass",
   Cpublic = list(
     ping = nFunction(
@@ -100,7 +109,7 @@ nodeFxnBase_nClass <- nClass(
 # nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
 
 #' @export
-modelBase_nClass <- nClass(
+modelBase_nClass <- NMdevel %||% nClass(
   classname = "modelBase_nClass",
   Cpublic = list(
     ping = nFunction(
@@ -140,6 +149,8 @@ modelBase_nClass <- nClass(
                    packageNames = c(uncompiled="modelBase_nClass", compiled="modelBase_nClass_C")
                    )
 )
+
+rm(NMdevel)
 
 # nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
 
@@ -244,7 +255,7 @@ make_node_nClass <- function(varInfo = list(),
     ))
   eval(node_nClass)
 }
-#test <- nCompiler:::argType2symbol('CppVar(baseType = argType2Cpp("numericVector"), ref=TRUE, const=TRUE)')
+#test <- nCompiler:::type2symbol('CppVar(baseType = type2cpp("numericVector"), ref=TRUE, const=TRUE)')
 
 # Make all the info needed to include a node in a model class.
 # The nodeFxn_nClass should be created first.
@@ -279,11 +290,11 @@ makeModel_nClass <- function(varInfo,
     setup_node_mgmt = getOperatorDef("custom_call"),
     do_setup_node_mgmt_from_names = getOperatorDef("custom_call")
   )
-  opDefs$base_ping$returnType <- nCompiler:::argType2symbol(quote(void()))
+  opDefs$base_ping$returnType <- nCompiler:::type2symbol(quote(void()))
   opDefs$base_ping$labelAbstractTypes$recurse <- FALSE
-  opDefs$setup_node_mgmt$returnType <- nCompiler:::argType2symbol(quote(void()))
+  opDefs$setup_node_mgmt$returnType <- nCompiler:::type2symbol(quote(void()))
   opDefs$setup_node_mgmt$labelAbstractTypes$recurse <- FALSE
-  opDefs$do_setup_node_mgmt_from_names$returnType <- nCompiler:::argType2symbol(quote(void()))
+  opDefs$do_setup_node_mgmt_from_names$returnType <- nCompiler:::type2symbol(quote(void()))
   opDefs$do_setup_node_mgmt_from_names$labelAbstractTypes$recurse <- FALSE
 
   if(missing(classname))

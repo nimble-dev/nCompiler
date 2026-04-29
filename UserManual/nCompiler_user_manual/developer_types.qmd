@@ -36,9 +36,9 @@ Symbol tables are represented by an object of type `symbolTableClass`. This has 
 
 ## From type declarations to type symbols
 
-A type declaration takes a form like the character string `"nVector(type='integer')"` or the code `nVector(type='integer')`. The function `argType2symbol` converts a type declaration (and possibly other information) into a type symbol. Since multiples types to compose a symbol table often start as a list of type declarations, there is a function `argTypeList2symbolTable`.
+A type declaration takes a form like the character string `"nVector(type='integer')"` or the code `nVector(type='integer')`. The function `type2symbol` converts a type declaration (and possibly other information) into a type symbol. Since multiples types to compose a symbol table often start as a list of type declarations, there is a function `typeList2symbolTable`.
 
-`argType2symbol` takes the following steps:
+`type2symbol` takes the following steps:
 
 -   If the type declaration is already a symbol object, return a named clone of it.
 

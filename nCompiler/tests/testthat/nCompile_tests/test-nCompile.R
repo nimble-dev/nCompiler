@@ -917,7 +917,7 @@ test_that("nCompile for nClass with compileInfo$createFromR=FALSE works", {
 ## 1. createFromR = FALSE does not have environments set up etc.
 ## 2. createFromR = TRUE (status quo) does not access an inner obj via interface correctly
 
-                                        # This test could perhaps be removed or superceded by others in the future.
+# This test could perhaps be removed or superceded by others in the future.
 test_that("argument name mangling and argument ordering work together", {
     foo <- nFunction(
         fun = function(x, log) {
