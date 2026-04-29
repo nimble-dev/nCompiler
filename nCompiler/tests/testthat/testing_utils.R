@@ -38,7 +38,7 @@ make_input <- function(argTypes, input_gen_funs = NULL) {
     input <- sapply(
       names(argTypes),
       function(name)
-        argType_2_input(argTypes[[name]], input_gen_funs[[name]]),
+        argType_2_input(!!argTypes[[name]], input_gen_funs[[name]]),
       simplify = FALSE
     )
   }
