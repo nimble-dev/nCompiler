@@ -108,7 +108,7 @@ gen_nFunction <- function(param) {
   body(fun) <- tmp
   return(
     nFunction(
-      fun, argTypes = param$argTypes, returnType = param$returnType
+      fun, argTypes = param$argTypes, returnType = !!(param$returnType)
     )
   )
 }
@@ -170,7 +170,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
           if (suppress_err_msgs) {
             expect_error(capture.output(
               nCompile(nC_error, control = control)))
-            
+
           } else {
             expect_error(nCompile(nC_error, control = control))
           }
@@ -309,7 +309,6 @@ get_ops_values <- function(field, subfield = NULL) {
 ##
 ## op:       An operator string
 ## argTypes: A character vector of argTypes (e.g. "double(0)".
-##
 return_type_string <- function(op, argTypes) {
 
   opDef <- `:::`("nCompiler", "getOperatorDef")(op)
@@ -344,12 +343,12 @@ return_type_string <- function(op, argTypes) {
   ##   'logical'  # 3
   ## )
 
-  argSymTab <- nCompiler:::typeList2symbolTable(argTypes)
-  args <- lapply(names(argTypes), function(name) argSymTab$getSymbol(name))
-  # args <- lapply(
-  #   argTypes, function(argType)
-  #     `:::`("nCompiler", "type2symbol")(argType)
-  # )
+  # argSymTab <- nCompiler:::typeList2symbolTable(argTypesList)
+  # args <- lapply(names(argTypesList), function(name) argSymTab$getSymbol(name))
+  args <- lapply(
+    argTypes, function(argType)
+      nCompiler:::type2symbol(!!argType)
+  )
 
   scalarTypeString <-
     if (length(argTypes) == 1) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type,
@@ -630,5 +629,3 @@ gen_pos_def_matrix <- function(arg_size) {
   mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
   mat %*% t(mat)
 }
-
-
