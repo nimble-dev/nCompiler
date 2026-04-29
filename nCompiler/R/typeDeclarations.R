@@ -678,9 +678,12 @@ typeList2symbolTable <- function(typeList,
   ## Begin error-trapping on arguments
   ## 1. Check that typeList is named list
   if(!is.list(typeList)) {
-    stop(paste0("In typeList2symbolTable, ",
-                "typeList must be a list."),
-         call. = FALSE)
+    typeList <- try(as.list(typeList), silent = TRUE)
+    if(inherits(typeList, 'try-error')) {
+      stop(paste0("In typeList2symbolTable, ",
+                  "typeList must be a list or coerceable to a list."),
+           call. = FALSE)
+    }
   }
   if(length(typeList) == 0) {
     return(symbolTableClass$new())

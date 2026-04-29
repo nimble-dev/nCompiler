@@ -398,7 +398,7 @@ test_that("infer type from evaluating default",
   #                                    origName = "orig_a",
   #                                    isArg = TRUE
   #                                    )
-  
+
   a <- quote(rnorm(5))
   aSym <- `:::`("nCompiler", "type2symbol")(O(!!a),
                                             name = "a",
@@ -410,7 +410,7 @@ test_that("infer type from evaluating default",
   expect_equal(aSym$nDim, 1)
   expect_identical(aSym$isRef, FALSE)
   expect_identical(aSym$isArg, TRUE)
-  
+
   aSym <- `:::`("nCompiler", "type2symbol")(O(rnorm(5)),
                                             name = "a",
                                             origName = "orig_a",
@@ -421,7 +421,7 @@ test_that("infer type from evaluating default",
   expect_equal(aSym$nDim, 1)
   expect_identical(aSym$isRef, FALSE)
   expect_identical(aSym$isArg, TRUE)
-  
+
   at <- nType(O(rnorm(5)))
   aSym <- `:::`("nCompiler", "type2symbol")(T(at),
                                             name = "a",
@@ -492,7 +492,7 @@ test_that("nMatrix(type = \"integer\")",
   b <- quote(nMatrix(type = "integer",
                      nrow = 3,
                      ncol = 5))
-  bSym <- `:::`("nCompiler", "type2symbol")(,
+  bSym <- `:::`("nCompiler", "type2symbol")(O(!!b),
                                      name = "b",
                                      origName = "orig_b",
                                      isArg = TRUE)
