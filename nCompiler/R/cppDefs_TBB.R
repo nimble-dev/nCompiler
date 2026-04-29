@@ -202,8 +202,6 @@ cppParallelReduceBodyClass <- R6::R6Class(
         unlist(output)
       } else
         ""
-      ## TODO: C++ generation of the original nFunction where parallel_reduce appears gets
-      ## 'int i__;' and 'double value__;', seemingly because of symbol table sharing.
     }
   )
 )
@@ -225,7 +223,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   orig_caller <- copyExprClass(loop_body$caller)
 
   cppParallelBodyClass_init_impl(cppDef, loop_body, loop_var,
-                                   symbolTable, copyVars, noncopyVars, aux)
+                                 symbolTable, copyVars, noncopyVars, aux)
 
   ## get the local aggregation var copy variable
   val_expr <- copyExprClass(loop_body$args[[1]])
@@ -327,6 +325,11 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   cppDef$memberCppDefs <- c(cppDef$memberCppDefs,
                               list(split_constructor = split_constructor,
                                    join = join))
+
+  ## Remove index and value variables so not defined in calling method.
+  symbolTable$removeSymbol(loop_var)
+  symbolTable$removeSymbol(value_name)
+ 
   invisible(NULL)
 }
 
