@@ -40,12 +40,17 @@ derivClass <- nClass(
 
 #' @export
 EigenDecomp <- nClass(
+  # manually insert:
+  # "#include <nCompiler/ET_ext/post_Rcpp/tensorOperations_Eigen.h>"
+  # in the hContent file AFTER the EigenDecomp class declaration
   classname = 'EigenDecomp',
-  predefined = "EigenDecomp_pkg",
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("EigenDecomp_pkg")),
   Cpublic = list(
     values = 'numericVector',
     vectors = 'numericMatrix'
-  )
+  ),
+  compileInfo = list(Hpreamble = "#define PREDEFINED_EigenDecomp")
 )
 
 ## #' @export
