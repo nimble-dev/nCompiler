@@ -9,18 +9,18 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
                         "#define USES_NCOMPILER")
-  ## handler nList in labelAbstractTypes does record in auxEnv if an
-  ## explicit call to nList() was uses. That is the beginning of a smarter
+  ## handler nCppVec in labelAbstractTypes does record in auxEnv if an
+  ## explicit call to nCppVec() was uses. That is the beginning of a smarter
   ## system for determining what #include (via #define) components are
   ## really needed. But I punted on further extension for now and
-  ## simply tacked NLIST onto the universal set of includes for now.
+  ## simply tacked NCPPVEC onto the universal set of includes for now.
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
                           "// #define NCOMPILER_USES_TBB",
-                          "#define NCOMPILER_USES_NLIST",
+                          "#define NCOMPILER_USES_NCPPVEC",
                           "#define USES_NCOMPILER")
   cppDef$Hincludes <- c(cppDef$Hincludes)#,
   ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
@@ -143,12 +143,12 @@ cpp_nFunctionClass <- R6::R6Class(
 cpp_include_aux_content <- function(self,
                                     NF_Compiler) {
   ## Available aux content:
-  if(isTRUE(NF_Compiler$auxEnv$uses_nList)) {
+  if(isTRUE(NF_Compiler$auxEnv$uses_nCppVec)) {
     self$Hpreamble <- c(self$Hpreamble,
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
                         "#define USES_NCOMPILER")
     self$CPPpreamble <- c(self$CPPpreamble,
-                          "#define NCOMPILER_USES_NLIST",
+                          "#define NCOMPILER_USES_NCPPVEC",
                           "#define USES_NCOMPILER")
   }
   ## initializerList for a constructor

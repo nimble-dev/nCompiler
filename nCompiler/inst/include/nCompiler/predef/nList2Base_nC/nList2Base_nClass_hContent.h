@@ -1,23 +1,23 @@
 /* OPENER (Do not edit this comment) */
-#ifndef __nList2Base_nClass_H
-#define __nList2Base_nClass_H
+#ifndef __nListBase_nClass_H
+#define __nListBase_nClass_H
 /* BODY (Do not edit this comment) */
 #ifndef R_NO_REMAP
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
 
-class nList2Base_nClass : public interface_resolver< genericInterfaceC<nList2Base_nClass> >, public loadedObjectHookC<nList2Base_nClass> {
+class nListBase_nClass : public interface_resolver< genericInterfaceC<nListBase_nClass> >, public loadedObjectHookC<nListBase_nClass> {
 public:
    virtual  bool  ping (  ) ;
-      nList2Base_nClass (  ) ;
+      nListBase_nClass (  ) ;
 };
 
-    void  set_CnClass_env_nList2Base_nClass ( SEXP env ) ;
+    void  set_CnClass_env_nListBase_nClass ( SEXP env ) ;
 
-    Rcpp::Environment  get_CnClass_env_nList2Base_nClass (  ) ;
+    Rcpp::Environment  get_CnClass_env_nListBase_nClass (  ) ;
 
-#include <nCompiler/predef/nList2_/nList2_.h>
+#include <nCompiler/predef/nList_/nList_.h>
 
 
 #endif

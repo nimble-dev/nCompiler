@@ -1,8 +1,8 @@
-message("nList uncompiled is rudimentary.")
-message("nList needs tests of nLists of nClass types or even other nLists")
+message("nCppVec uncompiled is rudimentary.")
+message("nCppVec needs tests of nCppVecs of nClass types or even other nCppVecs")
 #debug(nCompiler:::type2symbol)
 
-# working here on nList2, a working step towards a new more fully featured nList
+# working here on nList, a working step towards a new more fully featured nCppVec
 
 
 ## # To-do:
@@ -24,17 +24,17 @@ message("nList needs tests of nLists of nClass types or even other nLists")
 ## #
 ## # figure out to manage output more
 
-test_that("nList('numericScalar') works in nFunction", {
+test_that("nCppVec('numericScalar') works in nFunction", {
   foo <- nFunction(
-    function(x = "nList('numericScalar')") {
-      ans <- nList('numericScalar', 4)
+    function(x = "nCppVec('numericScalar')") {
+      ans <- nCppVec('numericScalar', 4)
       ans[[1]] <- 10.5
       z <- ans[[1]]
       ans[[2]] <- z+1
       ans[[3]] <- x[[2]]
       return(ans)
     },
-    returnType = "nList(numericScalar())"
+    returnType = "nCppVec(numericScalar())"
   )
   cfoo <- nCompile(foo)
   x <- list(1, 2, 3)
@@ -46,10 +46,10 @@ test_that("nList('numericScalar') works in nFunction", {
   expect_identical(foo(x), list(10.5, 11.5, 2, NULL))
 })
 
-test_that("nList('numericVector') works in nFunction", {
+test_that("nCppVec('numericVector') works in nFunction", {
   foo <- nFunction(
-    function(x = "nList('numericVector()')") {
-      ans <- nList('numericVector', 4)
+    function(x = "nCppVec('numericVector()')") {
+      ans <- nCppVec('numericVector', 4)
       ans[[1]] <- x[[1]]
       ans[[2]] <- ans[[1]] + 1
       ans[[3]] <- x[[2]]
@@ -57,7 +57,7 @@ test_that("nList('numericVector') works in nFunction", {
         ans[[3]][i] <- ans[[3]][i] + 1000
       return(ans)
     },
-    returnType = "nList('numericVector')" # How do alternate modes of saying this go through?
+    returnType = "nCppVec('numericVector')" # How do alternate modes of saying this go through?
   )
   x <- list(1:3, 11:13)
   expect_identical(foo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, NULL))
@@ -65,12 +65,12 @@ test_that("nList('numericVector') works in nFunction", {
   expect_equal(cfoo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, numeric(0)))
 })
 
-test_that("nList(my_type) finds my_type by correct scoping from nFunction", {
+test_that("nCppVec(my_type) finds my_type by correct scoping from nFunction", {
   make_foo <- function() {
     my_type <- nType(numericVector())
     foo <- nFunction(
-      function(x = "nList(T(my_type))") {
-        ans <- nList('T(my_type)', 4)
+      function(x = "nCppVec(T(my_type))") {
+        ans <- nCppVec('T(my_type)', 4)
         ans[[1]] <- x[[1]]
         ans[[2]] <- ans[[1]] + 1
         ans[[3]] <- x[[2]]
@@ -78,7 +78,7 @@ test_that("nList(my_type) finds my_type by correct scoping from nFunction", {
           ans[[3]][i] <- ans[[3]][i] + 1000
         return(ans)
       },
-      returnType = "nList({{my_type}})" # How do alternate modes of saying this go through?
+      returnType = "nCppVec({{my_type}})" # How do alternate modes of saying this go through?
     )
     foo
   }
@@ -89,15 +89,15 @@ test_that("nList(my_type) finds my_type by correct scoping from nFunction", {
   expect_equal(cfoo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, numeric(0)))
 })
 
-test_that("nList('numericVector') works in nClass", {
+test_that("nCppVec('numericVector') works in nClass", {
   nc <- nClass(
     Cpublic = list(
-      list_vec = "nList('numericVector')",
+      list_vec = "nCppVec('numericVector')",
       foo = nFunction(
-        function(x = "nList(numericScalar())") {
+        function(x = "nCppVec(numericScalar())") {
           x[[1]] <- list_vec[[2]][2]
           return(x)
-          returnType("nList('numericScalar')")
+          returnType("nCppVec('numericScalar')")
         })
     )
   )
@@ -120,18 +120,18 @@ test_that("nList('numericVector') works in nClass", {
   rm(obj); gc()
 })
 
-test_that("nList(my_type) finds my_type by correct scoping from nClass checking multiple pathways", {
+test_that("nCppVec(my_type) finds my_type by correct scoping from nClass checking multiple pathways", {
   make_nc <- function() {
     my_Vtype <- nType(numericVector())
     my_Stype <- nType(numericScalar())
     nc <- nClass(
       Cpublic = list(
-        list_vec = "nList(T(my_Vtype))",
+        list_vec = "nCppVec(T(my_Vtype))",
         foo = nFunction(
-          function(x = nList(T(my_Stype))) {
+          function(x = nCppVec(T(my_Stype))) {
             x[[1]] <- list_vec[[2]][2]
             return(x)
-            returnType("nList('numericScalar')")
+            returnType("nCppVec('numericScalar')")
           })
       )
     )
@@ -158,43 +158,43 @@ test_that("nList(my_type) finds my_type by correct scoping from nClass checking 
   rm(obj); gc()
 })
 
-test_that("nList of an nClass, requiring delayed type resolution, combined with scoping", {
+test_that("nCppVec of an nClass, requiring delayed type resolution, combined with scoping", {
   ## mync <- nClass(Cpublic=list(x = 'numericVector'))
   ## elemType <- nType(mync())
-  ## nListType <- nType(nList(T(elemType)))
-  ## nListSym <- nCompiler:::type2symbol({{nListType}})
-  ## nListSym$elementSym$uniqueID()
-  ## nListSym$uniqueID()
-  ## nListSym$cpp_typename()
+  ## nCppVecType <- nType(nCppVec(T(elemType)))
+  ## nCppVecSym <- nCompiler:::type2symbol({{nCppVecType}})
+  ## nCppVecSym$elementSym$uniqueID()
+  ## nCppVecSym$uniqueID()
+  ## nCppVecSym$cpp_typename()
 
   make_ncAB <- function() {
     my_Vtype <- nType(numericVector())
     my_Stype <- nType(numericScalar())
     nc <- nClass(
       Cpublic = list(
-        list_vec = "nList(T(my_Vtype))",
+        list_vec = "nCppVec(T(my_Vtype))",
         foo = nFunction(
-          function(x = "nList(T(my_Stype))") {
+          function(x = "nCppVec(T(my_Stype))") {
             x[[1]] <- list_vec[[2]][2]
             return(x)
-            returnType("nList('numericScalar')")
+            returnType("nCppVec('numericScalar')")
           })
       )
     )
     my_nctype <- nType(nc())
     ncB <- nClass(
       Cpublic = list(
-        list_nc = "nList(nc())",
+        list_nc = "nCppVec(nc())",
         one = nFunction(function() return(1), returnType = 'integerScalar'),
         fooB = nFunction(
-          function(x = "nList(T(my_nctype))") {
-            list_nc2 <- nList(nc(), 2)
+          function(x = "nCppVec(T(my_nctype))") {
+            list_nc2 <- nCppVec(nc(), 2)
             list_nc2[[1]] <- x[[2]]
             list_nc2[[2]] <- nc$new()
-            list_nc2[[2]]$list_vec <- nList(numericVector(), 2)
+            list_nc2[[2]]$list_vec <- nCppVec(numericVector(), 2)
             list_nc2[[2]]$list_vec[[1]] <- 8:10
             return(list_nc2)
-            returnType(nList(nc()))
+            returnType(nCppVec(nc()))
           }
          )
       )

@@ -112,14 +112,14 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
 }
 
 assignOperatorDef(
-  'nList',
+  'nCppVec',
   list(
     matchDef = function(type, length) {},
     compileArgs = c("type"),
     labelAbstractTypes = list(
-      handler = 'nList'),
+      handler = 'nCppVec'),
     cppOutput = list(
-      handler = 'nList')
+      handler = 'nCppVec')
   )
 )
 

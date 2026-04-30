@@ -2,7 +2,7 @@ cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 
 ## Compare two compilation units for identity, preferring classID over identical().
 ## For NCgenerators, classID (a digest hash) is always set and gives stable identity
-## even for dynamically generated parameterised types like nList2 where two separate
+## even for dynamically generated parameterised types like nList where two separate
 ## R objects can represent the same logical type.
 unit_is_duplicate <- function(a, b) {
   if(isNCgenerator(a) && isNCgenerator(b)) {
@@ -532,7 +532,7 @@ nCompile <- function(...,
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
     ## Use unit_is_duplicate() rather than identical() so that parameterised nClass
-    ## types (e.g. nList2) are correctly identified as duplicates even when they
+    ## types (e.g. nList) are correctly identified as duplicates even when they
     ## are represented by different R objects with the same classID hash.
     keep_new_unit <- rep(TRUE, length(new_units))
     for(i in seq_along(new_units)) {

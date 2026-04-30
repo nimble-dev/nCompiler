@@ -241,7 +241,7 @@ inEigenizeEnv(
 ## Alias-checking system needs a complete revamp.
 ## This rough draft just won't do. It's too simple for:
 ## - arguments passed in by reference
-## - nLists
+## - nCppVecs
 ## - LHS operators like diag()
 ## We may ideally want a combination of compile-time determination (where possible)
 ##  and a system for run-time determination.
@@ -628,7 +628,7 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   PtrMethod <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
-    maybe_convertToMethod(code, handlingInfo, force=TRUE, ptr=TRUE) # used by nList2
+    maybe_convertToMethod(code, handlingInfo, force=TRUE, ptr=TRUE) # used by nList
     invisible(NULL)
   }
 )

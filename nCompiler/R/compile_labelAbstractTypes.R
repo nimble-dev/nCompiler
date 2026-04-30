@@ -230,21 +230,21 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  nList <- function(code, symTab, auxEnv, handlingInfo) {
+  nCppVec <- function(code, symTab, auxEnv, handlingInfo) {
     inner_type <- nType(expr = code$aux$compileArgs$type, env = auxEnv$where)
     sym <- type2symbol({{inner_type}}, where = auxEnv$where)
     sym <- resolveOneTBDsymbol(sym, env = auxEnv$where, project_env = auxEnv$project_env)
-    code$type <- symbolNlist$new(elementSym = sym)
+    code$type <- symbolNcppVec$new(elementSym = sym)
     removeArg(code, "type", allow_missing=TRUE)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo)
-    auxEnv$uses_nList <- TRUE
+    auxEnv$uses_nCppVec <- TRUE
     if(length(inserts) == 0) NULL else inserts
   }
 )
 
 # inLabelAbstractTypesEnv(
-#   nList2_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
+#   nList_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
 #     browser()
 #     inserts <- NULL
 #     if(length(inserts) == 0) NULL else inserts
@@ -320,7 +320,7 @@ inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
     # specializations from generic will have already been handled
     # e.g obj[[1]] where obj defines its own "[[" operator definition (opDef).
-    # what remains is singleton indexing and nPlainList (original version of nList).
+    # what remains is singleton indexing and nPlainList (original version of nCppVec).
     useArgs <- rep(TRUE, length(code$args))
     useArgs[1] <- FALSE # already processed
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,

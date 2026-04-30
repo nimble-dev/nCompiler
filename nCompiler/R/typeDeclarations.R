@@ -409,10 +409,10 @@ typeDeclarationList <- list(
                            type = "double") {
     nSparseType(scalarType = type, nDim = 1)
   },
-  nList = function(type) {
+  nCppVec = function(type) {
     ttype <- nCaptureType(type)
     elementSym <- type2symbol({{ttype}}, where = parent.frame())
-    symbolNlist$new(elementSym = elementSym)
+    symbolNcppVec$new(elementSym = elementSym)
   },
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {

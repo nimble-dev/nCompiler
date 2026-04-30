@@ -114,7 +114,7 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
     project_env$built_types <- list()
   }
   nameSubList <- NFcompiler$nameSubList
-  NFcompiler$auxEnv[['uses_nList']] <- FALSE
+  NFcompiler$auxEnv[['uses_nCppVec']] <- FALSE
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()
   NFcompiler$auxEnv[['needed_nClasses']] <- list()
   NFcompiler$auxEnv[["parallelContent"]] <- list()

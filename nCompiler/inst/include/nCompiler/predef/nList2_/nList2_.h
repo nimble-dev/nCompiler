@@ -1,7 +1,7 @@
 template<class Element>
-class nList2_ : public nList2Base_nClass {
+class nList_ : public nListBase_nClass {
 public:
-    nList2_() {};
+    nList_() {};
     std::vector<Element> contents_;
     std::vector<Element> &contents() {return contents_;}
     const std::vector<Element> &contents() const {return contents_;}
@@ -138,7 +138,7 @@ public:
     template<typename VALUES>
     void singleBracket_set_(const Rcpp::RObject &inds, const VALUES &values) {
       size_t n = 0;
-      if(values.size() == 0) Rcpp::stop("nList: replacement has length zero");
+      if(values.size() == 0) Rcpp::stop("nCppVec: replacement has length zero");
       size_t vals_n = static_cast<size_t>(values.size());
       switch (inds.sexp_type()) {
         case INTSXP: {
@@ -146,12 +146,12 @@ public:
           n = static_cast<size_t>(idx.size());
           if(n == 0) return;
           if(n % vals_n != 0) {
-            Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
           }
           size_t max_idx = 1;
           for(size_t i = 0; i < n; ++i) {
-            if(idx[i] == NA_INTEGER) Rcpp::stop("nList: index is NA");
-            if(idx[i] < 1) Rcpp::stop("nList: index out of bounds");
+            if(idx[i] == NA_INTEGER) Rcpp::stop("nCppVec: index is NA");
+            if(idx[i] < 1) Rcpp::stop("nCppVec: index out of bounds");
             max_idx = std::max(max_idx, static_cast<size_t>(idx[i]));
           }
           if(max_idx > contents_.size()) contents_.resize(max_idx);
@@ -167,15 +167,15 @@ public:
           n = static_cast<size_t>(idx.size());
           if(n == 0) return;
           if(n % vals_n != 0) {
-            Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
           }
           size_t max_idx = 1;
           for(size_t i = 0; i < n; ++i) {
             if(Rcpp::NumericVector::is_na(idx[i]) || !R_finite(idx[i])) {
-              Rcpp::stop("nList: numeric index must be a finite number");
+              Rcpp::stop("nCppVec: numeric index must be a finite number");
             }
             int int_idx = static_cast<int>(std::floor(idx[i]));
-            if(int_idx < 1) Rcpp::stop("nList: index out of bounds");
+            if(int_idx < 1) Rcpp::stop("nCppVec: index out of bounds");
             max_idx = std::max(max_idx, static_cast<size_t>(int_idx));
           }
           if(max_idx > contents_.size()) contents_.resize(max_idx);
@@ -194,7 +194,7 @@ public:
           size_t contents_n = contents_.size();
           // Check for NA in the base logical vector (applies wherever it is recycled)
           for(size_t i = 0; i < bools_n; ++i) {
-            if(bools[i] == NA_LOGICAL) Rcpp::stop("nList: logical index is NA");
+            if(bools[i] == NA_LOGICAL) Rcpp::stop("nCppVec: logical index is NA");
           }
           // Count TRUE positions, recycling bools over contents_n
           n = 0;
@@ -203,7 +203,7 @@ public:
           }
           if(n == 0) return;
           if(n % vals_n != 0) {
-            Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
           }
           // Assign, recycling both bools (over contents_n) and values (over TRUE positions)
           size_t val_j = 0;
@@ -216,7 +216,7 @@ public:
           break;
         }
         default:
-          Rcpp::stop("nList: index type must be integer, double, or logical");
+          Rcpp::stop("nCppVec: index type must be integer, double, or logical");
       }
     }
     void singleBracket_set_(const Rcpp::RObject &inds, const Rcpp::List &values) {
@@ -240,7 +240,7 @@ public:
             const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
             const VALUES& values) {
         using Scalar = typename EigenElement::Scalar;
-        if (values.size() == 0) Rcpp::stop("nList: replacement has length zero");
+        if (values.size() == 0) Rcpp::stop("nCppVec: replacement has length zero");
         size_t vals_n = static_cast<size_t>(values.size());
         Eigen::Tensor<Scalar, 1> evaluated = inds;
         size_t n = static_cast<size_t>(evaluated.size());
@@ -254,7 +254,7 @@ public:
                 if (evaluated(static_cast<Eigen::Index>(i % n))) ++count;
             if (count == 0) return;
             if (count % vals_n != 0)
-                Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+                Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
             size_t val_j = 0;
             for (size_t i = 0; i < contents_n; ++i) {
                 if (evaluated(static_cast<Eigen::Index>(i % n))) {
@@ -266,13 +266,13 @@ public:
             // Positional indexing (int or double), 1-based
             if (n == 0) return;
             if (n % vals_n != 0)
-                Rcpp::warning("nList: number of items to replace is not a multiple of replacement length");
+                Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
             // Validate and find max index before any assignment
             size_t max_idx = 1;
             for (size_t i = 0; i < n; ++i) {
                 size_t idx1 = static_cast<size_t>(
                     std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
-                if (idx1 < 1) Rcpp::stop("nList: index out of bounds");
+                if (idx1 < 1) Rcpp::stop("nCppVec: index out of bounds");
                 max_idx = std::max(max_idx, idx1);
             }
             if (max_idx > contents_.size()) contents_.resize(max_idx);
@@ -286,7 +286,7 @@ public:
     template<typename EigenElement, int AccessLevel>
     void singleBracket_set_nList_cpp_(
             const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
-            std::shared_ptr<nList2_<Element>> values) {
+            std::shared_ptr<nList_<Element>> values) {
         singleBracket_set_cpp_(inds, values->contents());
     }
     template<typename EigenElement, int AccessLevel>
@@ -417,7 +417,7 @@ public:
                 size_t idx1 = static_cast<size_t>(
                     std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
                 if (idx1 < 1 || idx1 > contents_.size())
-                    Rcpp::stop("nList: index out of bounds");
+                    Rcpp::stop("nCppVec: index out of bounds");
                 res[i] = contents_[idx1 - 1];
             }
             return res;

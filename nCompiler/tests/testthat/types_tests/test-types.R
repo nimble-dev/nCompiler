@@ -83,7 +83,7 @@
 #   rlang::call2(quote(nTList), !!!ff) |> eval(parent.frame())
 # }
 #
-# # something like passing a type into nList2_nClass
+# # something like passing a type into nList_nClass
 #
 # f1 <- function(type) {
 #   ttype <- nCapT(type)
@@ -98,7 +98,7 @@
 # # debugonce(f1)
 # f1('numericScalar')
 # f1(integerVector())
-# f1(nList2(nList2('numericScalar')))
+# f1(nList(nList('numericScalar')))
 #
 # # test a situation where there are hidden call layers
 # myR6 <- R6::R6Class(
@@ -196,7 +196,7 @@
 # tlres <- nTypeList(a = 'numericVector', b = numericVector(), c = T(nv3), d = T(quote(numericVector())))
 # nTypeList(.list=tlres)
 #
-# ## junk <- function(x = numericVector(), y = 'numericVector', z = nList2( nList2( 'numericVector'))) {}
+# ## junk <- function(x = numericVector(), y = 'numericVector', z = nList( nList( 'numericVector'))) {}
 # ## fj <- formals(junk)
 # ## nTypeList(fj)
 # ## nTypeList(list())

@@ -1,19 +1,19 @@
-#ifndef NLIST_FORWARD_DECLARATIONS_H_
-#define NLIST_FORWARD_DECLARATIONS_H_
+#ifndef NCPPVEC_FORWARD_DECLARATIONS_H_
+#define NCPPVEC_FORWARD_DECLARATIONS_H_
 
 template<typename T>
-class nList;
+class nCppVec;
 
 namespace Rcpp {
   namespace traits {
     template <typename T>
-    class Exporter< nList< T > >;
+    class Exporter< nCppVec< T > >;
   }
 }
 
 namespace Rcpp {
   template<typename T>
-    SEXP wrap(const nList< T > & obj );
+    SEXP wrap(const nCppVec< T > & obj );
 }
 
-#endif // NLIST_FORWARD_DECLARATIONS_H_
+#endif // NCPPVEC_FORWARD_DECLARATIONS_H_

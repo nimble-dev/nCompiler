@@ -185,7 +185,7 @@ inGenCppEnv(
 )
 
 # inGenCppEnv(
-#   nList2_doubleBracket <- function(code, symTab) {
+#   nList_doubleBracket <- function(code, symTab) {
 #     browser()
 #     inserts <- NULL
 #     if(length(inserts) == 0) NULL else inserts
@@ -193,9 +193,9 @@ inGenCppEnv(
 # )
 
 inGenCppEnv(
-  nList <- function(code, symTab) {
+  nCppVec <- function(code, symTab) {
     elementSym <- code$type$elementSym
-    paste0("nList<", elementSym$genCppVar()$generate(), ">(",
+    paste0("nCppVec<", elementSym$genCppVar()$generate(), ">(",
       paste0(unlist(lapply(code$args,
                            compile_generateCpp,
                            symTab,

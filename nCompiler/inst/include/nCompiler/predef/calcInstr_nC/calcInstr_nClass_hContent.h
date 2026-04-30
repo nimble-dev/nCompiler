@@ -12,7 +12,7 @@ class calcInstr_nClass : public interface_resolver< genericInterfaceC<calcInstr_
 public:
       calcInstr_nClass (  ) ;
   int nodeIndex;
-  nList<std::shared_ptr<nodeInstr_nClass> > nodeInstrVec;
+  nCppVec<std::shared_ptr<nodeInstr_nClass> > nodeInstrVec;
 };
 
     SEXP  new_calcInstr_nClass (  ) ;

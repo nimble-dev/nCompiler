@@ -11,7 +11,7 @@ class nodeInstr_nClass : public interface_resolver< genericInterfaceC<nodeInstr_
 public:
       nodeInstr_nClass (  ) ;
   Eigen::Tensor<int, 1> methodInstr;
-  nList<Eigen::Tensor<int, 1> > indsInstrVec;
+  nCppVec<Eigen::Tensor<int, 1> > indsInstrVec;
 };
 
     SEXP  new_nodeInstr_nClass (  ) ;

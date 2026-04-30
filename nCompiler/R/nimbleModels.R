@@ -28,7 +28,7 @@ nodeInstr_nClass <- NMdevel %||% nClass(
   classname = "nodeInstr_nClass",
   Cpublic = list(
     methodInstr = 'integerVector',
-    indsInstrVec = "nList('integerVector')"
+    indsInstrVec = "nCppVec('integerVector')"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("nodeInstr_nC")),
@@ -44,14 +44,14 @@ calcInstr_nClass <- NMdevel %||% nClass(
   classname = "calcInstr_nClass",
   Cpublic = list(
     nodeIndex = 'integerScalar',
-    nodeInstrVec = "nList('nodeInstr_nClass')"
+    nodeInstrVec = "nCppVec('nodeInstr_nClass')"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("calcInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
                    # The Hincludes should be picked up automatically but I think it's not
-                   # because it is in the nList type and that is not being scanned for needed nClasses.
+                   # because it is in the nCppVec type and that is not being scanned for needed nClasses.
                    # These do need to be in "" not <>, for case of nCompile(...., package=TRUE)
                    Hincludes = '"nodeInstr_nClass_c_.h"',
                    # In the format here, needed_units is a list with either objects (nFunction or nClass (generators),
@@ -67,7 +67,7 @@ calcInstr_nClass <- NMdevel %||% nClass(
 calcInstrList_nClass <- NMdevel %||% nClass(
   classname = "calcInstrList_nClass",
   Cpublic = list(
-    calcInstrList = "nList('calcInstr_nClass')"
+    calcInstrList = "nCppVec('calcInstr_nClass')"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("calcInstrList_nC")),

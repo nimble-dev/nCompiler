@@ -222,7 +222,7 @@ symbolTBD <- R6::R6Class(
                                 typeSpec = self$typeSpec)
     },
     resolveSym = function(project_env = NULL, ...) {
-      # This is needed when called from genCppVar as an inner variable such as for nList
+      # This is needed when called from genCppVar as an inner variable such as for nCppVec
       # Possible redundance with these env's, which if provided
       # can over-rule the member env's
       candidate <- self$check_unknown_types(returnID = FALSE,
@@ -250,21 +250,21 @@ symbolTBD <- R6::R6Class(
       # }
     },
     uniqueID = function(project_env = NULL, ...) {
-      # If the type was provided like "nlist(some_custom_type())",
+      # If the type was provided like "nCppVec(some_custom_type())",
       # the string literal aspect will make the quosure have
       # env = emptyenv() and if an env is needed for the
       # inner type it is essentially lost. For now to cover
       # basic cases we use evalEnv or (if NULL) default to .GlobalEnv,
       # which will cover
       # cases where the inner type is a base type.
-      # This will fail if a user provides "nList2(T(mytype))"
+      # This will fail if a user provides "nList(T(mytype))"
       # as a character string.
       # where mytype only exists in the environment where 
       # mytype was created by nType(). That environment
       # will not be retained in the quosure and is also not
       # the environment of the nFunction or nClass call. 
       # A user
-      # can provide the type as an expression, nList2(T(mytype)),
+      # can provide the type as an expression, nList(T(mytype)),
       # not as character string, to get type scoping.
       # In future we could either more cleverly grab an 
       # actual environment when needed (but this will be unstable
@@ -349,8 +349,8 @@ symbolNCgenerator <- R6::R6Class(
     })
 )
 
-symbolNlist <- R6::R6Class(
-  classname = "symbolNlist",
+symbolNcppVec <- R6::R6Class(
+  classname = "symbolNcppVec",
   inherit = symbolBase,
   portable = TRUE,
   public = list(
@@ -360,11 +360,11 @@ symbolNlist <- R6::R6Class(
       self$name <- name
       self$elementSym <- elementSym
       self$isArg <- isArg
-      self$type <- "nList"
+      self$type <- "nCppVec"
       self
     },
     shortPrint = function() {
-      'nList'
+      'nCppVec'
     },
     resolveSym = function(project_env = NULL, ...) {
       elemSym <- self$elementSym
@@ -384,13 +384,13 @@ symbolNlist <- R6::R6Class(
       if(inherits(elemSym, "symbolTBD")) {
         elemSym <- elemSym$resolveSym(project_env, ...)
       }
-      cppVar <- cppNlist(name = self$name,
+      cppVar <- cppNcppVec(name = self$name,
                         elementVar = elemSym$genCppVar())
       return(cppVar$generate("") |> trimws())
     },
     uniqueID = function() {
       elementID <- self$elementSym$uniqueID()
-      paste0("nList_", elementID)
+      paste0("nCppVec_", elementID)
     },
     print = function() {
       writeLines(
@@ -411,7 +411,7 @@ symbolNlist <- R6::R6Class(
         # time this is used for actual code generation.
         elemSym <- elemSym$resolveSym()
       }
-      return(cppNlist(name = self$name,
+      return(cppNcppVec(name = self$name,
                       elementVar = elemSym$genCppVar()))
     }
   )
