@@ -45,12 +45,11 @@ EigenDecomp <- nClass(
   # in the hContent file AFTER the EigenDecomp class declaration
   classname = 'EigenDecomp',
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("EigenDecomp_pkg")),
+                       file.path("EigenDecomp")),
   Cpublic = list(
     values = 'numericVector',
     vectors = 'numericMatrix'
-  ),
-  compileInfo = list(Hpreamble = "#define PREDEFINED_EigenDecomp")
+  )
 )
 
 ## #' @export

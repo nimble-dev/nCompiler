@@ -1612,6 +1612,7 @@ inLabelAbstractTypesEnv(
         name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp, 
         isArg = FALSE
       )
+      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
     } else if(inherits(argType, 'symbolSparse')) {
       stop(exprClassProcessingErrorMsg(
         code,

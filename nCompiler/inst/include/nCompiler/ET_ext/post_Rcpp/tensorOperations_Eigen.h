@@ -5,7 +5,7 @@ std::shared_ptr<EigenDecomp> make_EigenDecomp() {
   return(std::shared_ptr<EigenDecomp>(new EigenDecomp));
 }
 
-std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symmetric = true, bool valuesOnly = false) {
+std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symmetric = false, bool valuesOnly = false) {
     auto x_map = matmap(x);
     int nrows(x_map.rows());
     int ncols(x_map.cols());

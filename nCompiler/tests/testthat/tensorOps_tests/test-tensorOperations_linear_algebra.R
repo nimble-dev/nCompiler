@@ -390,3 +390,132 @@ test_that("log determinants work (dense matrices)", {
   expect_equal(ldet_tensor_op_cpp(x,y), log(det(x+y)))
   
 })
+
+test_that("various uses of nEigen", {
+    set.seed(1)
+    xnsymm <- matrix(c(1.5, .3, .1, 0, .25, .7, 0, 0, -.2), 3)
+    xsymm <- xnsymm
+    xsymm[upper.tri(xsymm)] <- t(xsymm[lower.tri(xsymm)])
+
+    eig = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- eigen(x)
+            return(y$vectors)
+        },
+        returnType = 'numericMatrix'
+    )
+    cEig <- nCompile(eig)
+
+    result <- eigen(xnsymm, symmetric = FALSE)$vectors
+    vec <- eig(xnsymm)
+    cvec <- cEig(xnsymm)
+    expect_identical(result, vec)
+    ## Equal up to swapping of sign.
+    cvec[,1] <- -cvec[,1]
+    cvec[,2] <- -cvec[,2]
+    expect_equal(result, cvec)
+
+    ## Case with complex-valued result.
+    set.seed(1)
+    x <- matrix(rnorm(9), 3)
+    vec <- eig(x)
+    cvec <- cEig(x)
+    expect_identical(sum(is.nan(cvec)), 6L)
+    expect_equal(Re(vec[,3]), cvec[,1])
+    expect_equal(Im(vec[,3]), rep(0,3))
+
+    eigns = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- eigen(x, symmetric = FALSE)
+            return(y$vectors)
+        },
+        returnType = 'numericMatrix'
+    )
+    cEigns <- nCompile(eigns)
+
+    vec <- eig(xnsymm)
+    cvec <- cEig(xnsymm)
+    expect_identical(result, vec)
+    cvec[,1] <- -cvec[,1]
+    cvec[,2] <- -cvec[,2]
+    expect_equal(result, cvec)
+
+    eigs = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- eigen(x, symmetric = TRUE)
+            return(y$vectors)
+        },
+        returnType = 'numericMatrix'
+    )
+    cEigs <- nCompile(eigs)
+    
+    result <- eigen(xsymm, symmetric = TRUE)$vectors
+    vec <- eig(xsymm)
+    cvec <- cEig(xsymm)
+    expect_identical(result, vec)
+    ## Eigenvectors can be in different order.
+    expect_equal(result[, order(result[1,])], cvec[, order(cvec[1,])])
+
+    ## If matrix is not actually symmetric, result should be same as symmetric counterpart. 
+    result2 <- eigen(xsymm, symmetric = TRUE)$vectors
+    vec <- eigs(xnsymm)
+    cvec <- cEigs(xnsymm)
+    ## Should be the same as decomposition of the symmetric case.
+    expect_identical(result2, vec)
+    cvec[,2] <- -cvec[,2]
+    cvec[,3] <- -cvec[,3]
+    expect_equal(result2, cvec)
+   
+
+    ## Check case with EigenDecomp not as return type to make sure
+    ## predefined code is included with nCompiler_generated code.
+    eig = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- eigen(x)$vectors   # No EigenDecomp return type.
+            return(y)
+        },
+        returnType = 'numericMatrix'
+    )
+    cEig <- nCompile(eig)
+
+    result <- eigen(xnsymm, symmetric = FALSE)$vectors
+    vec <- eig(xnsymm)
+    cvec <- cEig(xnsymm)
+    expect_identical(result, vec)
+    cvec[,1] <- -cvec[,1]
+    cvec[,2] <- -cvec[,2]
+    expect_equal(result, cvec)
+    
+    eig = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- eigen(x, valuesOnly = TRUE)$values
+            return(y)
+        },
+        returnType = 'numericVector'
+    )
+    cEig <- nCompile(eig)
+
+    result <- eigen(xnsymm)$values
+    vals <- eig(xnsymm)
+    cvals <- cEig(xnsymm)
+    expect_identical(result, vals)
+    expect_equal(result, cvals)
+
+
+
+    ## Inline as part of larger calculation.
+    fun = nFunction(
+        fun = function(x = 'numericMatrix', z = 'numericMatrix') {
+            y <- eigen(x)$vectors %*% z
+            return(y)
+        },
+        returnType = 'numericMatrix'
+    )
+    cfun <- nCompile(fun)
+
+    z <- matrix(rnorm(9), 3)
+    result <- eigen(xnsymm)$vectors %*% z
+    out <- fun(xnsymm, z)
+    cout <- cfun(xnsymm, z)
+
+})
