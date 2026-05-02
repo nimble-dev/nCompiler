@@ -302,6 +302,29 @@ nChol <- function(x) {
   chol(x)
 }
 
+#' Compute the sparse Cholesky decomposition of a matrix for further operations
+#' 
+#' @details This function finds a sparse Cholesky factor using a fill-reducing
+#' `P` (AMD reordering by default), so the factorization is actually:
+# \eqn{P A P^\top = L L^\top}.
+#' 
+#' @param x a positive definite matrix
+#'
+#' @author nCompiler development team
+#'
+#' @export
+#'
+#' @details
+#'
+#' @examples TODO
+#' 
+sparseCholFactor <- function(x) {
+  Matrix::Cholesky(x)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
+}
+
+## diag(Cholesky(x))
+## result <- solve(ch, b, system = "A"), or "L"
+
 #' Compute the log-determinant of a matrix
 #' 
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}

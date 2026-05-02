@@ -211,6 +211,8 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
     return binaryOp<OP_, Scalar>(xEval, y);
 }
 
+// TODO: presumably delete this SparseCholesky stuff
+
 // forward declaration of nCompiler struct to store Sparse Chol. decompositions
 class SparseCholesky;
 
@@ -747,6 +749,7 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     return res;
 }
 
+/*
 template<typename SparseCholType = SparseCholesky, typename Scalar>
 SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(x);
@@ -757,6 +760,15 @@ SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
     pmap = llt.permutationP().indices();
     res.P = P;
     return res;
+}
+*/
+
+// Should this use SparseMatrix<Scalar>?
+std::shared_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>> sparseCholFactor(const Eigen::SparseMatrix<double> &x) {
+  //Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt(x);
+  std::shared_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>> llt(new Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>);
+  llt->compute(x);
+  return llt;
 }
 
 /**
