@@ -501,8 +501,6 @@ test_that("various uses of nEigen", {
     expect_identical(result, vals)
     expect_equal(result, cvals)
 
-
-
     ## Inline as part of larger calculation.
     fun = nFunction(
         fun = function(x = 'numericMatrix', z = 'numericMatrix') {
@@ -513,9 +511,12 @@ test_that("various uses of nEigen", {
     )
     cfun <- nCompile(fun)
 
-    z <- matrix(rnorm(9), 3)
-    result <- eigen(xnsymm)$vectors %*% z
-    out <- fun(xnsymm, z)
-    cout <- cfun(xnsymm, z)
+    result <- eigen(xnsymm)$vectors %*% diag(3)
+    out <- fun(xnsymm, diag(3))
+    cout <- cfun(xnsymm, diag(3))
+    cout[,1] <- -cout[,1]
+    cout[,2] <- -cout[,2]
+    expect_identical(result, out)
+    expect_equal(result, cout)
 
 })
