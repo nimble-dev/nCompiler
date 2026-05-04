@@ -766,10 +766,22 @@ SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
 // Should this use SparseMatrix<Scalar>?
 std::shared_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>> sparseCholFactor(const Eigen::SparseMatrix<double> &x) {
   //Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt(x);
+  //  auto llt = std::make_shared<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>>()
   std::shared_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>> llt(new Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>);
   llt->compute(x);
   return llt;
 }
+
+// Use Scalar as return type?
+double sparseCholLogdet(const std::shared_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>>& llt) {
+  double logdet; //  = llt->matrixL().diagonal().array().log().sum(); // 
+  Eigen::SparseMatrix<double> L;
+  L = llt->matrixL();  // Can't chain diagonal() on a triangular view, so instantiate the L matrix.
+  logdet = L.diagonal().array().log().sum();
+  return logdet;
+}
+
+
 
 /**
  * Compute the Cholesky decomposition for a symmetric matrix stored as an

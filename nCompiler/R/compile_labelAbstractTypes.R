@@ -1617,6 +1617,15 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+    sparseCholLogdet <- function(code, symTab, auxEnv, handlingInfo) {
+        if(exists('paciorek')) browser()
+    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- symbolBasic$new(nDim = 0, type = 'double')
+  }
+) 
+
+
+inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)

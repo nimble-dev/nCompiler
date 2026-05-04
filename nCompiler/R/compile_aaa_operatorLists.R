@@ -1116,6 +1116,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'sparseCholLogdet',
+  list(
+    labelAbstractTypes = list(
+      handler = 'sparseCholLogdet'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nChol'),
   list(
     labelAbstractTypes = list(

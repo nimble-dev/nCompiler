@@ -270,3 +270,108 @@ expect_equal(cAdd2_force_dense_mixed(x = M_sparse, y = M2), M + M2)
 expect_equal(cAsSparse(x = M), M_sparse)
 expect_equal(cAsDense(x = M_sparse), M)
 expect_equal(cAdd2_force_dense_unnecessary(x = M, y = M2), M + M2)
+
+
+
+sparseCholFactor <- function(x) {
+  Matrix::Cholesky(x, LDL = FALSE)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
+}
+
+sparseCholLogdet <- function(chol) {
+  return(sum(log(diag(expand1(chol, "L")))))
+}
+
+sparseCholSolve <- function(ch, x) {
+    return(solve(ch, x))
+    # solve(ch, solve(ch, solve(ch, solve(ch, x, system="P"), system = "L"), system = "Lt"), system = "Pt"))
+}
+
+
+sparseCholBacksolve <- function(ch, x) {
+  return(solve(ch, solve(ch, x, system = "Lt"), system = "Pt"))  # P^{top} U*^{-1} x
+}
+
+## Seems ok in dist.
+sparseCholMult <- function(ch, x) {
+    solve(ch, expand1(ch, "L") %*% x, system = "Pt")  # P^{top} L* x (see ?Matrix:::solve)
+}
+    
+
+set.seed(1)
+m <- 10
+n <- 10
+# proportion of non-zero entries
+p <- .1
+
+# set up a matrix with only a few random non-zero entries that will cause a permutation
+M <- matrix(data = 0, nrow = m, ncol = n)
+M[sample(x = length(M), size = p * length(M))] <- runif(n = p * length(M), 0, .2)
+diag(M) <- 1
+M[lower.tri(M)] <- t(M)[lower.tri(M)]
+M_sparse <- as(Matrix::Matrix(M, sparse = TRUE), 'generalMatrix')
+
+x <- rnorm(10)
+rch <- chol(M)
+
+sum(log(diag(rch)))
+backsolve(rch, forwardsolve(t(rch), x))
+forwardsolve(t(rch), x)
+t(rch) %*% x
+
+ch <- Cholesky(M_sparse, LDL=FALSE)
+
+
+ch <- sparseCholFactor(M_sparse)
+sparseCholLogdet(ch)
+sparseCholSolve(ch, x)   # Correct
+sparseCholForwardsolve(ch, x)
+
+
+y1 <- solve(ch, rhs, system = "P")    # y1 = P   rhs    (apply permutation)
+y2 <- solve(ch, y1,  system = "L")    # y2 = L^{-1} y1  (forward solve)
+y2a <- solve(ch, y1,  system = "D")    # y2 = L^{-1} y1  (forward solve)
+y3 <- solve(ch, y2a,  system = "Lt")   # y3 = L'^{-1} y2 (back solve)
+b  <- solve(ch, y3,  system = "Pt")   # b  = P'  y3     (undo permutation)
+
+
+m <- 10000
+out2 <- out1 <- matrix(0,m, 10)
+set.seed(1)
+for(i in 1:m) {
+    x <- rnorm(10)
+    out1[i,] <- t(rch) %*% x
+    out2[i,] <- sparseCholMult(ch, x)[,1]
+}
+plot(M,cov(out1), type = 'p')
+points(M,cov(out2),col='red')
+
+m <- 10000
+out2 <- out1 <- matrix(0,m, 10)
+set.seed(1)
+for(i in 1:m) {
+    x <- rnorm(10)
+    out1[i,] <- backsolve(rch, x)
+    out2[i,] <- sparseCholBacksolve(ch, x)
+}
+plot(solve(M),cov(out1), type = 'p')
+points(solve(M),cov(out2),col='red')
+
+
+myfun <- nFunction(
+    fun = function(Q = 'nSparseMatrix') {
+           ch <- sparseCholFactor(Q)
+        return(0)
+    }, returnType = 'numericScalar')
+cmyfun <- nCompile(myfun)
+
+myfun(m)
+cmyfun(sm)
+
+
+myfun <- nFunction(
+    fun = function(Q = 'nSparseMatrix') {
+        ch <- sparseCholFactor(Q)
+        out <- sparseCholLogdet(ch)
+        return(out)
+    }, returnType = 'numericScalar')
+cmyfun <- nCompile(myfun)

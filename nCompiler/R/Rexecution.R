@@ -322,6 +322,27 @@ sparseCholFactor <- function(x) {
   Matrix::Cholesky(x)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
 }
 
+sparseCholLogdet <- function(chol) {
+  return(sum(log(diag(expand1(chol, "L")))))
+}
+
+sparseCholSolve <- function(ch, x) {
+    ## E.g. for quadratic form with sparse covariance
+    return(solve(ch, x))
+    # solve(ch, solve(ch, solve(ch, solve(ch, x, system="P"), system = "L"), system = "Lt"), system = "Pt"))
+}
+
+sparseCholBacksolve <- function(ch, x) {
+  ## E.g., for generating MVN draws with sparse precision.
+  return(solve(ch, solve(ch, x, system = "Lt"), system = "Pt"))  # P^{top} U*^{-1} x
+}
+
+sparseCholMult <- function(ch, x) {
+    ## E.g., for gnerating MVN draws with sparse covariance.
+    solve(ch, expand1(ch, "L") %*% x, system = "Pt")  # P^{top} L* x (see ?Matrix:::solve)
+}
+
+
 ## diag(Cholesky(x))
 ## result <- solve(ch, b, system = "A"), or "L"
 
