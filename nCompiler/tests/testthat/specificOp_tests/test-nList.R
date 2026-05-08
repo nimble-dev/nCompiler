@@ -756,9 +756,10 @@ test_that("nList: multiple ways to indicate the same nList are correctly de-dupl
 # Compiled: various [ an [[ get and set operations compile and work
 # ---------------------------------------------------------------------------
 
-test_that("nList various bracket get and set operations compile and work",
+test_that("nList various bracket get and set operations compile and work for scalar element",
 {
-  rNL <- nList("numericScalar")
+  inner_type <- nType(numericScalar())
+  rNL <- nList({{inner_type}})
   nc <- nClass(
     classname = "nc_holds_nList",
     Cpublic = list(
@@ -823,14 +824,14 @@ test_that("nList various bracket get and set operations compile and work",
         function(ind = integer()) {
           return(lst[[ind]])
         },
-        returnType = 'numericScalar'
+        returnType = 'T(inner_type)'
       ),
       set_double_bracket = nFunction(
-        function(ind = integer(), v = 'numericScalar') {
+        function(ind = integer(), v = {{inner_type}}) {
           lst[[ind]] <- v
           return(v)
         },
-        returnType = 'numericScalar'
+        returnType = 'T(inner_type)'
       )
     )
   )
@@ -875,7 +876,132 @@ test_that("nList various bracket get and set operations compile and work",
   expect_equal(obj$get_length(), 4)
   expect_equal(obj$set_length(5), 5)
   expect_equal(obj$get_length(), 5)
+  rm(obj); gc()
 })
+
+test_that("nList various bracket get and set operations compile and work for vector element",
+{
+  inner_type <- nType(integerVector()) #nType(numericScalar())
+  rNL <- nList({{inner_type}})
+  nc <- nClass(
+    classname = "nc_holds_nList",
+    Cpublic = list(
+      lst = 'rNL',
+      set_length = nFunction(
+        function(len = integerScalar()) {
+          length(lst) <- len
+          return(length(lst))
+          returnType("integerScalar")
+        }
+      ),
+      get_length = nFunction(
+        function() {
+          res <- length(lst)
+          return(res)
+          returnType("integerScalar")
+        }
+      ),
+      get_single_bracket_int = nFunction(
+        function(inds = integer(1)) {
+          res <- lst[inds]
+          return(res)
+        },
+        returnType = 'rNL'
+      ),
+      get_single_bracket_double = nFunction(
+        function(inds = double(1)) {
+          res <- lst[inds]
+          return(res)
+        },
+        returnType = 'rNL'
+      ),
+      get_single_bracket_logical = nFunction(
+        function(inds = logical(1)) {
+          res <- lst[inds]
+          return(res)
+        },
+        returnType = 'rNL'
+      ),
+      set_single_bracket_int = nFunction(
+        function(inds = integer(1), v = 'rNL') {
+          lst[inds] <- v
+          return(lst)
+        },
+        returnType = 'rNL'
+      ),
+      set_single_bracket_double = nFunction(
+        function(inds = double(1), v = 'rNL') {
+          lst[inds] <- v
+          return(lst)
+        },
+        returnType = 'rNL'
+      ),
+      set_single_bracket_logical = nFunction(
+        function(inds = logical(1), v = 'rNL') {
+          lst[inds] <- v
+          return(lst)
+        },
+        returnType = 'rNL'
+      ),
+      get_double_bracket = nFunction(
+        function(ind = integer()) {
+          return(lst[[ind]])
+        },
+        returnType = 'T(inner_type)'
+      ),
+      set_double_bracket = nFunction(
+        function(ind = integer(), v = {{inner_type}}) {
+          lst[[ind]] <- v
+          return(v)
+        },
+        returnType = 'T(inner_type)'
+      )
+    )
+  )
+  comp <- nCompile(nc, rNL)
+
+  obj <- comp$nc$new()
+  obj$lst <- nc$new()
+
+  length(obj$lst) <- 3
+  curlst <- as.list(obj$lst)
+  expect_equal(length(curlst), 3)
+
+  lst2 <- comp$rNL$new()
+  lst2[1:3] <- list(1:3, 2:4, 3:5)
+  expect_identical(as.list(lst2), list(1:3, 2:4, 3:5))
+
+  obj$set_single_bracket_int(c(3, 1, 2), lst2[c(3, 1, 2)])
+  expect_identical(obj$lst |> as.list(), list(1:3, 2:4, 3:5))
+  lst_out <- obj$get_single_bracket_int(c(3, 1, 2))
+  expect_identical(lst_out |> as.list(), list(3:5, 1:3, 2:4))
+
+  obj$set_single_bracket_double(c(3, 1, 2), lst2[c(3:5, 1:3, 2:4)])
+  expect_identical(obj$lst |> as.list(), list(1:3, 2:4, 3:5))
+  lst_out <- obj$get_single_bracket_double(c(3, 1, 2))
+  expect_identical(lst_out |> as.list(), list(3:5, 1:3, 2:4))
+
+  obj$set_single_bracket_logical(c(TRUE, FALSE, TRUE), lst2[c(3, 2)])
+  expect_identical(obj$lst |> as.list(), list(3:5, 2:4, 2:4))
+  lst_out <- obj$get_single_bracket_logical(c(TRUE, TRUE, FALSE))
+  expect_identical(lst_out |> as.list(), list(3:5, 2:4))
+
+  obj$set_double_bracket(4, 4:6)
+  expect_identical(obj$lst |> as.list(), list(3:5, 2:4, 2:4, 4:6))
+  lst_out <- obj$get_single_bracket_logical(c(TRUE, TRUE, FALSE))
+  expect_identical(lst_out |> as.list(), list(3:5, 2:4, 4:6))
+
+  expect_error(obj$get_double_bracket(8))
+  expect_error(obj$get_double_bracket(0))
+  expect_error(obj$get_single_bracket(c(1, 2, 8)))
+  expect_error(obj$get_single_bracket(c(1, 2, 0)))
+
+  expect_equal(obj$get_length(), 4)
+  expect_equal(obj$set_length(5), 5)
+  expect_equal(obj$get_length(), 5)
+  rm(obj); gc()
+})
+
 
 test_that("nList of nClass elements works", {
   element_nc <- nClass(

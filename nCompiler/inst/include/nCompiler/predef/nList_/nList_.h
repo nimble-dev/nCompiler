@@ -136,6 +136,14 @@ public:
     }
 
     template<typename VALUES>
+    static Element extract_val_(const VALUES& values, size_t j) {
+        return values[j];
+    }
+    static Element extract_val_(const Rcpp::List& values, size_t j) {
+        return Rcpp::as<Element>(values[j]);
+    }
+
+    template<typename VALUES>
     void singleBracket_set_(const Rcpp::RObject &inds, const VALUES &values) {
       size_t n = 0;
       if(values.size() == 0) Rcpp::stop("nCppVec: replacement has length zero");
@@ -158,7 +166,7 @@ public:
           size_t j = 0;
           for(size_t i = 0; i < n; ++i, ++j) {
             if(j >= vals_n) j = 0; // recycling rule
-            contents_[static_cast<size_t>(idx[i]) - 1] = values[j];
+            contents_[static_cast<size_t>(idx[i]) - 1] = extract_val_(values, j);
           }
           break;
         }
@@ -182,7 +190,7 @@ public:
           size_t j = 0;
           for(size_t i = 0; i < n; ++i, ++j) {
             if(j >= vals_n) j = 0; // recycling rule
-            contents_[static_cast<size_t>(std::floor(idx[i])) - 1] = values[j];
+            contents_[static_cast<size_t>(std::floor(idx[i])) - 1] = extract_val_(values, j);
           }
           break;
         }
@@ -209,7 +217,7 @@ public:
           size_t val_j = 0;
           for(size_t i = 0; i < contents_n; ++i) {
             if(bools[i % bools_n]) {
-              contents_[i] = values[val_j % vals_n];
+              contents_[i] = extract_val_(values, val_j % vals_n);
               ++val_j;
             }
           }

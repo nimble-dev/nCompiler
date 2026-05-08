@@ -160,7 +160,7 @@ nClass <- function(classname,
   if(missing(classname))
     classname <- c(generated = nClassLabelMaker())
   if(is.null(compileInfo$classname))
-    compileInfo$classname <- paste0(classname, "_compiled")
+    compileInfo$classname <- classname # paste0(classname, "_compiled") # the classname field of the R6 generators *can* be the same and it is useful for S3 dispatch
   if('finalize' %in% names(Cpublic)) {
     if('finalize' %in% names(Rpublic))
       stop("If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",

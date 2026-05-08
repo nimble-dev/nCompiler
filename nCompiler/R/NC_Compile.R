@@ -73,12 +73,12 @@ nCompile_nClass <- function(NC,
                                                                 NC$parent_env, isNC = TRUE)
     allow_write_predefined <- !isTRUE(compileInfo$auto_included)
   }
-  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
+  if(is_predefined && (isFALSE(controlFull$generate_predefined) || !allow_write_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
     cppDef <- cppRcppPacket$new(RcppPacket = RcppPacket)
     cppDef$externalCppDefs <- c(cppDef$externalCppDefs,
                                 get_R_interface_cppDef()) #might not be needed, but doesn't hurt to add and we don't have the details on whether it is needed from the loaded RcppPacket.
- } else {
+  } else {
     if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC,
@@ -92,10 +92,10 @@ nCompile_nClass <- function(NC,
                           project_env = project_env) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
-    if(is_predefined && allow_write_predefined) {
+    if(is_predefined) { #  && allow_write_predefined) {
       predefined_gen_dir <- NCinternals(NC)$compileInfo$predefined_output_dir
       if(is.null(predefined_gen_dir))
-        predefined_gen_dir <- predefined_dir      
+        predefined_gen_dir <- predefined_dir
       RcppPacket <- cppDefs_2_RcppPacket(cppDef)
       saveRcppPacket(RcppPacket, predefined_gen_dir, regular_filename)
       # Now add interface calls if necessary for this live compilation, having
@@ -104,7 +104,7 @@ nCompile_nClass <- function(NC,
       # To do: check that there aren't any detected needed units that are not in the compileInfo$needed_units
       # because for a predefined, needed units must be provided manually by compileInfo.
     } else {
-      if(gather_needed_units) needed_units <- NC_Compiler$gather_needed_units()
+      if(gather_needed_units) needed_units <- NC_Compiler$gather_needed_units(project_env = project_env)
     }
 
     ##

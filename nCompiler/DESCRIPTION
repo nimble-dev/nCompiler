@@ -74,8 +74,8 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
-    nimbleModels.R
     nCppVec.R
+    nimbleModels.R
     nTry.R
     packaging.R
     Rcpp_check.R

@@ -181,7 +181,7 @@ nCompile_prepare_units <- function(...,
                         #  env = parent.frame(),
                         #  control = list(),
                         #  unitControls = list(),
-                          interfaces = list()#,
+                          interfaces = list()
                         #  package = FALSE,
                         #  returnList = FALSE
                         ) {
@@ -213,34 +213,41 @@ nCompile_prepare_units <- function(...,
 
   inputNamesInfo <- list(names = names(units), boolNameProvided = !boolNoName)
 
+  interfaces_provided <- !(identical(interfaces, list()))
+
   # (1b) Unpack interfaces argument from various formats.
   # Remember interface is only needed for nClass compilation units
   # If a single value ("full", "generic", or "none") is provided via
   # the interfaces argument, it will over-ride nClass-specific values
   #  from compileInfos. If a named vector of list is provided,
   #  they will over-ride on a one-by-one bases.
-  if(!is.list(interfaces)) {
-    if(is.character(interfaces)) {
-      if(length(interfaces) == 1) {
-        interfaces <- rep(interfaces, length(units))
-        names(interfaces) <- names(units) # nFunction units will just be ignored
+  if(interfaces_provided) {
+    if(!is.list(interfaces)) {
+      if(is.character(interfaces)) {
+        if(length(interfaces) == 1) {
+          interfaces <- rep(interfaces, length(units))
+          names(interfaces) <- names(units) # nFunction units will just be ignored
+        }
       }
+      interfaces <- as.list(interfaces)
     }
-    interfaces <- as.list(interfaces)
+    # check for invalid interface names.
+    # We could add a check for interfaces that are not for nClasses.  
+    if(!all(names(interfaces) %in% names(units))) {
+      i_bad_names <- which(!(names(interfaces) %in% names(units)))
+      stop("Some names in 'interfaces' do not match names of compilation units in '...':",
+          paste(names(interfaces)[i_bad_names], collapse=','))
+    }
+    # make interfaces match the order of units and fill in NULLs when no interface is provided
+    # (which will be the case for nFunctions)
+    for(un in names(units))
+      if(!(un %in% names(interfaces))) interfaces[un] <- ""
+    interfaces <- interfaces[names(units)]
+  } else {
+    interfaces <- rep("", length(units))
+    names(interfaces) <- names(units) # could have blanks at this point, will be renamed at the end
   }
-  # check for invalid interface names.
-  # We could add a check for interfaces that are not for nClasses.
-  if(!all(names(interfaces) %in% names(units))) {
-    i_bad_names <- which(!(names(interfaces) %in% names(units)))
-    stop("Some names in 'interfaces' do not match names of compilation units in '...':",
-         paste(names(interfaces)[i_bad_names], collapse=','))
-  }
-  # make interfaces match the order of units and fill in NULLs when no interface is provided
-  # (which will be the case for nFunctions)
-  for(un in names(units))
-    if(!(un %in% names(interfaces))) interfaces[un] <- ""
-  interfaces <- interfaces[names(units)]
-
+  
   unitTypes <- get_nCompile_types(units)
 
   # We defer processing of nClass inheritance until compile time to allow nClass
@@ -332,7 +339,7 @@ nCompile_prepare_units <- function(...,
   returnNames <- exportNames <- vector("character", length(units))
   packageNames <- vector("list", length(units))
   compileInfos <- structure(vector("list", length(units)),
-                            names = names(units))
+                            names = names(units)) # could have blanks at this point, will be filled in below
   for(i in seq_along(units)) {
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       compileInfo <- NFinternals(units[[i]])$compileInfo
@@ -421,8 +428,12 @@ nCompile_prepare_units <- function(...,
       }
     }
 
-    if(names(units)[i] == "") names(units)[i] <- returnNames[i]
-
+    if(names(units)[i] == "") {
+      names(units)[i] <- returnNames[i]
+      names(compileInfos)[i] <- returnNames[i]
+      if(unitTypes[i] == "nCgen")
+        names(interfaces)[i] <- returnNames[i]
+    }
     # In some cases this is the first addition of an exportName to a compileInfo
     compileInfo$exportName <- exportNames[i]
     compileInfo$interface <- interfaces[[i]]
@@ -508,6 +519,7 @@ nCompile <- function(...,
 
   while(!done_finding_units) {
     update_built_types(new_units, new_unitTypes, cppDefs_project_env)
+    existing_built_type_names <- ls(cppDefs_project_env$built_types)
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos, cppDefs_project_env)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
@@ -524,12 +536,18 @@ nCompile <- function(...,
 
     new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique_units()
     new_needed_nFunctions <- do.call("c", cppDefs_info$needed_nFunctions) |> unique()
-    names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
+    #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
+    #
+    updated_built_type_names <- ls(cppDefs_project_env$built_types)
+    new_needed_built_nClasses <- lapply(setdiff(updated_built_type_names, existing_built_type_names),
+                                     \(x) cppDefs_project_env$built_types[[x]])
+    # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
     # A bit of design irony: At this point, the needed units are
     # nicely organized into nClasses and nFunctions,
     # but we are going to mix them together as if they were an arbitrary
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
+    new_needed_nClasses <- c(new_needed_nClasses, new_needed_built_nClasses) |> unique_units()
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
     ## Use unit_is_duplicate() rather than identical() so that parameterised nClass
     ## types (e.g. nList) are correctly identified as duplicates even when they

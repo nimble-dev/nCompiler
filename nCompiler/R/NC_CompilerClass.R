@@ -129,7 +129,7 @@ NC_CompilerClass <- R6::R6Class(
         setupMethodSymbolTables()
       }
     },
-    gather_needed_units = function() {
+    gather_needed_units = function(project_env = new.env()) {
       # This gathers from member variables and methods.
       # It DOES NOT include an inherit nClass, because we could only access
       #   the inheritNCinternals, but we need the generator object.
@@ -145,7 +145,7 @@ NC_CompilerClass <- R6::R6Class(
                           unlist(recursive = FALSE) |> unique()
       compileInfo_needed_units <- nCompile_process_manual_needed_units(
                                     NCinternals(self$NCgenerator),
-                                    self$NCgenerator$parent_env, isNC = TRUE)
+                                    self$NCgenerator$parent_env, isNC = TRUE, project_env = project_env)
       list(
         needed_nClasses = unique_units(c(needed_nClasses1, needed_nClasses2 %||% list(),
                                          compileInfo_needed_units$needed_nClasses)),
@@ -157,8 +157,9 @@ NC_CompilerClass <- R6::R6Class(
 )
 
 nCompile_process_manual_needed_units <- function(internals, 
-                                                      where = internals$where, # NFinternals case
-                                                      isNC = FALSE) {
+                                                      where = internals$where, # Ths default works when internals is an NFinternals
+                                                      isNC = FALSE,
+                                                      project_env = new.env()) {
   # This function collects two forms of "manual" needed units (nClasses and nFunctions):
   # those provided via compileInfo$needed_units and also (in the case of nClass)
   # an inherited nClass.
@@ -178,7 +179,8 @@ nCompile_process_manual_needed_units <- function(internals,
   results_nFunctions <- list()
   for(i in seq_along(needed_units)) {
     if(is.character(needed_units[[i]])) {
-      obj <- nGet(needed_units[[i]], where)
+      obj <- check_unknown_types(!!needed_units[[i]], where = where, project_env = project_env)
+      # obj <- nGet(needed_units[[i]], where)
       if(is.null(obj))
         stop(paste0("In processing compileInfo$needed_units for ", name, ", could not find object named '",
                     needed_units[[i]], "' in the environment of the source unit."))

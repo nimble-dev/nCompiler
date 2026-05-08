@@ -62,6 +62,9 @@ nListBase_nClass <- NLdevel %||% nClass(
                    packageNames = c(uncompiled="nListBase_nClass", compiled="nListBase_nClass_C")
                    )
 )
+# Manually add
+# #include <nCompiler/predef/nList_/nList_.h>
+# to the nListBase_nClass header file after the class declaration.
 
 rm(NLdevel)
 
@@ -275,6 +278,8 @@ nList_nClass <- function(type, env = parent.frame()) {
       ),
       compileInfo = list(
         cpp_classname = CPP_CLASSNAME,
+        exportName = paste0(CPP_CLASSNAME, "_new"), # necessary to avoid "nList_new" as default later
+        packageNames = c(uncompiled = paste0(CPP_CLASSNAME, "_R"), compiled = CPP_CLASSNAME), # These are not tested!
 #          needed_units = list("nListBase_nClass"),
         nClass_inherit = list(base=BASECLASSFUN),
         overloadDefs = list(

@@ -28,14 +28,15 @@ nodeInstr_nClass <- NMdevel %||% nClass(
   classname = "nodeInstr_nClass",
   Cpublic = list(
     methodInstr = 'integerVector',
-    indsInstrVec = "nCppVec('integerVector')"
+    indsInstrVec = "nList(integerVector())"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("nodeInstr_nC")),
   compileInfo=list(interface="full",
                    createFromR = TRUE,
+                   needed_units = list("nList(integerVector())"),
                    exportName = "nodeInstr_nClass_new",
-                   packageNames = c(uncompiled = "nodeInstr_nClass", compiled="nodeInstr_nClass_C")
+                   packageNames = c(uncompiled = "nodeInstr_nClass_R", compiled="nodeInstr_nClass")
                    )
 )
 
@@ -44,7 +45,7 @@ calcInstr_nClass <- NMdevel %||% nClass(
   classname = "calcInstr_nClass",
   Cpublic = list(
     nodeIndex = 'integerScalar',
-    nodeInstrVec = "nCppVec('nodeInstr_nClass')"
+    nodeInstrVec = "nList(nodeInstr_nClass())"
   ),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("calcInstr_nC")),
@@ -57,28 +58,31 @@ calcInstr_nClass <- NMdevel %||% nClass(
                    # In the format here, needed_units is a list with either objects (nFunction or nClass (generators),
                    # or names. If names, we will use scoping to look them up and decide what they are.
                    # The list can mix objects and names of nClasses and nFunctions.
-                   needed_units = list("nodeInstr_nClass"),
+                   needed_units = list("nodeInstr_nClass", "nList(nodeInstr_nClass())"),
                    exportName = "calcInstr_nClass_new",
-                   packageNames = c(uncompiled="calcInstr_nClass", compiled="calcInstr_nClass_C")
+                   packageNames = c(uncompiled="calcInstr_nClass_R", compiled="calcInstr_nClass")
                    )
 )
 
 #' @export
-calcInstrList_nClass <- NMdevel %||% nClass(
-  classname = "calcInstrList_nClass",
-  Cpublic = list(
-    calcInstrList = "nCppVec('calcInstr_nClass')"
-  ),
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-               file.path("calcInstrList_nC")),
-  compileInfo=list(interface="full",
-                   createFromR = TRUE,
-                   Hincludes = '"calcInstr_nClass_c_.h"',
-                   exportName = "calcInstrList_nClass_new",
-                   packageNames = c(uncompiled = "calcInstrList_nClass", compiled = "calcInstrList_nClass_C"),
-                   needed_units = list("calcInstr_nClass")
-                   )
-)
+calcInstrList_nClass <- NMdevel %||% nList(calcInstr_nClass())
+
+#' @export
+## calcInstrList_nClass <- NMdevel %||% nClass(
+##   classname = "calcInstrList_nClass",
+##   Cpublic = list(
+##     calcInstrList = "nCppVec('calcInstr_nClass')"
+##   ),
+##   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+##                file.path("calcInstrList_nC")),
+##   compileInfo=list(interface="full",
+##                    createFromR = TRUE,
+##                    Hincludes = '"calcInstr_nClass_c_.h"',
+##                    exportName = "calcInstrList_nClass_new",
+##                    packageNames = c(uncompiled = "calcInstrList_nClass", compiled = "calcInstrList_nClass_C"),
+##                    needed_units = list("calcInstr_nClass")
+##                    )
+## )
 
 #' @export
 nodeFxnBase_nClass <- NMdevel %||% nClass(
@@ -102,9 +106,13 @@ nodeFxnBase_nClass <- NMdevel %||% nClass(
   compileInfo=list(interface="full",
                    createFromR = FALSE,
                    exportName = "nodeFxnBase_nClass_new",
-                   packageNames = c(uncompiled="nodeFxnBase_nClass", compiled="nodeFxnBase_nClass_C")
+                   needed_units = list("nodeInstr_nClass"),
+                   packageNames = c(uncompiled="nodeFxnBase_nClass_R", compiled="nodeFxnBase_nClass")
                    )
 )
+# Manually add
+# # "#include <nCompiler/predef/nodeFxnClass_/nodeFxnClass_.h>" in the hContent
+# after the header content.
 
 # nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
 
@@ -143,12 +151,16 @@ modelBase_nClass <- NMdevel %||% nClass(
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("modelBase_nC")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   Hincludes = c('"nodeFxnBase_nClass_c_.h"', '"calcInstrList_nClass_c_.h"'), # do we need "<nodeFxnBase_nClass_c_.h>" too?
-                   needed_units = list("nodeFxnBase_nClass","calcInstrList_nClass"), #do we need nodeFxnBase_nClass here too?
+                   Hincludes = c('"nodeFxnBase_nClass_c_.h"'), #, '"calcInstrList_nClass_c_.h"'), # "nodeFxnBase_nClass_c_.h" needed for package = TRUE
+                   needed_units = list("nodeFxnBase_nClass","calcInstrList_nClass"),
                    exportName = "modelBase_nClass_new",
-                   packageNames = c(uncompiled="modelBase_nClass", compiled="modelBase_nClass_C")
+                   packageNames = c(uncompiled="modelBase_nClass_R", compiled="modelBase_nClass")
                    )
 )
+# Manually add
+# # "#include <nCompiler/predef/modelClass_/modelClass_.h>" to that file,
+# after the header content.
+
 
 rm(NMdevel)
 
@@ -187,15 +199,19 @@ make_node_nClass <- function(varInfo = list(),
   # varInfo will be a list (names not used) of name, nDim, sizes.
   # These are the model member variables to be used by the nodeFxn.
   # They will be used in a constructor to set up C++ references to model variables.
-  varInfo_2_symbol <- \(x) nCompiler:::symbolBasic$new(
-    type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # In future maybe isConst=TRUE, but it might not matter much
-  symbolList <- varInfo |> lapply(varInfo_2_symbol)
-  names(symbolList) <- varInfo |> lapply(\(x) x$name) |> unlist()
+  CpublicVars <- varInfo |> lapply(\(x) paste0("ref(double(", x$nDim ,", interface=FALSE))"))
+  names(CpublicVars) <- varInfo |> lapply(\(x) x$name) |> unlist()
+
+
+#  varInfo_2_symbol <- \(x) nCompiler:::symbolBasic$new(
+#    type="double", nDim=x$nDim, name="", isRef=TRUE, isConst=FALSE, interface=FALSE) # In future maybe isConst=TRUE, but it might not matter much
+#  symbolList <- varInfo |> lapply(varInfo_2_symbol)
+#  names(symbolList) <- varInfo |> lapply(\(x) x$name) |> unlist()
   numVars <- length(varInfo)
 
-  CpublicVars <- names(symbolList) |> lapply(\(x) eval(substitute(quote(T(symbolList$NAME)),
-                                                    list(NAME=as.name(x)))))
-  names(CpublicVars) <- names(symbolList)
+#  CpublicVars <- names(symbolList) |> lapply(\(x) eval(substitute(quote(T(symbolList$NAME)),
+#                                                    list(NAME=as.name(x)))))
+#  names(CpublicVars) <- names(symbolList)
   # This is a kluge to have a model field in the Cpublic_obj,
   # needed for uncompiled purposes, and for compiled purposes
   # we instead use references to model variables. So
@@ -203,9 +219,11 @@ make_node_nClass <- function(varInfo = list(),
   initFun <- function(){}
 
   if(numVars > 0) {
-    ctorArgNames <- paste0(names(symbolList), '_')
+    # ctorArgNames <- paste0(names(symbolList), '_')
+    ctorArgNames <- paste0(names(CpublicVars), '_')
     # List used when generating C++ constructor code to allow direct initializers, necessary for references.
-    initializersList <- paste0(names(symbolList), '(', ctorArgNames ,')')
+    # initializersList <- paste0(names(symbolList), '(', ctorArgNames ,')')
+    initializersList <- paste0(names(CpublicVars), '(', ctorArgNames ,')')
     formals(initFun) <- structure(as.pairlist(CpublicVars), names = ctorArgNames)
   } else {
     initializersList <- character()
@@ -395,9 +413,9 @@ makeModel_nClass <- function(varInfo,
       classname = CLASSNAME,
       inherit = modelBase_nClass,
       compileInfo = list(opDefs = OPDEFS,
-                         nClass_inherit = list(base=BASECLASS)
-                         #inherit = list(base = "public modelClass_<mymodel>"),
-                         #Hincludes = "<nCompiler/nC_inter/post_Rcpp/nCompiler_model_base_devel.h>"
+                         nClass_inherit = list(base=BASECLASS)#,
+#                         needed_units = list("nodeFxnBase_nClass"), # needed for package=TRUE
+#                         Hincludes = '"nodeFxnBase_nClass_c_.h"' # needed for package=TRUE
                          ),
       Rpublic = RPUBLIC,
       Cpublic = CPUBLIC,

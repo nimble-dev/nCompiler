@@ -190,8 +190,8 @@ typeDeclarationList <- list(
     ans
   },
   ## integer types:
-  integerScalar = function(value) {
-    nTypeBasic("integer", 0)
+  integerScalar = function(value, ...) {
+    nTypeBasic("integer", 0, ...)
   },
   integerVector = function(length = NA,
                            ...) {
@@ -224,8 +224,8 @@ typeDeclarationList <- list(
     nTypeBasic("logical", nDim, ...)
   },
   ## numeric types
-  numericScalar = function(value) {
-    nTypeBasic("double", 0)
+  numericScalar = function(value, ...) {
+    nTypeBasic("double", 0, ...)
   },
   numericVector = function(length = NA,
                            ...) {
@@ -241,8 +241,8 @@ typeDeclarationList <- list(
     nTypeBasic("double", nDim, ...)
   },
   ## AD types
-  ADScalar = function(value) {
-    nTypeBasic("AD", 0)
+  ADScalar = function(value, ...) {
+    nTypeBasic("AD", 0, ...)
   },
   ADVector = function(length = NA,
                       ...) {
@@ -260,56 +260,56 @@ typeDeclarationList <- list(
   ## versions with type as a declared argument
   nScalar = function(...,
                      type = "double") {
-    nTypeBasic(type, 0)
+    nTypeBasic(type, 0, ...)
   },
   nVector = function(value,
                      length,
                      ...,
                      type = "double") {
-    nTypeBasic(type, 1)
+    nTypeBasic(type, 1, ...)
   },
   nMatrix = function(value,
                      ...,
                      type = "double") {
-    nTypeBasic(type, 2)
+    nTypeBasic(type, 2, ...)
   },
   nArray = function(value,
                     dim,
                     ...,
                     type = "double") {
-    nTypeBasic(type, length(dim))
+    nTypeBasic(type, length(dim), ...)
   },
   ## vector versions with type embedded in keyword
   nInteger = function(length = NA,
                       ...) {
-    nTypeBasic("integer", 1)
+    nTypeBasic("integer", 1, ...)
   },
   nLogical = function(length = NA,
                       ...) {
-    nTypeBasic("logical", 1)
+    nTypeBasic("logical", 1, ...)
   },
   nNumeric = function(length = NA,
                       ...) {
-    nTypeBasic("double", 1)
+    nTypeBasic("double", 1, ...)
   },
   ## versions from original nimble
   double = function(nDim = 0,
                     ...) {
-    nTypeBasic("double", nDim)
+    nTypeBasic("double", nDim, ...)
   },
   integer = function(nDim = 0,
                      ...) {
-    nTypeBasic("integer", nDim)
+    nTypeBasic("integer", nDim, ...)
   },
   logical = function(nDim = 0,
                      ...) {
-    nTypeBasic("logical", nDim)
+    nTypeBasic("logical", nDim, ...)
   },
   void = function(...) {
-    nTypeBasic("void", 0)
+    nTypeBasic("void", 0, ...)
   },
   string = function(...) {
-    nTypeBasic("string", 0)
+    nTypeBasic("string", 0, ...)
   },
   ##
   SEXP = function(...) {
@@ -402,12 +402,12 @@ typeDeclarationList <- list(
   nSparseMatrix = function(value,
                            ...,
                            type = "double") {
-    nSparseType(scalarType = type, nDim = 2)
+    nSparseType(scalarType = type, nDim = 2, ...)
   },
   nSparseVector = function(value,
                            ...,
                            type = "double") {
-    nSparseType(scalarType = type, nDim = 1)
+    nSparseType(scalarType = type, nDim = 1, ...)
   },
   nCppVec = function(type) {
     ttype <- nCaptureType(type)
@@ -810,7 +810,7 @@ typeList2symbolTable <- function(typeList,
   symTab
 }
 
-# take an Rexpr OR a type (quosure or ready to become one)
+# take a type (quosure or ready to become one)
 # and look for NCgenerator or nClassBuilder
 check_unknown_types <- function(type, where = parent.frame(),
                                 project_env = new.env(), returnID = FALSE,
@@ -838,9 +838,9 @@ check_unknown_types <- function(type, where = parent.frame(),
     if(returnID) {
       return(NCinternals(candidate)$classID)
     }
-    return(candidate)
+    # return(candidate)
   }
-  invisible(NULL)
+  candidate
 }
 
 check_built_types <- function(Rexpr = NULL, candidate = NULL,

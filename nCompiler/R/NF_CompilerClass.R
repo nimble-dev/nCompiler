@@ -146,8 +146,8 @@ NF_CompilerClass <- R6::R6Class(
                       project_env = project_env,
                       initialTypeInferenceOnly = initialTypeInferenceOnly)
     },
-    gather_needed_units = function() {
-      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals)
+    gather_needed_units = function(project_env = new.env()) {
+      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals, project_env = project_env)
       list(
         needed_nClasses = c(self$gather_needed_nClasses(), 
                            compileInfo_needed_units$needed_nClasses),
