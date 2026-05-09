@@ -728,7 +728,7 @@ test_that("nList: multiple ways to indicate the same nList are de-duplicated", {
     returnType = "nList('numericScalar')"
   )
 #  comp <- nCompile(foo)
-  comp <- nCompile(rNL1, rNL2, foo)
+  comp <- nCompile(rNL1 = rNL1, rNL2 = rNL2, foo) # packageNames will be used unless named explicitly
   cNL1a <- comp$rNL1$new()
   cNL2a <- comp$rNL2$new()
   expect_error(comp$foo(cNL2a))
@@ -746,7 +746,7 @@ test_that("nList: multiple ways to indicate the same nList are correctly de-dupl
     },
     returnType = "nList('numericScalar')"
   )
-  comp <- nCompile(rNL1, foo)
+  comp <- nCompile(rNL1 = rNL1, foo)
   obj <- comp$rNL1$new()
   obj2 <- comp$foo(obj)
   expect_equal(obj, obj2)
@@ -835,7 +835,7 @@ test_that("nList various bracket get and set operations compile and work for sca
       )
     )
   )
-  comp <- nCompile(nc, rNL)
+  comp <- nCompile(nc, rNL = rNL)
 
   obj <- comp$nc$new()
   obj$lst <- nc$new()
@@ -958,7 +958,7 @@ test_that("nList various bracket get and set operations compile and work for vec
       )
     )
   )
-  comp <- nCompile(nc, rNL)
+  comp <- nCompile(nc, rNL = rNL)
 
   obj <- comp$nc$new()
   obj$lst <- nc$new()
@@ -976,7 +976,7 @@ test_that("nList various bracket get and set operations compile and work for vec
   lst_out <- obj$get_single_bracket_int(c(3, 1, 2))
   expect_identical(lst_out |> as.list(), list(3:5, 1:3, 2:4))
 
-  obj$set_single_bracket_double(c(3, 1, 2), lst2[c(3:5, 1:3, 2:4)])
+  obj$set_single_bracket_double(c(3, 1, 2), lst2[c(3, 1, 2)])
   expect_identical(obj$lst |> as.list(), list(1:3, 2:4, 3:5))
   lst_out <- obj$get_single_bracket_double(c(3, 1, 2))
   expect_identical(lst_out |> as.list(), list(3:5, 1:3, 2:4))
@@ -1022,7 +1022,7 @@ test_that("nList of nClass elements works", {
       nl[[i]]$x <- 1:3
     }
   )
-  comp <- nCompile(use_NL, rNL, element_nc)
+  comp <- nCompile(use_NL, rNL = rNL, element_nc)
   nl1 <- comp$rNL$new()
   nl1[[1]] <- comp$element_nc$new()
   nl1[[1]]$x <- 11:14
@@ -1063,7 +1063,7 @@ test_that("nList: nClass member of nList type compiles and works", {
     )
   )
 #  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
-  comp <- nCompile(rNL, nc)
+  comp <- nCompile(rNL = rNL, nc)
   obj <- comp$nc$new()
   obj$init()
   expect_equal(obj$getLen(), 4L)
@@ -1109,7 +1109,7 @@ test_that("nList: nFunction argument of nList type compiles and works", {
       )
     )
   )
-  comp <- nCompile(nc, rNL)
+  comp <- nCompile(nc, rNL = rNL)
   obj  <- comp$nc$new()
   lst  <- comp$rNL$new()
   length(lst) <- 5

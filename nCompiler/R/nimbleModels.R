@@ -28,8 +28,12 @@ nodeInstr_nClass <- NMdevel %||% nClass(
   classname = "nodeInstr_nClass",
   Cpublic = list(
     methodInstr = 'integerVector',
-    indsInstrVec = "nList(integerVector())"
-  ),
+    indsInstrVec = "nList(integerVector())",
+    nodeInstr_nClass = nFunction(function(){
+      indsInstrVec <- nList(integerVector())$new()
+    },
+    compileInfo = list(constructor=TRUE)
+  )),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("nodeInstr_nC")),
   compileInfo=list(interface="full",
@@ -45,8 +49,12 @@ calcInstr_nClass <- NMdevel %||% nClass(
   classname = "calcInstr_nClass",
   Cpublic = list(
     nodeIndex = 'integerScalar',
-    nodeInstrVec = "nList(nodeInstr_nClass())"
-  ),
+    nodeInstrVec = "nList(nodeInstr_nClass())",
+    calcInstr_nClass = nFunction(function(){
+      nodeInstrVec <- nList(nodeInstr_nClass())$new()
+    },
+    compileInfo = list(constructor=TRUE)
+  )),
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                file.path("calcInstr_nC")),
   compileInfo=list(interface="full",

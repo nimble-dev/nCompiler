@@ -173,8 +173,11 @@ inGenCppEnv(
 
 inGenCppEnv(
   Assign <- function(code, symTab) {
+    orig_name <- code$name
     code$name <- ' = '
-    MidOperator(code, symTab)
+    res <- MidOperator(code, symTab)
+    code$name <- orig_name
+    res
   }
 )
 
@@ -636,7 +639,10 @@ inGenCppEnv(
 
 inGenCppEnv(
   PrependNamespace <- function(code, symTab) {
+    orig_name <- code$name
     code$name = paste0('nCompiler::', code$name, sep = '')
-    compile_generateCpp(code, symTab)
+    res <- compile_generateCpp(code, symTab)
+    code$name <- orig_name
+    res
   }
 )

@@ -7,16 +7,7 @@ library(testthat)
 ## # To update the set of predefined nClasses
 ## # generate new predef/nodeInstr_nC. Move that directly to package code inst/nCompiler/predef/nodeInstr_nC
 ## nCompile(nodeInstr_nClass, control=list(generate_predefined=TRUE))
-test <- nCompile(nodeInstr_nClass)
-test$new()
-test <- nCompile(nodeInstr_nClass, returnList = TRUE)
-names(test)
-test[[1]]$new()
-test <- nCompile(nodeInstr_nClass, package = TRUE, returnList = TRUE)
-names(test)
-test[[1]]$new()
-test <- nCompile(nodeInstr_nClass, package = TRUE)
-test$new()
+## test <- nCompile(nodeInstr_nClass)
 ## #
 ## # generate new predef/calcInstr_nC. Ditto: move directly to package code
 ## nCompile(calcInstr_nClass, control=list(generate_predefined=TRUE))
@@ -98,7 +89,7 @@ test_that("nimble model prototype works", {
       expect_equal(dim(obj$gamma), c(3, 5))
 
       obj$x <- 11:15
-      expect_equal(nodeObj$calc_one(c(3)), 13) # crash
+      expect_equal(nodeObj$calc_one(c(3)), 13)
       rm(obj, nodeObj); gc()
     }
   }
