@@ -828,11 +828,12 @@ check_unknown_types <- function(type, where = parent.frame(),
                   where = where,
                   project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
   if(!isNCgenerator(candidate)) {
-    candidate <- check_built_types(candidate = candidate,
+    candidate2 <- check_built_types(candidate = candidate,
             typeSpec = typeSpec, where = where,
             project_env = project_env,
             returnID = returnID)
-    if(returnID) return(candidate)
+    if(returnID) return(candidate2) # candidate2 *can* be NULL.
+    candidate <- candidate2 %||% candidate
   }
   if(isNCgenerator(candidate)) {
     if(returnID) {
