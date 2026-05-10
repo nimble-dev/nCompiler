@@ -88,7 +88,7 @@ static Rcpp::RObject Rexpr_2_RvarExpr(Rcpp::RObject Rexpr) {
   if(Rcpp::is<Rcpp::Symbol>(Rexpr)) return Rexpr;
   if( Rcpp::is<Rcpp::Language>(Rexpr) ) {
     Rcpp::Language lang(Rexpr);
-    if (lang[0] == Symbol("[")) {
+    if (CAR(static_cast<SEXP>(lang)) == R_BracketSymbol) { // equiv: Rcpp::Symbol(lang[0]) == Rcpp::Symbol("[")
       return static_cast<SEXP>(lang[1]);
     }
     return Rexpr;
@@ -146,7 +146,7 @@ std::vector<b__> Rinputs_2_indexBlockArray(Rcpp::RObject Rdata,
   bool isIndexed = false;
   if(Rcpp::is<Rcpp::Language>(Rexpr) ) {
     lang = Rcpp::Language(Rexpr);
-    isIndexed = (lang[0] == Symbol("["));       
+    isIndexed = (CAR(static_cast<SEXP>(lang)) == R_BracketSymbol); // equiv: Rcpp::Symbol(lang[0]) == Rcpp::Symbol("[")
   }
   if(isIndexed) {
     if( (lang.size() - 2) != nDim ) {
@@ -160,7 +160,7 @@ std::vector<b__> Rinputs_2_indexBlockArray(Rcpp::RObject Rdata,
       RcurrentIndex = lang[i + 2];
       if(Rcpp::is<Rcpp::Language>(RcurrentIndex)) { // should be `:`(start, end)
         Rcpp::Language indexLang(RcurrentIndex);
-        if(indexLang[0] != Symbol(":")) {
+        if(CAR(static_cast<SEXP>(indexLang)) != Rf_install(":")) { // equiv: Rcpp::Symbol(indexLang[0]) != Rcpp::Symbol(":")
           Rcpp::stop("Problem: Index in a refBlock argument has an operation that is not ':'.");
         }
         int first = SEXP_eval_to_single_int(indexLang[1], Renv);
@@ -178,7 +178,7 @@ std::vector<b__> Rinputs_2_indexBlockArray(Rcpp::RObject Rdata,
       } else { // index entry is a number, a variable, or a blank.
         bool isBlank = false;
         if(Rcpp::is<Rcpp::Symbol>(RcurrentIndex)) {
-          isBlank = Rcpp::Symbol(RcurrentIndex) == R_MissingArg;
+          isBlank = (static_cast<SEXP>(RcurrentIndex) == R_MissingArg); // equiv: Rcpp::Symbol(RcurrentIndex) == R_MissingArg
         }
         if(isBlank) {
           //PRINTF("blank\n");

@@ -480,7 +480,6 @@ test_that("nested pass by ref works", {
   expect_equal(x, 3:4)
 })
 
-## FIXED when nested from R to C++ with brackets in use.
 test_that("nested pass by blockRef case 1 works", {
   foo1 <- nFunction(
     fun=function(x=double(1)) {
@@ -533,10 +532,10 @@ test_that("nested pass by blockRef case 1 works", {
   )
   x <- as.numeric(1:2)
   foo4(x[1:2])
-  expect_equal(x, 3:4) ## FIXED
+  expect_equal(x, 3:4)
 })
 
-# FAIL with the same argument pass by refArg to C++
+# KNOWN FAILURES aka things that will not work.
 # This will NEVER (in any forseeable way) be made to work
 # in the case from R to C++
 test_that("pass by ref with same ref in multiple args works except R->C++", {
@@ -570,14 +569,12 @@ test_that("pass by ref with same ref in multiple args works except R->C++", {
 
   v <- as.numeric(1:2)
   C$foo1(v, v)
-  expect_false(identical(v, 3:4)) # FAIL
+  expect_false(identical(v, 3:4)) # WILL NOT WORK
 
   v <- as.numeric(1:2)
   C$foo2(v, v)
-  expect_false(identical(v, (1:2)+3)) # FAIL
-
+  expect_false(identical(v, (1:2)+3)) # WILL NOT WORK
   # Nest from R to C++
-
 })
 
 # This will NEVER be made to work in the case from R to C++
