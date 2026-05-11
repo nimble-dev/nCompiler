@@ -1229,10 +1229,10 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'sparseCholFactor',
+  'sparseChol',
   list(
     labelAbstractTypes = list(
-      handler = 'sparseCholFactor'
+      handler = 'sparseChol'
     )
   )
 )

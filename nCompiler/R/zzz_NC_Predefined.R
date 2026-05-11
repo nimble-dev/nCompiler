@@ -142,4 +142,15 @@ OptimResultList <- PDdevel %||% nClass(
   )
 )
 
+#' @export
+sparseCholFactor <- nClass(
+    classname = 'sparseCholFactor',
+    predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("sparseCholFactor_nC")),
+    Cpublic = list(
+        llt = 'simplicialLLT'
+    ) 
+)
+
 rm(PDdevel)
+
