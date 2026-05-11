@@ -268,6 +268,9 @@ typeDeclarationList <- list(
                            type = "double") {
     nSparseType(scalarType = type, nDim = 1)
   },
+  simplicialLLT = function() {
+    symbolSimplicialLLT$new()
+  },
   nList = function(type) {
     elementSym <- argType2symbol(type)
     symbolNlist$new(elementSym = elementSym)

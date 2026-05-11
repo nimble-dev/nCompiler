@@ -522,6 +522,26 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  sparseChol <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    if(exists('paciorek')) browser()
+    if(inherits(argType, 'symbolSparse')) {
+      # Cholesky factor of a sparse matrix is a collection of information
+        code$type <- symbolNC$new(
+          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+      )
+    } else {   # Fill in here when handle dense too.
+      # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
+      type <- setReturnType(handlingInfo, argType$type)
+      nDim <- setReturn_nDim(handlingInfo, argType$nDim)
+      code$type <- symbolBasic$new(type = type, nDim = nDim)
+    }
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
@@ -1602,12 +1622,14 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  sparseCholFactor <- function(code, symTab, auxEnv, handlingInfo) {
+    # nChol
+  chol <- function(code, symTab, auxEnv, handlingInfo) {
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(inherits(argType, 'symbolSparse')) {
       code$type <- symbolSimplicialLLT$new(name = code$name)
-    } else 
+    } else
+        ## Put dense chol handling here
       stop(exprClassProcessingErrorMsg(
         code,
         'sparse Cholesky factor only supported for sparse matrices.'
@@ -1618,7 +1640,6 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
     sparseCholLogdet <- function(code, symTab, auxEnv, handlingInfo) {
-        if(exists('paciorek')) browser()
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     code$type <- symbolBasic$new(nDim = 0, type = 'double')
   }

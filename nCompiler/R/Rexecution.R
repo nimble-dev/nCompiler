@@ -318,7 +318,7 @@ nChol <- function(x) {
 #'
 #' @examples TODO
 #' 
-sparseCholFactor <- function(x) {
+sparseChol <- function(x) {
   Matrix::Cholesky(x)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
 }
 

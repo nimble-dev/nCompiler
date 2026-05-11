@@ -635,16 +635,19 @@ symbolSimplicialLLT <- R6::R6Class(
   inherit = symbolBase,
   portable = TRUE,
   public = list(
+    interface = FALSE,  
     initialize = function(...) {
-      super$initialize(...)
-      self$type = "simplicialLLT"  # "simplicialLLT_ptr" ?
+      super$initialize(..., interface = self$interface)
+      self$type <- "simplicialLLT"
       self  
     },
-    print = function() print(self$type),
+    print = function() {
+      writeLines(paste0(self$name, ': symbolSimplicialLLT'))
+    },
     genCppVar = function() {
       cppVarFullClass$new(name = self$name,
-                          baseType = "std::shared_ptr",
-                          templateArgs = "Eigen::SimplicialLLT<Eigen::SparseMatrix<double> >")
+                          baseType = "Eigen::SimplicialLLT",  #  "std::shared_ptr",
+                          templateArgs = list("Eigen::SparseMatrix<double>"))
     }
   )
 )
