@@ -10,7 +10,7 @@ std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symm
     int nrows(x_map.rows());
     int ncols(x_map.cols());
     // potentially error-trap of nrows == ncols.
-    std::shared_ptr<EigenDecomp> ans(new EigenDecomp);
+    std::shared_ptr<EigenDecomp> ans(new EigenDecomp);  // TODO: Should this use `nClass_builder`?
     ans->values.resize(nrows);
     auto values_map = matmap(ans->values);
     if(!valuesOnly){
