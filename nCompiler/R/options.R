@@ -75,7 +75,7 @@ set_nOption <- function(x, value, listName = NULL) {
       .nOptions[[listName]] <- list() # overwrite any existing object
     .nOptions[[listName]][[x]] <- value
   }
-  value
+  invisible(value)
 }
 
 #' Get nCompiler Option
