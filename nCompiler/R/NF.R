@@ -130,7 +130,7 @@ nFunction <- function(fun,
   # ADfun: should become AD_nFun
   ###
 
-  if(missing(name))
+  if(missing(name) || !length(name))   # Check for empty `name` per issue 162.
     name <- nFunctionLabelMaker()
   ## Create internals that will be used for compilation.
   internals <- NF_InternalsClass$new(fun,
