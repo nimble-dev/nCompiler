@@ -72,8 +72,8 @@ using namespace Rcpp;
 #include <nCompiler/nC_inter_Rcpp_ext/nC_inter_Rcpp_ext_post_Rcpp.h>
 #endif
 
-#ifdef NCOMPILER_USES_NLIST
-#include <nCompiler/nList/nList_post_Rcpp.h>
+#ifdef NCOMPILER_USES_NCPPVEC
+#include <nCompiler/nCppVec/nCppVec_post_Rcpp.h>
 #endif
 
 // Main Rinternals include

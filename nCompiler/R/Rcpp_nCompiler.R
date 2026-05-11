@@ -61,24 +61,26 @@ cppDefs_2_RcppPacket <- function(cppDef,
   cppCode <-
     unlist(
       lapply(allCppDefs,
-             function(x)
+             function(x) {
+               gen <- x$generate()
                capture.output( {
                  writeLines("")
-                 writeCode(x$generate())
+                 writeCode(gen)
                }, split = debugCpp) ## for debugging to send handler output to console
-             ),
+              }),
       use.names = FALSE
     )
 
   hCode <-
     unlist(
       lapply(allCppDefs,
-             function(x)
+             function(x) {
+               gen <- x$generate(declaration=TRUE)
                capture.output( {
                  writeLines("")
-                 writeCode(x$generate(declaration=TRUE))
+                 writeCode(gen)
                })
-             ),
+              }),
       use.names = FALSE
     )
 

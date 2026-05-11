@@ -1,5 +1,10 @@
 nClassLabelMaker <- labelFunctionCreator('nClass')
 
+#' @keywords internal3
+#' @noRd
+#' @rawNamespace export(nClassClass)
+NULL
+
 nClassClass <- R6::R6Class(
   classname = "nClass",
   portable = FALSE,
@@ -12,6 +17,11 @@ nClassClass <- R6::R6Class(
     }
   )
 )
+
+#' @keywords internal3
+#' @noRd
+#' @rawNamespace export(CpubClass)
+NULL
 
 CpubClass <- R6::R6Class(
   classname = "CpubClass",
@@ -150,7 +160,7 @@ nClass <- function(classname,
   if(missing(classname))
     classname <- c(generated = nClassLabelMaker())
   if(is.null(compileInfo$classname))
-    compileInfo$classname <- paste0(classname, "_compiled")
+    compileInfo$classname <- classname # paste0(classname, "_compiled") # the classname field of the R6 generators *can* be the same and it is useful for S3 dispatch
   if('finalize' %in% names(Cpublic)) {
     if('finalize' %in% names(Rpublic))
       stop("If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",
@@ -333,10 +343,11 @@ make_nClass_code <- function(internals,
          ACTIVE = activeBindings_list_code,
          INHERIT =
            if(inherit_provided) inheritQ
-         else quote(nCompiler::nClassClass))
+         else quote(nCompiler::nClassClass)) # devtools::document() problem if we use :: instead of ::: for first run, then can change
   )
 }
 
+#' @export
 connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
   # The NCgen at this point has been created by R6::R6Class
   # with "parent_env = new.env()".

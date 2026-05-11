@@ -102,6 +102,7 @@ nFunction <- function(fun,
   #   scopes, args,
   #   qualifiers
   # Also cpp_code_name (see NF_InternalsClass).
+  TreturnType <- nCaptureType(returnType)
   compileInfo <- updateDefaults(
     list(C_fun = NULL,
          callFromR = TRUE,
@@ -137,7 +138,7 @@ nFunction <- function(fun,
                                      argTypes = argTypes,
                                      refArgs = refArgs,
                                      blockRefArgs = blockRefArgs,
-                                     returnType = returnType,
+                                     returnType = {{TreturnType}},
                                      enableDerivs = enableDerivs,
 #                                     check = check,
 #                                     C_fun = C_fun,

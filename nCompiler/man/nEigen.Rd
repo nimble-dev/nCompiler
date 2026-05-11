@@ -4,7 +4,7 @@
 \alias{nEigen}
 \title{Spectral Decomposition of a Matrix}
 \usage{
-nEigen(x)
+nEigen(x, symmetric, valuesOnly = FALSE)
 }
 \arguments{
 \item{x}{a numeric or complex matrix whose spectral decomposition is to be 

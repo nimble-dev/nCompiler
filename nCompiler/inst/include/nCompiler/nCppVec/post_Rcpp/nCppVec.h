@@ -1,10 +1,10 @@
-#ifndef NLIST_H_
-#define NLIST_H_
+#ifndef NCPPVEC_H_
+#define NCPPVEC_H_
 
-// I think nList could be done as a pre_Rcpp if we determine we
+// I think nCppVec could be done as a pre_Rcpp if we determine we
 // won't use genericInterfaceC.
 template<typename T>
-class nList { // : public genericInterfaceC<nList<T> > {
+class nCppVec { // : public genericInterfaceC<nCppVec<T> > {
 private:
   std::vector< T  > contents;
 public:
@@ -19,36 +19,36 @@ public:
   size_t size() const {return contents.size();}
   T& operator[](size_t i) {return contents[i];}
   const T& operator[](size_t i) const {return contents[i];}
-  nList() {};
-  nList(size_t len) : contents(len) {};
+  nCppVec() {};
+  nCppVec(size_t len) : contents(len) {};
 };
 
 // These chunks of commented code record the thought process and experiments
-// with making nLists<>s inherit from genericInterfaceC.
+// with making nCppVecs<>s inherit from genericInterfaceC.
 // I don't think it's really natural to do so but it could become handy in some situaitons.
 //
-// I am not sure we really need nList<>s to be genericInterfaces
+// I am not sure we really need nCppVec<>s to be genericInterfaces
 //  That would mean we want to get an extptr and manually change them.
 //  We can do it and include the following, but we'd need to make sure
 //  this only appears once (as it defines static template members)
-// We'll make a specialized macro for nList interface
+// We'll make a specialized macro for nCppVec interface
 // This did compile from here to....
-// #define NCOMPILER_INTERFACE_NLIST(T)\
+// #define NCOMPILER_INTERFACE_NCPPVEC(T)\
 //   template <>\
-//    int genericInterfaceC<nList<T> >::name_count = 0;	\
+//    int genericInterfaceC<nCppVec<T> >::name_count = 0;	\
 //    template<>\
-//    genericInterfaceC<nList<T> >::name2index_type genericInterfaceC<nList<T> >::name2index {};\
+//    genericInterfaceC<nCppVec<T> >::name2index_type genericInterfaceC<nCppVec<T> >::name2index {};\
 //    template<>\
-//    genericInterfaceC<nList<T> >::name2access_type genericInterfaceC<nList<T> >::name2access \
+//    genericInterfaceC<nCppVec<T> >::name2access_type genericInterfaceC<nCppVec<T> >::name2access \
 //    {}\
 //    ;\
 //    template<>\
-//    genericInterfaceC<nList<T> >::name2method_type genericInterfaceC<nList<T> >::name2method \
+//    genericInterfaceC<nCppVec<T> >::name2method_type genericInterfaceC<nCppVec<T> >::name2method \
 //    {\
-//  method("resize", &nList<T>::resize, args({{arg("i",copy)}}))\
+//  method("resize", &nCppVec<T>::resize, args({{arg("i",copy)}}))\
 //    }\
 //  ;
-//NCOMPILER_INTERFACE_NLIST(double)
+//NCOMPILER_INTERFACE_NCPPVEC(double)
 // ...here
 
 // Following is an idea of how we'd need another calling interface since there would be no shared_ptr.
@@ -71,13 +71,13 @@ public:
 namespace Rcpp {
   namespace traits {
     template <typename T>
-    class Exporter< nList< T > > {
+    class Exporter< nCppVec< T > > {
     public:
       Exporter(SEXP Sx) :
         Sinput(Sx) { }
-      inline nList< T > get(){
+      inline nCppVec< T > get(){
         Rcpp::List Rlist(Sinput);
-        nList<T> ans(Rlist.size());
+        nCppVec<T> ans(Rlist.size());
         for(size_t i = 0; i < ans.size(); ++i) {
           ans[i] = Rcpp::as<T>(Rlist[i]); // explicit template argument required here
         }
@@ -91,7 +91,7 @@ namespace Rcpp {
 
 namespace Rcpp {
   template<typename T>
-  SEXP wrap(const nList< T > & obj ) {
+  SEXP wrap(const nCppVec< T > & obj ) {
     Rcpp::List Sans = Rcpp::List( obj.size());
     std::cout<<"wrap "<<obj.size()<<std::endl;
     for(size_t i = 0; i < obj.size(); ++i)
@@ -101,4 +101,4 @@ namespace Rcpp {
 }
 
 
-#endif // NLIST_H_
+#endif // NCPPVEC_H_

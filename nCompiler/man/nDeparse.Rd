@@ -7,7 +7,7 @@
 nDeparse(code, indent = "", toR = FALSE)
 }
 \arguments{
-\item{code}{An \code{exprClass} object, representing a.nCompiler parse
+\item{code}{An \code{exprClass} object, representing a nCompiler parse
 tree.}
 
 \item{indent}{Amount of indentation in text output if \code{toR} is

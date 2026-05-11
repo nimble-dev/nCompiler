@@ -4,6 +4,8 @@ message("test-indexing works but there are disabled tests at the end waiting for
 ## indexing by numeric vector for higher dimensional objects and for multiple indexing dimensions at once.
 ## setting option nimble=TRUE or the component options TRUE
 
+message("tests needed of empty brackets on LHS.")
+
 test_that("indexing by numeric vector works", {
   nC <- nClass(
     Cpublic = list(

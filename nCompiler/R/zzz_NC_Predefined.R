@@ -1,3 +1,8 @@
+# This flag should normally be set to NULL
+# Setting it non-null supports development work on nClass itself
+# by allowing package building even if nClass is broken.
+PDdevel <- NULL
+
 # predefined classes can be included as compilation object in a call
 # to nCompile just like others.
 # The difference is that pre-existing C++ code will be used to implement them.
@@ -9,7 +14,7 @@
 # The current idea is that the feature, or a wrapper to it, will also live in a predefined.
 ##
 #' @export
-test_predefined <- nClass(
+test_predefined <- PDdevel %||% nClass(
   predefined = "test_predefined_pkg",
   classname = "test_predefined",
   Cpublic = list(
@@ -24,7 +29,7 @@ test_predefined <- nClass(
 ## because they aren't seen by a predefined.
 
 #' @export
-derivClass <- nClass(
+derivClass <- PDdevel %||% nClass(
   classname = "derivClass",
   predefined = "derivClass_pkg",
   Cpublic = list(
@@ -39,7 +44,7 @@ derivClass <- nClass(
 ##                                              function() new_nC_derivClass())
 
 #' @export
-EigenDecomp <- nClass(
+EigenDecomp <- PDdevel %||% nClass(
   classname = 'EigenDecomp',
   predefined = "EigenDecomp_pkg",
   Cpublic = list(
@@ -53,7 +58,7 @@ EigenDecomp <- nClass(
 ##                                          function() new_EigenDecomp())
 
 #' @export
-SVDDecomp <- nClass(
+SVDDecomp <- PDdevel %||% nClass(
   classname = 'SVDDecomp',
   predefined = "SVDDecomp_pkg",
   Cpublic = list(
@@ -64,8 +69,12 @@ SVDDecomp <- nClass(
 )
 
 
-#' @export
-OptimControlList <- nClass(
+#' @keywords internal2
+#' @noRd
+#' @rawNamespace export(OptimControlList)
+NULL
+
+OptimControlList <- PDdevel %||% nClass(
   classname = 'OptimControlList',
   predefined = "OptimControlList_pkg",
   Cpublic = list(
@@ -113,7 +122,7 @@ OptimControlList <- nClass(
 
 
 #' @export
-OptimResultList <- nClass(
+OptimResultList <- PDdevel %||% nClass(
   classname = 'OptimResultList',
   predefined = "OptimResultList_pkg",
   Cpublic = list(
@@ -125,3 +134,5 @@ OptimResultList <- nClass(
     message = 'RcppCharacterVector'
   )
 )
+
+rm(PDdevel)

@@ -1,5 +1,34 @@
 cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
 
+## Compare two compilation units for identity, preferring classID over identical().
+## For NCgenerators, classID (a digest hash) is always set and gives stable identity
+## even for dynamically generated parameterised types like nList where two separate
+## R objects can represent the same logical type.
+unit_is_duplicate <- function(a, b) {
+  if(isNCgenerator(a) && isNCgenerator(b)) {
+    id_a <- NCinternals(a)$classID
+    id_b <- NCinternals(b)$classID
+    if(!is.null(id_a) && !is.null(id_b))
+      return(id_a == id_b)
+  }
+  identical(a, b)
+}
+
+## classID-aware replacement for unique() on lists of compilation units.
+unique_units <- function(units) {
+  if(length(units) <= 1L) return(units)
+  keep <- rep(TRUE, length(units))
+  for(i in seq(2L, length(units))) {
+    for(j in seq(1L, i - 1L)) {
+      if(keep[j] && unit_is_duplicate(units[[i]], units[[j]])) {
+        keep[i] <- FALSE
+        break
+      }
+    }
+  }
+  units[keep]
+}
+
 # How names are handled through nCompile
 #
 # When nCompile is called with an nClass generator (as an argument):
@@ -94,7 +123,8 @@ get_nCompile_types <- function(units) {
 nCompile_createCppDefsInfo <- function(units,
                               unitTypes,
                               control,
-                              compileInfos) {
+                              compileInfos,
+                              project_env = new.env()) {
   if(is.null(names(units))) names(units) <- rep('', length(units))
   if(length(units) == 0) stop('No objects for compilation provided')
   unitResults <- vector("list", length(units))
@@ -108,14 +138,16 @@ nCompile_createCppDefsInfo <- function(units,
                                       stopAfterCppDef = TRUE,
                                       env = env,
                                       compileInfo = compileInfo,
-                                      control = control)
+                                      control = control,
+                                      project_env = project_env)
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
     } else if(unitTypes[i] == "nCgen") {
       oneResult <- nCompile_nClass(units[[i]],
                                   stopAfterCppDef = TRUE,
                                   env = env,
                                   compileInfo = compileInfo,
-                                  control = control)
+                                  control = control,
+                                  project_env = project_env)
       cpp_names[i] <- NCinternals(units[[i]])$cpp_classname
     }
     if(!is.list(oneResult)) stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
@@ -138,23 +170,35 @@ cppDefsList_2_RcppPacketList <- function(cppDefs) {
 }
 
 # prepare information for compilation units:
-#.  names, interface type, unit types, inherits.
+#  names (exportName, returnName, packageNames[compiled and uncompiled]),
+#  interface type, unit types, inherits.
 # previously this was done inside nCompile, but
 # now we separate it so we can recurse on units
 # that need other units that then need prepared
 # information
 nCompile_prepare_units <- function(...,
-                        #  dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                        #  cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
-                        #  env = parent.frame(),
-                        #  control = list(),
-                        #  unitControls = list(),
-                          interfaces = list()#,
-                        #  package = FALSE,
-                        #  returnList = FALSE
+                          interfaces = list()
                         ) {
+  # Input can arrive in several ways:
+  # - separate units in ..., with or without names
+  # -  some elements of ... can be lists of units, with or without names
+  # -  notably, when auto-included units are found iteratively,
+  # -  they will be passed here an unnamed list of units.
+  #
+  # If the interfaces argument is provided, then names(units) will be used
+  # and in particular an unnamed list is not allowed.
+  # (when called for auto-included units, list elements are unnamed, but interfaces is not provided.)
+  #
+  # A key use case is predefined nClasses that are generated once
+  # and then later used, including auto-included, by either package or non-package
+  # pathways.
+  # In that case the exportName *must* be stable, so the naming 
+  #  decision tree below should be careful with exportName.
+  # Recommended will be to provide it explicitly in the compileInfo$exportName
+  #.  of a predefined nClass, and then that must be respected.
+
+
   #(1) Put together inputs from ...
-  # cat("starting nCompile\n")
   # dotsDeparses is used to get default names for unnamed inputs.
   dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
   # origList can have several kinds of elements:
@@ -162,6 +206,10 @@ nCompile_prepare_units <- function(...,
   # nf = nFunction
   # not_used = list(nc1 = nc1, nf1 = nf2, etc) (in which case the name of the list isn't used)
 
+  # When input has units within the ..., 
+  # any unnamed units get a default name by deparsing the ... entry.
+  # e.g. nCompile(foo) gets a default name of "foo", as if it were nCompile(foo=foo)
+  # But unnamed entries in a provided list are left with name "" and get named at the end.
   origList <- list(...)
   if(is.null(names(origList)))
     names(origList) <- rep('', length(origList))
@@ -179,7 +227,10 @@ nCompile_prepare_units <- function(...,
   boolNoName <- names(units)=='NO_NAME_PROVIDED' | names(units)==''
   names(units)[names(units)=='NO_NAME_PROVIDED'] <- dotsDeparse_boolNoName_before_c
 
+  # This retains info about what was provided as input so we can respect that later.
   inputNamesInfo <- list(names = names(units), boolNameProvided = !boolNoName)
+
+  interfaces_provided <- !(identical(interfaces, list()))
 
   # (1b) Unpack interfaces argument from various formats.
   # Remember interface is only needed for nClass compilation units
@@ -187,28 +238,35 @@ nCompile_prepare_units <- function(...,
   # the interfaces argument, it will over-ride nClass-specific values
   #  from compileInfos. If a named vector of list is provided,
   #  they will over-ride on a one-by-one bases.
-  if(!is.list(interfaces)) {
-    if(is.character(interfaces)) {
-      if(length(interfaces) == 1) {
-        interfaces <- rep(interfaces, length(units))
-        names(interfaces) <- names(units) # nFunction units will just be ignored
+  # Note that this uses names(units). That's why we skip it if interfaces weren't provided,
+  #.  allowing names(units) to be empty ("").
+  if(interfaces_provided) {
+    if(!is.list(interfaces)) {
+      if(is.character(interfaces)) {
+        if(length(interfaces) == 1) {
+          interfaces <- rep(interfaces, length(units))
+          names(interfaces) <- names(units) # nFunction units will just be ignored
+        }
       }
+      interfaces <- as.list(interfaces)
     }
-    interfaces <- as.list(interfaces)
+    # check for invalid interface names.
+    # We could add a check for interfaces that are not for nClasses.  
+    if(!all(names(interfaces) %in% names(units))) {
+      i_bad_names <- which(!(names(interfaces) %in% names(units)))
+      stop("Some names in 'interfaces' do not match names of compilation units in '...':",
+          paste(names(interfaces)[i_bad_names], collapse=','))
+    }
+    # make interfaces match the order of units and fill in NULLs when no interface is provided
+    # (which will be the case for nFunctions)
+    for(un in names(units))
+      if(!(un %in% names(interfaces))) interfaces[un] <- ""
+    interfaces <- interfaces[names(units)]
+  } else {
+    interfaces <- rep("", length(units))
+    names(interfaces) <- names(units) # could have blanks at this point, will be renamed at the end
   }
-  # check for invalid interface names.
-  # We could add a check for interfaces that are not for nClasses.
-  if(!all(names(interfaces) %in% names(units))) {
-    i_bad_names <- which(!(names(interfaces) %in% names(units)))
-    stop("Some names in 'interfaces' do not match names of compilation units in '...':",
-         paste(names(interfaces)[i_bad_names], collapse=','))
-  }
-  # make interfaces match the order of units and fill in NULLs when no interface is provided
-  # (which will be the case for nFunctions)
-  for(un in names(units))
-    if(!(un %in% names(interfaces))) interfaces[un] <- ""
-  interfaces <- interfaces[names(units)]
-
+  
   unitTypes <- get_nCompile_types(units)
 
   # We defer processing of nClass inheritance until compile time to allow nClass
@@ -230,9 +288,10 @@ nCompile_prepare_units <- function(...,
   # set up exportNames, returnNames, and packageNames
   # exportNames: These appear in C++ as [[Rcpp::export(exportName = <exportName>)]].
   #              Thus they give the name of the R function that will call the C++ version of the nFunction or nClass generator function.
-  # returnNames: These are the names used in the list returned from nCompile.
+  #.      IF PROVIDED, this must be respected so that predefined nClasses will have stable exportName.
+  # returnNames: These are the names used in the list returned from nCompile (for units provided by the user, not auto-included)
   # packageNames: Each element is a vector of two names. The first is the
-  #               uncompiled generator name in pacakge code. The second is the
+  #               uncompiled generator name in package code. The second is the
   #               compiled generator name in package code.
   #               If there is inheritance, the uncompiled generator name should be the one
   #               used for inheritance by derived classes.
@@ -252,7 +311,7 @@ nCompile_prepare_units <- function(...,
   # [nFunction case:] packageNames$compiled next defaults to exportName.
   # returnName next defaults to packageNames$compiled, if provided (or just set in nFunction case)
   # returnName next defaults to default name from inputs (deparsed from ...), if available.
-  # exportName next defaults to returnName, if provided.
+  # exportName next defaults to returnName, if provided (or already set).
   # returnName next defaults to exportName, if provided.
   # [nClass case:] exportName and returnName next default to the classname
   # [nFunction case:] exportName defaults to NFinternals -> cpp_code_name;
@@ -263,17 +322,17 @@ nCompile_prepare_units <- function(...,
   #.   packageNames$compiled defaults to returnName.
   # If we have only packageNames$compiled (provided, or defaulting to returnName)
   #.   packageNames$uncompiled next defaults to the deparsed ... name, if available, otherwise returnName, if distinct,
-  #.   otherwise paste0(packageNames$compiled, "_uncompiled")
-  #.     THIS DEFAULT is natural for simple cases but COULD BREAK inherits arguments.
-  #.     Hence we may want to error-trap on this later.
+  #.   otherwise returnName
+  #.     Beware for cases where this breaks the inherits scheme (because an nClass inheriting from this class must find the uncompiled generator name).
+  #.   If this results in packageNames$uncompiled and packageNames$compiled being the same, then append "_uncompiled" to packageNames$uncompiled.
   # If only packageNames$uncompiled is provided:
   #    packageNames$compiled next defaults to returnName
   # If packageNames$compiled and packageNames$uncompiled match (even possibly by faulty user input)
   #.   append "_compiled" to packageNames$compiled
-  #    This may be then hard to find if unexpected by the user, but they need to give better input.
+  #    This may be then hard to find if unexpected by the user, but they need to give better input (likely via compileInfo$packageNames).
   #
   # [nClass case:] If exportName matches either packageNames element:
-  #.   if interface=="full", exportName gets "_new" appended.
+  #.   if interface=="full" and the exportName was not provided, exportName gets "_new" appended.
   #    Otherwise the conflicting name gets "_compiled" or "_uncompiled" appended
   #
   # Examples:
@@ -289,18 +348,10 @@ nCompile_prepare_units <- function(...,
   #.  Whatever is exported from Rcpp is directly the function in R to call that C++ function.
   #   Hence the separate steps above
   #
-  # DEPRECATED COMMENTS TO REMOVE WHEN CLEANING UP
-  # exportNames will be from names(units) if named in the call or there is no exportName in the NF or NC compileInfo
-  # Otherwise (i.e. no name provided in call and there is an exportName in the object def), use the exportName in the object def (compileInfo)
-  #
-  # The only case where exportNames and returnNames will be different will be an nClass with full interface.
-  # Then exportName is the new-object function and that needs to be different from the
-  # returned name for the nClass generator.
-  # e.g. for nc1, exportName will be new_nc1 but returnName will be nc1.
   returnNames <- exportNames <- vector("character", length(units))
   packageNames <- vector("list", length(units))
   compileInfos <- structure(vector("list", length(units)),
-                            names = names(units))
+                            names = names(units)) # could have blanks at this point, will be filled in below
   for(i in seq_along(units)) {
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       compileInfo <- NFinternals(units[[i]])$compileInfo
@@ -314,7 +365,11 @@ nCompile_prepare_units <- function(...,
         stop("Could not determine a valid interface value ('full', 'generic', or 'none') for ", names(units)[i])
     }
 
-    if(!is.null(compileInfo$exportName)) exportNames[i] <- compileInfo$exportName
+    exportName_provided <- FALSE
+    if(!is.null(compileInfo$exportName)) {
+      exportNames[i] <- compileInfo$exportName
+      exportName_provided <- TRUE
+    }
     if(isTRUE(inputNamesInfo$boolNameProvided[i])) returnNames[i] <- inputNamesInfo$names[i]
     if(!is.null(compileInfo$packageNames)) packageNames[[i]] <- compileInfo$packageNames
     if(is.null(packageNames[[i]])) packageNames[[i]] <- c(uncompiled = "", compiled = "")
@@ -373,7 +428,7 @@ nCompile_prepare_units <- function(...,
         packageNames[[i]]["compiled"] <- paste0(packageNames[[i]]["uncompiled"], "_compiled")
 
       if(exportNames[i] %in% packageNames[[i]]) {
-        if(interfaces[i] == "full") {
+        if(interfaces[i] == "full" && !exportName_provided) {
           exportNames[i] <- paste0(exportNames[i], "_new")
         } else {
           if(exportNames[i] == packageNames[[i]]["compiled"])
@@ -389,8 +444,12 @@ nCompile_prepare_units <- function(...,
       }
     }
 
-    if(names(units)[i] == "") names(units)[i] <- returnNames[i]
-
+    if(names(units)[i] == "") {
+      names(units)[i] <- returnNames[i]
+      names(compileInfos)[i] <- returnNames[i]
+      if(unitTypes[i] == "nCgen")
+        names(interfaces)[i] <- returnNames[i]
+    }
     # In some cases this is the first addition of an exportName to a compileInfo
     compileInfo$exportName <- exportNames[i]
     compileInfo$interface <- interfaces[[i]]
@@ -404,6 +463,18 @@ nCompile_prepare_units <- function(...,
      exportNames = exportNames,
      returnNames = returnNames,
      packageNames = packageNames)
+}
+
+update_built_types <- function(new_units, new_unitTypes, cppDefs_project_env) {
+  built_types <- cppDefs_project_env$built_types
+  for(i in seq_along(new_units)) {
+    if(new_unitTypes[i] == "nCgen") {
+      classID <- NCinternals(new_units[[i]])$classID
+      if(exists(classID, envir = built_types, inherits = FALSE)) next
+      built_types[[classID]] <- new_units[[i]]
+    }
+  }
+  built_types
 }
 
 #' @export
@@ -435,6 +506,11 @@ nCompile <- function(...,
   new_returnNames <- unit_info$returnNames # names for returning to user from nCompile
   new_packageNames <- unit_info$packageNames
 
+  unique_new_units <- unique_units(new_units)
+  if(!identical(unique_new_units, new_units)) {
+    stop("All compilation units must be unique.")
+  }
+
   # if package = TRUE, call package steps either with units or original ... (above)
   # after packing up control list (e.g. from interfaces)
   # (2) Create cppDefs
@@ -454,8 +530,13 @@ nCompile <- function(...,
   # to decide whether it is allowed to generate predefined code. For auto_included units, NO.
   new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
 
+  cppDefs_project_env <- new.env()
+  cppDefs_project_env$built_types <- new.env()
+
   while(!done_finding_units) {
-    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos)
+    update_built_types(new_units, new_unitTypes, cppDefs_project_env)
+    existing_built_type_names <- ls(cppDefs_project_env$built_types)
+    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos, cppDefs_project_env)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
 
@@ -469,24 +550,29 @@ nCompile <- function(...,
     cppDefs <- c(cppDefs, new_cppDefs)
     cpp_names <- c(cpp_names, new_cpp_names)
 
-    new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique()
+    new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique_units()
     new_needed_nFunctions <- do.call("c", cppDefs_info$needed_nFunctions) |> unique()
-    names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
+    #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
+    #
+    updated_built_type_names <- ls(cppDefs_project_env$built_types)
+    new_needed_built_nClasses <- lapply(setdiff(updated_built_type_names, existing_built_type_names),
+                                     \(x) cppDefs_project_env$built_types[[x]])
+    # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
     # A bit of design irony: At this point, the needed units are
     # nicely organized into nClasses and nFunctions,
     # but we are going to mix them together as if they were an arbitrary
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
+    new_needed_nClasses <- c(new_needed_nClasses, new_needed_built_nClasses) |> unique_units()
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
-    ## We need to make our own version of setdiff as it won't work on these types.
-    ## For now we rely on identical(). If this gets clunky or inefficient,
-    ## we can refine, but that would then need looking at types of each comparison
-    ## to decide how to do the comparison.
+    ## Use unit_is_duplicate() rather than identical() so that parameterised nClass
+    ## types (e.g. nList) are correctly identified as duplicates even when they
+    ## are represented by different R objects with the same classID hash.
     keep_new_unit <- rep(TRUE, length(new_units))
     for(i in seq_along(new_units)) {
       this_new_unit <- new_units[[i]]
       for(j in seq_along(units)) {
-        if(identical(this_new_unit, units[[j]])) {
+        if(unit_is_duplicate(this_new_unit, units[[j]])) {
           keep_new_unit[i] <- FALSE
           break
         }
@@ -579,7 +665,7 @@ nCompile <- function(...,
         devtools::install(pkgDir,
                           quick = TRUE,
                           quiet = !isTRUE(get_nOption("showCompilerOutput")),
-                          upgrade = "never") # Make quiet follow showCompilerOutput
+                          upgrade = FALSE, dependencies = FALSE) # Make quiet follow showCompilerOutput
         withr::with_libpaths(lib, action="prefix",
                             code = loadNamespace(temppkgname))
       })

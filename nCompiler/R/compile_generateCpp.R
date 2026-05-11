@@ -95,7 +95,19 @@ compile_generateCpp <- function(code,
   # An example is changes made in eigenization, such as inserting `index[`.
   # This is a core operator so it will be found in the check_cachedOpInfo with update=TRUE.
   opInfo <- check_cachedOpInfo(code, where=baseenv(), update=TRUE, allowFail = TRUE)
-  handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
+  handlingInfo <- NULL
+  isGeneric <- isTRUE(opInfo$opDef$isGeneric)
+  if(isGeneric) {
+    if(length(code$args) > 0) {
+      arg1 <- code$args[[1]]
+      if(inherits(arg1$type, "symbolNC")) {
+        handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "cppOutput", inherits=TRUE)
+      }
+      handler <- handlingInfo[['handler']]
+    }
+  }
+  if(is.null(handlingInfo))
+    handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
   #  handler <- getOperatorDef(code$name, "cppOutput", "handler")
   # opInfo <- operatorDefEnv[[code$name]]
   # if(!is.null(opInfo)) {
@@ -160,9 +172,33 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  nList <- function(code, symTab) {
+  Assign <- function(code, symTab) {
+    orig_name <- code$name
+    code$name <- ' = '
+    res <- MidOperator(code, symTab)
+    code$name <- orig_name
+    res
+  }
+)
+
+inGenCppEnv(
+  MakeScalar <- function(code, symTab) {
+    compile_generateCpp(code$args[[1]], symTab)
+  }
+)
+
+# inGenCppEnv(
+#   nList_doubleBracket <- function(code, symTab) {
+#     browser()
+#     inserts <- NULL
+#     if(length(inserts) == 0) NULL else inserts
+#   }
+# )
+
+inGenCppEnv(
+  nCppVec <- function(code, symTab) {
     elementSym <- code$type$elementSym
-    paste0("nList<", elementSym$genCppVar()$generate(), ">(",
+    paste0("nCppVec<", elementSym$genCppVar()$generate(), ">(",
       paste0(unlist(lapply(code$args,
                            compile_generateCpp,
                            symTab,
@@ -388,8 +424,16 @@ inGenCppEnv(
 
 inGenCppEnv(
   IndexingBracket <- function(code, symTab, brackets = c('[', ']')) {
+    # It seems universal that an indexing operation on an NC must be
+    # using operator[ in C++ and must want the shared_ptr to be derefenced.
+    # If that turns out not to be universal, then overloadDefs can be utilized
+    # to specify different handlers for different cases.
+    arg1res <- compile_generateCpp(code$args[[1]], symTab)
+    if(inherits(code$args[[1]]$type, "symbolNC")) {
+      arg1res <- paste0('(*', arg1res, ')')
+    }
     paste0(
-      compile_generateCpp(code$args[[1]], symTab),
+      arg1res,
       brackets[1],
       paste0(
         unlist(
@@ -549,8 +593,9 @@ inGenCppEnv(
 
 inGenCppEnv(
   ScalarCast <- function(code, symTab) {
+    newType <- code$aux$compileArgs$type
     paste0('scalar_cast_<',
-           compile_generateCpp(code$args[[2]]),
+           newType,
            '>::cast(',
            compile_generateCpp(code$args[[1]], symTab),
            ')')
@@ -594,7 +639,10 @@ inGenCppEnv(
 
 inGenCppEnv(
   PrependNamespace <- function(code, symTab) {
+    orig_name <- code$name
     code$name = paste0('nCompiler::', code$name, sep = '')
-    compile_generateCpp(code, symTab)
+    res <- compile_generateCpp(code, symTab)
+    code$name <- orig_name
+    res
   }
 )

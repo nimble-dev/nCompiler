@@ -4,25 +4,31 @@
 library(nCompiler)
 library(testthat)
 
-# To update the set of predefined nClasses
-# generate new predef/nodeInstr_nC. Move that directly to package code inst/nCompiler/predef/nodeInstr_nC
+## # To update the set of predefined nClasses
+## # generate new predef/nodeInstr_nC. Move that directly to package code inst/nCompiler/predef/nodeInstr_nC
 ## nCompile(nodeInstr_nClass, control=list(generate_predefined=TRUE))
+## test <- nCompile(nodeInstr_nClass)
 ## #
 ## # generate new predef/calcInstr_nC. Ditto: move directly to package code
 ## nCompile(calcInstr_nClass, control=list(generate_predefined=TRUE))
+## test <- nCompile(calcInstr_nClass)
 ## #
+## # Previously this was a predefined; not any more.
 ## # generate new predef/calcInstrList_nC. Ditto: move directly to package code
-## nCompile(calcInstrList_nClass, control=list(generate_predefined=TRUE))
+## #nCompile(calcInstrList_nClass, control=list(generate_predefined=TRUE))
+## #test <- nCompile(calcInstrList_nClass)
 ## #
 ## # generate new predef/nodeFxnBase_nC. Move to package and add
 ## # "#include <nCompiler/predef/nodeFxnClass_/nodeFxnClass_.h>" in the hContent
 ## # after declaration of newFxnBase_nClass
 ## nCompile(nodeFxnBase_nClass, control=list(generate_predefined=TRUE))
+## test <- nCompile(nodeFxnBase_nClass)
 ## #
 ## # generate new predef/modelBase_nC. Move to package and add
 ## # "#include <nCompiler/predef/modelClass_/modelClass_.h>" to that file,
 ## # after the declaration of modelBase_nClass.
 ## nCompile(modelBase_nClass, control=list(generate_predefined=TRUE))
+## test <- nCompile(modelBase_nClass)
 ## #nCompile(nodeFxnBase_nClass, nodeInstr_nClass, control=list(generate_predefined=TRUE))
 ## #nCompile(nodeInstr_nClass, calcInstr_nClass, modelBase_nClass, nodeFxnBase_nClass, calcInstrList_nClass, control=list(generate_predefined=TRUE))
 
@@ -43,7 +49,7 @@ test_that("nimble model prototype works", {
       }
     )
   )
-  my_nodeFxn <- make_node_nClass(nodeVarInfo, list(calc_one=calc_one), "test_node")
+  my_nodeFxn <- nCompiler:::make_node_nClass(nodeVarInfo, list(calc_one=calc_one), "test_node")
   my_nodeInfo <- nCompiler:::make_node_info_for_model_nClass("beta_NF1", "my_nodeFxn", "test_node", nodeVarInfo)
 
   modelVarInfo <- list(list(name="x", nDim = 1),
@@ -51,7 +57,7 @@ test_that("nimble model prototype works", {
                        list(name = "sd", nDim = 0),
                        list(name = "gamma", nDim = 2))
   #debug(makeModel_nClass)
-  ncm1 <- makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model", env=environment())
+  ncm1 <- nCompiler:::makeModel_nClass(modelVarInfo, list(my_nodeInfo), classname = "my_model", env=environment())
   #undebug(nCompiler:::addGenericInterface_impl)
   #undebug(nCompiler:::nCompile_finish_nonpackage)
   for(package in c(FALSE, TRUE)) {
@@ -92,21 +98,26 @@ test_that("nimble model prototype works", {
 test_that("nodeInstr_nClass and calcInstr_nClass basics work", {
   for(package in c(FALSE, TRUE)) {
     test <- nCompile(nodeInstr_nClass, calcInstr_nClass, calcInstrList_nClass, control=list(generate_predefined=FALSE), package = package)
-    calcInstrList <- test$calcInstrList_nClass$new()
+    calcInstrList <- test$nList_calcInstr_nClass$new()
     calcInstr <- test$calcInstr_nClass$new()
-    expect_equal(calcInstr$nodeInstrVec, list())
+    expect_equal(calcInstr$nodeInstrVec, NULL)
     ni1 <- test$nodeInstr_nClass$new()
     ni2 <- test$nodeInstr_nClass$new()
     ni1$methodInstr <- 1
     ni2$methodInstr <- 2
-    ni1$indsInstrVec <- list(1:2, 3:4)
-    ni2$indsInstrVec <- list(11:12, 13:14)
-    calcInstr$nodeInstrVec <- list(ni1, ni2)
+#    nList("integerVector")$new()
+#    ni1$indsInstrVec <- nList("integerVector")$new()
+    ni1$indsInstrVec[1:2] <- list(1:2, 3:4)
+    ni2$indsInstrVec
+    ni2$indsInstrVec[1:2] <- list(11:12, 13:14)
+    calcInstr$nodeInstrVec
+    calcInstr$nodeInstrVec[1:2] <- list(ni1, ni2)
+
     expect_true(length(calcInstr$nodeInstrVec)==2)
-    expect_identical(calcInstr$nodeInstrVec[[1]]$indsInstrVec, list(1:2, 3:4))
-    expect_identical(calcInstr$nodeInstrVec[[2]]$indsInstrVec, list(11:12, 13:14))
-    calcInstrList$calcInstrList <- list(calcInstr)
-    expect_equal(calcInstrList$calcInstrList, list(calcInstr))
+    expect_identical(calcInstr$nodeInstrVec[[1]]$indsInstrVec |> as.list(), list(1:2, 3:4))
+    expect_identical(calcInstr$nodeInstrVec[[2]]$indsInstrVec |> as.list(), list(11:12, 13:14))
+    calcInstrList[1] <- list(calcInstr)
+    expect_equal(calcInstrList |> as.list(), list(calcInstr))
     rm(calcInstrList, calcInstr, ni1, ni2); gc()
   }
 })
