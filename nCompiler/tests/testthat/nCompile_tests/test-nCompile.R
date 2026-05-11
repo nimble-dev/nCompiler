@@ -682,14 +682,14 @@ test_that("nCompile naming and interface choices work in various ways",
     expect_true(inherits(comp$nc1$new(), "nClass"))
     expect_true(inherits(comp$nc2$new(), "nClass"))
 
-                                        # One named element in the ..., and generic interface for ALL
+    # One named element in the ..., and generic interface for ALL
     comp <- nCompile(nc1x = nc1, nc2,
                      interfaces = "generic")
     expect_identical(names(comp), c("nc1x", "nc2"))
     expect_true(class(comp$nc1())=="loadedObjectEnv")
     expect_true(class(comp$nc2())=="loadedObjectEnv")
 
-                                        # One named element in the ..., and different interface choices
+    # One named element in the ..., and different interface choices
     comp <- nCompile(nc1x = nc1, nc2,
                      interfaces = c(nc1x = "full", nc2 = "generic"))
     expect_identical(names(comp), c("nc1x", "nc2"))
@@ -697,31 +697,32 @@ test_that("nCompile naming and interface choices work in various ways",
     expect_true(comp$nc1x$new()$isCompiled())
     expect_true(class(comp$nc2())=="loadedObjectEnv")
 
-                                        # Call with singleton does not return a list
+    # Call with singleton does not return a list
     comp <- nCompile(nc1)
     expect_true(comp$new()$isCompiled())
     expect_true(inherits(comp$new(), "nClass"))
-                                        # Option to return a list with a singleton
+    # Option to return a list with a singleton
     comp <- nCompile(nc1, returnList = TRUE)
     expect_true(comp$nc1$new()$isCompiled())
     expect_true(inherits(comp$nc1$new(), "nClass"))
-                                        # Provide compilation units as a named list
+    # Provide compilation units as a named list
     comp <- nCompile(list(nc1 = nc1, nc2 = nc2), interfaces = "generic")
     expect_identical(names(comp), c("nc1", "nc2"))
     expect_true(class(comp$nc1())=="loadedObjectEnv")
     expect_true(class(comp$nc2())=="loadedObjectEnv")
 
-                                        # Error if a list is not completely named
-    expect_error(comp <- nCompile(list(nc1 = nc1, nc2))) ## expect error due to only partial naming in list
+    # Previously we errored out if a list is not completely named
+    # Now we end up defaulting to the classname of the NCinternals
+    expect_no_error(comp <- nCompile(list(nc1 = nc1, nc2)))
 
-                                        # Mix of named list and individual unit, both in ...
+    # Mix of named list and individual unit, both in ...
     comp <- nCompile(list(nc1 = nc1, nc3 = nc3), nc2, interfaces = "generic")
     expect_identical(names(comp), c("nc1", "nc3", "nc2"))
     expect_true(class(comp$nc1())=="loadedObjectEnv")
     expect_true(class(comp$nc2())=="loadedObjectEnv")
     expect_true(class(comp$nc3())=="loadedObjectEnv")
 
-                                        # Move on to nFunctions
+    # Move on to nFunctions
     nfA <- nFunction(
         name = "nfA_",
         fun = function() {
@@ -741,45 +742,44 @@ test_that("nCompile naming and interface choices work in various ways",
             returnType('integerScalar')
         })
 
-                                        # Basic use
-                                        #debug(nCompile)
+    # Basic use
     comp <- nCompile(nfB, nfA)
     expect_identical(names(comp), c("nfB", "nfA"))
     expect_true(is.function(comp$nfB))
     expect_true(is.function(comp$nfA))
     expect_equal(comp$nfB(), 2)
-                                        # Singleton
+    # Singleton
     comp <- nCompile(nfA)
     expect_true(is.function(comp))
 
-                                        # Singleton returned as list
+    # Singleton returned as list
     comp <- nCompile(nfA, returnList = TRUE)
     expect_identical(names(comp), c("nfA"))
     expect_true(is.function(comp$nfA))
 
-                                        # One item named, the other not, in ...
+    # One item named, the other not, in ...
     comp <- nCompile(f2 = nfB, nfA)
     expect_identical(names(comp), c("f2", "nfA"))
     expect_true(is.function(comp$f2))
     expect_true(is.function(comp$nfA))
 
-                                        # Error from incompletely named list
+    # Error from incompletely named list (ok for nClass, not for nFunction)
     expect_error(comp <- nCompile(list(f2 = nfB, nfA))) # expected error due to incompletely named list
 
-                                        # Fully named list
+    # Fully named list
     comp <- nCompile(list(f2 = nfB, f1 = nfA))
     expect_identical(names(comp), c("f2", "f1"))
     expect_true(is.function(comp$f2))
     expect_true(is.function(comp$f1))
 
-                                        # Mix of list and individual item, both in ...
+    # Mix of list and individual item, both in ...
     comp <- nCompile(list(f2 = nfB, f3 = nfC), nfA)
     expect_identical(names(comp), c("f2", "f3", "nfA"))
     expect_true(is.function(comp$f2))
     expect_true(is.function(comp$f3))
     expect_true(is.function(comp$nfA))
 
-                                        # Mix of nFunction and nClass
+    # Mix of nFunction and nClass
     comp <- nCompile(nfA, nc1)
     expect_identical(names(comp), c("nfA", "nc1"))
     expect_true(is.function(comp$nfA))
