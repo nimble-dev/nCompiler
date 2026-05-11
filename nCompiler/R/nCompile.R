@@ -602,8 +602,23 @@ nCompile <- function(...,
     }
   }
 
-  if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
+  if(isTRUE(controlFull$show_types)) 
+      sapply(cppDefs, function(def) {
+          nm <- def$name
+          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
+          def$showTypes()
+          cat("\n")
+      })
+  if(isTRUE(controlFull$show_annotations)) 
+      sapply(cppDefs, function(def) {
+          nm <- def$name
+          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
+          def$showTypes(annotations = TRUE)
+          cat("\n")
+      })
 
+  if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
+    
   # writePackage inserts roxygen here
 
   # (3) Create RcppPacket_list
