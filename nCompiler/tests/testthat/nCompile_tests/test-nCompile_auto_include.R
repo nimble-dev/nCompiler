@@ -439,8 +439,6 @@ test_that("One predefined nClass can use another, separately and by inheritance,
         )
       , compileInfo = list(interface='generic', createFromR = FALSE,
                            packageNames=c(uncompiled="foo_base"),
-                           #                       , compileInfo = list(interface='full', createFromR = FALSE,
-                           #                                            exportName="fooBase")
                            exportName="foo_base_export") # must be distinct
       , predefined=file.path(tempdir(), "test_predefined_nC_foo_base_dir")
       )
