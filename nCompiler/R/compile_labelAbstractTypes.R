@@ -525,7 +525,6 @@ inLabelAbstractTypesEnv(
   sparseChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
-    if(exists('paciorek')) browser()
     if(inherits(argType, 'symbolSparse')) {
       # Cholesky factor of a sparse matrix is a collection of information
         code$type <- symbolNC$new(
@@ -1639,12 +1638,22 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-    sparseCholLogdet <- function(code, symTab, auxEnv, handlingInfo) {
-    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- symbolBasic$new(nDim = 0, type = 'double')
-  }
-) 
-
+  nLogdet <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      if(length(code$args) != 1)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'nLogdet called with argument length != 1.'
+        ),
+        call. = FALSE)
+      
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      
+      code$type <- symbolBasic$new(nDim = 0,
+                                   type = setReturnType(handlingInfo, "double"))
+      inserts
+    }
+)
 
 inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {

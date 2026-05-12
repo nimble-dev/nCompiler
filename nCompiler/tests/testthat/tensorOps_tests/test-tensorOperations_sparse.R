@@ -272,13 +272,8 @@ expect_equal(cAsDense(x = M_sparse), M)
 expect_equal(cAdd2_force_dense_unnecessary(x = M, y = M2), M + M2)
 
 
-
 sparseCholFactor <- function(x) {
   Matrix::Cholesky(x, LDL = FALSE)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
-}
-
-sparseCholLogdet <- function(chol) {
-  return(sum(log(diag(expand1(chol, "L")))))
 }
 
 sparseCholSolve <- function(ch, x) {

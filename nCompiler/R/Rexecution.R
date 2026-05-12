@@ -322,9 +322,6 @@ sparseChol <- function(x) {
   Matrix::Cholesky(x)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
 }
 
-sparseCholLogdet <- function(chol) {
-  return(sum(log(diag(expand1(chol, "L")))))
-}
 
 sparseCholSolve <- function(ch, x) {
     ## E.g. for quadratic form with sparse covariance
@@ -350,14 +347,13 @@ sparseCholMult <- function(ch, x) {
 #' 
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a square matrix
+#' @param x a square matrix or a sparse Cholesky factor
 #'
 #' @export
 #' 
 nLogdet <- function(x) {
+    if(inherits(x, 'dCHMsimpl')
+       return(sum(log(diag(expand1(chol, "L")))))
     ldet <- determinant(x, logarithm = TRUE)
     ifelse(ldet$sign >= 0, ldet$modulus, NaN)
   }
