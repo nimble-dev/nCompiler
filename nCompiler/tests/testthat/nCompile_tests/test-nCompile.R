@@ -963,13 +963,14 @@ test_that("showing types works", {
     )
     defs <- nCompile(test, control = list(return_cppDefs=TRUE))
     expect_output(defs[[1]]$showTypes(), "symbol table")
-    expect_output(defs[[1]]$showTypes(annotations=TRUE), "{ |", fixed = TRUE) 
+    expect_output(defs[[1]]$showTypes(annotations=TRUE), "{ |", fixed = TRUE)
 
     expect_output(defs <- nCompile(test, control =
                  list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
-                 "symbol table") 
+                 "symbol table")
 
     nc <- nClass(
+        classname = "my_nClass",
         Cpublic = list(
             x = double(1),
             add_vectors = nFunction(
@@ -991,15 +992,15 @@ test_that("showing types works", {
     )
     defs <- nCompile(nc, control = list(return_cppDefs=TRUE))
     expect_output(defs[[1]]$showTypes(), "Class variables")
-    expect_output(defs[[1]]$showTypes(annotations=TRUE), "-- add_vectors --") 
+    expect_output(defs[[1]]$showTypes(annotations=TRUE), "-- add_vectors --")
 
     expect_output(defs <- nCompile(nc, control =
                   list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
                   "Class variables")
-    
+
     ## Multi-unit compilation.
     expect_output(defs <- nCompile(nc, test, control =
                   list(return_cppDefs=TRUE, show_types = TRUE, show_annotations = TRUE)),
-                  "==== nClass_1 ====")
-    
+                  "==== my_nClass ====")
+
 })
