@@ -1238,15 +1238,6 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'sparseCholLogdet',
-  list(
-    labelAbstractTypes = list(
-      handler = 'sparseCholLogdet'
-    )
-  )
-)
-
-assignOperatorDef(
   c('nChol'),
   list(
     labelAbstractTypes = list(
@@ -1260,7 +1251,7 @@ assignOperatorDef(
   c('nLogdet'),
   list(
     labelAbstractTypes = list(
-      handler = 'UnaryReduction'
+      handler = 'nLogdet'
     )
   )
 )
