@@ -365,8 +365,8 @@ cmyfun(sm)
 
 myfun <- nFunction(
     fun = function(Q = 'nSparseMatrix') {
-        ch <- sparseCholFactor(Q)
-        out <- sparseCholLogdet(ch)
+        ch <- sparseChol(Q)
+        out <- nLogdet(ch)
         return(out)
     }, returnType = 'numericScalar')
 cmyfun <- nCompile(myfun)
