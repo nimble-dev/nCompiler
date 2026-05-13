@@ -319,14 +319,7 @@ nChol <- function(x) {
 #' @examples TODO
 #' 
 sparseChol <- function(x) {
-  Matrix::Cholesky(x)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
-}
-
-
-sparseCholSolve <- function(ch, x) {
-    ## E.g. for quadratic form with sparse covariance
-    return(solve(ch, x))
-    # solve(ch, solve(ch, solve(ch, solve(ch, x, system="P"), system = "L"), system = "Lt"), system = "Pt"))
+  Matrix::Cholesky(x, LDL = FALSE)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
 }
 
 sparseCholBacksolve <- function(ch, x) {
@@ -352,7 +345,7 @@ sparseCholMult <- function(ch, x) {
 #' @export
 #' 
 nLogdet <- function(x) {
-    if(inherits(x, 'dCHMsimpl')
+    if(inherits(x, 'dCHMsimpl'))
        return(sum(log(diag(expand1(chol, "L")))))
     ldet <- determinant(x, logarithm = TRUE)
     ifelse(ldet$sign >= 0, ldet$modulus, NaN)
@@ -450,14 +443,22 @@ asDense <- function(x) {
 #' 
 #' @export
 nMul <- function(x, y) {
+  if(inherits(x, "dCHMsimpl"))
+    # P^{top} L* x (see ?Matrix:::solve))
+    return(solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  
   x %*% y
 }
+
+## This would only work if Matrix is loaded.
+## setMethod("%*%", c(x = "dCHMsimpl", y = "ANY"),
+##          function(x,y)
+##            solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  # P^{top} L* x (see ?Matrix:::solve))
 
 #' Wrapper for solve
 #'
 #' @export
 nSolve <- function(a, b) {
-  solve(a,b)
+  solve(a,b)  # This works fine if `a` is of type `dCHMsimpl`.
 }
 
 #' Wrapper for forwardsolve

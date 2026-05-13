@@ -211,21 +211,37 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
     return binaryOp<OP_, Scalar>(xEval, y);
 }
 
-// TODO: presumably delete this SparseCholesky stuff
+// forward declaration of class to store sparse Cholesky decompositions
+// class SparseCholesky;
+class sparseCholFactor;
 
-// forward declaration of nCompiler struct to store Sparse Chol. decompositions
-class SparseCholesky;
+// TODO: Not sure if IsSparseCholFactor stuff should be here or in tensorOperations_chol.h.
+// I think we need to use `IsSparseCholFactor` in `IsEvaluatedType`.
 
 /**
- * Template meta programming check to see if Class is an Eigen::SparseCholesky
+ * Template meta programming check to see if Class is an Eigen::SparseCholFactor
  *
  * @tparam Class type to inspect
  */
 template<typename Class>
-struct IsSparseCholesky : std::is_base_of<
-    SparseCholesky,
+struct IsSparseCholFactor : std::is_base_of<
+    std::shared_ptr<sparseCholFactor>,
     Class
 > { };
+  
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to std::shared_ptr<sparseCholFactor> by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+template<typename Class, int N>
+constexpr typename std::enable_if<IsSparseCholFactor<Class>::value, bool>::type
+  HasNumDimensionsN() {
+    return N == 2;  // matrices are inherently 2-dimensional
+  }
 
 /**
  * Template meta programming check to see if Class is an Eigen::SparseMatrix
@@ -396,7 +412,7 @@ std::conditional<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseType<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value ||
+    IsSparseCholFactor<Class>::value || std::is_arithmetic<Class>::value ||
     IsMap<Class>::value || IsTranspose<Class>::value,
     std::true_type,
     std::false_type
@@ -512,6 +528,7 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
      return N == 1;  // vectors are inherently 1-dimensional
    }
 
+ 
 /**
  * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
@@ -969,7 +986,7 @@ Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
   * DiagIO class that uses conversion operators and overloaded
   * assignment operators to provide additional functionality (i.e., assignment
   * and extraction of diagonal entries) in a way that is compatible with
-  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler would
+  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler wonuld
   * need to perform additional, possibly complex, modification of an nFunction's
   * AST in order to change R-like syntax into Eigen-like syntax.
   *
@@ -1334,6 +1351,7 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(
     return triangularsolve<Eigen::Upper>(U, b);
 }
 
+
 /**
  * Matrix multiplication x %*% y when both inputs are matrix-like objects, i.e.,
  * rank 2 Eigen::Tensor objects, or Tensor expressions
@@ -1597,7 +1615,6 @@ Scalar nLogdet(const Xpr & x) {
     return qrdecomp.logDeterminant();
 }
 
-// TODO: implement nLogdet for sparse matrices
 
 // This is drafted but not yet used.
 template<typename Scalar >

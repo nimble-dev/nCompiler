@@ -1496,7 +1496,8 @@ inLabelAbstractTypesEnv(
     # product between two input vectors, which returns a matrix
     resDim <- 2
     # return a dense object if any arguments are dense, o/w return sparse
-    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse')))) {
+    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse'))) ||
+       inherits(code$args[[1]]$type, 'symbolSimplicialLLT') && inherits(code$args[[2]]$type, 'symbolSparse')) {
       code$type <- symbolSparse$new(nDim = resDim, type = returnType)
     } else {
       code$type <- symbolBasic$new(nDim = resDim, type = returnType)
