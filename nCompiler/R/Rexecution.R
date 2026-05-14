@@ -196,6 +196,8 @@ makeReturnVector <- function(fillValue, length, recycle) {
 #' @export
 #' 
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nEigen` not implemented for sparse Cholesky factor input")      
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
   ans$values <- res$values
@@ -257,6 +259,8 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      return(singularValues)
 #'  })
 nSvd <- function(x, vectors = 'full') {
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
   p <- ncol(x)
   if(vectors == 'full') { # vectors = 2, when converted to int
@@ -284,6 +288,8 @@ nSvd <- function(x, vectors = 'full') {
 #' @export
 #' 
 nDiag <- function(x, ...) {
+  if(inherits(x, 'dCHMsimpl'))
+    stop("`nDiag` not implemented for sparse Cholesky factor input")      
   diag(x, ...)
 }
 
@@ -299,6 +305,8 @@ nDiag <- function(x, ...) {
 #' @export
 #' 
 nChol <- function(x) {
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nChol` not meaningful for sparse Cholesky factor input")      
   chol(x)
 }
 
@@ -318,23 +326,9 @@ nChol <- function(x) {
 #'
 #' @examples TODO
 #' 
-sparseChol <- function(x) {
-  Matrix::Cholesky(x, LDL = FALSE)  # unlike Matrix::chol, this does permutation and returns representation of the Cholesky
+sparseCholFactor <- function(x) {
+  Matrix::Cholesky(x, LDL = FALSE)  
 }
-
-sparseCholBacksolve <- function(ch, x) {
-  ## E.g., for generating MVN draws with sparse precision.
-  return(solve(ch, solve(ch, x, system = "Lt"), system = "Pt"))  # P^{top} U*^{-1} x
-}
-
-sparseCholMult <- function(ch, x) {
-    ## E.g., for gnerating MVN draws with sparse covariance.
-    solve(ch, expand1(ch, "L") %*% x, system = "Pt")  # P^{top} L* x (see ?Matrix:::solve)
-}
-
-
-## diag(Cholesky(x))
-## result <- solve(ch, b, system = "A"), or "L"
 
 #' Compute the log-determinant of a matrix
 #' 
@@ -465,6 +459,9 @@ nSolve <- function(a, b) {
 #'
 #' @export
 nForwardsolve <- function(l, x) {
+  ## TODO: add error trap for non-sparse Cholesky factor input
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nForwardsolve` not implemented for sparse Cholesky factor input")      
   forwardsolve(l,x)
 }
 
@@ -472,6 +469,8 @@ nForwardsolve <- function(l, x) {
 #'
 #' @export
 nBacksolve <- function(r, x) {
+  if(inherits(r, 'dCHMsimpl'))
+    return(solve(r, solve(ch, r, system = "Lt"), system = "Pt"))  # P^{top} U*^{-1} x
   backsolve(r,x)
 }
 
