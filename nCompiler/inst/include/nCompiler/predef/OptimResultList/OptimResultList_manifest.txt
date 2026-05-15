@@ -1,0 +1,7 @@
+list(saved_at = structure(1778867647.50215, class = c("POSIXct", 
+"POSIXt")), packet_name = "OptimResultList", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "OptimResultList_preamble.cpp", cppContent = "OptimResultList_cppContent.cpp", 
+    hContent = "OptimResultList_hContent.h", filebase = "OptimResultList_filebase.txt", 
+    post_cpp_compiler = "OptimResultList_post_cpp_compiler.txt", 
+    copyFiles = "OptimResultList_copyFiles.txt"))

@@ -26,7 +26,8 @@ test_predefined <- nClass(
 #' @export
 derivClass <- nClass(
   classname = "derivClass",
-  predefined = "derivClass_pkg",
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("derivClass")),
   Cpublic = list(
       value = 'numericVector',
       gradient = 'numericMatrix',
@@ -71,7 +72,8 @@ SVDDecomp <- nClass(
 #' @export
 OptimControlList <- nClass(
   classname = 'OptimControlList',
-  predefined = "OptimControlList_pkg",
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("OptimControlList")),
   Cpublic = list(
     trace = 'integer',
     fnscale = 'double',
@@ -119,7 +121,8 @@ OptimControlList <- nClass(
 #' @export
 OptimResultList <- nClass(
   classname = 'OptimResultList',
-  predefined = "OptimResultList_pkg",
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("OptimResultList")),
   Cpublic = list(
     par = 'numericVector',
     value = 'double',
