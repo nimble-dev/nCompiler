@@ -52,14 +52,14 @@ EigenDecomp <- nClass(
   )
 )
 
-## #' @export
-## C_EigenDecomp <- build_compiled_nClass(EigenDecomp,
-##                                          function() new_EigenDecomp())
-
 #' @export
 SVDDecomp <- nClass(
+  # manually insert:
+  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_SVD.h>
+  # in the hContent file AFTER the SVDDecomp class declaration
   classname = 'SVDDecomp',
-  predefined = "SVDDecomp_pkg",
+  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("SVDDecomp")),
   Cpublic = list(
     d = 'numericVector',
     v = 'numericMatrix',

@@ -4,31 +4,6 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 // #include "tensorIndexingOps.h"
 
-#define QUOTEME(A) #A
-//#define PREDEFINED_HEADER(PH) QUOTEME(PH.h)
-#define PREDEFINED_HEADER(PH) // <nCompiler/PH.h>
-
-#ifdef PREDEFINED_test_predefined
-#include PREDEFINED_HEADER(PREDEFINED_test_predefined)
-std::shared_ptr<test_predefined> make_test_predefined() {
-  return(std::shared_ptr<test_predefined>(new test_predefined));
-}
-#endif
-
-#ifdef PREDEFINED_derivClass
-#include PREDEFINED_HEADER(PREDEFINED_derivClass)
-std::shared_ptr<derivClass> make_derivClass() {
-  return(std::shared_ptr<derivClass>(new derivClass));
-}
-#endif
-
-#ifdef PREDEFINED_SVDDecomp
-#include PREDEFINED_HEADER(PREDEFINED_SVDDecomp)
-std::shared_ptr<SVDDecomp> make_SVDDecomp() {
-    return(std::shared_ptr<SVDDecomp>(new SVDDecomp));
-}
-#endif
-
 
 /**
  * Generate functors similar to std::binary_function, but where the 
@@ -1586,8 +1561,6 @@ Scalar nLogdet(const Xpr & x) {
     return qrdecomp.logDeterminant();
 }
 
-// TODO: implement nLogdet for sparse matrices
-
 // This is drafted but not yet used.
 template<typename Scalar >
 bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
@@ -1607,54 +1580,6 @@ bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
 }
 
 
-#ifdef PREDEFINED_SVDDecomp
-std::shared_ptr<SVDDecomp> nSvd(
-    const Eigen::Tensor<double, 2> &x, int vectors
-) {
-    auto xm = matmap(x);
-    std::shared_ptr<SVDDecomp> ans(new SVDDecomp);
-
-    int n = xm.rows();
-    int p = xm.cols();
- 	int nu = std::min(n, p);
-
- 	Eigen::JacobiSVD<Eigen::MatrixXd> svd;
-
- 	/* note: if nu > 16, bidiagonialization algo. is recommended on eigen
- 	   website.  not currently available w/ nimble's version of eigen, but may
- 	   be in future. */
- 	if(vectors == 0) {
- 	    svd.compute(xm);
- 	}
- 	else {
- 	    int leftSVs = nu;
- 	    int rightSVs = nu;
-
- 	    if(vectors == 1) {
- 	        svd.compute(xm, Eigen::ComputeThinU | Eigen::ComputeThinV);
- 	    }
- 	    if(vectors == 2) {
- 	        leftSVs = xm.rows();
- 	        rightSVs = xm.cols();
- 	        svd.compute(xm, Eigen::ComputeFullU | Eigen::ComputeFullV);
- 	    }
-
- 	    ans->u.resize(std::array<Eigen::Index, 2>({{n, leftSVs}}));
- 	    auto u = matmap(ans->u);
- 	    u = svd.matrixU();
-
- 	    ans->v.resize(std::array<Eigen::Index, 2>({{p, rightSVs}}));
- 	    auto v = matmap(ans->v);
-        v = svd.matrixV();
- 	}
-
-    ans->d.resize(nu);
- 	auto d = matmap(ans->d);
- 	d = svd.singularValues();
-
- 	return ans;
-}
-#endif
 
 
 /**

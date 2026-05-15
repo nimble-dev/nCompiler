@@ -1,16 +1,12 @@
 #ifndef TENSOROPERATIONS_EIGEN_H
 #define TENSOROPERATIONS_EIGEN_H
 
-std::shared_ptr<EigenDecomp> make_EigenDecomp() {
-  return(std::shared_ptr<EigenDecomp>(new EigenDecomp));
-}
-
 std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symmetric = false, bool valuesOnly = false) {
     auto x_map = matmap(x);
     int nrows(x_map.rows());
     int ncols(x_map.cols());
     // potentially error-trap of nrows == ncols.
-    std::shared_ptr<EigenDecomp> ans(new EigenDecomp);  // TODO: Should this use `nClass_builder`?
+    std::shared_ptr<EigenDecomp> ans = nClass_builder<EigenDecomp>()();
     ans->values.resize(nrows);
     auto values_map = matmap(ans->values);
     if(!valuesOnly){

@@ -1171,6 +1171,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nSvd',
   list(
+    matchDef = function(x, vectors=1) {},
     labelAbstractTypes = list(
       handler = 'nSvd'
     )

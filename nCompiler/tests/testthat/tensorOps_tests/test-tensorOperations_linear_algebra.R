@@ -519,4 +519,166 @@ test_that("various uses of nEigen", {
     expect_identical(result, out)
     expect_equal(result, cout)
 
+    ## Passing full decomp back to R and checking run-time use of valuesOnly.
+    eig = nFunction(
+        fun = function(x = 'numericMatrix', valsOnly = 'logicalScalar') {
+            y <- eigen(x, valuesOnly = valsOnly)
+            return(y)
+        },
+        returnType = 'EigenDecomp'
+    )
+    cEig <- nCompile(eig)
+    
+    result <- eigen(xnsymm)
+    e <- eig(xnsymm, FALSE)
+    ce <- cEig(xnsymm, FALSE)
+    expect_identical(e$values, result$values)
+    expect_identical(e$vectors, result$vectors)
+    expect_equal(ce$values, result$values)
+    expect_equal(ce$vectors, result$vectors)
+
+    e <- eig(xnsymm, TRUE)
+    ce <- cEig(xnsymm, TRUE)
+    expect_identical(e$values, result$values)
+    expect_equal(ce$values, result$values)
+    expect_length(e$vectors, 0)
+    expect_length(ce$vectors, 0)
+    
+})
+
+
+test_that("various uses of nSvd", {
+    set.seed(1)
+    x <- matrix(rnorm(12),4)
+
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x)
+            return(y$u)
+        },
+        returnType = 'numericMatrix'
+    )
+    cSvd <- nCompile(mysvd)
+
+    result <- svd(x)$u
+    u <- mysvd(x)
+    cu <- cSvd(x)
+    
+    expect_identical(result, u)
+    ## Equal up to swapping of sign.
+    cu[,2:3] <- -cu[,2:3]
+    expect_equal(result, cu)
+
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x)
+            return(y)
+        },
+        returnType = 'SVDDecomp'
+    )
+    cSvd <- nCompile(mysvd)
+
+    result <- svd(x)
+    out <- mysvd(x)
+    cout <- cSvd(x)
+
+    expect_identical(result$d, out$d)
+    expect_equal(result$d, cout$d)
+
+
+    ## Check case with SVDDecomp not as return type to make sure
+    ## predefined code is included with nCompiler_generated code.
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x)$u   # No SVDDecomp return type.
+            return(y)
+        },
+        returnType = 'numericMatrix'
+    )
+    cSvd <- nCompile(mysvd)
+
+    result <- svd(x)$u
+    u <- mysvd(x)
+    cu <- cSvd(x)
+    expect_identical(result, u)
+    cu[,2:3] <- -cu[,2:3]
+    expect_equal(result, cu)
+    
+    ## Inline as part of larger calculation.
+    fun = nFunction(
+        fun = function(x = 'numericMatrix', z = 'numericMatrix') {
+            y <- svd(x)$u %*% z
+            return(y)
+        },
+        returnType = 'numericMatrix'
+    )
+    cfun <- nCompile(fun)
+
+    result <- svd(x)$u %*% diag(3)
+    out <- fun(x, diag(3))
+    cout <- cfun(x, diag(3))
+    cu[,2:3] <- -cu[,2:3]
+    expect_identical(result, out)
+    expect_equal(result, cout)
+
+    ## Passing full decomp back to R.
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x)
+            return(y)
+        },
+        returnType = 'SVDDecomp'
+    )
+    csvd <- nCompile(mysvd)
+    
+    result <- svd(x)
+    out <- mysvd(x)
+    cout <- csvd(x)
+    expect_identical(out$d, result$d)
+    expect_identical(out$u, result$u)
+    expect_equal(cout$d, result$d)
+    cout$u[,2:3] <- -cout$u[,2:3]
+    expect_equal(cout$u, result$u)
+
+    ## Different arguments, including using non-integer values.
+    
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x, 0.0)
+            return(y)
+        },
+        returnType = 'SVDDecomp'
+    )
+    csvd <- nCompile(mysvd)
+
+    result <- svd(x)
+    out <- mysvd(x)
+    cout <- csvd(x)
+
+    expect_identical(out$d, result$d)
+    expect_equal(cout$d, result$d)
+    expect_length(out$u, 0)
+    expect_length(cout$u, 0)
+
+    mysvd = nFunction(
+        fun = function(x = 'numericMatrix') {
+            y <- svd(x, 2.0)
+            return(y)
+        },
+        returnType = 'SVDDecomp'
+    )
+    csvd <- nCompile(mysvd)
+
+    result <- svd(x, nu = 4, nv = 3)
+    out <- mysvd(x)
+    cout <- csvd(x)
+
+    expect_identical(dim(out$u), c(4L,4L))
+    expect_identical(dim(out$v), c(3L,3L))
+    expect_identical(dim(cout$u), c(4L,4L))
+    expect_identical(dim(cout$v), c(3L,3L))
+    expect_identical(result$u, out$u)
+    cout$u[,2:3] <- -cout$u[,2:3]
+    expect_equal(result$u, cout$u)
+    
 })

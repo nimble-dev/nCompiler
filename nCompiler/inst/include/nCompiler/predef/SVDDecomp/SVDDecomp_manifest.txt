@@ -1,0 +1,6 @@
+list(saved_at = structure(1778858126.71361, class = c("POSIXct", 
+"POSIXt")), packet_name = "SVDDecomp", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "SVDDecomp_preamble.cpp", cppContent = "SVDDecomp_cppContent.cpp", 
+    hContent = "SVDDecomp_hContent.h", filebase = "SVDDecomp_filebase.txt", 
+    post_cpp_compiler = "SVDDecomp_post_cpp_compiler.txt", copyFiles = "SVDDecomp_copyFiles.txt"))
