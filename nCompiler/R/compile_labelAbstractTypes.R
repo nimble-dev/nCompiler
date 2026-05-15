@@ -1726,6 +1726,7 @@ inLabelAbstractTypesEnv(
         name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp, 
         isArg = FALSE
       )
+      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
     } else if(inherits(argType, 'symbolSparse')) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -1752,6 +1753,7 @@ inLabelAbstractTypesEnv(
         name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp, 
         isArg = FALSE
       )
+      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
     } else if(inherits(argType, 'symbolSparse')) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -1763,17 +1765,18 @@ inLabelAbstractTypesEnv(
         'unable to handle input type.'
       ), call. = FALSE)
     }
-    # check type that specifies singular vector calculation
+                                        # check type that specifies singular vector calculation
+      if(F) {
     if(length(code$args) == 2) {
-      argType <- code$args[[2]]$type
+      argType <- code$args[[2]]$type 
       if(argType$nDim != 0 || argType$type != 'integer') {
         stop(exprClassProcessingErrorMsg(
           code, 
-          'compiled code must use an integer for num. of vectors to compute'
+          'compiled code must use an integer `vectors` argument'
         ))
       }
-    }
-    argType <- code$args[[2]]$type
+    } else stop('nSvd takes one or two arguments')  # This should never be reached given matchDef.
+    argType <- code$args[[2]]$type}
     invisible(NULL)
   }
 )

@@ -224,7 +224,7 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' @details
 #' Computes the singular value decomposition of a numeric matrix using the Eigen C++ template library.  
 #' 
-#' The \code{vectors} character argument determines whether to compute no left and right singular vectors (\code{'none'}), thinned left and right singular vectors (\code{'thin'}), or full left and right singular vectors (\code{'full'}).  For a
+#' The \code{vectors} character argument determines whether to compute no left and right singular vectors (\code{0} or (for uncompiled operation) \code{'none'}), thinned left and right singular vectors (\code{1} or (for uncompiled) \code{'thin'}) (the default), or full left and right singular vectors (\code{2} or (for uncompiled) \code{'full'}).  For a
 #' matrix \code{x} with dimensions \code{n} and \code{p}, setting \code{vectors = 'thin'} will does the following (quoted from eigen website): 
 #' In case of a rectangular n-by-p matrix, letting m be the smaller value among n and p, there are only m singular vectors; 
 #' the remaining columns of U and V do not correspond to actual singular vectors. 
@@ -256,20 +256,23 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      returnType(double(1))
 #'      return(singularValues)
 #'  })
-nSvd <- function(x, vectors = 'full') {
+nSvd <- function(x, vectors = 'thin') {
   n <- nrow(x)
   p <- ncol(x)
-  if(vectors == 'full') { # vectors = 2, when converted to int
+  if(vectors %in% c(2, 'full')) { 
     nu <- n
     nv <- p
-  } else if(vectors == 'thin') { # vectors = 1, when converted to int
+  } else if(vectors %in% c(1, 'thin')) { 
     nu <- min(n, p)
     nv <- nu
-  } else if(vectors == 'none') { # vectors = 0, when converted to int
+  } else if(vectors %in% c(0, 'none')) { 
     nu <- 0
     nv <- 0
   }
   s <- svd(x = x, nu = nu, nv = nv)
+  if(vectors %in% c(0, 'none'))  # For compatibility with compiled output.
+    s$u <- s$v <- matrix(nrow = 0, ncol = 0)
+  return(s)
 }
 
 #' Extract or replace the diagonal of matrix

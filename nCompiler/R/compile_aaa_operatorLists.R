@@ -1234,7 +1234,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nEigen',
   list(
-    matchDef = function(x, symmetric, valuesOnly=FALSE) {},
+    matchDef = function(x, symmetric=FALSE, valuesOnly=FALSE) {},
     labelAbstractTypes = list(
       handler = 'nEigen'
     )
@@ -1244,6 +1244,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nSvd',
   list(
+    matchDef = function(x, vectors=1) {},
     labelAbstractTypes = list(
       handler = 'nSvd'
     )
