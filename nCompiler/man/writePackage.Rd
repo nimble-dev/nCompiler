@@ -3,23 +3,11 @@
 \name{writePackage}
 \alias{writePackage}
 \title{Create packages containing compiled elements}
-\usage{
-writePackage(
-  ...,
-  package.name,
-  dir = ".",
-  control = list(),
-  modify = get_nOption("modifyPackageContents"),
-  memberData = list(),
-  roxygen = list(),
-  nClass_full_interface = TRUE
-)
-}
 \arguments{
 \item{...}{One or more nClass constructor and nFunction objects to be
 compiled into the package.}
 
-\item{package.name}{Character string. The name of the package to be written.}
+\item{pkgName}{Character string. The name of the package to be written.}
 
 \item{dir}{Character string. Path to the parent directory in which the main
 package directory will be created. If not provided, default is the current
@@ -35,7 +23,7 @@ elements are overwritten, while elements without name conflicts are
 retained. To change the default across multiple calls, use
 `set_nOption("modifyPackageContents" = TRUE)`}
 
-\item{memberData}{A named list of elements to be stored as exported package 
+\item{memberData}{A named list of elements to be stored as exported package
 data objects.}
 
 \item{roxygen}{A list of roxygen entries corresponding to the objects being
@@ -43,10 +31,10 @@ compiled, indicated either by matching names or (if all objects are
 documented) by order. The elements of the list are either character strings
 or lists produced by documentNClass.}
 
-\item{nClass_full_interface}{}
-
 \item{roxygenize}{Logical, default FALSE. Should roxygen be called to produce
 documentation pages before package build?}
+
+\item{nClass_full_interface}{}
 }
 \description{
 Create packages containing compiled elements
@@ -63,7 +51,7 @@ names of the elements as they are passed (the \code{name} field in
 the names of the objects in the R environment.
 
 If a nonexistent directory or nonexistent directory is indicated by the
-arguments \code{dir} and \code{package.name}, writePackage uses Rcpp's
+arguments \code{dir} and \code{pkgName}, writePackage uses Rcpp's
 Rcpp.package.skeleton to initialize a directory.
 
 If the directory indicated by those two arguments does exist and
@@ -75,31 +63,4 @@ elements as well as add new elements.
 If an uncompilable nFunction or nClass is passed, \code{writePackage} will
 not error. This will not be caught until the package is built, for example
 with \code{buildPackage}.
-}
-\examples{
-# Initialize an example nFunction
-foo <- nFunction(name = "foo",
-                 fun = function(x = numericScalar()) {
-                     ans <- x+1
-                     return(ans)
-                     returnType(numericScalar())
-                   }
-                 )
-# Write a package containing the compiled nFunction "foo"
-writePackage(foo,
-             dir = tempdir(),
-             package.name = "fooPackage",
-             control = list(export = TRUE))
-# Build and install the package
-buildPackage("fooPackage", dir = tempdir())
-# We can call "foo" from the new namespace
-fooPackage::foo(10)
-}
-\seealso{
-For more nCompiler packaging tools, see \code{\link{buildPackage}}
-  and \code{\link{erasePackage}}. For nCompiler roxygen utilities see
-  \code{\link{documentNClass}} and \code{\link{documentNFunction}}. For
-  package initialization tools on which \code{writePackage} depends see
-  \code{\link[Rcpp]{Rcpp.package.skeleton}} and
-  \code{\link[utils]{package.skeleton}}.
 }

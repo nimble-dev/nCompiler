@@ -5,7 +5,7 @@
 # for different kinds of numeric objects
 
 library(testthat)
-#library(nCompiler)
+library(nCompiler)
 
 message("More test coverage of argument passing cases is needed. See comments.")
 # need cases of multiple function call layers
@@ -110,7 +110,7 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage")
     test_foo(access_dynamic_package("testpackage", "foo"))
@@ -172,7 +172,7 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassingb")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackageb"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackageb")
     Cobj <- access_dynamic_package("testpackageb", "nc1")$new()
@@ -228,7 +228,7 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2")
     test_foo(testpackage2::foo)
@@ -292,7 +292,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2b")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2b"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2b")
     Cobj <- testpackage2b::nc1$new()
@@ -348,7 +348,7 @@ test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompi
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3")
     test_foo(testpackage3::foo)
@@ -413,7 +413,7 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3b")
   dir.create(lib, showWarnings=FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3b"),
-                                              upgrade = "never", quick=TRUE, quiet=TRUE))
+                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3b")
     Cobj <- testpackage3b::nc1$new()
@@ -480,7 +480,6 @@ test_that("nested pass by ref works", {
   expect_equal(x, 3:4)
 })
 
-## FIXED when nested from R to C++ with brackets in use.
 test_that("nested pass by blockRef case 1 works", {
   foo1 <- nFunction(
     fun=function(x=double(1)) {
@@ -533,10 +532,10 @@ test_that("nested pass by blockRef case 1 works", {
   )
   x <- as.numeric(1:2)
   foo4(x[1:2])
-  expect_equal(x, 3:4) ## FIXED
+  expect_equal(x, 3:4)
 })
 
-# FAIL with the same argument pass by refArg to C++
+# KNOWN FAILURES aka things that will not work.
 # This will NEVER (in any forseeable way) be made to work
 # in the case from R to C++
 test_that("pass by ref with same ref in multiple args works except R->C++", {
@@ -570,14 +569,12 @@ test_that("pass by ref with same ref in multiple args works except R->C++", {
 
   v <- as.numeric(1:2)
   C$foo1(v, v)
-  expect_false(identical(v, 3:4)) # FAIL
+  expect_false(identical(v, 3:4)) # WILL NOT WORK
 
   v <- as.numeric(1:2)
   C$foo2(v, v)
-  expect_false(identical(v, (1:2)+3)) # FAIL
-
+  expect_false(identical(v, (1:2)+3)) # WILL NOT WORK
   # Nest from R to C++
-
 })
 
 # This will NEVER be made to work in the case from R to C++

@@ -12,13 +12,13 @@ nClassBaseClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
                         "#define USES_NCOMPILER")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
                         "#define USES_NCOMPILER")
 
   cppDef$Hincludes <- c(cppDef$Hincludes,
@@ -200,12 +200,29 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
     },
+    showTypes = function(annotations = FALSE) {
+      if(!annotations) {
+        cat("----------------- Class variables ---------------------------\n")
+        print(self$Compiler$symbolTable, parent = FALSE)
+      }
+      sapply(self$memberCppDefs, function(def) {
+        if(inherits(def, "cpp_nFunctionClass")) {
+          suffix <- paste0(rep("-", max(42-nchar(def$name), 5)), collapse = "")    
+          cat("----------------- ", def$name, " ", suffix, "\n", sep = "")
+          def$showTypes(annotations)
+        }
+      })
+      invisible(self)
+    },
     process_inheritance = function(Compiler) {
       for(oneInheritance in Compiler$compileInfo$inherit) {
         self$addInheritance(oneInheritance)
       }
       # This may not get used much or at all but here it is if needed.
       for(oneInheritance in Compiler$compileInfo$nClass_inherit) {
+        if(is.function(oneInheritance)) {
+          oneInheritance <- oneInheritance()
+        }
         self$add_nClass_inheritance(oneInheritance)
       }
       inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals

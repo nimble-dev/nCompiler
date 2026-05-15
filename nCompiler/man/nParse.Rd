@@ -2,7 +2,7 @@
 % Please edit documentation in R/compile_nParse.R
 \name{nParse}
 \alias{nParse}
-\title{Create.nCompiler parse tree from R code.}
+\title{Create nCompiler parse tree from R code.}
 \usage{
 nParse(code, caller = NULL, callerArgID = numeric(), recursing = FALSE)
 }
@@ -23,5 +23,5 @@ An \code{exprClass} object.
 }
 \description{
 Create nCompiler parse tree, an annotated bidirectional syntax tree
-used by the.nCompiler compiler, from R code.
+used by the nCompiler compiler, from R code.
 }

@@ -7,12 +7,12 @@
 #endif
 #include <Rinternals.h>
 #include "nodeFxnBase_nClass_c_.h"
-#include "calcInstrList_nClass_c_.h"
+#include "nList_calcInstr_nClass_c_.h"
 
 class modelBase_nClass : public interface_resolver< genericInterfaceC<modelBase_nClass> >, public loadedObjectHookC<modelBase_nClass> {
 public:
    virtual  bool  ping (  ) ;
-   virtual  double  calculate ( std::shared_ptr<calcInstrList_nClass> calcInstrList ) ;
+   virtual  double  calculate ( std::shared_ptr<nList_calcInstr_nClass> calcInstrList ) ;
       modelBase_nClass (  ) ;
 };
 

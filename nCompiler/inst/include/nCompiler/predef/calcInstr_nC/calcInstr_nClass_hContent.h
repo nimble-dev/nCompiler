@@ -6,13 +6,14 @@
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
+#include "nList_nodeInstr_nClass_c_.h"
 #include "nodeInstr_nClass_c_.h"
 
 class calcInstr_nClass : public interface_resolver< genericInterfaceC<calcInstr_nClass> >, public loadedObjectHookC<calcInstr_nClass> {
 public:
       calcInstr_nClass (  ) ;
   int nodeIndex;
-  nList<std::shared_ptr<nodeInstr_nClass> > nodeInstrVec;
+  std::shared_ptr<nList_nodeInstr_nClass> nodeInstrVec;
 };
 
     SEXP  new_calcInstr_nClass (  ) ;

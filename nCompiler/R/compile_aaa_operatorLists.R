@@ -40,6 +40,7 @@ getHandlerEnv <- function(stage) {
          )
 }
 
+#' @export
 registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
   opNames <- names(opDefs)
   if(is.null(opNames))
@@ -74,6 +75,7 @@ registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
   }
 }
 
+#' @export
 deregisterOpDef <- function(names) {
   if(!isTRUE(is.character(names))) names <- ls(names) # in case an env or list is passed in as names.
   suppressWarnings(rm(list=names, envir=operatorDefUserEnv))
@@ -110,15 +112,21 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
 }
 
 assignOperatorDef(
-  'nList',
+  'nCppVec',
   list(
     matchDef = function(type, length) {},
     compileArgs = c("type"),
     labelAbstractTypes = list(
-      handler = 'nList'),
+      handler = 'nCppVec'),
     cppOutput = list(
-      handler = 'nList')
+      handler = 'nCppVec')
   )
+)
+
+nCompiler:::assignOperatorDef(
+  # A dummy to have something non-null during update_cachedOpInfo during compile_normalizeCalls
+  'nClassBuilder',
+  list()
 )
 
 assignOperatorDef(
@@ -151,18 +159,6 @@ assignOperatorDef(
       handler = 'AsIs')
   )
 )
-
-# assignOperatorDef(
-#   'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
-#   list(
-#     ## labelAbstractTypes = list(
-#     ##   handler = 'nFunction_or_method_call'),
-#     normalizeCalls = list(
-#       handler = 'nFunction_or_method_call')#, # becomes NFCALL_
-#     ## cppOutput = list(
-#     ##   handler = 'Generic_nFunction')
-#   )
-# )
 
 assignOperatorDef(
   c('dim'),
@@ -348,6 +344,12 @@ assignOperatorDef(
 assignOperatorDef(
   c('['),
   list(
+    matchDef = function(x, i, j, ..., drop=TRUE) {},
+    useOpAssign = TRUE,
+    compileArgs = c("drop"),
+    isGeneric = TRUE,
+    simpleTransformations = list(
+      handler = 'EvalDrop'),
     labelAbstractTypes = list(
       handler = 'Bracket'),
     eigenImpl = list(
@@ -358,12 +360,56 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('[<-'),
+  list(
+    matchDef = function(x, i, j, ..., drop=TRUE, value) {},
+    compileArgs = c("drop"),
+    isGeneric = TRUE,
+    simpleTransformations = list(
+      handler = 'EvalDrop'),
+    labelAbstractTypes = list(
+      handler = 'Bracket',
+      isAssign = TRUE),
+    eigenImpl = list(
+      handler = 'Bracket',
+      isAssign = TRUE), ## converts `[` to `index[` or `index(`
+    cppOutput = list(
+      handler = 'IndexingBracket') ## needed for generated code such as for AD.
+  )
+)
+
+assignOperatorDef(
   c('[['),
   list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i) {},
+    useOpAssign = TRUE,
+    isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DoubleBracket'),
+    # eigenImpl = list(
+    #   handler = 'Bracket',
+    #   ),
     cppOutput = list(
       handler = 'IndexingBracket') # generates to single bracket for C++
+  )
+)
+
+assignOperatorDef(
+  c('[[<-'),
+  list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i, value) {},
+    isGeneric = TRUE,
+    labelAbstractTypes = list(
+      handler = 'DoubleBracket',
+      isAssign = TRUE),
+    eigenImpl = list(
+      handler = 'revert_OpAssign')#,
+#      isAssign = TRUE),
+# cppOutput will go back to `[[` opDef after reverse_OpAssign
+#    cppOutput = list(
+#      handler = 'IndexingBracket') # generates to single bracket for C++
   )
 )
 
@@ -409,13 +455,15 @@ assignmentOperators <- c('<-','<<-','=')
 assignOperatorDef(
   assignmentOperators,
   list(
+    simpleTransformations = list(
+      handler = 'CheckOpAssignment'),
     labelAbstractTypes = list(
       handler = 'Assign'),
     eigenImpl = list(
       beforeHandler = 'Assign_Before',
       handler = 'Assign'),
     cppOutput = list(
-      handler = 'MidOperator',
+      handler = 'Assign',
       cppString = ' = ')
   )
 )
@@ -438,6 +486,7 @@ assignOperatorDef(
 assignOperatorDef(
   '$',
   list(
+    isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DollarSign')
   )
@@ -565,9 +614,10 @@ assignOperatorDef(
 
 
 assignOperatorDef(
-  'scalarcast',
+  'scalarcast', # Ensure that an argument produces a scalar result, even for example from a 0-dimensional tensor. Currently for internal use only.
   list(
     help = 'scalarcast(A, type) is for scalar_cast_<type>::cast(A).',
+    compileArgs = c("type"),
     cppOutput = list(
       handler = 'ScalarCast'
     )
@@ -916,13 +966,13 @@ assignOperatorDef(
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
       method = TRUE),
     cppOutput = list(
-      cppString = 'pow'
+      # cppString = 'pow' # added to simple name changes below
     )
   )
 )
 
 assignOperatorDef(
-  c('%%'),
+  c('%%', 'nc_mod'),
   list(
     labelAbstractTypes = list(
       handler = 'BinaryCwise',
@@ -934,8 +984,9 @@ assignOperatorDef(
       allScalar = TRUE
     ),
     cppOutput = list(
-      handler = 'AsIs',
-      cppString = 'nc_mod')
+      handler = 'AsIs'
+      ##cppString = 'nc_mod'
+    )
   )
 )
 
@@ -1054,8 +1105,11 @@ updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
 updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
-  c('length'),
+  c('length'), # methods here are for Eigen objects and may be overloaded for user nClasses.
   list(
+    matchDef <- function(x) {},
+    isGeneric = TRUE,
+    useOpAssign = TRUE,
     labelAbstractTypes = list(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$integer
@@ -1064,10 +1118,29 @@ assignOperatorDef(
       handler = 'Reduction',
       noPromotion = TRUE,
       replaceForScalar = 1,
-      method = TRUE
+      method = TRUE,
+      methodName = 'size'
     ),
     cppOutput = list(
-      cppString = 'size'
+      # cppString = 'size'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('length<-'),
+  list(
+    matchDef <- function(x, value) {},
+    isGeneric = TRUE,
+    labelAbstractTypes = list(
+      handler = 'LengthAssign'
+    ),
+    eigenImpl = list(
+      handler = 'LengthAssign',
+      methodName = 'resize'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
+    cppOutput = list(
+      #handler = 'OpAssign'
+      #cppString = 'setLength'
     )
   )
 )
@@ -1215,8 +1288,8 @@ assignOperatorDef(
 ## )
 
 specificCallReplacements <- list(
-#    '^' = 'pow',
-#    '%%' = 'nimMod',
+    '^' = 'pow', # previously commented and changed instead at cppOutput. Was there a problem?
+    '%%' = 'nc_mod', # ditto
 #    length = 'size',
     is.nan = 'ISNAN',
     is.nan.vec = 'ISNAN',

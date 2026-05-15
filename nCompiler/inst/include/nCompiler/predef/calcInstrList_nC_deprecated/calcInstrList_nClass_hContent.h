@@ -11,7 +11,7 @@
 class calcInstrList_nClass : public interface_resolver< genericInterfaceC<calcInstrList_nClass> >, public loadedObjectHookC<calcInstrList_nClass> {
 public:
       calcInstrList_nClass (  ) ;
-  nList<std::shared_ptr<calcInstr_nClass> > calcInstrList;
+  nCppVec<std::shared_ptr<calcInstr_nClass> > calcInstrList;
 };
 
     SEXP  new_calcInstrList_nClass (  ) ;

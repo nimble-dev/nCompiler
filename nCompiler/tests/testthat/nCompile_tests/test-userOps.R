@@ -187,6 +187,10 @@ test_that("nFunction custom opDef works through a sequence of changes and handle
 })
 
 test_that("nClass custom opDefs of 3 kinds works through a sequence of changes and handlers", {
+  # This test sets up a series of name transformations.
+  # A custom handler at one compilation stage turns foo into foo2, then
+  # another one at the next compilation stage turns foo2 into foo3, then
+  # so on for foo3 to foo4. The custom handlers are provided in different ways.
 
   # foo is an nFunction with compileArgs and a simpleTrans handler that
   # renames it foo2 and emits a msg.

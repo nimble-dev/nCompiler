@@ -392,7 +392,7 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 
   argSymbols <- lapply(
     argTypes, function(argType)
-      add_missing_size(nCompiler:::argType2symbol(argType))
+      add_missing_size(nCompiler:::type2symbol(argType))
   )
 
   while (n_random > 0) {
@@ -449,7 +449,7 @@ make_wrt <- function(argTypes, n_random = 10, n_arg_reps = 1) {
 ## op:             Character string, the operator that will be the focus of the
 ##                 test.
 ## argTypes:       Character vector of argType strings that, when parsed, can be
-##                 passed to argType2symbol. If named, the names will as the formals
+##                 passed to type2symbol. If named, the names will as the formals
 ##                 of the nimbleFunction generator's run method and other methods.
 ##                 If not, formals are generated as arg1, arg2, etc.
 ## wrt_args:       Optional character vector of args to use in make_wrt(). If NULL,

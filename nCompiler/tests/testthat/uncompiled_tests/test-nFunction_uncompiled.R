@@ -76,3 +76,4 @@ test_that("providing fun as a separate function",
     expect_equal(foo@internals$returnSym$type,
                  "double")
 })
+

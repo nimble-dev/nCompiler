@@ -1,3 +1,8 @@
+# This flag should normally be set to NULL
+# Setting it non-null supports development work on nClass itself
+# by allowing package building even if nClass is broken.
+PDdevel <- NULL
+
 # predefined classes can be included as compilation object in a call
 # to nCompile just like others.
 # The difference is that pre-existing C++ code will be used to implement them.
@@ -9,7 +14,7 @@
 # The current idea is that the feature, or a wrapper to it, will also live in a predefined.
 ##
 #' @export
-test_predefined <- nClass(
+test_predefined <- PDdevel %||% nClass(
   predefined = "test_predefined_pkg",
   classname = "test_predefined",
   Cpublic = list(
@@ -24,7 +29,7 @@ test_predefined <- nClass(
 ## because they aren't seen by a predefined.
 
 #' @export
-derivClass <- nClass(
+derivClass <- PDdevel %||% nClass(
   classname = "derivClass",
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                        file.path("derivClass")),
@@ -40,7 +45,7 @@ derivClass <- nClass(
 ##                                              function() new_nC_derivClass())
 
 #' @export
-EigenDecomp <- nClass(
+EigenDecomp <- PDdevel %||% nClass(
   # manually insert:
   # "#include <nCompiler/ET_ext/post_Rcpp/tensorOperations_Eigen.h>"
   # in the hContent file AFTER the EigenDecomp class declaration
@@ -54,7 +59,7 @@ EigenDecomp <- nClass(
 )
 
 #' @export
-SVDDecomp <- nClass(
+SVDDecomp <- PDdevel %||% nClass(
   # manually insert:
   #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_SVD.h>
   # in the hContent file AFTER the SVDDecomp class declaration
@@ -69,8 +74,12 @@ SVDDecomp <- nClass(
 )
 
 
-#' @export
-OptimControlList <- nClass(
+#' @keywords internal2
+#' @noRd
+#' @rawNamespace export(OptimControlList)
+NULL
+
+OptimControlList <- PDdevel %||% nClass(
   classname = 'OptimControlList',
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                        file.path("OptimControlList")),
@@ -119,7 +128,7 @@ OptimControlList <- nClass(
 
 
 #' @export
-OptimResultList <- nClass(
+OptimResultList <- PDdevel %||% nClass(
   classname = 'OptimResultList',
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                        file.path("OptimResultList")),
@@ -132,3 +141,5 @@ OptimResultList <- nClass(
     message = 'RcppCharacterVector'
   )
 )
+
+rm(PDdevel)

@@ -32,6 +32,7 @@ NC_InternalsClass <- R6::R6Class(
     virtualMethodNames_self = character(), # will be used when checking inherited method validity, only for locally implemented methods
     virtualMethodNames = character(),
     check_inherit_done = FALSE,
+    classID = NULL,
     #Cpub_class_code = NULL,
     #main_class_code = NULL,
     RpublicNames = character(),
@@ -48,7 +49,8 @@ NC_InternalsClass <- R6::R6Class(
       self$inheritQ <- inheritQ
       self$compileInfo <- compileInfo
       self$classname <- classname
-      self$cpp_classname <- Rname2CppName(classname)
+      self$cpp_classname <- if(!is.null(compileInfo$cpp_classname)) compileInfo$cpp_classname else Rname2CppName(classname)
+      self$classID <- self$cpp_classname
       self$RpublicNames <- RpublicNames
       self$isOnlyC = length(RpublicNames) == 0
       numEntries <- length(Cpublic)
@@ -70,7 +72,7 @@ NC_InternalsClass <- R6::R6Class(
         }
         has_Cpublic_init <- "initialize" %in% names(Cpublic)
         self$virtualMethodNames <- names(Cpublic)[isVirtual]
-        self$symbolTable <- argTypeList2symbolTable(Cpublic[!isMethod], evalEnv = env)
+        self$symbolTable <- typeList2symbolTable(Cpublic[!isMethod], where = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
         if(has_Cpublic_init) {

@@ -117,7 +117,6 @@ run_test_suite(
   gold_file_dir
 )
 
-
 # FIXED: problem with 5: & -- seems like an Eigen quirk (C++ compile error)?
 # FIXED: same kind of problem with 14: |
 # FIXED: problem with 19: any (mismatch b/w R and C answers -- looks like a type issue?)

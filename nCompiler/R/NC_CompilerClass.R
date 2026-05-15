@@ -68,20 +68,28 @@ NC_CompilerClass <- R6::R6Class(
       }
     },
     createCppMethods = function(control,
-                                sourceObj) {
+                                sourceObj,
+                                class_env = new.env(),
+                                project_env = new.env()) {
       for(i in seq_along(NFcompilers)) {
-        NFcompilers[[i]]$createCpp(sourceObj = sourceObj)
+        NFcompilers[[i]]$createCpp(sourceObj = sourceObj,
+                                   class_env = class_env,
+                                   project_env = project_env)
       }
     },
     createCpp = function(control = list(),
                          sourceObj, #this will be the same as NC, so seems redundant and should be considered for removal/cleanup
-                         interfaceCalls = TRUE) {
+                         interfaceCalls = TRUE,
+                         class_env = new.env(),
+                         project_env = new.env()) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control
       )
       process(control = controlFull,
-              sourceObj)
+              sourceObj = sourceObj,
+              class_env = class_env,
+              project_env = project_env)
       cppDef <<- cpp_nClassClass$new(
         Compiler = self,
         name = self$name,
@@ -94,29 +102,34 @@ NC_CompilerClass <- R6::R6Class(
       invisible(NULL)
     },
     process = function(control = list(),
-                       sourceObj) {
+                       sourceObj,
+                       class_env = new.env(),
+                       project_env = new.env()) {
       controlFull <- updateDefaults(
         get_nOption('compilerOptions'),
         control
       )
       if(is.null(symbolTable)) {
-        makeSymbolTables()
+        makeSymbolTables(project_env = project_env)
       }
       createCppMethods(control = controlFull,
-                       sourceObj)
+                       sourceObj = sourceObj,
+                       class_env = class_env,
+                       project_env = project_env)
       ##collectNeededTypes()
       invisible(NULL)
     },
-    makeSymbolTables = function() {
+    makeSymbolTables = function(project_env = new.env()) {
       if(is.null(symbolTable)) {
         symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
         ## Update any symbolTBD symbols by scoped lookup
         resolveTBDsymbols(symbolTable,
-                          NCgenerator)
+                          NCgenerator,
+                          project_env = project_env)
         setupMethodSymbolTables()
       }
     },
-    gather_needed_units = function() {
+    gather_needed_units = function(project_env = new.env()) {
       # This gathers from member variables and methods.
       # It DOES NOT include an inherit nClass, because we could only access
       #   the inheritNCinternals, but we need the generator object.
@@ -125,18 +138,18 @@ NC_CompilerClass <- R6::R6Class(
       # list() |> unique() retruns list(), what we want.
       needed_nClasses1 <- nCompile_gather_needed_nClasses(cppDef, self$symbolTable)
       needed_nClasses2 <- lapply(NFcompilers,
-                                  \(x) x$gather_needed_nClasses()) |> 
-                          unlist(recursive = FALSE) |> unique()
+                                  \(x) x$gather_needed_nClasses()) |>
+                          unlist(recursive = FALSE) |> unique_units()
       needed_nFunctions <- lapply(NFcompilers,
-                                  \(x) x$gather_needed_nFunctions()) |> 
+                                  \(x) x$gather_needed_nFunctions()) |>
                           unlist(recursive = FALSE) |> unique()
       compileInfo_needed_units <- nCompile_process_manual_needed_units(
                                     NCinternals(self$NCgenerator),
-                                    self$NCgenerator$parent_env, isNC = TRUE)
+                                    self$NCgenerator$parent_env, isNC = TRUE, project_env = project_env)
       list(
-        needed_nClasses = unique(c(needed_nClasses1, needed_nClasses2 %||% list(),
-                                   compileInfo_needed_units$needed_nClasses)),
-        needed_nFunctions = unique(c(needed_nFunctions %||% list(), 
+        needed_nClasses = unique_units(c(needed_nClasses1, needed_nClasses2 %||% list(),
+                                         compileInfo_needed_units$needed_nClasses)),
+        needed_nFunctions = unique(c(needed_nFunctions %||% list(),
                                      compileInfo_needed_units$needed_nFunctions))
       )
     }
@@ -144,8 +157,9 @@ NC_CompilerClass <- R6::R6Class(
 )
 
 nCompile_process_manual_needed_units <- function(internals, 
-                                                      where = internals$where, # NFinternals case
-                                                      isNC = FALSE) {
+                                                      where = internals$where, # Ths default works when internals is an NFinternals
+                                                      isNC = FALSE,
+                                                      project_env = new.env()) {
   # This function collects two forms of "manual" needed units (nClasses and nFunctions):
   # those provided via compileInfo$needed_units and also (in the case of nClass)
   # an inherited nClass.
@@ -165,7 +179,8 @@ nCompile_process_manual_needed_units <- function(internals,
   results_nFunctions <- list()
   for(i in seq_along(needed_units)) {
     if(is.character(needed_units[[i]])) {
-      obj <- nGet(needed_units[[i]], where)
+      obj <- check_unknown_types(!!needed_units[[i]], where = where, project_env = project_env)
+      # obj <- nGet(needed_units[[i]], where)
       if(is.null(obj))
         stop(paste0("In processing compileInfo$needed_units for ", name, ", could not find object named '",
                     needed_units[[i]], "' in the environment of the source unit."))

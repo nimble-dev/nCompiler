@@ -9,8 +9,10 @@ nCompile_nClass(
   dir = file.path(tempdir(), "nCompiler_generatedCode"),
   cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
   env = parent.frame(),
+  compileInfo = NULL,
   control = list(),
   interface = c("full", "generic", "both"),
+  project_env = new.env(),
   ...
 )
 }

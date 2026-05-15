@@ -172,10 +172,10 @@ cppTemplateDeclaration <- function(templateNames,
                       ...)
 }
 
-cppNlist <- function(name = character(),
+cppNcppVec <- function(name = character(),
                      elementVar) {
   cppVarFullClass$new(name = name,
-                      baseType = "nList",
+                      baseType = "nCppVec",
                       templateArgs = list(elementVar))
 }
 

@@ -74,11 +74,10 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
+    nCppVec.R
     nimbleModels.R
-    nList.R
     nTry.R
     packaging.R
-    RcppExports.R
     Rcpp_check.R
     Rcpp_nCompiler.R
     Rexecution.R
@@ -86,4 +85,4 @@ Collate:
     testingTools.R
     compile_zzz_operatorLists.R
     zzz_NC_Predefined.R
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
