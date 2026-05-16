@@ -15,13 +15,11 @@ inlineCxxPlugin <- function(...) {
   uses_nC_inter <- !isFALSE(inlineCxxPlugin_env$uses_nC_inter)
   uses_nList <- !isFALSE(inlineCxxPlugin_env$uses_nList)
   uses_cereal <- !isFALSE(inlineCxxPlugin_env$uses_cereal)
-  uses_TBB <- !isFALSE(inlineCxxPlugin_env$uses_TBB) 
   include.before <- character()
   if(uses_eigen) include.before <- paste0(include.before, "#define NCOMPILER_USES_EIGEN\n")
   if(uses_nC_inter) include.before <- paste0(include.before, "#define NCOMPILER_USES_NCLASS_INTERFACE\n")
   if(uses_nList) include.before <- paste0(include.before, "#define NCOMPILER_USES_NLIST\n")
   if(uses_cereal) include.before <- paste0(include.before, "#define NCOMPILER_USES_CEREAL\n")
-  if(uses_TBB) include.before <- paste0(include.before, "#define NCOMPILER_USES_TBB\n")
   include.before <- paste0(include.before, "#include <nCompiler/nCompiler_omnibus.h>")
   ans <- Rcpp::Rcpp.plugin.maker(include.before=include.before)()
   ans

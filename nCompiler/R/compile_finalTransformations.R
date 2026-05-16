@@ -104,7 +104,7 @@ inFinalTransformationsEnv(
     ## shareVars <- replace_nameSubList(shareVars, auxEnv$nameSubList)
     ## code$args[[4]] <- copyVars ## This is no longer an exprClass
     ## code$args[[5]] <- shareVars ## Ditto
-
+            
     ## remove the vector and initial value arg and save for later
     vector_arg <- removeArg(code, 2)
     ## TODO: don't remove the init arg unless isTRUE(code$caller$isAssign)

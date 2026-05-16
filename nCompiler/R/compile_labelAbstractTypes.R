@@ -760,6 +760,8 @@ inLabelAbstractTypesEnv(
 
     ## Now the 3rd arg, the body of the loop, can be processed
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    
+    auxEnv$uses_TBB <- TRUE
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
@@ -816,6 +818,8 @@ inLabelAbstractTypesEnv(
         call. = FALSE)
     code$type <- symbolBasic$new(name = code$name, nDim = 0,
                                  type = code$args[[3]]$type$type)
+    
+    auxEnv$uses_TBB <- TRUE
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
