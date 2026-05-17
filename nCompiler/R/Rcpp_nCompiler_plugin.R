@@ -15,13 +15,11 @@ inlineCxxPlugin <- function(...) {
   uses_nC_inter <- !isFALSE(inlineCxxPlugin_env$uses_nC_inter)
   uses_nList <- !isFALSE(inlineCxxPlugin_env$uses_nList)
   uses_cereal <- !isFALSE(inlineCxxPlugin_env$uses_cereal)
-  uses_TBB <- FALSE # !isFALSE(inlineCxxPlugin_env$uses_TBB) # including here causes error due to #defining FALSE
   include.before <- character()
   if(uses_eigen) include.before <- paste0(include.before, "#define NCOMPILER_USES_EIGEN\n")
   if(uses_nC_inter) include.before <- paste0(include.before, "#define NCOMPILER_USES_NCLASS_INTERFACE\n")
   if(uses_nList) include.before <- paste0(include.before, "#define NCOMPILER_USES_NLIST\n")
   if(uses_cereal) include.before <- paste0(include.before, "#define NCOMPILER_USES_CEREAL\n")
-  if(uses_TBB) include.before <- paste0(include.before, "#define NCOMPILER_USES_TBB\n")
   include.before <- paste0(include.before, "#include <nCompiler/nCompiler_omnibus.h>")
   ans <- Rcpp::Rcpp.plugin.maker(include.before=include.before)()
   ans
@@ -37,9 +35,9 @@ nCompiler_pluginEnv <- new.env()
 make_nCompiler_plugin <- function(nCompiler_pluginEnv) {
   RcppDefaultPlugin <- Rcpp:::Rcpp.plugin.maker()
   force(nCompiler_pluginEnv)
-  ans <- function(...) {
+    ans <- function(...) {
     result <- RcppDefaultPlugin(...)
-    result$env$PKG_CPPFLAGS <- c(result$env$PKG_CPPFLAGS,
+    result$env$PKG_CPPFLAGS <- paste(result$env$PKG_CPPFLAGS,
                                  if(length(nCompiler_pluginEnv$includePaths) > 0)
                                    paste0(
                                      "-I",
@@ -50,6 +48,8 @@ make_nCompiler_plugin <- function(nCompiler_pluginEnv) {
     result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
     ## Makevars doesn't work
     ## result$Makevars <- "CXX_STD=CXX11" does not seem to work
+    if(isTRUE(nCompiler_pluginEnv$uses_TBB))
+      result$env <- setEnvTBB(result$env)
     result
   }
   ans
@@ -74,13 +74,15 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
                                        "")
     # result$env$PKG_CXXFLAGS <- "-std=c++11"
     result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
+    if(!isFALSE(inlineCxxPlugin_env$uses_TBB))
+      result$env <- setEnvTBB(result$env)
     if(isTRUE(get_nOption('compilerOptions')$throwEigenErrors)) {
       # replace include directives to enable Eigen errors
       #preamble = system.file(file.path('include', 'nCompiler',
       #                                 'nCompiler_Eigen_EnableErrors.h'),
       #                       package = 'nCompiler')
       #result$includes = readChar(preamble, file.info(preamble)$size)
-      result$includes = "#define NCOMPILER_HANDLE_EIGEN_ERRORS"
+      result$includes = c("#define NCOMPILER_HANDLE_EIGEN_ERRORS")
     }
     if(isTRUE(get_nOption('compilerOptions')$cppStacktrace)) {
       # add include directives to add stack basic traces
@@ -95,3 +97,13 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
 }
 
 nCompiler_Eigen_plugin <- make_nCompiler_Eigen_plugin(nCompiler_pluginEnv)
+
+setEnvTBB <- function(env) {
+  if(.Platform$OS.type == "windows") {
+    env$PKG_CPPFLAGS <- paste(env$PKG_CPPFLAGS, '-DRCPP_PARALLEL_USE_TBB=1')
+    env$PKG_LIBS <- paste(env$PKG_LIBS,
+                                 '$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe"-e "RcppParallel::RcppParallelLibs()")')
+  } else env$PKG_LIBS <- paste(env$PKG_LIBS, 
+                               '$(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")')
+  return(env)
+}

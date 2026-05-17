@@ -11,13 +11,11 @@ nClassBaseClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB",
                         "#define NCOMPILER_USES_NLIST",
                         "#define USES_NCOMPILER")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_TBB",
                         "#define NCOMPILER_USES_NLIST",
                         "#define USES_NCOMPILER")
 
@@ -114,6 +112,13 @@ cpp_nClassBaseClass <- R6::R6Class(
       cpp_include_needed_nClasses(self, Compiler$symbolTable)
       symbolTable <<- symbolTable2cppSymbolTable(Compiler$symbolTable)
 #      variableNamesForInterface <<- symbolTable$getSymbolNames()
+      uses_TBB <- any(sapply(Compiler$NFcompilers, function(x) isTRUE(x$auxEnv$uses_TBB)))
+      if(uses_TBB) {
+        self$Hpreamble <- c(self$Hpreamble,
+                        "#define NCOMPILER_USES_TBB")
+        self$CPPpreamble <- c(self$CPPpreamble,
+                        "#define NCOMPILER_USES_TBB")
+      }
     },
     buildAll = function(where = where) {
       buildDefaultSEXPgenerator <- !isFALSE(self$compileInfo$createFromR)

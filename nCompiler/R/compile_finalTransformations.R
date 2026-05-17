@@ -168,6 +168,7 @@ inFinalTransformationsEnv(
     ## code$args[[4]] <- copyVars ## This is no longer an exprClass
     ## code$args[[5]] <- shareVars ## Ditto
 
+
     ## We have already found the local method calls and set the `opInfo$case` to be 'nClass_method_in_lifted',
     ## such that C++ calls to the method will be handled by cppOutput handler.
     ## The following checks for such methods in a different way (so perhaps worry an inconsistency could arise).
@@ -184,6 +185,7 @@ inFinalTransformationsEnv(
     vector_arg <- removeArg(code, 'object')
     init_arg <- removeArg(code, 'init')
     nThreads_arg <- removeArg(code, 'nThreads')  
+
     ## add an index var
     index_arg <- exprClass$new(name = 'i__', isName = TRUE, isCall = FALSE,
                                isLiteral = FALSE, isAssign = FALSE)
