@@ -762,6 +762,7 @@ inLabelAbstractTypesEnv(
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
     
     auxEnv$uses_TBB <- TRUE
+    nCompiler_pluginEnv$uses_TBB <- TRUE
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
@@ -820,6 +821,7 @@ inLabelAbstractTypesEnv(
                                  type = code$args[[3]]$type$type)
     
     auxEnv$uses_TBB <- TRUE
+    nCompiler_pluginEnv$uses_TBB <- TRUE
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )

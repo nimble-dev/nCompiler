@@ -48,7 +48,7 @@ make_nCompiler_plugin <- function(nCompiler_pluginEnv) {
     result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
     ## Makevars doesn't work
     ## result$Makevars <- "CXX_STD=CXX11" does not seem to work
-    if(!isFALSE(inlineCxxPlugin_env$uses_TBB))
+    if(isTRUE(nCompiler_pluginEnv$uses_TBB))
       result$env <- setEnvTBB(result$env)
     result
   }
@@ -103,7 +103,7 @@ setEnvTBB <- function(env) {
     env$PKG_CPPFLAGS <- paste(env$PKG_CPPFLAGS, '-DRCPP_PARALLEL_USE_TBB=1')
     env$PKG_LIBS <- paste(env$PKG_LIBS,
                                  '$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe"-e "RcppParallel::RcppParallelLibs()")')
-  } else env$PKG_LIBS <- paste(env$PKG_LIBS,
+  } else env$PKG_LIBS <- paste(env$PKG_LIBS, 
                                '$(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")')
   return(env)
 }
