@@ -617,10 +617,13 @@ inGenCppEnv(
   ParallelExpr <- function(code, symTab) {
     nThreads_arg <- removeArg(code, 3)
     paste0('{',
-      paste0('tbb::global_control gc(tbb::global_control::max_allowed_parallelism, getNumThreads(',
-             compile_generateCpp(nThreads_arg, symTab),
-             '));'),
-      paste0(eval(call("AsIs", code, symTab), envir = genCppEnv), ';'),
-      '}', collapse = '\n')
+           "TBB_DEPTH++;",
+           paste0('tbb::global_control gc(tbb::global_control::max_allowed_parallelism, getNumThreads(',
+                  compile_generateCpp(nThreads_arg, symTab),
+                  '));'),
+           paste0(eval(call("AsIs", code, symTab), envir = genCppEnv), ';'),
+           "TBB_DEPTH--;",
+           '}',
+           collapse = '\n')
   }
 )

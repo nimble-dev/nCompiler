@@ -888,25 +888,7 @@ inLabelAbstractTypesEnv(
        
 
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
-    
 
-    ## give reduce operator the same return type as the initial value
-    ## TODO: Maybe symbolNF is the right type for the reduction op.
-    code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[3]]$type$type)
-    ## finish by processing the vector arg
-    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
-    if (code$args[[2]]$type$nDim != 1)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected the second argument to be a vector but got nDim = ',
-              code$args[[2]]$type$nDim)),
-        call. = FALSE)
-    code$type <- symbolBasic$new(name = code$name, nDim = 0,
-                                 type = code$args[[3]]$type$type)
-    
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
 
