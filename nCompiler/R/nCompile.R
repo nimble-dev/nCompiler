@@ -1269,8 +1269,8 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     write.dcf(DESCRIPTION, DESCfile)
     NAMESPACE <- c(paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
                    "importFrom(Rcpp, evalCpp)", # required at package loading
-                   if(!isFALSE(inlineCxxPlugin_env$uses_TBB))
-                       "importFrom(RcppParallel, RcppParallelLibs)" else NULL
+                   if(isTRUE(nCompiler_pluginEnv$uses_TBB))
+                       "importFrom(RcppParallel, RcppParallelLibs)" #else NULL
 #                   "export(nComp_serialize_)",
 #                   "export(nComp_deserialize_)",
 #                   "export(call_method)",

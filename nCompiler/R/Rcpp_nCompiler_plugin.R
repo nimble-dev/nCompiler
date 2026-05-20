@@ -74,8 +74,6 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
                                        "")
     # result$env$PKG_CXXFLAGS <- "-std=c++11"
     result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
-    if(!isFALSE(inlineCxxPlugin_env$uses_TBB))
-      result$env <- setEnvTBB(result$env)
     if(isTRUE(get_nOption('compilerOptions')$throwEigenErrors)) {
       # replace include directives to enable Eigen errors
       #preamble = system.file(file.path('include', 'nCompiler',
@@ -91,6 +89,8 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
       result$includes = c(result$includes,
                           '#include <nCompiler/nCompiler_stacktrace.h>')
     }
+    if(isTRUE(nCompiler_pluginEnv$uses_TBB))
+      result$env <- setEnvTBB(result$env)
     result
   }
   ans
