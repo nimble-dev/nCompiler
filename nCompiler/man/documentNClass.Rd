@@ -110,7 +110,7 @@ rox <- documentNClass(obj = foo,
 # documentation for foo
 writePackage(foo,
              dir = tempdir(),
-             package.name = "fooPackageWriteDocnFunction",
+             pkgName = "fooPackageWriteDocnFunction",
              roxygen = list(foo = rox))
 buildPackage("fooPackageWriteDocnFunction",
              dir = tempdir(),

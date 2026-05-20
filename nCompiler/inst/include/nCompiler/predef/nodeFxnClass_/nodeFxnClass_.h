@@ -13,7 +13,7 @@ RESET_EIGEN_ERRORS
 double logProb(0.0);
 const auto& methodInstr = nodeInstr->methodInstr;
 const auto& indsInstrVec = nodeInstr->indsInstrVec;
-logProb += static_cast<Derived*>(this)->calc_one(indsInstrVec[0]);
+logProb += static_cast<Derived*>(this)->calc_one((*indsInstrVec)[0]);
 return(logProb);
     }
 

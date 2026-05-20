@@ -102,6 +102,7 @@ nFunction <- function(fun,
   #   scopes, args,
   #   qualifiers
   # Also cpp_code_name (see NF_InternalsClass).
+  TreturnType <- nCaptureType(returnType)
   compileInfo <- updateDefaults(
     list(C_fun = NULL,
          callFromR = TRUE,
@@ -129,7 +130,7 @@ nFunction <- function(fun,
   # ADfun: should become AD_nFun
   ###
 
-  if(missing(name))
+  if(missing(name) || !length(name))   # Check for empty `name` per issue 162.
     name <- nFunctionLabelMaker()
   ## Create internals that will be used for compilation.
   internals <- NF_InternalsClass$new(fun,
@@ -137,7 +138,7 @@ nFunction <- function(fun,
                                      argTypes = argTypes,
                                      refArgs = refArgs,
                                      blockRefArgs = blockRefArgs,
-                                     returnType = returnType,
+                                     returnType = {{TreturnType}},
                                      enableDerivs = enableDerivs,
 #                                     check = check,
 #                                     C_fun = C_fun,

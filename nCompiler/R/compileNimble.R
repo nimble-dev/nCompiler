@@ -137,7 +137,7 @@ RCfun_2_nFun <- function(RCfun, env=parent.frame()) {
   nFun <- nFunction(
     name = nfMethodRCobj$uniqueName, # This might be helpful
     fun = fun,
-    returnType = nfMethodRCobj$returnType,
+    returnType = !!(nfMethodRCobj$returnType),
     where = env
   )
   nFun
@@ -212,7 +212,7 @@ nimbleSymTab_to_nComp_types <- function(symTab) {
     if(symClass[length(symClass)] == "symbolBasic") { # numeric, integer, logical
       nDim <- obj$nDim
       scalarType <- obj$type
-      result[[sn]] <- nType(name = sn, scalarType=scalarType, nDim=nDim)
+      result[[sn]] <- nTypeBasic(name = sn, scalarType=scalarType, nDim=nDim)
     }
   }
   result

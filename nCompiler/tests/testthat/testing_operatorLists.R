@@ -270,7 +270,8 @@ binaryOp_argTypes <- c(
                                         rhs = c('numericScalar',
                                                 'integerScalar',
                                                 'logicalScalar')),
-    alpha_name = 'pow'
+    alpha_name = 'pow',
+    returnTypeCode = 2L  # ^ always returns double regardless of input types
   )
 )
 

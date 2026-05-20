@@ -2,7 +2,7 @@
 % Please edit documentation in R/all_utils.R
 \name{writeCode}
 \alias{writeCode}
-\title{Write unlisted code generated from.nCompiler cpp definitions.}
+\title{Write unlisted code generated from nCompiler cpp definitions.}
 \usage{
 writeCode(x, ...)
 }
@@ -15,5 +15,5 @@ strings.}
 }
 \description{
 This is not intended to be called directly but is useful for
-debugging.nCompiler's C++ output.
+debugging nCompiler's C++ output.
 }

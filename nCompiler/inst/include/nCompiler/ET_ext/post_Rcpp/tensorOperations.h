@@ -4,38 +4,6 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 // #include "tensorIndexingOps.h"
 
-#define QUOTEME(A) #A
-//#define PREDEFINED_HEADER(PH) QUOTEME(PH.h)
-#define PREDEFINED_HEADER(PH) <nCompiler/PH.h>
-
-#ifdef PREDEFINED_test_predefined
-#include PREDEFINED_HEADER(PREDEFINED_test_predefined)
-std::shared_ptr<test_predefined> make_test_predefined() {
-  return(std::shared_ptr<test_predefined>(new test_predefined));
-}
-#endif
-
-#ifdef PREDEFINED_derivClass
-#include PREDEFINED_HEADER(PREDEFINED_derivClass)
-std::shared_ptr<derivClass> make_derivClass() {
-  return(std::shared_ptr<derivClass>(new derivClass));
-}
-#endif
-
-#ifdef PREDEFINED_EigenDecomp
-#include PREDEFINED_HEADER(PREDEFINED_EigenDecomp)
-std::shared_ptr<EigenDecomp> make_EigenDecomp() {
-  return(std::shared_ptr<EigenDecomp>(new EigenDecomp));
-}
-#endif
-
-#ifdef PREDEFINED_SVDDecomp
-#include PREDEFINED_HEADER(PREDEFINED_SVDDecomp)
-std::shared_ptr<SVDDecomp> make_SVDDecomp() {
-    return(std::shared_ptr<SVDDecomp>(new SVDDecomp));
-}
-#endif
-
 
 /**
  * Generate functors similar to std::binary_function, but where the 
@@ -1593,8 +1561,6 @@ Scalar nLogdet(const Xpr & x) {
     return qrdecomp.logDeterminant();
 }
 
-// TODO: implement nLogdet for sparse matrices
-
 // This is drafted but not yet used.
 template<typename Scalar >
 bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
@@ -1614,110 +1580,7 @@ bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
 }
 
 
-#ifdef PREDEFINED_SVDDecomp
-std::shared_ptr<SVDDecomp> nSvd(
-    const Eigen::Tensor<double, 2> &x, int vectors
-) {
-    auto xm = matmap(x);
-    std::shared_ptr<SVDDecomp> ans(new SVDDecomp);
 
-    int n = xm.rows();
-    int p = xm.cols();
- 	int nu = std::min(n, p);
-
- 	Eigen::JacobiSVD<Eigen::MatrixXd> svd;
-
- 	/* note: if nu > 16, bidiagonialization algo. is recommended on eigen
- 	   website.  not currently available w/ nimble's version of eigen, but may
- 	   be in future. */
- 	if(vectors == 0) {
- 	    svd.compute(xm);
- 	}
- 	else {
- 	    int leftSVs = nu;
- 	    int rightSVs = nu;
-
- 	    if(vectors == 1) {
- 	        svd.compute(xm, Eigen::ComputeThinU | Eigen::ComputeThinV);
- 	    }
- 	    if(vectors == 2) {
- 	        leftSVs = xm.rows();
- 	        rightSVs = xm.cols();
- 	        svd.compute(xm, Eigen::ComputeFullU | Eigen::ComputeFullV);
- 	    }
-
- 	    ans->u.resize(std::array<Eigen::Index, 2>({{n, leftSVs}}));
- 	    auto u = matmap(ans->u);
- 	    u = svd.matrixU();
-
- 	    ans->v.resize(std::array<Eigen::Index, 2>({{p, rightSVs}}));
- 	    auto v = matmap(ans->v);
-        v = svd.matrixV();
- 	}
-
-    ans->d.resize(nu);
- 	auto d = matmap(ans->d);
- 	d = svd.singularValues();
-
- 	return ans;
-}
-#endif
-
-#ifdef PREDEFINED_EigenDecomp
-  std::shared_ptr<EigenDecomp> nEigen(const Eigen::Tensor<double, 2> &x, bool symmetric = true, bool valuesOnly = false) {
-    auto x_map = matmap(x);
-    int nrows(x_map.rows());
-    int ncols(x_map.cols());
-    // potentially error-trap of nrows == ncols.
-    std::shared_ptr<EigenDecomp> ans(new EigenDecomp);
-    ans->values.resize(nrows);
-    auto values_map = matmap(ans->values);
-    if(!valuesOnly){
-      ans->vectors.resize(std::array<Eigen::Index, 2>({{nrows, ncols}}));
-    }
-    Eigen::DecompositionOptions eigOpts = valuesOnly ? Eigen::EigenvaluesOnly : Eigen::ComputeEigenvectors;
-    if(symmetric) {
-      Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> solver1(x_map, eigOpts);
-      values_map = solver1.eigenvalues().reverse();
-      if(!valuesOnly){
-	Eigen::Map<Eigen::MatrixXd> vecs_map = matmap(ans->vectors);
-	vecs_map = solver1.eigenvectors().rowwise().reverse();
-      }
-    } else {
-      Eigen::EigenSolver<Eigen::MatrixXd> solver2(x_map, eigOpts);
-      std::vector<std::pair<double,int> > sortIndices;
-      for(int i = 0; i < nrows; i++){
-	sortIndices.push_back(std::make_pair(abs(solver2.eigenvalues().real()(i)),i));
-      }
-      std::sort(sortIndices.begin(), sortIndices.end());
-      std::reverse(sortIndices.begin(), sortIndices.end());
-
-      for(int i = 0; i < nrows ; ++i){
-	if(solver2.eigenvalues().imag()(sortIndices[i].second) != 0){
-	  // emit error message like thsi from nimble
-	  // _nimble_global_output <<"Run-time warning: matrix used in call to nimEigen() has a complex valued eigenvector."<<"\n"; nimble_print_to_R(_nimble_global_output);
-	  values_map(i) = NAN;
-	} else {
-	  values_map(i) = solver2.eigenvalues().real()(sortIndices[i].second);
-	}
-      }
-      if(!valuesOnly){
-	Eigen::Map<Eigen::MatrixXd> vecs_map = matmap(ans->vectors);
-	for(int i = 0; i < ncols; i++){
-	  vecs_map.col(i) = solver2.eigenvectors().real().col(sortIndices[i].second);
-	  for(int j = 0; j < nrows; j++){
-	    if(solver2.eigenvectors().imag()(j, sortIndices[i].second) != 0){
-	      // emit warning something like this from nimble:
-	      // _nimble_global_output <<"Run-time warning: matrix used in call to nimEigen() has a complex valued eigenvector."<<"\n"; nimble_print_to_R(_nimble_global_output);
-	      vecs_map(j, i) = NAN;
-	    }
-	  }
-	}
-      }
-    }
-    return ans;
-  }
-#endif
 
 /**
  * Templated variance function assuming an Eigen::tensor or tensor expression 

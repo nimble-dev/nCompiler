@@ -68,6 +68,25 @@ compile_normalizeCalls <- function(code,
         auxEnv$needed_nFunctions[[uniqueName]] <- list(code$name, auxEnv$where)
       }
     }
+    # In the case of an nClassBuilder call, we evaluate that in R right here, right now,
+    # and replace it with a type name.
+    # This is a candidate for a new compilation stage, but it might work fine to bundle it here.
+    if(cachedOpInfo$case == "nClassBuilder") {
+      this_builder <- cachedOpInfo$obj_internals
+      type_res <- check_built_types(Rexpr = code$Rexpr,
+                                    candidate = this_builder, 
+                                    where = auxEnv$where,
+                                    project_env = auxEnv$project_env)
+      if(isNCgenerator(type_res)) {
+        cpp_classname <- NCinternals(type_res)$cpp_classname
+        new_code <- exprClass$new(name = cpp_classname, isName = TRUE, isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
+        replaceArgInCaller(code, new_code)
+        code$aux$cachedOpInfo <- NULL
+      } else {
+        stop("During normalizeCalls, could not resolve an nClass type from an nClassBuilder.")
+      }
+      return(NULL)
+    }
 
     opDef <- cachedOpInfo$opDef
     matchDef <- opDef[["matchDef"]]
@@ -134,6 +153,8 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         if(!is.null(obj)) {
           if(isNF(obj)) {
             cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            cachedOpInfo$obj_internals <- NFinternals(obj)
+            opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
           } else {
             stop(exprClassProcessingErrorMsg(code,
                                               paste0('method ', code$name, 'is being called, but it is not a nFunction.')),
@@ -155,16 +176,24 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
           # There is no error trapping if obj is not an nFunction, because
           # it could be simply an R function, since nGet (via get0) may traverse up to R_GlobalEnv.
           cachedOpInfo$case <- "nFunction"
+          cachedOpInfo$obj_internals <- NFinternals(obj)
+          opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
+        } else if(inherits(obj, "nClassBuilder")) {
+          cachedOpInfo$case <- "nClassBuilder"
+          opDef <- getOperatorDef("nClassBuilder") # a dummy to be non-null below
+          cachedOpInfo$obj_internals <- obj
         } else {
-          obj <- NULL # reset to NULL if not an nFunction
+          obj <- NULL # reset to NULL if not an nFunction or nClassBuilder
         }
       }
     }
-    if(!is.null(obj)) {
-      # We found an nFunction object that is either a method or not.
-      cachedOpInfo$obj_internals <- NFinternals(obj)
-      opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
-    }
+    # if(!is.null(obj)) {
+    #   if(cachedOpInfo$case == "nFunction") {
+    #   # We found an nFunction object that is either a method or not.
+    #     cachedOpInfo$obj_internals <- NFinternals(obj)
+    #     opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
+    #   }
+    # }
   }
   if(is.null(opDef)) {
     ## At this point, we have not found an nFunction or nClass method.
@@ -205,41 +234,3 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
   code$aux$cachedOpInfo <- cachedOpInfo
   cachedOpInfo
 }
-
-# inNormalizeCallsEnv(
-#   convert_nFunction_or_method_AST <-
-#     function(code) {
-#       nFunctionName <- code$name
-#       obj_internals <- code$aux$obj_internals
-#       code$aux$obj_internals <- NULL
-#       opDef <- obj_internals$compileInfo$opDef
-#       matched_code <- exprClass_put_args_in_order(def=opDef$matchDef, expr=code, compileArgs = opDef$compileArgs)
-#       code <- replaceArgInCaller(code, matched_code)
-#       ## Note that the string `NFCALL_` matches the operatorDef entry.
-#       ## Therefore the change-of-name here will automatically trigger use of
-#       ## the 'NFCALL_' operatorDef in later stages.
-#       newExpr <- wrapInExprClass(code, 'NFCALL_', "call")
-#       # code$name <- 'NFCALL_'
-#       cpp_code_name <- obj_internals$cpp_code_name
-#       # fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
-#       #                             isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
-#       newExpr$aux$obj_internals <- obj_internals
-#       # newExpr$aux$nFunctionName <- nFunctionName
-#       newExpr$aux$cpp_code_name <- cpp_code_name
-#       ## We may need to add content to this symbol if
-#       ## necessary for later processing steps.
-#       ## insertArg(code, 1, fxnNameExpr, "FUN_")
-#       obj_internals <- NULL
-#       invisible(NULL)
-#     }
-# )
-
-# inNormalizeCallsEnv(
-#   nFunction_or_method_call <-
-#     function(code, symTab, auxEnv, handlingInfo) {
-#       recurse_normalizeCalls(code, symTab, auxEnv,
-#                              handlingInfo)
-#       convert_nFunction_or_method_AST(code)
-#       NULL
-#     }
-# )

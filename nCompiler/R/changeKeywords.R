@@ -16,7 +16,7 @@ nKeyWords <- list(copy = 'nCopy',
                   seq = 'nSeq',
                   eigen = 'nEigen',
                   diag = 'nDiag',
-                  Diagonal = 'nDiagonal', # mirror Matrix::Diagonal to 
+                  Diagonal = 'nDiagonal', # mirror Matrix::Diagonal to
                                           # create sparse matrices
                   '%*%' = 'nMul',
                   svd = 'nSvd',
@@ -59,7 +59,7 @@ nf_changeKeywordsOne <- function(code, first = FALSE){
             }
         }
     }
-    else if(length(code) > 1){ 
+    else if(length(code) > 1){
         for(i in seq_along(code) ) {
             if(!is.null(code[[i]]) )
                 code[[i]] <- nf_changeKeywordsOne(code[[i]], first = i == 1)

@@ -6,12 +6,13 @@
 #define R_NO_REMAP
 #endif
 #include <Rinternals.h>
+#include "nList_I1_c_.h"
 
 class nodeInstr_nClass : public interface_resolver< genericInterfaceC<nodeInstr_nClass> >, public loadedObjectHookC<nodeInstr_nClass> {
 public:
       nodeInstr_nClass (  ) ;
   Eigen::Tensor<int, 1> methodInstr;
-  nList<Eigen::Tensor<int, 1> > indsInstrVec;
+  std::shared_ptr<nList_I1> indsInstrVec;
 };
 
     SEXP  new_nodeInstr_nClass (  ) ;

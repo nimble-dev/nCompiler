@@ -38,7 +38,7 @@ make_input <- function(argTypes, input_gen_funs = NULL) {
     input <- sapply(
       names(argTypes),
       function(name)
-        argType_2_input(argTypes[[name]], input_gen_funs[[name]]),
+        argType_2_input(!!argTypes[[name]], input_gen_funs[[name]]),
       simplify = FALSE
     )
   }
@@ -71,8 +71,9 @@ add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4),
 }
 
 argType_2_input <- function(argType, input_gen_fun = NULL) {
+  targType <- nCaptureType(argType)
   argSymbol <- add_missing_size(
-    `:::`("nCompiler", "argType2symbol")(argType)
+    `:::`("nCompiler", "type2symbol")({{targType}})
   )
   type <- argSymbol$type
   nDim <- argSymbol$nDim
@@ -107,7 +108,7 @@ gen_nFunction <- function(param) {
   body(fun) <- tmp
   return(
     nFunction(
-      fun, argTypes = param$argTypes, returnType = param$returnType
+      fun, argTypes = param$argTypes, returnType = !!(param$returnType)
     )
   )
 }
@@ -169,7 +170,7 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
           if (suppress_err_msgs) {
             expect_error(capture.output(
               nCompile(nC_error, control = control)))
-            
+
           } else {
             expect_error(nCompile(nC_error, control = control))
           }
@@ -308,13 +309,26 @@ get_ops_values <- function(field, subfield = NULL) {
 ##
 ## op:       An operator string
 ## argTypes: A character vector of argTypes (e.g. "double(0)".
-##
 return_type_string <- function(op, argTypes) {
+
+  opDef <- `:::`("nCompiler", "getOperatorDef")(op)
+  if(is.null(opDef))
+    stop(paste0('No operator definition found for operator: ', op), call. = FALSE)
+  simpTrans <- opDef$simpleTransformations
+  if(!is.null(simpTrans)) {
+    if(identical(simpTrans$handler, "replace")) {
+      if(!is.null(simpTrans$replacement))
+       op <- simpTrans$replacement
+    }
+  }
 
   returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'labelAbstractTypes',
                                                'returnTypeCode')
   recycling_rule_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing',
                                                   'recyclingRuleOp')
+
+  if (is.null(returnTypeCode))
+    returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'returnTypeCode')
 
   if (is.null(returnTypeCode))
     if (!isTRUE(recycling_rule_op)) return(argTypes[1])
@@ -329,9 +343,11 @@ return_type_string <- function(op, argTypes) {
   ##   'logical'  # 3
   ## )
 
+  # argSymTab <- nCompiler:::typeList2symbolTable(argTypesList)
+  # args <- lapply(names(argTypesList), function(name) argSymTab$getSymbol(name))
   args <- lapply(
     argTypes, function(argType)
-      `:::`("nCompiler", "argType2symbol")(argType)
+      nCompiler:::type2symbol(!!argType)
   )
 
   scalarTypeString <-
@@ -613,5 +629,3 @@ gen_pos_def_matrix <- function(arg_size) {
   mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
   mat %*% t(mat)
 }
-
-

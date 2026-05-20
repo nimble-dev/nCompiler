@@ -74,7 +74,7 @@ build_compiled_nClasses <- function(units,
         match <- rep(FALSE, numUnits)
         inherit_returnName <- NULL
         inherit_indices[[i]] <- integer()
-        if(identical(inherit_NCgen, nCompiler::nClassClass))
+        if(identical(inherit_NCgen, nCompiler::nClassClass)) # devtools::document() problem if we use :: instead of :::
           inherit_NCgen <- NULL
         else {
           for(j in seq_along(units)) {

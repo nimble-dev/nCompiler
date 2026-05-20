@@ -5,7 +5,7 @@
 #' @param x Object to be inspected.
 #'
 #' @return \code{TRUE} or \code{FALSE}
-#' 
+#'
 #' @export
 isNC <- function(x) inherits(x, 'nClass')
 
@@ -34,7 +34,7 @@ compileInfo <- function(NC) {
 #' @param x Object to be inspected
 #'
 #' @return \code{TRUE} or \code{FALSE}
-#' 
+#'
 #' @export
 isNCgenerator <- function(x) {
   if(inherits(x, "R6ClassGenerator"))
@@ -50,7 +50,7 @@ isNCgenerator <- function(x) {
 #' @param x Object to be inspected
 #'
 #' @return \code{TRUE} or \code{FALSE}
-#' 
+#'
 #' @export
 isCompiledNCgenerator <- function(x) {
   if(inherits(x, "R6ClassGenerator"))
@@ -64,7 +64,7 @@ isCompiledNCgenerator <- function(x) {
 #' Only for advanced use.
 #'
 #' @param x A nClass object.
-#' 
+#'
 #' @export
 NCinternals <- function(x) {
   if(isNC(x))
@@ -82,7 +82,7 @@ NCinternals <- function(x) {
 #' Only for advanced use.
 #'
 #' @param x A nClass object.
-#' 
+#'
 #' @export
 `NCinternals<-` <- function(x, value) {
   if(isNC(x))
@@ -94,6 +94,32 @@ NCinternals <- function(x) {
                paste(class(x), collapse = ',')),
          call. = FALSE)
   x
+}
+
+NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
+  if(!isNCgenerator(NCgenerator))
+    stop("Input must be a nClass generator.")
+  current_NCgen <- NCgenerator
+  done <- FALSE
+  overload <- NULL
+  # If there is an overload, it will be at
+  # overloadDefs[[name]][[stage]]$handler
+  # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
+  while(!done) {
+    overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
+    if(!is.null(overloadDefs)) {
+      overload <- overloadDefs[[name]][[stage]]
+      done <- !is.null(overload)
+    }
+    if(!done) {
+      if(inherits)  {
+        current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+        done <- !isNCgenerator(current_NCgen)
+      } else
+        done <- TRUE
+    }
+  }
+  overload
 }
 
 # Utility function to allow searching up an inheritance
@@ -119,12 +145,12 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
   method
 }
 
-# This function will be called from nCompile after going through the 
+# This function will be called from nCompile after going through the
 # NCinternals for all units and calling connect_inherit and then process_inherit
 # (with all connect_inherits called before all process_inherits)
 # At that point we are ready to check for disallowed method overloading
 # (we don't allow the same method name in different levels of the hierarchy unless it is virtual
-# and all signatures match, i.e. we don't allow C-style overloading because it wouldn't work in 
+# and all signatures match, i.e. we don't allow C-style overloading because it wouldn't work in
 # uncompiled (R) execution. This can be changed by an option, indicating one wants only the
 # compiled behavior and doesn't care about uncompiled inconsistency.)
 # and disallowed duplicate member variable names (for a similar reason: In C++
@@ -175,7 +201,7 @@ NC_check_inheritance <- function(NCgenerator) {
       if(is.null(inheritMethod))
         stop("Problem finding inherited method ", mN, " in NC_check_inheritance.", call. = FALSE)
       if(!NF_types_match(localMethod, inheritMethod))
-        stop(paste0("Method ", mN, " does not have the same arguments names,", 
+        stop(paste0("Method ", mN, " does not have the same arguments names,",
                     " and/or argument types, and/or returnType as a base class method of the same name.",
                     " Methods of the same name in an nClass hierarchy must have all of these the same",
                     " and the top-level one must be marked with compileInfo(virtual=TRUE).",
@@ -183,7 +209,7 @@ NC_check_inheritance <- function(NCgenerator) {
                     " set nOptions(allow_method_overloading=TRUE)"),
              call. = FALSE)
       if(!(mN %in% inherit_virtualMethodNames))
-        stop(paste0("Method ", mN, " is inherited, so", 
+        stop(paste0("Method ", mN, " is inherited, so",
                 " it must be marked with compileInfo(virtual=TRUE) in the top-level nClass that includes it.",
                 " That does not appear to be the case.",
                 " (If you want to allow method over-loading in C++ by turning off this requirement,",
@@ -195,7 +221,7 @@ NC_check_inheritance <- function(NCgenerator) {
     # This would be slightly more efficient to do in NC_InternalsClass::process_inherit
     # but we keep it here so all the checking is together here.
     #
-    # If any of my own field names already existed from my inherited classes, 
+    # If any of my own field names already existed from my inherited classes,
     # that's not allowed
     badFields <- NCint$allFieldNames_self %in% inheritNCinternals$allFieldNames
     if(any(badFields))

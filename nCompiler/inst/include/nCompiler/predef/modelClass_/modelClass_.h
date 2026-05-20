@@ -9,14 +9,14 @@ public:
     modelClass_() {};
     std::vector< std::shared_ptr<nodeFxnBase_nClass> > nodeFxnPtrs;
     std::map<std::string, size_t> name2index_map;
-    double calculate(std::shared_ptr<calcInstrList_nClass> calcInstrList) override {
+    double calculate(std::shared_ptr<nList_calcInstr_nClass> calcInstrList) override {
         double logProb(0.0);
-        const auto& calcInstrVec = calcInstrList->calcInstrList.get();
+        const auto& calcInstrVec = calcInstrList->contents();
         auto calcInstr = calcInstrVec.cbegin();
         auto calcInstrEnd = calcInstrVec.cend();
         for( ; calcInstr != calcInstrEnd; ++calcInstr) {
             auto nodeFxnPtr = nodeFxnPtrs[(*calcInstr)->nodeIndex-1];
-            const auto& nodeInstrVec = (*calcInstr)->nodeInstrVec.get();
+            const auto& nodeInstrVec = (*calcInstr)->nodeInstrVec->contents();
             auto nodeInstr = nodeInstrVec.cbegin();
             auto nodeInstrEnd = nodeInstrVec.cend();
             for( ; nodeInstr != nodeInstrEnd; ) {

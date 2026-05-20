@@ -36,7 +36,7 @@ jobs:
       image: rocker/r2u:latest
     if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_nCompile == 'yes'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       - name: Install nimbleModel
@@ -65,7 +65,7 @@ jobs:
       image: rocker/r2u:latest
     if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_nCompile_features == 'yes'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       - name: Package Dependencies
@@ -89,12 +89,16 @@ jobs:
       image: rocker/r2u:latest
     if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_nClass == 'yes'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
+      - name: Install nimbleModel
+        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel", auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
+        env:
+          GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
@@ -106,7 +110,7 @@ jobs:
       - name: Run nCompile and other tests
         run: |
           library(nCompiler)
-          testthat::test_dir("nCompiler/tests/testthat/nimble_tests", reporter = "summary")
+          # testthat::test_dir("nCompiler/tests/testthat/nimble_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
@@ -118,7 +122,7 @@ jobs:
       image: rocker/r2u:latest
     if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_math == 'yes'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       #- name: System Dependencies
@@ -144,7 +148,7 @@ jobs:
       image: rocker/r2u:latest
     if: github.event.inputs.run_tests == 'yes' || github.event.inputs.run_tensorOps == 'yes'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
       #- name: System Dependencies

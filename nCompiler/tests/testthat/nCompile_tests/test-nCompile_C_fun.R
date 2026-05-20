@@ -7,7 +7,7 @@ test_that("C_fun works in an nFunction", {
   # 2. The args of fun are untyped and may even differ from C_fun, if C_fun is provided.
   # 3. By default, changeKeywords does not happen, so "nStep" instead of "step"
   foo <- nFunction(
-    fun = function(x) {
+    fun = function(x, y, z) {
       x+1
     },
     compileInfo = list(
@@ -28,7 +28,7 @@ test_that("C_fun works in an nFunction", {
 test_that("C_fun errors out in an nFunction from not changing keywords ", {
   # Now expect and error if "step" was used
   foo <- nFunction(
-    fun = function(x) {
+    fun = function(x, y, z) {
       x+1
     },
     compileInfo = list(
@@ -48,7 +48,7 @@ test_that("C_fun errors out in an nFunction from not changing keywords ", {
 test_that("C_fun works in an nFunction with changeKeywords=TRUE", {
   # Now step is ok b/c control$changeKeywords is TRUE
   foo <- nFunction(
-    fun = function(x) {
+    fun = function(x, y, z) {
       x+1
     },
     compileInfo = list(
@@ -69,7 +69,7 @@ test_that("C_fun works in an nFunction with changeKeywords=TRUE", {
 
 test_that("C_fun works in an nClass method", {
   foo <- nFunction(
-    fun = function(x) {
+    fun = function(x, y, z) {
       x+1
     },
     compileInfo = list(

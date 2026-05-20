@@ -92,7 +92,9 @@ NF_CompilerClass <- R6::R6Class(
     ##   }
     ## },
     createCpp = function(control = list(),
-                         sourceObj = NULL) {
+                         sourceObj = NULL,
+                         class_env = new.env(),
+                         project_env = new.env()) {
       ## Do all steps to create C++ (and R wrapper).
       ## When the function is a class method, the NC_CompilerClass
       ## object manages these steps by calling process() and createCppInternal().
@@ -101,7 +103,9 @@ NF_CompilerClass <- R6::R6Class(
         control
       )
       process(control = controlFull,
-              sourceObj = sourceObj)
+              sourceObj = sourceObj,
+              class_env = class_env,
+              project_env = project_env)
       createCppInternal()
     },
     createCppInternal = function() {
@@ -119,7 +123,8 @@ NF_CompilerClass <- R6::R6Class(
     process = function(control = list(),
                        sourceObj = NULL,
                        doKeywords = TRUE, ## deprecated?
-                       .nCompilerProject = NULL,  ## deprecated?
+                       class_env = new.env(), 
+                       project_env = new.env(),
                        initialTypeInferenceOnly = FALSE) { ## deprecated?
       ## Do all steps of manipulating the abstract syntax tree
       ## to the point where it is ready to be used for C++ generation.
@@ -133,15 +138,16 @@ NF_CompilerClass <- R6::R6Class(
         get_nOption('compilerOptions'),
         control
       )
-      processNFstages(self,
-                      controlFull,
-                      sourceObj,
-                      doKeywords,
-                      .nCompilerProject,
-                      initialTypeInferenceOnly)
+      processNFstages(NFcompiler = self,
+                      control = controlFull,
+                      sourceObj = sourceObj,
+                      doKeywords = doKeywords,
+                      class_env = class_env,
+                      project_env = project_env,
+                      initialTypeInferenceOnly = initialTypeInferenceOnly)
     },
-    gather_needed_units = function() {
-      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals)
+    gather_needed_units = function(project_env = new.env()) {
+      compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals, project_env = project_env)
       list(
         needed_nClasses = c(self$gather_needed_nClasses(), 
                            compileInfo_needed_units$needed_nClasses),
@@ -169,7 +175,8 @@ processNFstages <- function(NFcompiler,
                             control = list(),
                             sourceObj = NULL,
                             doKeywords = TRUE,
-                            .nCompilerProject = NULL,
+                            class_env = new.env(),
+                            project_env = new.env(),
                             initialTypeInferenceOnly = FALSE) {
   ## Do all steps of manipulating the abstract syntax tree
   ## to the point where it is ready to be used for C++ generation.
@@ -287,14 +294,17 @@ processNFstages <- function(NFcompiler,
   if(!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     NFtry({
-      compilerStage_initializeAuxEnv(NFcompiler,
-                                     sourceObj,
-                                     debug)
+      compilerStage_initializeAuxEnv(NFcompiler = NFcompiler,
+                                     sourceObj = sourceObj,
+                                     class_env = class_env,
+                                     project_env = project_env,
+                                     debug = debug)
     },
     stageName,
     use_nCompiler_error_handling)
     resolveTBDsymbols(NFcompiler$symbolTable,
-                      env = NFcompiler$auxEnv[['where']])
+                      env = NFcompiler$auxEnv[['where']],
+                      project_env = project_env)
     NFcompiler$returnSymbol <- resolveOneTBDsymbol(NFcompiler$returnSymbol,
                                                    env = NFcompiler$auxEnv[['where']])
     if(inherits(NFcompiler$returnSymbol, "symbolNC")) {
