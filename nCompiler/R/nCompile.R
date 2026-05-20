@@ -1369,7 +1369,9 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
     write.dcf(DESCRIPTION, DESCfile)
     NAMESPACE <- c(paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
-                   "importFrom(Rcpp, evalCpp)"# , # required at package loading
+                   "importFrom(Rcpp, evalCpp)", # required at package loading
+                   if(isTRUE(nCompiler_pluginEnv$uses_TBB))
+                       "importFrom(RcppParallel, RcppParallelLibs)" #else NULL
 #                   "export(nComp_serialize_)",
 #                   "export(nComp_deserialize_)",
 #                   "export(call_method)",
