@@ -142,7 +142,7 @@ class ETaccessorTyped : public ETaccessorBase {
     } else {
       if constexpr (mode == AsMode::LHS) {
         auto view = STmapTyped<nDim>(); // STM for write-back correctness (handles non-contiguous sources)
-        return CastingProxy<TargetScalar, decltype(view)>(view, /*is_lhs=*/true);
+        return CastingProxy<TargetScalar, decltype(view)>(view);
       } else {
         return mapTyped<nDim>().template cast<TargetScalar>(); // lazy Eigen expression, RHS only
       }

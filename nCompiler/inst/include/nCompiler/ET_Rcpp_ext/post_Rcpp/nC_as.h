@@ -21,20 +21,28 @@ class CastingProxy {
   using CopyTensor = Eigen::Tensor<TargetScalar, nDim>;
   using TM = Eigen::TensorMap<CopyTensor>;
 
-  ViewType view_;   // TensorMap into original source data
+  ViewType view_;   // view into original source data
   CopyTensor copy_; // TargetScalar copy
-  bool is_lhs_;
 
 public:
-  explicit CastingProxy(ViewType view, bool is_lhs = false)
-    : view_(view), copy_(view.template cast<TargetScalar>()), is_lhs_(is_lhs) {}
+  explicit CastingProxy(ViewType view)
+    : view_(view), copy_(view.template cast<TargetScalar>()) {}
 
+  // Always writes copy_ back to the source on destruction.
   ~CastingProxy() {
-    if(is_lhs_) view_ = copy_.template cast<SourceScalar>();
+    view_ = copy_.template cast<SourceScalar>();
   }
 
   CastingProxy(const CastingProxy&) = delete;
   CastingProxy& operator=(const CastingProxy&) = delete;
+
+  // Assign an Eigen expression into copy_. cast<TargetScalar>() is a no-op
+  // when Rhs already has scalar type TargetScalar.
+  template<typename Rhs>
+  CastingProxy& operator=(const Rhs& rhs) {
+    copy_ = rhs.template cast<TargetScalar>();
+    return *this;
+  }
 
   TM map() { return TM(copy_.data(), copy_.dimensions()); }
 };

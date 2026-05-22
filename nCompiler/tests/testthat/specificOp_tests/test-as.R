@@ -256,12 +256,55 @@ test_that("as(): runtime error when non-singleton dims cannot be dropped", {
 })
 
 # ---------------------------------------------------------------------------
-# Pending / not yet implemented
+# Cross-scalar LHS (CastingProxy write-back)
 # ---------------------------------------------------------------------------
 
-test_that("as(): cross-scalar LHS (CastingProxy write-back)", {
-  skip("Cross-scalar LHS requires CastingProxy::operator= — not yet implemented.")
+test_that("as(): cross-scalar LHS — double source viewed as integer, integer assigned, writes back double", {
+  nc <- nClass(
+    Cpublic = list(
+      assign_int_to_double = nFunction(
+        function(x = numericVector, y = integerVector) {
+          as(x, "integerVector") <- y
+          return(x)
+          returnType(numericVector)
+        }
+      )
+    )
+  )
+  ncc <- nCompile(nc)
+  nco <- ncc$new()
+
+  x <- c(1.5, 2.5, 3.5)
+  y <- c(10L, 20L, 30L)
+  expect_equal(nco$assign_int_to_double(x, y), as.numeric(y))
+  rm(nco); gc()
 })
+
+test_that("as(): cross-scalar LHS — integer source viewed as double, double assigned, writes back integer", {
+  nc <- nClass(
+    Cpublic = list(
+      assign_double_to_int = nFunction(
+        function(x = integerVector, y = numericVector) {
+          as(x, "numericVector") <- y
+          return(x)
+          returnType(integerVector)
+        }
+      )
+    )
+  )
+  ncc <- nCompile(nc)
+  nco <- ncc$new()
+
+  x <- 1:3L
+  y <- c(10.9, 20.1, 30.7)
+  # double values are truncated to integer on write-back
+  expect_equal(nco$assign_double_to_int(x, y), as.integer(y))
+  rm(nco); gc()
+})
+
+# ---------------------------------------------------------------------------
+# Pending / not yet implemented
+# ---------------------------------------------------------------------------
 
 test_that("as(): immediate indexing of as() result — as(x, type)[i]", {
   skip("Indexing directly on an as() expression (STM path) — not yet implemented.")
