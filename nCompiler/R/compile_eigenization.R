@@ -446,6 +446,17 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  As <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    ## STM is needed when as() is immediately indexed: as(X, type)[...]
+    ## LHS detection is handled centrally via code$aux$onLHS (set in labelAbstractTypes).
+    caller <- code$caller
+    use_stm <- !is.null(caller) && caller$name == "[" && isTRUE(code$callerArgID == 1)
+    code$aux$useSTM <- use_stm
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   RandomGeneration <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # determine arguments that parameterize the dist'n.
     size_ind = match('n', names(code$args))

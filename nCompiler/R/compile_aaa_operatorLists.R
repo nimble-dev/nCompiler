@@ -237,6 +237,21 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'as',
+  list(
+    matchDef = function(object, type) {},
+    compileArgs = c("type"),
+    help = 'as(object, type) uses "object" as if it is of type "type", where the type is limited to basic types.',
+    labelAbstractTypes = list(
+      handler = 'As'),
+    eigenImpl = list(
+      handler = 'As'),
+    cppOutput = list(
+      handler = 'As')
+  )
+)
+
+assignOperatorDef(
   c('if', 'while'),
   list(
     labelAbstractTypes = list(

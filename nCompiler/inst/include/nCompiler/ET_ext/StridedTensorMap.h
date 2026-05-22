@@ -141,6 +141,30 @@ namespace Eigen {
 #endif
     }
 
+    // const-ref and rvalue-ref overloads so temporary tensors/maps can be used as input.
+    // Only data() and dimensions() are needed, so this is safe: m_data outlives the temp.
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const InputType &inputTensor)
+      : m_data(const_cast<PointerType>(inputTensor.data()))
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions,
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+    }
+
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &&inputTensor)
+      : m_data(inputTensor.data())
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions,
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+    }
+
     template<typename InputType>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
@@ -644,6 +668,15 @@ struct MakeStridedTensorMap {
   template<typename EigenInputType>
   static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x) {
     return typename MakeOutputType<EigenInputType>::type(x);
+  }
+  // rvalue overloads so temporaries (e.g. TensorMap returned by nC_as) can be used as input.
+  template<typename EigenInputType, typename IndexBlocksType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x), indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x));
   }
 };
 

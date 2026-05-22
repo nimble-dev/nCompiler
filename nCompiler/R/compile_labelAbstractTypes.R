@@ -11,6 +11,8 @@ compile_labelAbstractTypes <- function(code,
   logging <- get_nOption('compilerOptions')[['logging']]
   if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
   
+  if(isTRUE(auxEnv$onLHS)) code$aux$onLHS <- TRUE
+
   if(code$isLiteral) {
     if(is.numeric(code$name)) {
       if(is.integer(code$name)) {
@@ -202,6 +204,17 @@ inLabelAbstractTypesEnv(
                                           handlingInfo)
     code$args[["value"]]$type <- sym
     removeExprClassLayer(code, "value")
+  }
+)
+
+inLabelAbstractTypesEnv(
+  As <- function(code, symTab, auxEnv, handlingInfo) {
+    inner_type <- nType(expr = code$aux$compileArgs$type, env = auxEnv$where)
+    sym <- type2symbol({{inner_type}}, where = auxEnv$where)
+    sym <- resolveOneTBDsymbol(sym, env = auxEnv$where, project_env = auxEnv$project_env)
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- sym
+    if(length(inserts) == 0) NULL else inserts
   }
 )
 
@@ -728,9 +741,11 @@ inLabelAbstractTypesEnv(
                      compile_labelAbstractTypes(code, symTab, auxEnv))
       }
       else{
+        auxEnv$onLHS <- TRUE
         inserts <- c(inserts,
                      recurse_labelAbstractTypes(code, symTab, auxEnv,
                                                 handlingInfo, useArgs = c(TRUE, FALSE)))
+        auxEnv$onLHS <- FALSE
         # auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
         inserts <- c(inserts,
                      AssignAfterRecursing(code, symTab, auxEnv,

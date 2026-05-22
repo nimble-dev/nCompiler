@@ -2,9 +2,20 @@
 #define NCOMPILER_ETACCESSOR_POST_RCPP_H_
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <type_traits>
 
 template<typename Scalar>
 class ETaccessorTyped;
+
+using Eigen::StridedTensorMap;
+
+enum class AsMode { TM, STM, LHS };
+
+// Forward declaration: CastingProxy is defined in nC_as.h (included after
+// this file). ETaccessorTyped::asTyped() returns it; because asTyped() is a
+// template, instantiation is deferred to the call site where CastingProxy is
+// fully defined.
+template<typename TargetScalar, typename ViewType> class CastingProxy;
 
 // Virtual nDim-general methods (e.g. resize, conversions to and from SEXP).
 class ETaccessorBase {
@@ -17,8 +28,32 @@ class ETaccessorBase {
 
   virtual std::vector<int> &intDims()=0;
 
+  // Virtual element-wise cast/writeback for cross-scalar RuntimeCastingProxy.
+  // Only 3 scalar types are supported so virtual templates are avoided.
+  virtual void castCopyToDouble(double* dest, size_t n) {
+    Rcpp::stop("castCopyToDouble not supported for this ETaccessor type.");
+  }
+  virtual void castCopyToInt(int* dest, size_t n) {
+    Rcpp::stop("castCopyToInt not supported for this ETaccessor type.");
+  }
+  virtual void castCopyToBool(bool* dest, size_t n) {
+    Rcpp::stop("castCopyToBool not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromDouble(const double* src, size_t n) {
+    Rcpp::stop("writeBackFromDouble not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromInt(const int* src, size_t n) {
+    Rcpp::stop("writeBackFromInt not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromBool(const bool* src, size_t n) {
+    Rcpp::stop("writeBackFromBool not supported for this ETaccessor type.");
+  }
+
   template<int nDim, typename Scalar>
   using ETM = Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> >;
+
+  template<int nDim, typename Scalar>
+  using ESTM = StridedTensorMap<Eigen::Tensor<Scalar, nDim> >;
 
   template<typename Scalar = double>
   ETaccessorTyped<Scalar> &S() {
@@ -29,6 +64,9 @@ class ETaccessorBase {
 
   template<int nDim, typename Scalar = double>
   ETM<nDim, Scalar> map();
+
+  template<int nDim, typename Scalar = double>
+  ESTM<nDim, Scalar> STmap();
 
   template<int nDim, typename Scalar = double>
   Eigen::Tensor<Scalar, nDim> &ref();
@@ -55,6 +93,60 @@ class ETaccessorTyped : public ETaccessorBase {
         Rcpp::stop("Invalid call to scalar() for ETaccessor with dimensions not all equal to 1.");
     }
     return *data();
+  }
+
+  // Cast/writeback implementations (element-wise, supports all 3 scalar types).
+  void castCopyToDouble(double* dest, size_t n) override {
+    Scalar* src = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<double>(src[i]);
+  }
+  void castCopyToInt(int* dest, size_t n) override {
+    Scalar* src = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<int>(src[i]);
+  }
+  void castCopyToBool(bool* dest, size_t n) override {
+    Scalar* src = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<bool>(src[i]);
+  }
+  void writeBackFromDouble(const double* src, size_t n) override {
+    Scalar* dest = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+  }
+  void writeBackFromInt(const int* src, size_t n) override {
+    Scalar* dest = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+  }
+  void writeBackFromBool(const bool* src, size_t n) override {
+    Scalar* dest = data();
+    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+  }
+
+  template<int output_nDim>
+  using ESTM = StridedTensorMap<Eigen::Tensor<Scalar, output_nDim> >;
+
+  // StridedTensorMap variant of mapTyped — same singleton-drop/pad logic.
+  template<int output_nDim>
+  ESTM<output_nDim> STmapTyped() {
+    return Eigen::MakeStridedTensorMap<output_nDim>::make(mapTyped<output_nDim>());
+  }
+
+  // Central dispatch for as() operations. Selects view type and write-back
+  // behaviour at compile time based on scalar match and AsMode.
+  template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM>
+  auto asTyped() {
+    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+      if constexpr (mode == AsMode::TM)
+        return mapTyped<nDim>();
+      else
+        return STmapTyped<nDim>(); // mode == STM or LHS: STM for full element access
+    } else {
+      if constexpr (mode == AsMode::LHS) {
+        auto view = STmapTyped<nDim>(); // STM for write-back correctness (handles non-contiguous sources)
+        return CastingProxy<TargetScalar, decltype(view)>(view, /*is_lhs=*/true);
+      } else {
+        return mapTyped<nDim>().template cast<TargetScalar>(); // lazy Eigen expression, RHS only
+      }
+    }
   }
 
   template<int output_nDim>
@@ -103,6 +195,13 @@ Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::map() {
   auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
   if(castptr == nullptr) Rcpp::stop("Problem creating a map() from some form of access().\n");
   return castptr->template mapTyped<nDim>();
+}
+
+template<int nDim, typename Scalar>
+StridedTensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::STmap() {
+  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  if(castptr == nullptr) Rcpp::stop("Problem creating an STmap() from some form of access().\n");
+  return castptr->template STmapTyped<nDim>();
 }
 
 template<typename Scalar>
