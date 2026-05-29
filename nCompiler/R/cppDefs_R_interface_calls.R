@@ -46,12 +46,6 @@ global_R_interface_cppDef <-
       "    get_genericInterfaceBaseC(Xptr);\n",
       "  //  std::cout << name << std::endl;\n",
       "  return(obj->call_method( name, Sargs ));\n",
-#      "}\n\n",
-
-#      "class depth_counter {",
-#      "  public:",
-#      "    depth_counter() { TBB_DEPTH++; }",
-#      "    ~depth_counter() { TBB_DEPTH--; }",
       "};\n"),
     name = "R_interfaces"
   )
