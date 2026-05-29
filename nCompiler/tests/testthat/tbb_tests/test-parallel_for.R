@@ -346,7 +346,7 @@ test_that("multiple non-nested loops", {
     expect_identical(Cobj$go2(2:6,100:104), as.numeric(2*(2:6)+100:104+3))
 })
  
-test_that("nested loops", {   # See issue 152.
+test_that("nested loops", {  
 
     nc <- nClass(
         Cpublic = list(

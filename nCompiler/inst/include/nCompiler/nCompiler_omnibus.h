@@ -23,8 +23,22 @@
 //#ifndef NCOMPILER_OMNIBUS_FIRST_CPP_
 // #define NCOMPILER_OMNIBUS_FIRST_CPP_
 
-#pragma once
-inline int TBB_DEPTH = 0;   
+// Despite use of `inline` and C++17, TBB_DEPTH is being defined multiple times.
+// Also, I think I need the include guard for the class definition anyway.
+// The header guard is needed for the class definition and to
+// avoid multiple definitions of `TBB_DEPTH` (despite the `inline`; I
+// don't fully understand that).
+#ifndef TBB_DEPTH_H
+#define TBB_DEPTH_H
+
+inline int TBB_DEPTH = 0;
+
+class depth_counter {
+  public:
+    depth_counter() { TBB_DEPTH++; }
+    ~depth_counter() { TBB_DEPTH--; }
+};
+#endif
    
 #include "nCompiler_omnibus_pre_Rcpp.h" // should always be redundant, but it is here to be clear
 
