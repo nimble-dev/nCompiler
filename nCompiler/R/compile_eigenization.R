@@ -447,11 +447,21 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   As <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    ## STM is needed when as() is immediately indexed: as(X, type)[...]
-    ## LHS detection is handled centrally via code$aux$onLHS (set in labelAbstractTypes).
     caller <- code$caller
-    use_stm <- !is.null(caller) && caller$name == "[" && isTRUE(code$callerArgID == 1)
-    code$aux$useSTM <- use_stm
+    # labelAbstractTypes does not propagate onLHS through [<-, so we detect
+    # indexed LHS/RHS by looking up at the caller rather than reading onLHS.
+    caller_is_bracket_rhs <- !is.null(caller) && caller$name == "[" &&
+                             isTRUE(code$callerArgID == 1)
+    caller_is_bracket_lhs <- !is.null(caller) && caller$name == "[<-" &&
+                             isTRUE(code$callerArgID == 1)
+
+    # AsMode::STM is needed for indexed RHS so slicing strides are correct.
+    code$aux$useSTM <- caller_is_bracket_rhs
+
+    # labelAbstractTypes sets onLHS for the plain <- case; we handle [<- here.
+    if(caller_is_bracket_lhs)
+      code$aux$onLHS <- TRUE
+
     invisible(NULL)
   }
 )
@@ -926,8 +936,8 @@ nCompiler:::inEigenizeEnv(
       # Either we're indexing a vector and we keep '[' in the AST, or we're
       # indexing a non-vector object and we use 'index(' instead.
       # TODO: if (code$args[[1]]$type$nDim == 0)
-      if (code$args[[1]]$type$nDim == 1) code$name <- 'index['
-      else if (code$args[[1]]$type$nDim > 1) code$name <- 'index('
+      if (code$args[[1]]$type$nDim == 1 && isTRUE(code$args[[1]]$isName)) code$name <- 'index['
+      else code$name <- 'index('
       ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
       ## We see inconsistent C++ compiler behavior around casting a double index
       ## to a long index, so we do it explicitly.

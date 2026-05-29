@@ -3,18 +3,19 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <type_traits>
+#include <nCompiler/ET_ext/StridedTensorMap.h>
 
 template<typename Scalar>
 class ETaccessorTyped;
 
-using Eigen::StridedTensorMap;
-
 enum class AsMode { TM, STM, LHS };
 
-// Forward declaration: CastingProxy is defined in nC_as.h (included after
-// this file). ETaccessorTyped::asTyped() returns it; because asTyped() is a
-// template, instantiation is deferred to the call site where CastingProxy is
-// fully defined.
+// Forward declarations: proxy classes are defined in nC_as.h (included after
+// this file). ETaccessorTyped::asTyped() returns them; because asTyped() is a
+// template, instantiation is deferred to the call site where they are fully
+// defined.
+template<typename ViewType> class EmptyProxy;
+template<typename TargetScalar, typename ViewType> class RHSCastProxy;
 template<typename TargetScalar, typename ViewType> class CastingProxy;
 
 // Virtual nDim-general methods (e.g. resize, conversions to and from SEXP).
@@ -53,7 +54,7 @@ class ETaccessorBase {
   using ETM = Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> >;
 
   template<int nDim, typename Scalar>
-  using ESTM = StridedTensorMap<Eigen::Tensor<Scalar, nDim> >;
+  using ESTM = Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> >;
 
   template<typename Scalar = double>
   ETaccessorTyped<Scalar> &S() {
@@ -122,7 +123,7 @@ class ETaccessorTyped : public ETaccessorBase {
   }
 
   template<int output_nDim>
-  using ESTM = StridedTensorMap<Eigen::Tensor<Scalar, output_nDim> >;
+  using ESTM = Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim> >;
 
   // StridedTensorMap variant of mapTyped — same singleton-drop/pad logic.
   template<int output_nDim>
@@ -130,21 +131,27 @@ class ETaccessorTyped : public ETaccessorBase {
     return Eigen::MakeStridedTensorMap<output_nDim>::make(mapTyped<output_nDim>());
   }
 
-  // Central dispatch for as() operations. Selects view type and write-back
-  // behaviour at compile time based on scalar match and AsMode.
+  // Central dispatch for as() operations. Returns a proxy wrapping the
+  // appropriate view. All proxy types expose operator()() uniformly.
   template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM>
   auto asTyped() {
     if constexpr (std::is_same_v<TargetScalar, Scalar>) {
       if constexpr (mode == AsMode::TM)
-        return mapTyped<nDim>();
+        return EmptyProxy<ETM<nDim>>(mapTyped<nDim>());
       else
-        return STmapTyped<nDim>(); // mode == STM or LHS: STM for full element access
+        return EmptyProxy<ESTM<nDim>>(STmapTyped<nDim>());
     } else {
       if constexpr (mode == AsMode::LHS) {
-        auto view = STmapTyped<nDim>(); // STM for write-back correctness (handles non-contiguous sources)
+        auto view = STmapTyped<nDim>();
         return CastingProxy<TargetScalar, decltype(view)>(view);
+      } else if constexpr (mode == AsMode::STM) {
+        // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
+        // have correct strides in the lazy cast expression.
+        auto view = STmapTyped<nDim>();
+        return RHSCastProxy<TargetScalar, decltype(view)>(view);
       } else {
-        return mapTyped<nDim>().template cast<TargetScalar>(); // lazy Eigen expression, RHS only
+        auto view = mapTyped<nDim>();
+        return RHSCastProxy<TargetScalar, decltype(view)>(view);
       }
     }
   }
@@ -198,7 +205,7 @@ Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::map() {
 }
 
 template<int nDim, typename Scalar>
-StridedTensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::STmap() {
+Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::STmap() {
   auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
   if(castptr == nullptr) Rcpp::stop("Problem creating an STmap() from some form of access().\n");
   return castptr->template STmapTyped<nDim>();

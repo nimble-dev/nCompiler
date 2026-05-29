@@ -4,31 +4,79 @@
 #include <memory>
 #include <type_traits>
 
+// ---------------------------------------------------------------------------
+// All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
+// obtain the underlying tensor expression or reference. This uniform interface
+// means callers always write as_nC<T,N,mode>(x)() regardless of mode or
+// scalar match.
+//
+// Four proxy types, selected at compile time by asTyped() / as_nC():
+//
+//   EmptyProxy<ViewType>               — same-scalar; wraps TM or STM view
+//   RHSCastProxy<Src,Tgt,N>            — cross-scalar RHS; lazy, no allocation
+//   CastingProxy<Tgt,ViewType>         — cross-scalar LHS; eager copy + write-back
+//   RuntimeCastingProxy<Tgt,N>         — runtime-source (ETaccessorBase)
+// ---------------------------------------------------------------------------
+
+// EmptyProxy<ViewType>
+//
+// Same-scalar proxy. Stores a TensorMap or StridedTensorMap by value (cheap:
+// just a pointer + dims). operator()() returns a reference to the stored view
+// for all Eigen tensor operations.
+template<typename ViewType>
+class EmptyProxy {
+  ViewType view_;
+public:
+  explicit EmptyProxy(ViewType view) : view_(std::move(view)) {}
+  EmptyProxy(const EmptyProxy&) = delete;
+  EmptyProxy& operator=(const EmptyProxy&) = delete;
+  ViewType& operator()() { return view_; }
+};
+
+// RHSCastProxy<TargetScalar, ViewType>
+//
+// Cross-scalar RHS proxy. ViewType is TM (AsMode::TM, non-indexed) or STM
+// (AsMode::STM, indexed). Stores the view by value; operator()() returns a
+// fresh lazy view.cast<TargetScalar>() expression each time. The const ViewType&
+// inside the TensorConversionOp refers to the stable view_ member, not a stack
+// temporary, so there is no dangling reference. No copy of source data is made.
+//
+// STM must be used for indexed RHS (AsMode::STM) so that non-contiguous sources
+// (e.g. blockRef) produce correct strides in the lazy cast expression.
+template<typename TargetScalar, typename ViewType>
+class RHSCastProxy {
+  ViewType view_;
+public:
+  explicit RHSCastProxy(ViewType view) : view_(std::move(view)) {}
+  RHSCastProxy(const RHSCastProxy&) = delete;
+  RHSCastProxy& operator=(const RHSCastProxy&) = delete;
+  auto operator()() { return view_.template cast<TargetScalar>(); }
+};
+
 // CastingProxy<TargetScalar, ViewType>
 //
-// RAII wrapper for cross-scalar-type as() on the LHS. Holds a copy of the
-// source view cast to TargetScalar. On destruction, casts the (possibly
-// modified) copy back into the original view via ViewType::operator=.
+// Cross-scalar LHS proxy. Holds an eager copy of the source view cast to
+// TargetScalar. On destruction, casts the copy back into the original view.
 // ViewType should be a StridedTensorMap so that non-contiguous sources
-// (e.g. blockRef) are handled correctly. For RHS use, is_lhs = false
-// makes the destructor a no-op.
+// (e.g. blockRef) are handled correctly.
 //
-// ViewType must expose ::Scalar, ::NumDimensions, and operator= from Eigen.
+// operator()() returns CopyTensor& for all Eigen write operations:
+//   as_nC<int,2,AsMode::LHS>(x)()(i, j) = val;       // element write
+//   ISEQS_(2, si, as_nC<int,2,AsMode::LHS>(x)()) = y; // range write
+//   as_nC<int,1,AsMode::LHS>(x)() = rhs;              // whole-object write
 template<typename TargetScalar, typename ViewType>
 class CastingProxy {
   static constexpr int nDim = ViewType::NumDimensions;
   using SourceScalar = typename ViewType::Scalar;
   using CopyTensor = Eigen::Tensor<TargetScalar, nDim>;
-  using TM = Eigen::TensorMap<CopyTensor>;
 
-  ViewType view_;   // view into original source data
-  CopyTensor copy_; // TargetScalar copy
+  ViewType view_;
+  CopyTensor copy_;
 
 public:
   explicit CastingProxy(ViewType view)
     : view_(view), copy_(view.template cast<TargetScalar>()) {}
 
-  // Always writes copy_ back to the source on destruction.
   ~CastingProxy() {
     view_ = copy_.template cast<SourceScalar>();
   }
@@ -36,27 +84,23 @@ public:
   CastingProxy(const CastingProxy&) = delete;
   CastingProxy& operator=(const CastingProxy&) = delete;
 
-  // Assign an Eigen expression into copy_. cast<TargetScalar>() is a no-op
-  // when Rhs already has scalar type TargetScalar.
-  template<typename Rhs>
-  CastingProxy& operator=(const Rhs& rhs) {
-    copy_ = rhs.template cast<TargetScalar>();
-    return *this;
-  }
-
-  TM map() { return TM(copy_.data(), copy_.dimensions()); }
+  CopyTensor& operator()() { return copy_; }
 };
 
 // RuntimeCastingProxy<TargetScalar, nDim>
 //
-// Used when the source type is only known at runtime (ETaccessorBase).
-// At construction, dynamic_cast tests whether the source scalar matches
-// TargetScalar:
-//   - Same type: map_ points directly into source data (no copy).
-//   - Different type: allocates copy_, cast-copies from source; map_ points
-//     into copy_->data().
+// Runtime-source proxy (ETaccessorBase). At construction, dynamic_cast tests
+// whether the source scalar matches TargetScalar:
+//   - Same type: data_ptr_ points directly into source data (no copy).
+//   - Different type: allocates copy_, cast-copies from source;
+//     data_ptr_ points into copy_->data().
 // On destruction, if a copy was made and is_lhs is true, writes copy_ back
 // into the source via virtual writeBackFrom* methods.
+//
+// operator()() returns TM for all Eigen ops (element access, ISEQS_, ...):
+//   as_nC<int,1>(*acc)()(i)                         // element read
+//   as_nC<int,1,AsMode::LHS>(*acc)()(i) = val;      // element write
+//   as_nC<int,1,AsMode::LHS>(*acc)() = rhs;         // whole-object write
 template<typename TargetScalar, int nDim>
 class RuntimeCastingProxy {
   using TM = Eigen::TensorMap<Eigen::Tensor<TargetScalar, nDim>>;
@@ -143,27 +187,26 @@ public:
   RuntimeCastingProxy(const RuntimeCastingProxy&) = delete;
   RuntimeCastingProxy& operator=(const RuntimeCastingProxy&) = delete;
 
-  TM map() { return TM(data_ptr_, dims_); }
+  TM operator()() { return TM(data_ptr_, dims_); }
 };
 
 // ---------------------------------------------------------------------------
 // as_nC — the single public API emitted by the nCompiler code generator.
 // Two overloads: compile-time source (any concrete T) and runtime source
 // (ETaccessorBase&, scalar type unknown at C++ compile time).
+//
+// All overloads return a proxy; caller always writes as_nC<T,N,mode>(x)().
 // ---------------------------------------------------------------------------
 
 // Compile-time source: delegates to ETaccessorTyped<Scalar>::asTyped<>().
-// Returns: TM (TM mode), STM (STM/LHS same-scalar), CastingProxy (LHS cross-
-// scalar), or a lazy Eigen cast expression (RHS cross-scalar).
+// Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy.
 template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM, typename T>
 auto as_nC(T& x) {
   return ETaccess(x).template asTyped<TargetScalar, nDim, mode>();
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
-// Returns a RuntimeCastingProxy that uses dynamic_cast to avoid copies when
-// source scalar already matches TargetScalar, and virtual cast/writeback
-// methods otherwise. Write-back occurs on destruction iff mode == LHS.
+// Returns RuntimeCastingProxy. Write-back occurs on destruction iff mode == LHS.
 template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM>
 RuntimeCastingProxy<TargetScalar, nDim> as_nC(ETaccessorBase& acc) {
   return RuntimeCastingProxy<TargetScalar, nDim>(acc, mode == AsMode::LHS);

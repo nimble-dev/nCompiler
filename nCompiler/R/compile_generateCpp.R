@@ -623,7 +623,8 @@ inGenCppEnv(
 
     tgt_cpp  <- as_op_scalarToCpp(tgt_type)
     mode_arg <- if(is_lhs) ', AsMode::LHS' else if(use_stm) ', AsMode::STM' else ''
-    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')')
+    # All proxy types expose operator()() — always append ().
+    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')()')
   }
 )
 

@@ -237,11 +237,11 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  'as',
+  'nAs',
   list(
     matchDef = function(object, type) {},
     compileArgs = c("type"),
-    help = 'as(object, type) uses "object" as if it is of type "type", where the type is limited to basic types.',
+    help = 'as(object, type) (or nAs(object, type)) uses "object" as if it is of type "type", where the type is limited to basic types.',
     labelAbstractTypes = list(
       handler = 'As'),
     eigenImpl = list(
