@@ -152,5 +152,15 @@ sparseCholFactor <- nClass(
     ) 
 )
 
+#' @export
+denseCholFactor <- nClass(
+    classname = 'denseCholFactor',
+    predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
+                       file.path("denseCholFactor_nC")),
+    Cpublic = list(
+        llt = 'LLT'
+    ) 
+)
+
 rm(PDdevel)
 

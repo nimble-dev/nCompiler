@@ -1238,6 +1238,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'denseChol',
+  list(
+    labelAbstractTypes = list(
+      handler = 'denseChol'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nChol'),
   list(
     labelAbstractTypes = list(

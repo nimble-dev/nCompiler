@@ -6,9 +6,10 @@ std::shared_ptr<sparseCholFactor> sparseChol(const Eigen::SparseMatrix<double>& 
   std::shared_ptr<sparseCholFactor> ch = nClass_builder<sparseCholFactor>()();
   ch->llt.compute(x);
   if (ch->llt.info() != Eigen::Success)
-    throw std::runtime_error("Cholesky factorization failed");
+    throw std::runtime_error("sparse Cholesky factorization failed");
   return ch;
 }
+
 
 // This overloads nLogdet, on top of use for standard matrices with calculation
 // done via the SVD.
@@ -16,6 +17,7 @@ double nLogdet(std::shared_ptr<sparseCholFactor> ch) {
     Eigen::SparseMatrix<double> L = ch->llt.matrixL();
     return L.diagonal().array().log().sum();
 }
+
 
 // Should we implement nLogdet for operation directly on sparse matrix?
 
@@ -37,7 +39,7 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nSolve(std::shared_ptr<s
     return res;
 }
 
-// In progress
+
 template<typename RHS>
 Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(std::shared_ptr<sparseCholFactor> ch, const RHS & b
   ) {
@@ -55,6 +57,7 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(std::shared_p
     resMap = ch->llt.permutationPinv() * ch->llt.matrixU().triangularView<Eigen::Upper>().solve(bmap);
     return res;
 }
+
 
 // Multiply L by matrix.
 template<
@@ -79,6 +82,7 @@ ResultType nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
     matmap(res) = ch->llt.permutationPinv() * (ch->llt.matrixL() * ymap);
     return res;
 }
+
 
 // Multiply L by vector.
 // TODO: is there any way for us to return a vector instead of a matrix?
@@ -107,7 +111,5 @@ ResultType nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
 }
 
 
-  
-// Add function for dense chol factor too.
 
 #endif

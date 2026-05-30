@@ -423,6 +423,9 @@ typeDeclarationEnv <- list2env(list(
   simplicialLLT = function() {
     symbolSimplicialLLT$new()
   },
+  LLT = function() {
+    symbolLLT$new()
+  },
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
     if(inherits(x, 'symbolBasic'))
