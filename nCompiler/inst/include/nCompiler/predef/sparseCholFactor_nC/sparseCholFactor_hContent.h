@@ -19,6 +19,6 @@ public:
 
     Rcpp::Environment  get_CnClass_env_sparseCholFactor (  ) ;
 
-#include <nCompiler/ET_ext/post_Rcpp/tensorOperations_chol.h>
+#include <nCompiler/ET_ext/post_Rcpp/tensorOperations_sparseChol.h>
 
 #endif

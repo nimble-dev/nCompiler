@@ -1,7 +1,16 @@
 #ifndef TENSOROPERATIONS_DENSECHOL_H
 #define TENSOROPERATIONS_DENSECHOL_H
 
+std::shared_ptr<denseCholFactor> Cholesky(const Eigen::Tensor<double, 2> &x) {
+  auto x_map = matmap(x);
+  std::shared_ptr<denseCholFactor> ch = nClass_builder<denseCholFactor>()();
+  ch->llt.compute(x_map);   // ch->llt(x) ?
+  if (ch->llt.info() != Eigen::Success)
+    throw std::runtime_error("dense Cholesky factorization failed");
+  return ch;
+}
 
+// TODO: remove as redundant.
 std::shared_ptr<denseCholFactor> denseChol(const Eigen::Tensor<double, 2> &x) {
   auto x_map = matmap(x);
   std::shared_ptr<denseCholFactor> ch = nClass_builder<denseCholFactor>()();

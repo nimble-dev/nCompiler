@@ -1,7 +1,15 @@
-#ifndef TENSOROPERATIONS_CHOL_H
-#define TENSOROPERATIONS_CHOL_H
+#ifndef TENSOROPERATIONS_SPARSECHOL_H
+#define TENSOROPERATIONS_SPARSECHOL_H
 
+std::shared_ptr<sparseCholFactor> Cholesky(const Eigen::SparseMatrix<double>& x) {
+  std::shared_ptr<sparseCholFactor> ch = nClass_builder<sparseCholFactor>()();
+  ch->llt.compute(x);
+  if (ch->llt.info() != Eigen::Success)
+    throw std::runtime_error("sparse Cholesky factorization failed");
+  return ch;
+}
 
+// TODO: remove as redundant
 std::shared_ptr<sparseCholFactor> sparseChol(const Eigen::SparseMatrix<double>& x) {
   std::shared_ptr<sparseCholFactor> ch = nClass_builder<sparseCholFactor>()();
   ch->llt.compute(x);
