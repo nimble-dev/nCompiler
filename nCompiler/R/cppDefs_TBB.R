@@ -327,7 +327,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                    join = join))
 
   ## Remove index and value variables so not defined in calling method.
-  symbolTable$removeSymbol(loop_var)
+  symbolTable$removeSymbol(loop_var$name)
   symbolTable$removeSymbol(value_name)
  
   invisible(NULL)
