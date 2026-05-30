@@ -271,6 +271,9 @@ typeDeclarationList <- list(
   simplicialLLT = function() {
     symbolSimplicialLLT$new()
   },
+  LLT = function() {
+    symbolLLT$new()
+  },
   nList = function(type) {
     elementSym <- argType2symbol(type)
     symbolNlist$new(elementSym = elementSym)

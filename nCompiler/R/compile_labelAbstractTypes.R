@@ -521,39 +521,57 @@ inLabelAbstractTypesEnv(
   }
 )
 
+
+## TODO: merge these next two to become `Cholesky`.
 inLabelAbstractTypesEnv(
   sparseChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(inherits(argType, 'symbolSparse')) {
-      # Cholesky factor of a sparse matrix is a collection of information
         code$type <- symbolNC$new(
           name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
       )
-    } else {   # Fill in here when handle dense too.
-      # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
-      type <- setReturnType(handlingInfo, argType$type)
-      nDim <- setReturn_nDim(handlingInfo, argType$nDim)
-      code$type <- symbolBasic$new(type = type, nDim = nDim)
+    } else { 
+        code$type <- symbolNC$new(
+          name = code$name, type = 'denseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+      )
     }
     invisible(inserts)
   }
 )
 
+## Akin to `Matrix::Cholesky` in returning collection of information for further computation.
+inLabelAbstractTypesEnv(
+  denseChol <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    if(inherits(argType, 'symbolSparse')) {
+        code$type <- symbolNC$new(
+          name = code$name, type = 'sparseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
+      )
+    } else { 
+        code$type <- symbolNC$new(
+          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
+      )
+    }
+    invisible(inserts)
+  }
+)
+
+## Akin to R `chol` in returning U matrix.
 inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
-    #if(inherits(argType, 'symbolSparse')) {
-      # Cholesky factor of a sparse matrix is a collection of matrices
-      # TODO: do we need to specify arguments for the initializer?
-    #  code$type <- symbolSparseCholesky$new(name = code$name)
-    #} else {
+    if(inherits(argType, 'symbolSparse')) {
+      
+
+    } else {
       # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
       type <- setReturnType(handlingInfo, argType$type)
       nDim <- setReturn_nDim(handlingInfo, argType$nDim)
       code$type <- symbolBasic$new(type = type, nDim = nDim)
-    #}
+    }
     invisible(inserts)
   }
 )
@@ -1629,11 +1647,7 @@ inLabelAbstractTypesEnv(
     if(inherits(argType, 'symbolSparse')) {
       code$type <- symbolSimplicialLLT$new(name = code$name)
     } else
-        ## Put dense chol handling here
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'sparse Cholesky factor only supported for sparse matrices.'
-      ), call. = FALSE)
+      code$type <- symbolLLT$new(name = code$name)
     invisible(NULL)
   }
 )

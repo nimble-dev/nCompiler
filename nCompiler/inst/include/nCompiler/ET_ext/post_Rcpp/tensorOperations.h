@@ -215,6 +215,8 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
 // class SparseCholesky;
 class sparseCholFactor;
 
+class denseCholFactor;
+
 // TODO: Not sure if IsSparseCholFactor stuff should be here or in tensorOperations_chol.h.
 // I think we need to use `IsSparseCholFactor` in `IsEvaluatedType`.
 
@@ -290,6 +292,32 @@ struct IsSparseType : std::conditional<
     std::true_type,
     std::false_type
 >::type { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::DenseCholFactor
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsDenseCholFactor : std::is_base_of<
+    std::shared_ptr<denseCholFactor>,
+    Class
+> { };
+  
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to std::shared_ptr<denseCholFactor> by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+template<typename Class, int N>
+constexpr typename std::enable_if<IsDenseCholFactor<Class>::value, bool>::type
+  HasNumDimensionsN() {
+    return N == 2;  // matrices are inherently 2-dimensional
+  }
+
 
 /**
  * Template meta programming check to see if Class is an Eigen::Tensor type.
