@@ -1229,6 +1229,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'Cholesky',
+  list(
+    labelAbstractTypes = list(
+      handler = 'Cholesky'
+    )
+  )
+)
+
+## TODO: remove these next two as redundant with Cholesky.
+assignOperatorDef(
   'sparseChol',
   list(
     labelAbstractTypes = list(

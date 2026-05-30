@@ -568,8 +568,24 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  Cholesky <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    argType <- code$args[[1]]$type
+    if(inherits(argType, 'symbolSparse')) {
+        code$type <- symbolNC$new(
+          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+      )
+    } else { 
+        code$type <- symbolNC$new(
+          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
+      )
+    }
+    invisible(inserts)
+  }
+)
 
-## TODO: merge these next two to become `Cholesky`.
+## TODO: remove these next two as redundant with Cholesky
 inLabelAbstractTypesEnv(
   sparseChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
@@ -580,7 +596,7 @@ inLabelAbstractTypesEnv(
       )
     } else { 
         code$type <- symbolNC$new(
-          name = code$name, type = 'denseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
       )
     }
     invisible(inserts)
@@ -594,7 +610,7 @@ inLabelAbstractTypesEnv(
     argType <- code$args[[1]]$type
     if(inherits(argType, 'symbolSparse')) {
         code$type <- symbolNC$new(
-          name = code$name, type = 'sparseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
+          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
       )
     } else { 
         code$type <- symbolNC$new(
