@@ -144,6 +144,9 @@ OptimResultList <- PDdevel %||% nClass(
 
 #' @export
 sparseCholFactor <- nClass(
+  # manually insert:
+  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_chol.h>
+  # in the hContent file AFTER the sparseCholFactor class declaration
     classname = 'sparseCholFactor',
     predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                        file.path("sparseCholFactor_nC")),
@@ -154,6 +157,9 @@ sparseCholFactor <- nClass(
 
 #' @export
 denseCholFactor <- nClass(
+  # manually insert:
+  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_denseChol.h>
+  # in the hContent file AFTER the denseCholFactor class declaration
     classname = 'denseCholFactor',
     predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
                        file.path("denseCholFactor_nC")),
