@@ -331,6 +331,94 @@ public:
     //     return res;
     // }
 
+    // CRTP-level implementation called by the generated nList class's
+    // set_all_values Cpublic method (which is the actual virtual override).
+    // Handles all ways an R object may represent a positionally-indexed nList:
+    //   1. plain R list  — compiled or uncompiled elements; handled by set_from_list
+    //   2. compiled nList (LOE/R6 environment with extptr) — copy contents_ directly
+    //   3. uncompiled nList (R6 environment without extptr) — call as_list() then set_from_list
+    void set_all_values_(SEXP Robj) {
+      // Case 1: plain R list — compiled or uncompiled elements positionally
+      if(Rcpp::is<Rcpp::List>(Robj)) {
+        set_from_list(Rcpp::as<Rcpp::List>(Robj));
+        return;
+      }
+      if(Rcpp::is<Rcpp::Environment>(Robj)) {
+        // Case 2: compiled nList — LOE environment containing an extptr
+        Rcpp::RObject Rextptr = get_extptr_from_SEXP(Robj);
+        SEXP Sextptr = Rextptr;
+        if(Sextptr != R_NilValue) {
+          genericInterfaceBaseC* src_base =
+            static_cast<genericInterfaceBaseC*>(
+              static_cast<shared_ptr_holder_base*>(
+                R_ExternalPtrAddr(Sextptr))->get_ptr());
+          nList_<Element>* src = dynamic_cast<nList_<Element>*>(src_base);
+          if(src) {
+            contents_ = src->contents_;
+            return;
+          }
+          Rcpp::stop(
+            "set_all_values on nList: extptr found but object is not an nList.");
+        }
+        // Case 3: uncompiled nList R6 environment — call as_list() to convert
+        Rcpp::Environment Renv(Robj);
+        if(Renv.exists("as_list")) {
+          Rcpp::Function as_list_fn(Renv["as_list"]);
+          SEXP Slist = as_list_fn();
+          if(Rcpp::is<Rcpp::List>(Slist)) {
+            set_from_list(Rcpp::as<Rcpp::List>(Slist));
+            return;
+          }
+        }
+        Rcpp::stop(
+          "set_all_values on nList: environment is neither a compiled nList "
+          "(no extptr) nor a recognised uncompiled nList (no as_list method).");
+      }
+      Rcpp::stop(
+        "set_all_values on nList requires a list, a compiled nList, "
+        "or an uncompiled nList object.");
+    }
+
+    // Populate contents_ positionally from an R list.
+    // Each element is converted to Element:
+    //   - shared_ptr<T>: tries the compiled extptr path first; falls back to
+    //     default-constructing a T and calling set_all_values() on it
+    //     (handles uncompiled objects, plain R lists, and nested nLists).
+    //   - primitive / Eigen tensor: Rcpp::as<Element>().
+    void set_from_list(const Rcpp::List& Robj) {
+      int n = Robj.length();
+      contents_.resize(n);
+      for(int i = 0; i < n; ++i) {
+        SEXP Selem = Robj[i];
+        if constexpr(is_shared_ptr<Element>::value) {
+          Rcpp::RObject Rextptr = get_extptr_from_SEXP(Selem);
+          SEXP Sextptr = Rextptr;
+          if(Sextptr != R_NilValue) {
+            // Compiled object: extract via shared_ptr Exporter
+            contents_[i] = Element(
+              typename Rcpp::traits::input_parameter<Element>::type(Sextptr));
+          } else {
+            // Not compiled (plain R list, uncompiled nClass, nested nList):
+            // create element if absent, then populate recursively
+            if(!contents_[i]) {
+              if constexpr(std::is_default_constructible_v<
+                             typename Element::element_type>) {
+                contents_[i] =
+                  std::make_shared<typename Element::element_type>();
+              } else {
+                Rcpp::stop(
+                  "nList set_from_list: element nClass type has no "
+                  "default constructor.");
+              }
+            }
+            contents_[i]->set_all_values(Selem);
+          }
+        } else {
+          contents_[i] = Rcpp::as<Element>(Selem);
+        }
+      }
+    }
+
     Rcpp::List as_list_() {
       Rcpp::List res(contents_.size());
       for(size_t i = 0; i < contents_.size(); ++i) {

@@ -145,6 +145,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
   // so we iterate through the list and check names against name2access.
   void set_all_values_impl_list(const Rcpp::List Robj) {
     // Cache names once to avoid repeatedly constructing the names vector
+    if(!Robj.length()) return;
     Rcpp::Nullable<Rcpp::CharacterVector> nmsN = Robj.names();
     if(nmsN.isNull()) {
       Rcpp::stop("Setting multiple values of an nClass from a list requires that the list have names.\n");

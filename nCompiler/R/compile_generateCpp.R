@@ -174,7 +174,7 @@ inGenCppEnv(
 inGenCppEnv(
   Assign <- function(code, symTab) {
     orig_name <- code$name
-    code$name <- ' = '
+    code$name <- '='
     res <- MidOperator(code, symTab)
     code$name <- orig_name
     res

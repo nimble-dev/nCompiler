@@ -31,7 +31,7 @@ to_full_interface <- function(LOE) {
     stop("LOE should be a loadedObjectEnv")
   CnCenv <- get_CnCenv(LOE)
   if(exists('.R6interface', CnCenv)) {
-    fullAns <- CnCenv$.R6interface$new(LOE)
+    fullAns <- CnCenv$.R6interface$new(CppObj = LOE)
     return(fullAns)
   }
   LOE # default to non-full
@@ -51,7 +51,7 @@ new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL) {
   if(!is.null(parentEnv)) { # This doesn't really do anything
     if(exists('.R6interface', parentEnv) &&
        parentEnv$return_mode == "full") {
-        fullAns <- parentEnv$.R6interface$new(ans)
+        fullAns <- parentEnv$.R6interface$new(CppObj = ans)
         return(fullAns)
     }
   }
