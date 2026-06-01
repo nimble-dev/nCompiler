@@ -513,6 +513,12 @@ type2symbol <- function(type,
   #   return(ans)
   # }
 
+  if(ttypeToUse |> rlang::get_expr() |> inherits("symbolBase")) {
+    ans <- ttypeToUse |> rlang::get_expr()
+    ans$name <- name
+    return(ans)
+  }
+
   typeSpec <- nTypeSpec(ttypeToUse)
   inputAsLiteral <- identical(rlang::quo_get_env(ttypeToUse), emptyenv())
   inputAsCharacter <- typeSpec$inputAsCharacter
