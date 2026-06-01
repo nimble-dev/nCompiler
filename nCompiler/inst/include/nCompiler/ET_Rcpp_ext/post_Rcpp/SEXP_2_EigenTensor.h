@@ -30,6 +30,11 @@ struct SEXP_2_EigenTensor {
   static EigenTensorType copy(SEXP &Sinput,
                               const IndexArray &indexArray) {
     EigenTensorType xCopy;
+    if(Sinput==R_NilValue) {
+      // Return an empty tensor with the correct shape and scalar type.
+      std::cout<<"  [Warning]: NULL was provided where a numeric, integer or logical object was expected.\n"<<std::endl;
+      return xCopy;
+    }
     typedef typename std::is_same<Scalar, int>::type i_match_type;
     typedef typename std::is_same<Scalar, double>::type d_match_type;
     switch( TYPEOF(Sinput) ) {
@@ -59,7 +64,7 @@ struct SEXP_2_EigenTensor {
                                             );
       break;
     default:
-      std::cout<<"Bad type\n"<<std::endl;
+      std::cout<<"  [Warning]: Invalid R object was provided where a numeric, integer or logical object was expected.\n"<<std::endl;
     }
     return xCopy; // compiler should use copy elision
   }

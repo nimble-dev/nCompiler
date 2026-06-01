@@ -259,12 +259,33 @@ nList_nClass <- function(type, env = parent.frame()) {
         C_fun = function(i = 'SEXP', value = {{RtypeObj}}) {
           cppLiteral('return doubleBracket_set_(i, value)')
         }
+      )),
+    set_all_values = nFunction(
+      name = "set_all_values",
+      # R-level (uncompiled): handle plain list, uncompiled nList, or compiled
+      # nList (all via duck-typing on as_list).
+      function(Robj = 'SEXP') {
+        if(is.list(Robj)) {
+          Rcontents <<- Robj
+        } else if(is.environment(Robj) &&
+                  exists("as_list", envir = Robj, inherits = FALSE)) {
+          Rcontents <<- Robj$as_list()
+        } else {
+          stop("Uncompiled nList set_all_values requires a list or an nList object.")
+        }
+      },
+      compileInfo = list(
+        # Delegates to set_all_values_() in nList_<Element>, which handles all
+        # four input types without needing explicit namespace qualification.
+        C_fun = function(Robj = 'SEXP') {
+          cppLiteral('set_all_values_(Robj);')
+        }
       ))
     )
   ans <- substitute(
     nClass(
       classname = CLASSNAME,
-      inherit = nListBase_nClass,
+      inherit = nCompiler::nListBase_nClass,
       Cpublic = c(
         list(
           x = TYPE),

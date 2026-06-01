@@ -180,6 +180,24 @@ nClass <- function(classname,
       stop("In nFunction 'initialize', use 'compileInfo = list(constructor=TRUE)'.")
   }
 
+  if('initialize' %in% names(Rpublic) && is.function(Rpublic[['initialize']])) {
+    init_body_text <- deparse(body(Rpublic[['initialize']]))
+    has_super_init    <- any(grepl("super\\$initialize",  init_body_text))
+    has_init_cpublic  <- any(grepl("initialize_Cpublic", init_body_text))
+    if(!has_super_init && !has_init_cpublic)
+      warning(
+        "The Rpublic 'initialize' function does not call 'super$initialize()' or ",
+        "'initialize_Cpublic()'. Without one of these, the Cpublic component will not ",
+        "be properly set up, and compiled nClass objects returned from nFunctions will ",
+        "not be connected to their C++ data. ",
+        "Add '...' to the 'initialize' signature and call 'super$initialize(...)' ",
+        "(recommended) so that the `CppObj` argument is forwarded when returning an nClass ",
+        "from a compiled nFunction. Alternatively use 'initialize_Cpublic()' followed by ",
+        "'if(isCompiled()) initializeCpp()' for manual control.",
+        call. = FALSE
+      )
+  }
+
   inheritQ <- substitute(inherit)
   inherit_provided <- !is.null(inheritQ)
 

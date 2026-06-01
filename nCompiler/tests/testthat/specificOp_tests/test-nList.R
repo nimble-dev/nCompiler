@@ -838,7 +838,7 @@ test_that("nList various bracket get and set operations compile and work for sca
   comp <- nCompile(nc, rNL = rNL)
 
   obj <- comp$nc$new()
-  obj$lst <- nc$new()
+  obj$lst <- rNL$new()
 
   length(obj$lst) <- 3
   curlst <- as.list(obj$lst)
@@ -961,7 +961,7 @@ test_that("nList various bracket get and set operations compile and work for vec
   comp <- nCompile(nc, rNL = rNL)
 
   obj <- comp$nc$new()
-  obj$lst <- nc$new()
+  obj$lst <- rNL$new()
 
   length(obj$lst) <- 3
   curlst <- as.list(obj$lst)
@@ -1035,9 +1035,6 @@ test_that("nList of nClass elements works", {
   expect_equal(nl1[[3]]$x, 1:3)
 })
 
-## The following tests might be made to work fine.
-## At the time of working on this I ran out of time to pursue further tests,
-## so these were left incompletely worked out.
 ##
 test_that("nList: nClass member of nList type compiles and works", {
   elemT <- nType("numericScalar")
@@ -1062,7 +1059,6 @@ test_that("nList: nClass member of nList type compiles and works", {
       )
     )
   )
-#  debug(nCompiler:::simpleTransformationsEnv$CheckOpAssignment)
   comp <- nCompile(rNL = rNL, nc)
   obj <- comp$nc$new()
   obj$init()
@@ -1115,4 +1111,64 @@ test_that("nList: nFunction argument of nList type compiles and works", {
   length(lst) <- 5
   expect_equal(obj$lenOf(lst), 5L)
   rm(rNL, nc, comp, obj, lst); gc()
+})
+
+# ---------------------------------------------------------------------------
+# set_all_values — populate an nList from various R representations
+# ---------------------------------------------------------------------------
+
+test_that("nList uncompiled: set_all_values from plain list", {
+  obj <- rNL$new()
+  obj$set_all_values(list(1.0, 2.0, 3.0))
+  expect_equal(length(obj), 3)
+  expect_equal(obj[[1]], 1.0)
+  expect_equal(obj[[2]], 2.0)
+  expect_equal(obj[[3]], 3.0)
+  rm(obj); gc()
+})
+
+test_that("nList uncompiled: set_all_values from uncompiled nList", {
+  src <- make_uncompiled()
+  obj <- rNL$new()
+  obj$set_all_values(src)
+  expect_equal(length(obj), 4)
+  for(i in 1:4) expect_equal(obj[[i]], src[[i]])
+  rm(src, obj); gc()
+})
+
+test_that("nList uncompiled: set_all_values from compiled nList", {
+  src <- make_compiled()
+  obj <- rNL$new()
+  obj$set_all_values(src)
+  expect_equal(length(obj), 4)
+  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj); gc()
+})
+
+test_that("nList compiled: set_all_values from plain list", {
+  obj <- cNL$new()
+  obj$set_all_values(list(1.0, 2.0, 3.0))
+  expect_equal(obj$getLength(), 3L)
+  expect_equal(obj[[1]], 1.0)
+  expect_equal(obj[[2]], 2.0)
+  expect_equal(obj[[3]], 3.0)
+  rm(obj); gc()
+})
+
+test_that("nList compiled: set_all_values from compiled nList", {
+  src <- make_compiled()
+  obj <- cNL$new()
+  obj$set_all_values(src)
+  expect_equal(obj$getLength(), 4L)
+  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj); gc()
+})
+
+test_that("nList compiled: set_all_values from uncompiled nList", {
+  src <- make_uncompiled()
+  obj <- cNL$new()
+  obj$set_all_values(src)
+  expect_equal(obj$getLength(), 4L)
+  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj); gc()
 })
