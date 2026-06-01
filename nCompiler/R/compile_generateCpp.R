@@ -378,8 +378,10 @@ cppOutputMemberData <- function(code, symTab) {
 inGenCppEnv(
   ## Member(A, x) -> A.x
   Member <- function(code, symTab, connector = '.') {
+    isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
+    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
     paste0( '(',
-           compile_generateCpp(code$args[[1]], symTab),
+           objOutput,
            ')', connector, code$args[[2]]$name)
   }
 )
@@ -395,7 +397,9 @@ inGenCppEnv(
   ## This differs from old system
   ## Method(A, foo, x) -> A.foo(x)
   Method <- function(code, symTab, connector = '.') {
-    obj <- paste0('(', compile_generateCpp(code$args[[1]], symTab), ')', connector)
+    isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
+    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
+    objPart <- paste0('(', objOutput, ')', connector)
     opString <- getCppString(code$args[[2]])
     methodCall <- paste0(
       opString, '(',
@@ -404,7 +408,7 @@ inGenCppEnv(
         collapse = ', '
       ), ')'
     )
-    paste0(obj, methodCall)
+    paste0(objPart, methodCall)
   }
 )
 inGenCppEnv(

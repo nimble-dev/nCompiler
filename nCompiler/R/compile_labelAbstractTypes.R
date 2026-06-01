@@ -387,13 +387,12 @@ inLabelAbstractTypesEnv(
         )
         code$type <- returnSym
         ## Logically it might seem this should become ->method.
-        ## However it appears in nFunction(->member(A, foo), x) for A->foo(x).
-        ## In stage generateCpp, the nFunction packs the arguments after A->foo,
+        ## However it appears in chainedCall(->member(A, foo), x) for A->foo(x).
+        ## In stage generateCpp, the chainedCall packs the arguments after A->foo,
         ## so we mark that here as a member.
         code$name <- '->member'
         code$args[[2]]$aux$obj_internals <- obj_internals
         code$args[[2]]$aux$nFunctionName <- innerName
-        #code$args[[2]]$name <- NFinternals(method)$cpp_code_name
         code$args[[2]]$name <- NCinternals(code$args[[1]]$type$NCgenerator)$all_methodName_to_cpp_code_name[[innerName]]
         
         obj_internals <- NULL
@@ -407,48 +406,9 @@ inLabelAbstractTypesEnv(
         code$type <- symbol$clone(deep = TRUE)
         code$name <- '->member'
       }
-      ## TO-DO: Handle special case of "new", or put it in
-      ##        the nClass symbol table.
       if(length(inserts) == 0) NULL else inserts
     }
 )
-
-## a$b would become nClass_member(a, b)
-## a$b$foo(x) would become chainedCall(`$`(`$`(a, b), foo), x)
-##     which would become nFunction( nClass_member(nClass$member(a, b), foo) , x)
-
-## Called by Generic_nFunction and Generic_nFunction_method
-## This converts foo(x) to nFunction(foo, x)
-## if foo is either an nFunction or a method of the current class
-## inLabelAbstractTypesEnv(
-##   convert_nFunction_or_method_AST <-
-##     function(code, obj) {
-##       nFunctionName <- code$name
-##       ## Note that the string `nFunction` matches the operatorDef entry.
-##       ## Therefore the change-of-name here will automatically trigger use of
-##       ## the 'nFunction' operatorDef in later stages.
-##       code$name <- 'nFunction'
-##       cpp_code_name <- NFinternals(obj)$cpp_code_name
-##       fxnNameExpr <- exprClass$new(name = cpp_code_name, isName = TRUE,
-##                                    isCall = FALSE, isLiteral = FALSE, isAssign = FALSE)
-##       ## We may need to add content to this symbol if
-##       ## necessary for later processing steps.
-##       fxnNameExpr$type <- symbolNF$new(name = nFunctionName)
-##       insertArg(code, 1, fxnNameExpr)
-##       ## TO-DO: Add error-trapping of argument types
-##       returnSym <- NFinternals(obj)$returnSym
-##       if(is.null(returnSym))
-##         stop(
-##           exprClassProcessingErrorMsg(
-##             code, paste('In convert_nFunction_or_method_AST: the nFunction (or method) ',
-##                         code$name,
-##                         ' does not have a valid returnType.')
-##           ), call. = FALSE
-##         )
-##       code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
-##       invisible(NULL)
-##     }
-## )
 
 ## Called by main compile_labelAbstractTypes loop
 ## This converts use of the function foo as an object to 
@@ -1501,12 +1461,25 @@ inLabelAbstractTypesEnv(
       insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       code$type <- code$args[[1]]$type
       # see if the returned object differs from the nFunction's return type
-      if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
-        warning(exprClassProcessingErrorMsg(
-          code,
-          "Object type for return() does not match the nFunction's return type."
-        ),
-        call. = FALSE)
+      # To-do: We could look at the NCgenerator class hierarchy to actually
+      # determine validity of returned type. Instead here we just 
+      # see if both are symbolNC, with a special-case check for a symbolSelf (or other case)
+      # that inherits from symbolNC
+      if(inherits(auxEnv$returnSymbol, "symbolNC")) {
+        if(!inherits(code$type, class(auxEnv$returnSymbol)[1]))
+         warning(exprClassProcessingErrorMsg(
+           code,
+           "Object nClass type for return() does not match the nFunction's return type."
+         ),
+         call. = FALSE)
+      } else {
+        if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
+          warning(exprClassProcessingErrorMsg(
+            code,
+            "Object type for return() does not match the nFunction's return type."
+          ),
+          call. = FALSE)
+        }
       }
       if(inherits(auxEnv$returnSymbol, "symbolBasic")) {
         # problem if number of dimensions differs

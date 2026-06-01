@@ -115,6 +115,14 @@ class genericInterfaceBaseC {
   };
 };
 
+// Forward declaration needed for class_from_interface below
+template<class T> class genericInterfaceC;
+
+// Extracts ClassName from genericInterfaceC<ClassName>, used by interface_resolver
+// to determine the owned type for nC_shared_from_this().
+template<typename T> struct class_from_interface { using type = void; };
+template<typename T> struct class_from_interface<genericInterfaceC<T>> { using type = T; };
+
 // FirstDerived and interface_resolver<> designed with help from Google Gemini
 // Helper template to find the first type that inherits from Base
 template <typename T, typename... Rest>
@@ -136,13 +144,24 @@ struct FirstGenericDerived<T> {
   >;
 };
 
+// General case (2+ template args): derived nClass.
+// nC_shared_from_this() casts the inherited shared_from_this() result to
+// shared_ptr<OwnedType>, where OwnedType is the most-derived class
+// (extracted from the first template arg, which is always genericInterfaceC<ClassName>).
+// The enable_shared_from_this lives only in the single-arg (root) specialization below;
+// it is inherited through the base-class chain and initialized correctly by
+// shared_ptr<DerivedClass> because DerivedClass is derived from enable_shared_from_this<RootClass>.
 template <typename... Bases>
 class interface_resolver : public Bases..., virtual public genericInterfaceBaseC
 {
 private:
   using FirstFound = typename FirstGenericDerived<Bases...>::type;
+  using OwnedType  = typename class_from_interface<FirstFound>::type;
 
 public:
+  std::shared_ptr<OwnedType> nC_shared_from_this() {
+    return std::static_pointer_cast<OwnedType>(this->shared_from_this());
+  }
   const name2access_type& get_name2access() const override {
       return FirstFound::get_name2access();
   }
@@ -166,6 +185,48 @@ public:
   }
 };
 
+// Single-arg specialization: root nClass (no nClass parent).
+// Adds enable_shared_from_this<OwnedType> so that shared_ptr<ClassName>
+// correctly initialises the weak_ptr used by shared_from_this().
+// nC_shared_from_this() is a trivial cast here (same type).
+template<typename First>
+class interface_resolver<First> :
+    public First,
+    virtual public genericInterfaceBaseC,
+    public std::enable_shared_from_this<typename class_from_interface<First>::type>
+{
+private:
+  using FirstFound = First;
+  using OwnedType  = typename class_from_interface<First>::type;
+
+public:
+  std::shared_ptr<OwnedType> nC_shared_from_this() {
+    return std::enable_shared_from_this<OwnedType>::shared_from_this();
+  }
+  const name2access_type& get_name2access() const override {
+      return FirstFound::get_name2access();
+  }
+  std::unique_ptr<ETaccessorBase> access(const std::string &name) override {
+      return FirstFound::access(name);
+  }
+  SEXP get_value(const std::string &name) const override {
+      return FirstFound::get_value(name);
+  }
+  void set_all_values(SEXP Robj) override {
+      FirstFound::set_all_values(Robj);
+  }
+  void set_value(const std::string &name, SEXP Svalue) override {
+      FirstFound::set_value(name, Svalue);
+  }
+  SEXP call_method(const std::string &name, SEXP Sargs) override {
+      return FirstFound::call_method(name, Sargs);
+  }
+  SEXP make_deserialized_return_SEXP() override {
+      return FirstFound::make_deserialized_return_SEXP();
+  }
+};
+
+// Empty specialization: nClass with no generic interface (no enable_shared_from_this).
 template<>
 class interface_resolver<> : virtual public genericInterfaceBaseC
 {

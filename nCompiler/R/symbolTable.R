@@ -320,6 +320,31 @@ symbolNC <- R6::R6Class(
   )
 )
 
+## Symbol for `self` inside nClass method bodies.
+## generateUse() emits nC_shared_from_this() so that `self` used as a value
+## (passed as argument or returned) produces a std::shared_ptr<ClassName>.
+## For method calls (self$method(x)), the DollarSign handler in
+## compile_labelAbstractTypes uses the inherited NCgenerator for lookup,
+## and PtrMember in compile_generateCpp emits (nC_shared_from_this())->method(x).
+symbolSelf <- R6::R6Class(
+  classname = "symbolSelf",
+  inherit = symbolNC,
+  portable = TRUE,
+  public = list(
+    initialize = function(name, type, NCgenerator, isArg = FALSE) {
+      super$initialize(name = name,
+                       type = type,
+                       NCgenerator = NCgenerator,
+                       isArg = isArg)
+    },
+    # Note that the genCppOutput handlers for 'Method' and 'Member'
+    # intercept this. If they see a name "self" with type that inherits from "symbolSelf",
+    # they will emit "this" instead of generating a cppVar for it.
+    # The cppVar for self is only used if self is used as a value, such as in an argument or return value.
+    genCppVar = function() cppVarSelfClass$new()
+  )
+)
+
 ## type is the unique ID of the NCgenerator.
 ## same value as for a symbolNC for an object of the class.
 symbolNCgenerator <- R6::R6Class(

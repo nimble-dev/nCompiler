@@ -48,6 +48,22 @@ cppVarClass <- R6::R6Class(
   )
 )
 
+cppVarSelfClass <- R6::R6Class(
+  classname = 'cppVarSelfClass',
+  inherit = cppVarClass,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+      self$name <- "self"
+    },
+    generate = function(printName = character(), ...) {
+      character()
+    },
+    generateUse = function(...) "nC_shared_from_this()"
+  )
+)
+
 cppVar2cppVarFull <- function(cppVar, ...) {
   ans <- cppVarFullClass$new(name = cppVar$name,
                              baseType = cppVar$baseType, 

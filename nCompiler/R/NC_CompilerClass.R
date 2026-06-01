@@ -126,6 +126,14 @@ NC_CompilerClass <- R6::R6Class(
         resolveTBDsymbols(symbolTable,
                           NCgenerator,
                           project_env = project_env)
+        ## Add 'self' so method bodies can reference the current object.
+        ## genCppVar() gives a special cppVar case where generate() returns ""
+        ## and generateUse returns "nC_shared_from_this()".
+        symbolTable$addSymbol(symbolSelf$new(
+          name        = 'self',
+          type = NCinternals(NCgenerator)$cpp_classname,
+          NCgenerator = NCgenerator
+        ))
         setupMethodSymbolTables()
       }
     },
