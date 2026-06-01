@@ -3,7 +3,7 @@
 ## The real tests will be running nimble's test suite.
 
 library(nimble)
-#library(nCompiler)
+library(nCompiler)
 library(testthat)
 
 test_that("compileNimble bridge works for simple nimbleFunction (RC function)",{
@@ -14,7 +14,7 @@ test_that("compileNimble bridge works for simple nimbleFunction (RC function)",{
       returnType(double())
     }
   )
-  CRCF1 <- `:::`("nCompiler", "compileNimble")(RCF1)
+  CRCF1 <- nCompiler:::compileNimble(RCF1)
   expect_equal(CRCF1(1:3), 6)
 })
 
@@ -24,7 +24,7 @@ test_that("compileNimble bridge works for one nimbleFunction object", {
     run = function() {return(x[1]); returnType(double())}
   )
   nf1 <- nf()
-  Cnf1 <- `:::`("nCompiler", "compileNimble")(nf1)
+  Cnf1 <- nCompiler:::compileNimble(nf1)
   expect_identical(Cnf1$x, 1:2)
 })
 ## NEXT STEPS:
@@ -33,3 +33,11 @@ test_that("compileNimble bridge works for one nimbleFunction object", {
 ## add nClass to nCompiler:::compileNimble
 ##
 ## document, document, document
+
+
+test <- nClass(
+  Cpublic = list(
+    x = nTypeBasic(name = "x", scalarType = "integer", nDim = 1)
+  )
+)
+ctest <- nCompile(test)

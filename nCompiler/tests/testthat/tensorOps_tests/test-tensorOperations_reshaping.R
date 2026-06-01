@@ -158,12 +158,17 @@ test_that("tensorOperations with re-shaping for single ops", {
     expect_identical(opfun(V1, A3), op_v_a3(x = V1, y = A3))
 
     # nCompiler runtime errors on non-conformable inputs
+    cat("Next error message is expected:\n")
     expect_error(op_m_m(x = M1, y = M2))
+    cat("Next error message is expected:\n")
     expect_error(op_m_m(x = M1, y = M3))
+    cat("Next error message is expected:\n")
     expect_error(op_m_m(x = M1, y = M4))
 
     # nCompiler runtime errors where R would normally use recycling rule
+    cat("Next error message is expected:\n")
     expect_error(op_m_v(x = M3, y = V1))
+    cat("Next error message is expected:\n")
     expect_error(op_v_a3(x = V1, y = A4))
 
     # # Issues: These should throw errors, but don't. Are runtime args validated?
