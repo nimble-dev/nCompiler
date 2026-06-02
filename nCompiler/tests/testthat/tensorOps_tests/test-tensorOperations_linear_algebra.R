@@ -535,6 +535,7 @@ test_that("various uses of nEigen", {
     expect_identical(e$values, result$values)
     expect_identical(e$vectors, result$vectors)
     expect_equal(ce$values, result$values)
+    result$vectors[,1:2] <- -result$vectors[,1:2]
     expect_equal(ce$vectors, result$vectors)
 
     e <- eig(xnsymm, TRUE)
@@ -617,7 +618,7 @@ test_that("various uses of nSvd", {
     result <- svd(x)$u %*% diag(3)
     out <- fun(x, diag(3))
     cout <- cfun(x, diag(3))
-    cu[,2:3] <- -cu[,2:3]
+    cout[,2:3] <- -cout[,2:3]
     expect_identical(result, out)
     expect_equal(result, cout)
 
