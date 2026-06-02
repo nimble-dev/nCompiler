@@ -588,19 +588,21 @@ exprClass_put_args_in_order <- function(def, expr,
   # separate compile-time arguments.
   # This is done AFTER inserting defaults, so that compile-time args can have defaults.
   # The nParse-ing of compileTime args was superfluous, so we throw it out in this step.
-  expr$aux[["compileArgs"]] <- list()
+  # Seed from any already-extracted compileArgs so repeated normalization calls
+  # are safe: if an arg was already removed from expr$args in a prior call, its
+  # value is preserved in aux_compileArgs rather than silently dropped.
   if(length(compileArgs)>0) {
-    aux_compileArgs <- list()
-    iRes <- 1
+    aux_compileArgs <- if(!is.null(expr$aux[["compileArgs"]])) expr$aux[["compileArgs"]] else list()
     for(CA_name in compileArgs) {
       if(CA_name %in% names(expr$args)) {
-        aux_compileArgs[[iRes]] <- expr$args[[CA_name]]$Rexpr
-        names(aux_compileArgs)[iRes] <- CA_name
-        iRes <- iRes + 1
+        aux_compileArgs[[CA_name]] <- expr$args[[CA_name]]$Rexpr
         removeArg(expr, CA_name)
       }
+      # else: already extracted in a prior normalization call — keep existing value
     }
     expr$aux[["compileArgs"]] <- aux_compileArgs
+  } else {
+    if(is.null(expr$aux[["compileArgs"]])) expr$aux[["compileArgs"]] <- list()
   }
   expr
 }

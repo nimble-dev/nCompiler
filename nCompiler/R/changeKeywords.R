@@ -1,4 +1,5 @@
-nKeyWords <- list(copy = 'nCopy',
+nKeyWords <- list(as = 'nAs',
+                  copy = 'nCopy',
                   print = 'nPrint',
                   cat = 'nCat',
                   step = 'nStep',

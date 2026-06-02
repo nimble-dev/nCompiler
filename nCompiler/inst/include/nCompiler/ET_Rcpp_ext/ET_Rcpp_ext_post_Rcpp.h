@@ -6,5 +6,6 @@
 #include <nCompiler/ET_Rcpp_ext/post_Rcpp/ET_Rcpp_as_wrap.h>
 #include <nCompiler/ET_Rcpp_ext/post_Rcpp/ET_SEXP_converter.h>
 #include <nCompiler/ET_Rcpp_ext/post_Rcpp/ETaccessor_post_Rcpp.h>
+#include <nCompiler/ET_Rcpp_ext/post_Rcpp/nC_as.h>
 
 //#endif // EIGEN_RCPP_EXTENSIONS_H_

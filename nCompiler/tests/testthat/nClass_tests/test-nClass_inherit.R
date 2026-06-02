@@ -698,3 +698,40 @@ test_that("inheritance with interfaces at multiple levels", {
 
   rm(Cder, Cmid, Cbase); gc()
 })
+
+test_that("manual access to derived interfaced members works", {
+  ncBase <- nClass(
+    classname = "ncBase",
+    Cpublic = list(v = 'numericScalar')
+  )
+  ncDer <- nClass(
+    classname = "ncDer",
+    inherit = ncBase,
+    Cpublic = list(x = "numericVector")
+  )
+  foo <- nFunction(
+    function(obj = ncDer()) {
+      cppLiteral("auto ETacc = obj->access(\"x\");")
+      cppLiteral("ans = ETacc->map<1, double>();", types=list(ans="numericVector"))
+     # Cppliteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
+      return(ans)
+      returnType(numericVector())
+    }
+  )
+  foo2 <- nFunction(
+    function(obj = ncBase()) {
+      cppLiteral("auto ETacc = obj->access(\"x\");")
+      cppLiteral("ans = ETacc->map<1, double>();", types=list(ans="numericVector"))
+#      cppLiteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
+      return(ans)
+      returnType(numericVector())
+    }
+  )
+
+  comp <- nCompile(ncBase, ncDer, foo, foo2)
+  obj <- comp$ncDer$new()
+  obj$x <- 1:3
+  comp$foo(obj)
+  comp$foo2(obj)
+  rm(obj); gc()
+})

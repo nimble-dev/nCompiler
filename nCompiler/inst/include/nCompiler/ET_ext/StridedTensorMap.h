@@ -141,6 +141,19 @@ namespace Eigen {
 #endif
     }
 
+    // const-ref overload so temporaries and const tensors/maps can be used as input.
+    // Only data() and dimensions() are needed; m_data points to the source data, which outlives the temp.
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const InputType &inputTensor)
+      : m_data(const_cast<PointerType>(inputTensor.data()))
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions,
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+    }
+
     template<typename InputType>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
@@ -633,7 +646,8 @@ template<int output_nInd>
 struct MakeStridedTensorMap {
   template<typename EigenInputType>
    struct MakeOutputType {
-     typedef typename EigenInputType::Scalar Scalar;
+     typedef typename std::remove_reference<EigenInputType>::type EigenBaseType;
+     typedef typename EigenBaseType::Scalar Scalar;
      typedef Tensor<Scalar, output_nInd> EigenOutputType;
      typedef StridedTensorMap< EigenOutputType > type;
    };
@@ -644,6 +658,15 @@ struct MakeStridedTensorMap {
   template<typename EigenInputType>
   static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x) {
     return typename MakeOutputType<EigenInputType>::type(x);
+  }
+  // rvalue overloads so temporaries (e.g. TensorMap returned by nC_as) can be used as input.
+  template<typename EigenInputType, typename IndexBlocksType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x), indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x));
   }
 };
 
@@ -686,6 +709,145 @@ struct TensorEvaluator< StridedTensorMap<PlainObjectType, Options_, MakePointer_
 
 
 
+
+// ---------------------------------------------------------------------------
+// CastSTM<TargetScalar, SourceSTM>
+//
+// A read-only Eigen tensor expression that wraps a SourceSTM and casts its
+// elements to TargetScalar at read time.  No allocation; coeff(i) evaluates
+// to static_cast<TargetScalar>(source_evaluator.coeff(i)).
+//
+// Returned by RHSCastProxy::operator()() for cross-scalar as_nC<> calls,
+// making the result directly usable in Eigen ops and scalar indexing with
+// the same uniform as_nC<T,N,mode>(x)() interface.
+//
+// SourceSTM is stored by value (cheap: pointer + small index arrays) to
+// avoid lifetime issues when wrapping a proxy member.
+// ---------------------------------------------------------------------------
+
+// Forward declaration required before the traits specialisation.
+template<typename TargetScalar, typename SourceSTM> class CastSTM;
+
+namespace internal {
+  template<typename TargetScalar, typename SourceSTM>
+  struct traits<CastSTM<TargetScalar, SourceSTM>> {
+    typedef TargetScalar Scalar;
+    typedef typename traits<SourceSTM>::StorageKind StorageKind;
+    typedef typename traits<SourceSTM>::Index Index;
+    static const int NumDimensions = traits<SourceSTM>::NumDimensions;
+    static const int Layout = traits<SourceSTM>::Layout;
+    enum { Flags = 0 };
+    // PointerType: TypeConversion converts the source pointer's element type to
+    // TargetScalar*, matching the pattern used by TensorConversionOp.
+    typedef typename TypeConversion<TargetScalar,
+                       typename traits<SourceSTM>::PointerType>::type PointerType;
+  };
+
+  // eval: keep as a const reference (the expression is cheap to hold by reference).
+  template<typename TargetScalar, typename SourceSTM>
+  struct eval<CastSTM<TargetScalar, SourceSTM>, Eigen::Dense> {
+    typedef const CastSTM<TargetScalar, SourceSTM>& type;
+  };
+
+  // nested: store by value when nested inside another expression (avoids dangling
+  // reference when the CastSTM is a temporary returned from RHSCastProxy::operator()()).
+  template<typename TargetScalar, typename SourceSTM>
+  struct nested<CastSTM<TargetScalar, SourceSTM>, 1,
+                typename eval<CastSTM<TargetScalar, SourceSTM>>::type> {
+    typedef CastSTM<TargetScalar, SourceSTM> type;
+  };
+} // namespace internal
+
+template<typename TargetScalar, typename SourceSTM>
+class CastSTM : public TensorBase<CastSTM<TargetScalar, SourceSTM>, ReadOnlyAccessors>
+{
+public:
+  typedef typename internal::traits<CastSTM>::Scalar Scalar;
+  typedef typename internal::traits<CastSTM>::StorageKind StorageKind;
+  typedef typename internal::traits<CastSTM>::Index Index;
+  typedef typename internal::nested<CastSTM>::type Nested;
+  typedef Scalar CoeffReturnType;
+  typedef typename NumTraits<Scalar>::Real RealScalar;
+  typedef typename SourceSTM::Dimensions Dimensions;
+  static const int NumDimensions = SourceSTM::NumDimensions;
+
+  EIGEN_DEVICE_FUNC explicit CastSTM(const SourceSTM& src) : src_(src) {}
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const Dimensions& dimensions() const { return src_.dimensions(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const SourceSTM& source() const { return src_; }
+
+  // Element access — delegates cast to SourceSTM's operator(), which handles strides.
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TargetScalar operator()(Index i) const {
+    return static_cast<TargetScalar>(src_(i));
+  }
+
+  template<typename... IndexTypes>
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TargetScalar operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices) const {
+    return static_cast<TargetScalar>(src_(firstIndex, secondIndex, otherIndices...));
+  }
+
+private:
+  SourceSTM src_; // stored by value — cheap and avoids proxy-member lifetime issues
+};
+
+template<typename TargetScalar, typename SourceSTM, typename Device>
+struct TensorEvaluator<const CastSTM<TargetScalar, SourceSTM>, Device>
+{
+  typedef CastSTM<TargetScalar, SourceSTM> XprType;
+  typedef typename XprType::Dimensions Dimensions;
+  typedef TargetScalar Scalar;
+  typedef TargetScalar CoeffReturnType;
+  typedef typename PacketType<CoeffReturnType, Device>::type PacketReturnType;
+  typedef typename XprType::Index Index;
+
+  enum {
+    IsAligned         = false,
+    PacketAccess      = false,
+    BlockAccess       = false,
+    PreferBlockAccess = false,
+    Layout            = TensorEvaluator<const SourceSTM, Device>::Layout,
+    RawAccess         = false
+  };
+
+  typedef internal::TensorBlockNotImplemented TensorBlock;
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TensorEvaluator(const XprType& op, const Device& device)
+    : src_eval_(op.source(), device) {}
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const Dimensions& dimensions() const { return src_eval_.dimensions(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  bool evalSubExprsIfNeeded(CoeffReturnType*) {
+    src_eval_.evalSubExprsIfNeeded(nullptr);
+    return true;
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  void cleanup() { src_eval_.cleanup(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  CoeffReturnType coeff(Index index) const {
+    return static_cast<TargetScalar>(src_eval_.coeff(index));
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TensorOpCost costPerCoeff(bool vectorized) const {
+    return src_eval_.costPerCoeff(vectorized);
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  Scalar* data() const { return nullptr; }
+
+private:
+  TensorEvaluator<const SourceSTM, Device> src_eval_;
+};
 
 } // end namespace Eigen
 
