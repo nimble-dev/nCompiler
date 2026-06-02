@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <type_traits>
+#include "../../ET_ext/StridedTensorMap.h"
 
 // ---------------------------------------------------------------------------
 // All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
@@ -50,7 +51,9 @@ public:
   explicit RHSCastProxy(ViewType view) : view_(std::move(view)) {}
   RHSCastProxy(const RHSCastProxy&) = delete;
   RHSCastProxy& operator=(const RHSCastProxy&) = delete;
-  auto operator()() { return view_.template cast<TargetScalar>(); }
+  // Returns a CastSTM — a proper Eigen expression that casts elements on read.
+  // Directly supports operator()(index), assignment to Tensor<>, and all Eigen ops.
+  Eigen::CastSTM<TargetScalar, ViewType> operator()() { return Eigen::CastSTM<TargetScalar, ViewType>(view_); }
 };
 
 // CastingProxy<TargetScalar, ViewType>

@@ -936,7 +936,7 @@ nCompiler:::inEigenizeEnv(
       # Either we're indexing a vector and we keep '[' in the AST, or we're
       # indexing a non-vector object and we use 'index(' instead.
       # TODO: if (code$args[[1]]$type$nDim == 0)
-      if (code$args[[1]]$type$nDim == 1 && isTRUE(code$args[[1]]$isName)) code$name <- 'index['
+      if (code$args[[1]]$type$nDim == 1 && isTRUE(code$args[[1]]$isName) && !isTRUE(code$args[[1]]$type$isBlockRef)) code$name <- 'index['
       else code$name <- 'index('
       ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
       ## We see inconsistent C++ compiler behavior around casting a double index

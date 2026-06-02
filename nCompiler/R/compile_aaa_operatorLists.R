@@ -237,6 +237,9 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  # Note that nAs<- is supported but does not need
+  # separate assignment op handlers. Hence
+  # we do not have useAssignOp = TRUE.
   'nAs',
   list(
     matchDef = function(object, type) {},
