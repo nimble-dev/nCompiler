@@ -329,7 +329,7 @@ inLabelAbstractTypesEnv(
 #   }
 # )
 
-inLabelAbstractTypesEnv(
+nCompiler:::inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
     # specializations from generic will have already been handled
     # e.g obj[[1]] where obj defines its own "[[" operator definition (opDef).
@@ -338,6 +338,26 @@ inLabelAbstractTypesEnv(
     useArgs[1] <- FALSE # already processed
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo, useArgs = useArgs)
+    if(inherits(code$args[[1]]$type, "symbolNC")) {
+      if(isTRUE(code$args[[2]]$isLiteral)) {
+        # This case is from the end of DollarSign (could be combined)
+        innerName <- as.character(code$args[[2]]$name)
+        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
+        if(is.null(symbol))
+          stop(exprClassProcessingErrorMsg(
+            code,
+            paste0('member variable ', innerName, ' of ', code$args[[1]]$name, ' could not be found.')
+          ), call. = FALSE)
+        code$type <- symbol$clone(deep = TRUE)
+        code$name <- '->member'
+      } else {
+        code$type <- symbolETaccBase$new(name = '')
+        code$name <- '->method'
+        insertArg(code, 2, exprClass$new(name = 'access', isName = TRUE, isCall = FALSE, 
+                                         isLiteral = FALSE, isAssign = FALSE))
+      }
+      return(if(length(inserts) == 0) NULL else inserts)
+    }
     # return type of x[[i]] is the element type of x
     # and return type of `[[<-`(x, i, value) is the type of value,
     #.  which is also the element type of x, so both cases have same return type

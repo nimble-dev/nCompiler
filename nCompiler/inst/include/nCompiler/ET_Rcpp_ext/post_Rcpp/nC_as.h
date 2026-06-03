@@ -34,6 +34,30 @@ public:
   ViewType& operator()() { return view_; }
 };
 
+template<typename Scalar>
+class EmptyScalarProxy {
+  Scalar& scalar_;
+public:
+  explicit EmptyScalarProxy(Scalar& s) : scalar_(s) {}
+  EmptyScalarProxy(const EmptyScalarProxy&) = delete;
+  EmptyScalarProxy& operator=(const EmptyScalarProxy&) = delete;
+  Scalar& operator()() { return scalar_; }
+};
+
+template<typename TargetScalar,typename Scalar>
+class CastingScalarProxy {
+  Scalar& scalar_;
+  TargetScalar casted_scalar_;
+public:
+  explicit CastingScalarProxy(Scalar& s) : scalar_(s), casted_scalar_(static_cast<TargetScalar>(s)) {}
+  CastingScalarProxy(const CastingScalarProxy&) = delete;
+  CastingScalarProxy& operator=(const CastingScalarProxy&) = delete;
+  TargetScalar& operator()() { return casted_scalar_; }
+  ~CastingScalarProxy() {
+    scalar_ = static_cast<Scalar>(casted_scalar_);
+  }
+};
+
 // RHSCastProxy<TargetScalar, ViewType>
 //
 // Cross-scalar RHS proxy. ViewType is TM (AsMode::TM, non-indexed) or STM
@@ -104,8 +128,68 @@ public:
 //   as_nC<int,1>(*acc)()(i)                         // element read
 //   as_nC<int,1,AsMode::LHS>(*acc)()(i) = val;      // element write
 //   as_nC<int,1,AsMode::LHS>(*acc)() = rhs;         // whole-object write
-template<typename TargetScalar, int nDim>
+
+template<typename TargetType>
 class RuntimeCastingProxy {
+  // TargetType5o here should be a true scalar type,
+  // because specialization to Eigen::Tensor types is below.
+  typedef TargetType TargetScalar;
+
+  ETaccessorBase& source_;
+  bool is_lhs_;
+  bool copy_made_;
+  TargetScalar copy_;
+  TargetScalar* data_ptr_;
+
+  void castCopyFrom() {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source_.castCopyToDouble(&copy_, 1);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source_.castCopyToInt(&copy_, 1);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source_.castCopyToBool(&copy_, 1);
+    else
+      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    data_ptr_ = &copy_;
+    copy_made_ = true;
+  }
+
+  void writeBack() {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source_.writeBackFromDouble(&copy_, 1);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source_.writeBackFromInt(&copy_, 1);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source_.writeBackFromBool(&copy_, 1);
+    else
+      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+  }
+
+public:
+  explicit RuntimeCastingProxy(ETaccessorBase& acc, bool is_lhs = false)
+    : source_(acc), is_lhs_(is_lhs), copy_made_(false)
+  {
+    auto* typed = dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc);
+    if(typed) {
+      // Same scalar type: view directly, no copy.
+      data_ptr_ = &acc.scalar<TargetScalar>();
+    } else {
+      castCopyFrom();
+    }
+  }
+  
+  ~RuntimeCastingProxy() {
+    if(copy_made_ && is_lhs_) writeBack();
+  }
+
+  RuntimeCastingProxy(const RuntimeCastingProxy&) = delete;
+  RuntimeCastingProxy& operator=(const RuntimeCastingProxy&) = delete;
+
+  TargetScalar& operator()() { return *data_ptr_; }
+};
+
+template<typename TargetScalar, int nDim>
+class RuntimeCastingProxy<Eigen::Tensor<TargetScalar, nDim> > {
   using TM = Eigen::TensorMap<Eigen::Tensor<TargetScalar, nDim>>;
   using CopyTensor = Eigen::Tensor<TargetScalar, nDim>;
 
@@ -118,21 +202,7 @@ class RuntimeCastingProxy {
   // Mirrors mapTyped singleton-drop/pad logic from ETaccessorTyped.
   Eigen::array<Eigen::Index, nDim> computeDims(const std::vector<int>& intDims) {
     Eigen::array<Eigen::Index, nDim> outDim;
-    int innate_nDim = static_cast<int>(intDims.size());
-    if(nDim >= innate_nDim) {
-      for(int i = 0; i < innate_nDim; ++i) outDim[i] = intDims[i];
-      for(int i = innate_nDim; i < nDim; ++i) outDim[i] = 1;
-    } else {
-      int i_out = 0;
-      for(int i_in = 0; i_in < innate_nDim; ++i_in) {
-        if(intDims[i_in] > 1) {
-          if(i_out >= nDim)
-            Rcpp::stop("RuntimeCastingProxy: too many non-singleton dimensions for requested nDim.");
-          outDim[i_out++] = intDims[i_in];
-        }
-      }
-      for(; i_out < nDim; ++i_out) outDim[i_out] = 1;
-    }
+    set_output_dims(intDims, outDim, nDim);
     return outDim;
   }
 
@@ -203,16 +273,24 @@ public:
 
 // Compile-time source: delegates to ETaccessorTyped<Scalar>::asTyped<>().
 // Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy.
-template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM, typename T>
+template<typename TargetType, AsMode mode = AsMode::TM, typename T>
 auto as_nC(T& x) {
-  return ETaccess(x).template asTyped<TargetScalar, nDim, mode>();
+  return ETaccess(x).template asTyped<TargetType, mode>();
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
 // Returns RuntimeCastingProxy. Write-back occurs on destruction iff mode == LHS.
-template<typename TargetScalar, int nDim, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetScalar, nDim> as_nC(ETaccessorBase& acc) {
-  return RuntimeCastingProxy<TargetScalar, nDim>(acc, mode == AsMode::LHS);
+template<typename TargetType, AsMode mode = AsMode::TM>
+RuntimeCastingProxy<TargetType> as_nC(ETaccessorBase& acc) {
+  return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
+}
+
+// genericInterfaceBaseC::access() returns a unique_ptr<ETaccessorBase>,
+// so this overload allows direct passing of the unique_ptr, for simpler usage and code-generation.
+// This takes its argument by value, so that it can be an rvalue (returned from another call at the call site).
+template<typename TargetType, AsMode mode = AsMode::TM>
+RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase> acc) {
+    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
 }
 
 #endif // NCOMPILER_NC_AS_H_

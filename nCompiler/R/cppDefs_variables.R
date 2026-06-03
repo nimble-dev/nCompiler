@@ -195,6 +195,12 @@ cppNcppVec <- function(name = character(),
                       templateArgs = list(elementVar))
 }
 
+cppETaccBase <- function(name = character()) {
+  cppVarFullClass$new(name = name,
+                      baseType = "std::unique_ptr",
+                      templateArgs = list("ETaccessorBase"))
+}
+
 cppEigenTensorRef <- function(name = character(),
                               nDim,
                               scalarType) {

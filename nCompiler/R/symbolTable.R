@@ -442,39 +442,27 @@ symbolNcppVec <- R6::R6Class(
   )
 )
 
-
-## I think this was and old idea
-## symbolList <- R6::R6Class(
-##   classname = "symbolList",
-##   inherit = symbolBase,
-##   portable = TRUE,
-##   public = list(
-##     size = NULL,
-##     initialize = function(..., size = NA) {
-##       super$initialize(...)
-##       self$type = 'list'
-##       self$size <- size
-##       self
-##     },
-##     shortPrint = function() {
-##       'List'
-##     },
-##     print = function() {
-##       if(is.null(self$size)) {
-##         writeLines(
-##           paste0(self$name, ': ', self$type, ' size = (uninitialized),')
-##         )
-##       } else {
-##         writeLines(
-##           paste0(self$name, ': ', self$type, ' size = ', self$size)
-##         )
-##       }
-##     },
-##     genCppVar = function() {
-##       return(cppRcppList(name = self$name))
-##     }
-##   )
-## )
+symbolETaccBase <- R6::R6Class(
+  classname = "symbolETaccBase",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    initialize = function(name, isArg = FALSE) {
+      self$name <- name
+      self$type <- "ETaccessorBase"
+      self$isArg <- isArg
+    },
+    print = function() {
+      writeLines(paste0(self$name, ': symbolETaccBase (ETaccessorBase) '))
+    },
+    uniqueID = function(...) {
+      paste0("ETaccessorBase")
+    },
+    genCppVar = function() {
+      cppETaccBase(name = self$name)
+    }
+  )
+)
 
 symbolRcppType<- R6::R6Class(
   classname = "symbolRcppType",

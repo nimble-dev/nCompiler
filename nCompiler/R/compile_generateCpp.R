@@ -617,18 +617,21 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
   As <- function(code, symTab) {
     obj_cpp  <- compile_generateCpp(code$args[[1]], symTab)
-    tgt_type <- code$type$type
-    tgt_nDim <- code$type$nDim
+    target_sym <- code$type
+#    tgt_type <- code$type$type
+#    tgt_nDim <- code$type$nDim
     use_stm  <- isTRUE(code$aux$useSTM)
     is_lhs   <- isTRUE(code$aux$onLHS)
 
-    tgt_cpp  <- as_op_scalarToCpp(tgt_type)
+    #tgt_cpp  <- as_op_scalarToCpp(target_sym$type)
     mode_arg <- if(is_lhs) ', AsMode::LHS' else if(use_stm) ', AsMode::STM' else ''
     # All proxy types expose operator()() — always append ().
-    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')()')
+#    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')()')
+    paste0('as_nC<', target_sym$genCppVar()$generate(""),
+            mode_arg, '>(', obj_cpp, ')()')
   }
 )
 
