@@ -823,7 +823,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0.0
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc)().sum(); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
@@ -834,7 +834,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0L
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<int,1>(*_acc)().sum(); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<int,1> >(*_acc)().sum(); }')
           return(ans)
           returnType(integerScalar)
         }
@@ -845,7 +845,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0L
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<int,1>(*_acc)()(i - 1); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<int,1> >(*_acc)()(i - 1); }')
           return(ans)
           returnType(integerScalar)
         }
@@ -881,9 +881,9 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
         function(v = numericVector) {
           data <- ncAcc$new()
           data$x <- numeric(length = length(v), value = 0)
-          cppLiteral('{ auto _acc = data->access("x"); as_nC<double,1,AsMode::LHS>(*_acc)() = v; }')
+          cppLiteral('{ auto _acc = data->access("x"); as_nC<Eigen::Tensor<double,1> ,AsMode::LHS>(*_acc)() = v; }')
           ans <- 0.0
-          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc2)().sum(); }')
+          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc2)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
@@ -893,9 +893,9 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
         function(v = integerVector) {
           data <- ncAcc$new()
           data$x <- numeric(length = length(v), value = 0)
-          cppLiteral('{ auto _acc = data->access("x"); as_nC<int,1,AsMode::LHS>(*_acc)() = v; }')
+          cppLiteral('{ auto _acc = data->access("x"); as_nC<Eigen::Tensor<int,1>,AsMode::LHS>(*_acc)() = v; }')
           ans <- 0.0
-          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc2)().sum(); }')
+          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc2)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
