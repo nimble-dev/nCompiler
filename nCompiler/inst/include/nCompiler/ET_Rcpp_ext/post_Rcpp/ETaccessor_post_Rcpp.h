@@ -43,6 +43,7 @@ template<typename ViewType> class EmptyProxy;
 template<typename Scalar> class EmptyScalarProxy;
 template<typename TargetScalar, typename ViewType> class RHSCastProxy;
 template<typename TargetScalar, typename ViewType> class CastingProxy;
+template<typename TargetScalar, typename Scalar> class CastingScalarProxy;
 
 // Virtual nDim-general methods (e.g. resize, conversions to and from SEXP).
 class ETaccessorBase {
