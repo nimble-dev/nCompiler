@@ -289,7 +289,13 @@ RuntimeCastingProxy<TargetType> as_nC(ETaccessorBase& acc) {
 // so this overload allows direct passing of the unique_ptr, for simpler usage and code-generation.
 // This takes its argument by value, so that it can be an rvalue (returned from another call at the call site).
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase> acc) {
+RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>& acc) {
+    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
+}
+
+
+template<typename TargetType, AsMode mode = AsMode::TM>
+RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>&& acc) {
     return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
 }
 

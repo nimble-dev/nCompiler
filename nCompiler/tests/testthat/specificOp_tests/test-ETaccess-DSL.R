@@ -7,25 +7,29 @@ test_that("obj[['x']] works like obj$x", {
       x = 'numericVector'
     )
   )
-  nf <- nFunction(
-    function(obj = 'nc') {
-      v <- obj[["x"]]
-      return(v)
-      returnType('numericVector')
-    }
+  nc2 <- nClass(
+    Cpublic = list(
+      nf = nFunction(
+        function(obj = 'nc') {
+          v <- obj[["x"]]
+          return(v)
+          returnType('numericVector')
+        }
+      )
+    )
   )
   for(mode in c("R","non-pkg", "pkg")) {
     if(mode == "R") {
       obj <- nc$new()
-      foo <- nf
+      obj2 <- nc2$new()
     } else {
       package <- mode=="pkg"
-      comp <- nCompile(nc, nf, package = package)
+      comp <- nCompile(nc, nc2, package = package)
       obj <- comp$nc$new()
-      foo <- comp$nf
+      obj2 <- comp$nc2$new()
     }
     obj$x <- c(1.2, 2.3)
-    expect_equal(foo(obj), obj$x)
+    expect_equal(obj2$nf(obj), obj$x)
     rm(obj); gc()
   }
 })
@@ -37,27 +41,30 @@ test_that("obj[[var_name]] works", {
       x = 'numericVector'
     )
   )
-  nf <- nFunction(
-    function(obj = 'nc', var_name = 'string') {
-      ETacc <- obj[[var_name]]
-      v <- as(ETacc, 'numericVector')
-      return(v)
-      returnType('numericVector')
-    }
+  nc2 <- nClass(
+    Cpublic = list(
+      nf = nFunction(
+        function(obj = 'nc', var_name = 'string') {
+          ETacc <- obj[[var_name]]
+          v <- as(ETacc, 'numericVector')
+          return(v)
+          returnType('numericVector')
+        }
+      )
+    )
   )
   for(mode in c("R","non-pkg", "pkg")) {
     if(mode == "R") {
       obj <- nc$new()
-      foo <- nf
+      obj2 <- nc2$new()
     } else {
       package <- mode=="pkg"
-      comp <- nCompile(nc, nf, package = package)
+      comp <- nCompile(nc, nc2, package = package)
       obj <- comp$nc$new()
-      foo <- comp$nf
+      obj2 <- comp$nc2$new()
     }
     obj$x <- c(1.2, 2.3)
-    foo(obj, "x")
-    expect_equal(foo(obj, "x"), obj$x)
+    expect_equal(obj2$nf(obj, "x"), obj$x)
     rm(obj); gc()
   }
 })
