@@ -21,9 +21,6 @@ Collate:
     local_DLL.R
     Rcpp_nCompiler_plugin.R
     changeKeywords.R
-    distributions_implementations.R
-    distributions_inputList.R
-    distributions_processInputList.R
     compile_aaa_operatorLists.R
     compile_addDebug.R
     compile_nParse.R
@@ -75,7 +72,6 @@ Collate:
     nCompile.R
     nConstructor.R
     nCppVec.R
-    nimbleModels.R
     nTry.R
     packaging.R
     Rcpp_check.R
