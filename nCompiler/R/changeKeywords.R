@@ -15,6 +15,7 @@ nKeyWords <- list(as = 'nAs',
                   c = 'nC',
                   rep = 'nRep',
                   seq = 'nSeq',
+                  switch = 'nSwitch',
                   eigen = 'nEigen',
                   diag = 'nDiag',
                   Diagonal = 'nDiagonal', # mirror Matrix::Diagonal to

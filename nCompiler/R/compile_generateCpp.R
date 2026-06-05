@@ -2,11 +2,12 @@
 ## Section for outputting C++ code from an exprClass object ##
 ##############################################################
 
+# This should be moved into opDefs or handlers
 nimCppKeywordsThatFillSemicolon <- c(
   '{',
   'for',
   ifOrWhile,
-  'nimSwitch',
+  'nSwitch',
  # 'cppLiteral',
   'cppComment')
 
@@ -203,6 +204,25 @@ inGenCppEnv(
                            compile_generateCpp,
                            symTab,
                            asArg = TRUE)), collapse=","), ")")
+  }
+)
+
+inGenCppEnv(
+  Switch <- function(code, symTab) {
+    IDs <- code$aux$compileArgs$IDs
+    numChoices <- length(code$args)-1
+    if(numChoices <= 0) return('')
+    choicesCode <- vector('list', numChoices)
+    choiceValues <- IDs
+    if(length(choiceValues) != numChoices) stop(paste0('number of switch choices does not match number of indices.'))
+    for(i in 1:numChoices) {
+        if(code$args[[i+1]]$name != '{')
+            bracketedCode <- insertExprClassLayer(code, i+1, '{')
+        choicesCode[[i]] <- list(paste0('case ',choiceValues[i],':'), 
+                                        compile_generateCpp(code$args[[i+1]], symTab, showBracket=FALSE), 'break;')
+    }
+    ans <- list(paste('switch(',code$args[[1]]$name,') {'), choicesCode, '}')
+    ans
   }
 )
 

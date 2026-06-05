@@ -30,6 +30,16 @@ make_nAs_output_dims <- function(input_dims, output_nDim) {
 }
 
 #' @export
+nSwitch <- function(paramID, IDoptions = NULL, ...) {
+  dotsList <- eval(substitute(alist(...)))
+  if(is.null(IDoptions)) IDoptions <- seq_along(dotsList)
+  if(length(IDoptions) != length(dotsList)) stop("length of IDoptions must match number of cases provided in ...")
+  iUse <- which(IDoptions == paramID)
+  if(length(iUse) > 0)  eval(dotsList[[iUse[1] ]], envir = parent.frame())
+  invisible(NULL)
+}
+
+#' @export
 nAs <- function(object, type) {
   ttype <- nCaptureType(type)
   sym <- type2symbol(!!ttype)

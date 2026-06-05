@@ -595,6 +595,7 @@ exprClass_put_args_in_order <- function(def, expr,
     aux_compileArgs <- if(!is.null(expr$aux[["compileArgs"]])) expr$aux[["compileArgs"]] else list()
     for(CA_name in compileArgs) {
       if(CA_name %in% names(expr$args)) {
+        # should we use aux_compileArgs[CA_name] <- list(expr$args[[CA_name]]$Rexpr) to preserve NULL values?
         aux_compileArgs[[CA_name]] <- expr$args[[CA_name]]$Rexpr
         removeArg(expr, CA_name)
       }
