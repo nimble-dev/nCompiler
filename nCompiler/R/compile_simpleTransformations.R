@@ -144,3 +144,16 @@ inSimpleTransformationsEnv(
       code$aux$compileArgs$drop <- drop_arg
     }
 )
+
+inSimpleTransformationsEnv(
+  Switch <- function(code, symTab, auxEnv, handlingInfo) {
+    if(length(code$args) < 2) stop("nSwitch must have at least 2 arguments: the value to check and at least one option.")
+    IDs <- code$aux$compileArgs$IDs
+    if(is.null(IDs)) IDs <- 1:(length(code$args) - 1)
+    else IDs <- eval(IDs, envir = auxEnv$where)
+    if(!is.numeric(IDs)) stop("IDs for nSwitch must be numeric.")
+    if(length(IDs) != length(code$args) - 1) stop("Number of IDs for nSwitch must match the number of options.")
+    code$aux$compileArgs$IDs <- IDs
+    if(code$caller$name != "{") stop("nSwitch can not be used within an expression. It does not return anything.")
+  }
+)

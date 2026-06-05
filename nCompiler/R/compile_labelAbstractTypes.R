@@ -256,78 +256,14 @@ inLabelAbstractTypesEnv(
   }
 )
 
-# inLabelAbstractTypesEnv(
-#   nList_doubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
-#     browser()
-#     inserts <- NULL
-#     if(length(inserts) == 0) NULL else inserts
-#   }
-# )
-
-# nCompiler:::inLabelAbstractTypesEnv(
-#   nClassBuilder <- function(code, symTab, auxEnv, handlingInfo) {
-#     this_builder <- code$aux$cachedOpInfo$obj_internals
-#     Rexpr <- code$Rexpr
-#     args <- as.list(Rexpr)[-1]
-#     args2 <- c(args, .ID=TRUE)
-#     ID <- do.call(this_builder, args2)
-#     NCgen <- NULL
-#     for(already_built in auxEnv$nClassBuilder_built) {
-#       if(identical(ID, NCinternals(already_built)$classID)) {
-#         NCgen <- already_built
-#         break
-#       }
-#     }
-#     if(is.null(NCgen)) {
-#       NCgen <- do.call(this_builder, args)
-#       auxEnv$nClassBuilder_built <- c(auxEnv$nClassBuilder_built, list(NCgen))
-#     }
-
-#     newSym <- symbolNCgenerator$new(name = ID,
-#                                     type = ID,
-#                                     NCgenerator = NCgen)
-#     code$type <- newSym
-#     auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, NCgen)
-#     NULL
-#   }
-# )
-
-# inLabelAbstractTypesEnv(
-#   CheckOverload <- function(code, symTab, auxEnv, handlingInfo) {
-#     if(length(code$args) == 0) return(NULL)
-#     arg1 <- code$args[[1]]
-#     if(inherits(arg1$type, "symbolNC")) {
-#       overload <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
-#       if(!is.null(overload)) {
-#         if(is.function(overload))
-#           ans <- overload(code, symTab,  auxEnv, handlingInfo)
-#         else
-#           ans <- eval(call(overload, code, symTab, auxEnv, handlingInfo),
-#                       envir = labelAbstractTypesEnv)
-#         return(ans)
-#       }
-#     }
-#     NULL
-#   }
-# )
-
-# inLabelAbstractTypesEnv(
-#   recurse_labelAbstractTypes_overloaded <- function(code, symTab, auxEnv, handlingInfo) {
-#     useArgs <- rep(FALSE, length(code$args))
-#     useArgs[1] <- TRUE
-#     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-#                                           handlingInfo, useArgs = useArgs)
-#     inserts2 <- CheckOverload(code, symTab, auxEnv, handlingInfo)
-#     handled <- TRUE
-#     if(is.null(inserts2)) {
-#       inserts2 <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-#                                             handlingInfo, useArgs = !useArgs)
-#       handled <- FALSE
-#     }
-#     if(isTRUE(inserts2)) inserts2 <- NULL
-#     list(inserts = c(inserts, inserts2), handled = handled)
-#   }
-# )
+inLabelAbstractTypesEnv(
+  Switch <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo)
+    code$type <- "NA" # should never be looked at because Switch has no return type
+    if(length(inserts) == 0) NULL else inserts
+  }
+)
 
 nCompiler:::inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {

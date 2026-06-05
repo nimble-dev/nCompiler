@@ -1123,6 +1123,23 @@ updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
 updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
+  c('nSwitch'),
+  list(
+    matchDef = function(expr, IDs, ...) {},
+    compileArgs = c("IDs"),
+    simpleTransformations = list(
+      handler = 'Switch'
+    ),
+    labelAbstractTypes = list(
+      handler = 'Switch'
+    ),
+    cppOutput = list(
+      handler = 'Switch'
+    )
+  )
+)
+
+assignOperatorDef(
   c('length'), # methods here are for Eigen objects and may be overloaded for user nClasses.
   list(
     matchDef <- function(x) {},
