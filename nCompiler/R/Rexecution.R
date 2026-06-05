@@ -60,6 +60,7 @@ nAs <- function(object, type) {
   scalar_type <- storage.mode(object)
   input_dims <- dim(object) %||% length(object)
   output_dims <- make_nAs_output_dims(input_dims, output_nDim)
+  if(!length(output_dims)) output_dims <- 1
   value_dims <- dim(value) %||% length(value)
   if(!all.equal(output_dims, value_dims))
     stop("value doesn't conform to type in nAs<- assignment")

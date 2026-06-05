@@ -57,6 +57,10 @@ struct eigenTensor {};
     typedef trueScalar type;
   };
   
+// This was added much later than initial development of this file,
+// so it is has not been propagated into use.
+template <typename T>
+using type_category_t = typename type_category<T>::type;
 
 // checkDimsAllOne returns true if all dimensions are 1s, false otherwise
 template<int Ndim>

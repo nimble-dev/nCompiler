@@ -37,6 +37,7 @@ test_that("as(): same scalar 2D→1D singleton-drop, RHS", {
       )
     )
   )
+  package <- FALSE
   for(mode in c("R", "non_pkg", "pkg")) {
     if(mode == "R") {
       nco <- nc$new()
@@ -624,6 +625,178 @@ test_that("as(): LHS range assignment cross-scalar (double source, integer view)
   }
 })
 
+# Inputs are true scalars, target type is non-scalar
+# same scalar element type
+test_that("as(): true scalar input (same element type)", {
+  foo <- nFunction(
+    function(x = 'numericScalar', scalar_res = numericVector()) {
+      v <- as(x, 'numericMatrix')
+      y <- x
+      w <- v
+      as(y, "numericMatrix") <- 3*w
+      scalar_res[1] <- y
+      return(v)
+      returnType(double(2))
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  scalar_res <- 0
+  ans <- foo(2, scalar_res)
+  cscalar_res <- -1
+  cans <- cfoo(2, cscalar_res)
+  expect_identical(ans, cans)
+  expect_identical(dim(cans), c(1L,1L))
+  expect_equal(cans[1,1], 2)
+
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 6)
+  rm(ans, cans); gc()
+})
+
+# cross scalar element type
+test_that("as(): true scalar input (different element type)", {
+  foo <- nFunction(
+    function(x = 'numericScalar', scalar_res = numericVector()) {
+      v <- as(x, 'integerMatrix')
+      y <- x
+      w <- v
+      as(y, "integerMatrix") <- 3*w
+      scalar_res[1] <- y
+      return(v)
+      returnType(integer(2))
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  scalar_res <- 0
+  ans <- foo(2, scalar_res)
+  cscalar_res <- -1
+  cans <- cfoo(2, cscalar_res)
+  expect_identical(ans, cans)
+  expect_identical(dim(cans), c(1L,1L))
+  expect_identical(cans[1,1], 2L)
+
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 6)
+  rm(ans, cans); gc()
+})
+
+
+# Inputs are NOT true scalars, target type is true scalar
+# same type
+test_that("as(): true scalar target type (same element type)", {
+  foo <- nFunction(
+    function(x = 'numericMatrix', scalar_res = numericVector()) {
+      v <- as(x, 'numericScalar')
+      y <- x
+      w <- v
+      as(y, "numericScalar") <- 3*w
+      scalar_res[1] <- y[1,1]
+      return(v)
+      returnType(double())
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  x <- matrix(2, nrow = 1, ncol = 1)
+  scalar_res <- 0
+  ans <- foo(x, scalar_res)
+  cscalar_res <- -1
+  cans <- cfoo(x, cscalar_res)
+  expect_identical(ans, cans)
+  expect_true(is.null(dim(cans)))
+  expect_equal(cans, 2)
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 6)
+  rm(ans, cans); gc()
+})
+
+# cross type
+test_that("as(): true scalar target type (same element type)", {
+  foo <- nFunction(
+    function(x = 'integerMatrix', scalar_res = numericVector()) {
+      v <- as(x, 'numericScalar')
+      y <- x
+      w <- v
+      as(y, "numericScalar") <- 3*w
+      scalar_res[1] <- y[1,1]
+      return(v)
+      returnType(double())
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  x <- matrix(2, nrow = 1, ncol = 1)
+  scalar_res <- 0
+  ans <- foo(x, scalar_res)
+  cscalar_res <- -1
+  cans <- cfoo(x, cscalar_res)
+  expect_identical(ans, cans)
+  expect_true(is.null(dim(cans)))
+  expect_equal(cans, 2)
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 6)
+  rm(ans, cans); gc()
+})
+
+# Inputs are true scalars and output is also a true scalar
+# same type
+test_that("as(): true scalar input and  target type (same element type)", {
+  foo <- nFunction(
+    function(x = 'numericScalar', scalar_res = numericVector()) {
+      v <- as(x, 'numericScalar')
+      y <- x
+      w <- v
+      as(y, "numericScalar") <- 3*w
+      scalar_res[1] <- y
+      return(v)
+      returnType(double())
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  x <- 2.3
+  scalar_res <- 1
+  ans <- foo(x, scalar_res)
+  cscalar_res <- 0
+  cans <- cfoo(x, cscalar_res)
+  expect_identical(ans, cans)
+  expect_true(is.null(dim(cans)))
+  expect_equal(cans, 2.3)
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 3*2.3)
+  rm(ans, cans); gc()
+})
+
+# cross type
+test_that("as(): true scalar input and  target type (different element type)", {
+  foo <- nFunction(
+    function(x = 'numericScalar', scalar_res = numericVector()) {
+      v <- as(x, 'integerScalar')
+      y <- x
+      w <- v
+      as(y, "integerScalar") <- 3*w
+      scalar_res[1] <- y
+      return(v)
+      returnType(integer())
+    },
+    refArgs = "scalar_res"
+  )
+  cfoo <- nCompile(foo)
+  x <- 2.3
+  scalar_res <- 1
+  ans <- foo(x, scalar_res)
+  cscalar_res <- 0
+  cans <- cfoo(x, cscalar_res)
+  expect_identical(ans, cans)
+  expect_true(is.null(dim(cans)))
+  expect_equal(cans, 2L)
+  expect_identical(scalar_res, cscalar_res)
+  expect_identical(cscalar_res, 3*2L)
+  rm(ans, cans); gc()
+})
+
 # ---------------------------------------------------------------------------
 # Runtime-source path via ETaccessorBase (RuntimeCastingProxy)
 #
@@ -650,7 +823,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0.0
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc)().sum(); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
@@ -661,7 +834,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0L
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<int,1>(*_acc)().sum(); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<int,1> >(*_acc)().sum(); }')
           return(ans)
           returnType(integerScalar)
         }
@@ -672,7 +845,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
           data <- ncAcc$new()
           data$x <- v
           ans <- 0L
-          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<int,1>(*_acc)()(i - 1); }')
+          cppLiteral('{ auto _acc = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<int,1> >(*_acc)()(i - 1); }')
           return(ans)
           returnType(integerScalar)
         }
@@ -708,9 +881,9 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
         function(v = numericVector) {
           data <- ncAcc$new()
           data$x <- numeric(length = length(v), value = 0)
-          cppLiteral('{ auto _acc = data->access("x"); as_nC<double,1,AsMode::LHS>(*_acc)() = v; }')
+          cppLiteral('{ auto _acc = data->access("x"); as_nC<Eigen::Tensor<double,1> ,AsMode::LHS>(*_acc)() = v; }')
           ans <- 0.0
-          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc2)().sum(); }')
+          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc2)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
@@ -720,9 +893,9 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
         function(v = integerVector) {
           data <- ncAcc$new()
           data$x <- numeric(length = length(v), value = 0)
-          cppLiteral('{ auto _acc = data->access("x"); as_nC<int,1,AsMode::LHS>(*_acc)() = v; }')
+          cppLiteral('{ auto _acc = data->access("x"); as_nC<Eigen::Tensor<int,1>,AsMode::LHS>(*_acc)() = v; }')
           ans <- 0.0
-          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<double,1>(*_acc2)().sum(); }')
+          cppLiteral('{ auto _acc2 = data->access("x"); flex_(ans) = as_nC<Eigen::Tensor<double,1> >(*_acc2)().sum(); }')
           return(ans)
           returnType(numericScalar)
         }
