@@ -35,6 +35,23 @@ symbolBase <- R6::R6Class(
   )
 )
 
+symbolVoid <- R6::R6Class(
+  classname = 'symbolVoid',
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(type = 'void', ...)
+    },
+    shortPrint = function()"void",
+    uniqueID = function() "void",
+    print = function() "void",
+    genCppVar = function() {
+      cppVoid()
+    }
+  )
+)
+
 ## nDim and size are redundant for convenience with one exception:
 ## nDim = 0 must have size = 1 and means it is a true scalar -- NOT sure this is correct anymore...
 ## nDim = 1 with size = 1 means it is a 1D vector that happens to be length 1
@@ -43,9 +60,9 @@ symbolBase <- R6::R6Class(
 ##   In cases such as x[3:3, 2:4] or x[c(3), 2:4], nimble's system for 
 ##   symbolic sizeExprs determines that 3:3 or c(3) have sizeExpr "1"
 ##   and then the bracket processing will drop the index (if drop=TRUE)
-symbolBasic <-
+symbolScalarOrTensor <-
   R6::R6Class(
-    classname = 'symbolBasic',
+    classname = 'symbolScalarOrTensor',
     inherit = symbolBase,
     portable = TRUE,
     public = list(
@@ -66,14 +83,8 @@ symbolBasic <-
         self$isConst <- isConst
         self
       },
-      shortPrint = function() {
-        paste0(switch(self$type,
-                      double = 'D',
-                      integer = 'I',
-                      logical = 'L',
-                      AD = 'AD',
-                      'Other'),
-               self$nDim)
+      shortPrint = function(prefix = '') {
+        paste0(prefix, self$nDim)
       },
       uniqueID = function(...) {
         self$shortPrint()
@@ -91,20 +102,9 @@ symbolBasic <-
                      )
         }
       },
-      genCppVar = function() {
+      genCppVar = function(cType = NULL) {
+        if(is.null(cType)) stop("should not be calling symbolScalarOrTensor$genCppVar without a cType")
         isArg <- self$isArg
-        type <- self$type
-        if(type == 'void') return(cppVoid())
-        else if(type == 'integer') cType <- 'int'
-        else if(type == 'double') cType <- 'double'
-        else if(type == 'logical') cType <- 'bool'
-        else if(type == 'AD') cType <- 'CppAD::AD<double>'
-        else if(type == 'string') cType <- 'std::string'
-        else warning(paste("in genCppVar method for",
-                           self$name,
-                           "in symbolBasic class,",
-                           "type", type,"unrecognized\n"),
-                     FALSE)
         if(self$nDim == 0) {
           if(identical(self$name, "pi"))
             return(cppVarFullClass$new(baseType = cType,
@@ -143,6 +143,58 @@ symbolBasic <-
       }
     )
   )
+
+symbolBasic <- R6::R6Class(
+  classname = "symbolBasic",
+  inherit = symbolScalarOrTensor,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+    },
+    shortPrint = function() {
+      prefix <- switch(self$type,
+                    double = 'D',
+                    integer = 'I',
+                    logical = 'L',
+                    AD = 'AD',
+                    'Other')
+      super$shortPrint(prefix = prefix)
+    },
+    genCppVar = function() {
+      cType <- NULL
+      type <- self$type
+      if(type == 'integer') cType <- 'int'
+      else if(type == 'double') cType <- 'double'
+      else if(type == 'logical') cType <- 'bool'
+      else if(type == 'AD') cType <- 'CppAD::AD<double>'
+      else warning(paste("in genCppVar method for",
+                    self$name,
+                    "in symbolBasic class,",
+                    "type", type,"unrecognized\n"),
+              FALSE)
+      super$genCppVar(cType = cType)
+    }
+
+  )
+)
+
+symbolBasicString <- R6::R6Class(
+  classname = "symbolBasicString",
+  inherit = symbolScalarOrTensor,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(..., type = "string")
+    },
+    shortPrint = function() {
+      super$shortPrint(prefix = 'S')
+    },
+    genCppVar = function() {
+      super$genCppVar(cType = 'std::string')
+    }
+  )
+)
 
 symbolBlank <- R6::R6Class(
   classname = "symbolBlank",
@@ -666,8 +718,7 @@ symbolSparse <- R6::R6Class(
     genCppVar = function() {
       isArg <- self$isArg
       type <- self$type
-      if(type == 'void') return(cppVoid())
-      else if(type == 'integer') cType <- 'int'
+      if(type == 'integer') cType <- 'int'
       else if(type == 'double') cType <- 'double'
       else if(type == 'logical') cType <- 'bool'
       else if(type == 'AD') cType <- 'CppAD::AD<double>'

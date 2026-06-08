@@ -256,11 +256,11 @@ test_that("RcppS4 works in nFunctions", {
     }
   )
   nfs4C <- nCompile(nfs4)
-  
+
   # Taken from ?setClass
   track <- setClass("track", slots = c(x="numeric", y="numeric"))
   t1 <- track(x = 1:10, y = 1:10 + rnorm(10))
-  
+
   expect_true(nfs4C(t1))
 })
 
@@ -281,7 +281,7 @@ test_that("RcppFunction works", {
   set.seed(505)
   result1_Correct <- rnorm(10)
   expect_equal(result1, result1_Correct)
-  
+
   result2 <- nffnC(logit, 0.4)
   result2_correct <- logit(0.4)
   expect_equal(result2, result2_correct)
@@ -413,9 +413,9 @@ test_that("RcppNumericVector works in nClasses", {
     classname = "test_RcppNumericVector",
     Cpublic = list(
       x = "RcppNumericVector",
-      set_x = nFunction(fun = function(new_x = "RcppNumericVector") { 
+      set_x = nFunction(fun = function(new_x = "RcppNumericVector") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -436,9 +436,9 @@ test_that("RcppNumericMatrix works in nClasses", {
     classname = "test_RcppNumericMatrix",
     Cpublic = list(
       x = "RcppNumericMatrix",
-      set_x = nFunction(fun = function(new_x = "RcppNumericMatrix") { 
+      set_x = nFunction(fun = function(new_x = "RcppNumericMatrix") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -459,9 +459,9 @@ test_that("RcppIntegerVector works in nClasses", {
     classname = "test_RcppIntegerVector",
     Cpublic = list(
       x = "RcppIntegerVector",
-      set_x = nFunction(fun = function(new_x = "RcppIntegerVector") { 
+      set_x = nFunction(fun = function(new_x = "RcppIntegerVector") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -482,9 +482,9 @@ test_that("RcppIntegerMatrix works in nClasses", {
     classname = "test_RcppIntegerMatrix",
     Cpublic = list(
       x = "RcppIntegerMatrix",
-      set_x = nFunction(fun = function(new_x = "RcppIntegerMatrix") { 
+      set_x = nFunction(fun = function(new_x = "RcppIntegerMatrix") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -505,9 +505,9 @@ test_that("RcppCharacterVector works in nClasses", {
     classname = "test_RcppCharacterVector",
     Cpublic = list(
       x = "RcppCharacterVector",
-      set_x = nFunction(fun = function(new_x = "RcppCharacterVector") { 
+      set_x = nFunction(fun = function(new_x = "RcppCharacterVector") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -528,9 +528,9 @@ test_that("RcppCharacterMatrix works in nClasses", {
     classname = "test_RcppCharacterMatrix",
     Cpublic = list(
       x = "RcppCharacterMatrix",
-      set_x = nFunction(fun = function(new_x = "RcppCharacterMatrix") { 
+      set_x = nFunction(fun = function(new_x = "RcppCharacterMatrix") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -551,9 +551,9 @@ test_that("RcppComplexVector works in nClasses", {
     classname = "test_RcppComplexVector",
     Cpublic = list(
       x = "RcppComplexVector",
-      set_x = nFunction(fun = function(new_x = "RcppComplexVector") { 
+      set_x = nFunction(fun = function(new_x = "RcppComplexVector") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -574,9 +574,9 @@ test_that("RcppComplexMatrix works in nClasses", {
     classname = "test_RcppComplexMatrix",
     Cpublic = list(
       x = "RcppComplexMatrix",
-      set_x = nFunction(fun = function(new_x = "RcppComplexMatrix") { 
+      set_x = nFunction(fun = function(new_x = "RcppComplexMatrix") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -597,9 +597,9 @@ test_that("RcppLogicalVector works in nClasses", {
     classname = "test_RcppLogicalVector",
     Cpublic = list(
       x = "RcppLogicalVector",
-      set_x = nFunction(fun = function(new_x = "RcppLogicalVector") { 
+      set_x = nFunction(fun = function(new_x = "RcppLogicalVector") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -620,9 +620,9 @@ test_that("RcppLogicalMatrix works in nClasses", {
     classname = "test_RcppLogicalMatrix",
     Cpublic = list(
       x = "RcppLogicalMatrix",
-      set_x = nFunction(fun = function(new_x = "RcppLogicalMatrix") { 
+      set_x = nFunction(fun = function(new_x = "RcppLogicalMatrix") {
         x <- new_x
-        return(0) 
+        return(0)
       }, returnType = "integerScalar"
       )
     )
@@ -668,26 +668,26 @@ test_that("RcppLogicalMatrix works in nClasses", {
 #     classname = "test_RcppDatetimeVector",
 #     Cpublic = list(
 #       x = "RcppDatetimeVector",
-#       set_x = nFunction(fun = function(new_x = "RcppDatetimeVector") { 
+#       set_x = nFunction(fun = function(new_x = "RcppDatetimeVector") {
 #         x <- new_x
-#         return(0) 
+#         return(0)
 #       }, returnType = "integerScalar"
 #       )
 #     )
 #   )
 #   ncC <- nCompile(nc)
 #   my_nc <- ncC$new()
-#   test_x1 <- as.POSIXct(c(1593166562, 1593066562, 1592166562, 159316562), 
+#   test_x1 <- as.POSIXct(c(1593166562, 1593066562, 1592166562, 159316562),
 #                         origin = as.Date("1950-01-01"))
 #   my_nc$set_x(test_x1)
 #   expect_equal(my_nc$x, test_x1)
-#   test_x2 <- as.POSIXct(c(1493166562, 1593066562, 2592166562, 159316562), 
+#   test_x2 <- as.POSIXct(c(1493166562, 1593066562, 2592166562, 159316562),
 #                         origin = as.Date("1950-01-01"))
 #   my_nc$x <- test_x2
 #   expect_equal(my_nc$x, test_x2)
 # })
-# 
-# 
+#
+#
 test_that("RcppDataFrame works in nClasses", {
   nc <- nClass(
     classname = "test_RcppDataFrame",

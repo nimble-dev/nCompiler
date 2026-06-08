@@ -1471,7 +1471,7 @@ inLabelAbstractTypesEnv(
         if(auxEnv$returnSymbol$nDim==0) {
           # if the return is a literal, check for a case like return(2) <integer> with return type "double"
           if(code$args[[1]]$isLiteral) {
-            # What other cases are there here?
+            # Are there additional cases to warn on for literals other than returning an integer to a double?
             # returning anything to a logical is ok
             type_mismatch <- FALSE
             if(auxEnv$returnSymbol$type == "integer" && code$type$type == "double")

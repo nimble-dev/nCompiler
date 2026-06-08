@@ -462,6 +462,7 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   ## Error-trapping:
   ## Duplicate setting of ref
   a <- quote(ref(numericVector(5)))
+  cat("expecting an error:\n")
   expect_error(
     `:::`("nCompiler", "type2symbol")(O(!!a),
                                name = "a",
@@ -474,6 +475,7 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   ## Type incompatible with default
   a <- quote(matrix(1:4, nrow = 2, ncol = 2))
   aExplicit <- nType(numericVector())
+  cat("expecting an error:\n")
   expect_error(suppressWarnings( # this gives a warning and an error, so for testing we suppress the warning
     `:::`("nCompiler", "type2symbol")(O(!!a),
                                name = "a",
@@ -547,7 +549,7 @@ test_that("list arguments handled correctly",
   ## void() (return type default)
   vSym <- `:::`("nCompiler", "type2symbol")(quote(void()))
   expect_identical(vSym$type, "void")
-  expect_identical(vSym$nDim, 0)
+#  expect_identical(vSym$nDim, 0)
 })
 
 test_that("symbolTBD works",
@@ -633,4 +635,14 @@ test_that("types as objects work with an nClass", {
   obj <- ncC$new()
   obj$nf(1:3)
   expect_identical(obj$nf(1:3), 2:4)
+})
+
+test_that("string type works in nFunctions", {
+    foo <- nFunction(
+        fun=function(mystr = 'string'){
+            return(mystr)
+        }, returnType = 'string'
+    )
+    cfoo <- nCompile(foo)
+    expect_identical(cfoo("hw"),"hw")
 })
