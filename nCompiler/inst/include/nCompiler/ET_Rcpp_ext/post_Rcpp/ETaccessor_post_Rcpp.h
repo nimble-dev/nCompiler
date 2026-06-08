@@ -241,7 +241,7 @@ Scalar& ETaccessorBase::scalar() {
 // then specialize to allow valid types (Eigen::Tensor's or true scalars)
 // These are supported as run-time errors because the genericInterfaceC
 // will access them by a name.
-template<typename ERROR>
+template<typename ERROR, bool copy=false>
 class ETaccessor : public ETaccessorTyped<double> {
   public:
   using ET = Eigen::Tensor<double, 0>;
@@ -278,8 +278,8 @@ class ETaccessor : public ETaccessorTyped<double> {
 };
 
 
-template<typename Scalar, int nDim>
-class ETaccessor<Eigen::Tensor<Scalar, nDim> > : public ETaccessorTyped<Scalar> {
+template<typename Scalar, int nDim, bool copy>
+class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Scalar> {
   public:
   using ET = Eigen::Tensor<Scalar, nDim>;
   // using Scalar = typename ET::Scalar;
@@ -306,7 +306,24 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim> > : public ETaccessorTyped<Scalar> 
   std::vector<int> intDims_;
 };
 
-template<typename Scalar>
+template<typename ET>
+struct ETaccessorCopyHolder {
+  ET obj_copy;
+  ETaccessorCopyHolder(const ET &src) : obj_copy(src) {}
+};
+
+template<typename Scalar, int nDim>
+class ETaccessor<Eigen::Tensor<Scalar, nDim>, true> : 
+  private ETaccessorCopyHolder<Eigen::Tensor<Scalar, nDim>>,
+  public ETaccessor<Eigen::Tensor<Scalar, nDim>, false> {
+public:
+  using ET = Eigen::Tensor<Scalar, nDim>;
+  using Holder = ETaccessorCopyHolder<ET>;
+  ETaccessor(const ET &obj_) : Holder(obj_), ETaccessor<ET, false>(Holder::obj_copy) {};
+  ~ETaccessor() {};
+};
+
+template<typename Scalar, bool copy=false>
 class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   public:
   ETaccessorScalar(Scalar &obj_) : obj(obj_) {};
@@ -323,24 +340,38 @@ class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   std::vector<int> intDims_;
 };
 
-template<>
-class ETaccessor<double> : public ETaccessorScalar<double> {
+template<typename Scalar>
+class ETaccessorScalar<Scalar, true> : 
+  private ETaccessorCopyHolder<Scalar>,
+  public ETaccessorScalar<Scalar, false> {
+public:
+  using ET = ETaccessorScalar<Scalar, false>;
+  using Holder = ETaccessorCopyHolder<Scalar>;
+  ETaccessorScalar(const Scalar &obj_) : Holder(obj_), ET(Holder::obj_copy) {};
+  ~ETaccessorScalar() {};
+};
+
+template<bool copy>
+class ETaccessor<double, copy> : public ETaccessorScalar<double, copy> {
+  using Ref = std::conditional_t<copy, const double&, double&>;
   public:
-  ETaccessor(double &obj_) : ETaccessorScalar(obj_) {};
+  ETaccessor(Ref obj_) : ETaccessorScalar<double, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
-template<>
-class ETaccessor<int> : public ETaccessorScalar<int> {
+template<bool copy>
+class ETaccessor<int, copy> : public ETaccessorScalar<int, copy> {
+  using Ref = std::conditional_t<copy, const int&, int&>;
   public:
-  ETaccessor(int &obj_) : ETaccessorScalar(obj_) {};
+  ETaccessor(Ref obj_) : ETaccessorScalar<int, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
-template<>
-class ETaccessor<bool> : public ETaccessorScalar<bool> {
+template<bool copy>
+class ETaccessor<bool, copy> : public ETaccessorScalar<bool, copy> {
+  using Ref = std::conditional_t<copy, const bool&, bool&>;
   public:
-  ETaccessor(bool &obj_) : ETaccessorScalar(obj_) {};
+  ETaccessor(Ref obj_) : ETaccessorScalar<bool, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
@@ -351,9 +382,16 @@ Eigen::Tensor<Scalar, nDim> &ETaccessorBase::ref() {
   return castptr->innerRef();
 }
 
-template<typename T>
-auto ETaccess(T &x) -> ETaccessor<T>{
-  return ETaccessor<T>(x);
+template<bool copy=false, typename T>
+std::enable_if_t<!copy, ETaccessor<T, false>>
+ETaccess(T &x) {
+  return ETaccessor<T, false>(x);
+}
+
+template<bool copy, typename T>
+std::enable_if_t<copy, ETaccessor<T, true>>
+ETaccess(const T &x) {
+  return ETaccessor<T, true>(x);
 }
 
 // end ETaccess

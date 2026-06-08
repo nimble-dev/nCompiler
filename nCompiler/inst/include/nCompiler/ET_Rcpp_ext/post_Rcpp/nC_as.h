@@ -131,7 +131,7 @@ public:
 
 template<typename TargetType>
 class RuntimeCastingProxy {
-  // TargetType5o here should be a true scalar type,
+  // TargetType here should be a true scalar type,
   // because specialization to Eigen::Tensor types is below.
   typedef TargetType TargetScalar;
 
@@ -273,9 +273,9 @@ public:
 
 // Compile-time source: delegates to ETaccessorTyped<Scalar>::asTyped<>().
 // Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy.
-template<typename TargetType, AsMode mode = AsMode::TM, typename T>
+template<typename TargetType, AsMode mode = AsMode::TM, bool copy = false, typename T>
 auto as_nC(T& x) {
-  return ETaccess(x).template asTyped<TargetType, mode>();
+  return ETaccess<copy>(x).template asTyped<TargetType, mode>();
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
