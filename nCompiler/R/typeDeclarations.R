@@ -306,10 +306,10 @@ typeDeclarationList <- list(
     nTypeBasic("logical", nDim, ...)
   },
   void = function(...) {
-    nTypeBasic("void", 0, ...)
+    symbolVoid$new(...)
   },
   string = function(...) {
-    nTypeBasic("string", 0, ...)
+    symbolBasicString$new(nDim = 0, ...)
   },
   ##
   SEXP = function(...) {
