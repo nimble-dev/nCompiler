@@ -208,6 +208,18 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  ETaccess <- function(code, symTab) {
+    copy <- isTRUE(code$aux$compileArgs$copy)
+    copy_piece <- if(copy) '<true>' else ''
+    paste0('ETaccessPtr', copy_piece, '(',
+           paste0(unlist(lapply(code$args,
+                                compile_generateCpp,
+                                symTab,
+                                asArg = TRUE)), collapse=","), ")")
+  }
+)
+
+inGenCppEnv(
   Switch <- function(code, symTab) {
     IDs <- code$aux$compileArgs$IDs
     numChoices <- length(code$args)-1

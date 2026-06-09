@@ -499,10 +499,9 @@ symbolETaccBase <- R6::R6Class(
   inherit = symbolBase,
   portable = TRUE,
   public = list(
-    initialize = function(name, isArg = FALSE) {
-      self$name <- name
+    initialize = function(...) {
+      super$initialize(...)
       self$type <- "ETaccessorBase"
-      self$isArg <- isArg
     },
     print = function() {
       writeLines(paste0(self$name, ': symbolETaccBase (ETaccessorBase) '))
@@ -511,7 +510,7 @@ symbolETaccBase <- R6::R6Class(
       paste0("ETaccessorBase")
     },
     genCppVar = function() {
-      cppETaccBase(name = self$name)
+      cppETaccBase(name = self$name, ref = self$isArg)
     }
   )
 )

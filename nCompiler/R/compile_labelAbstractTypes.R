@@ -265,6 +265,15 @@ inLabelAbstractTypesEnv(
   }
 )
 
+inLabelAbstractTypesEnv(
+  ETaccess <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                          handlingInfo)
+    code$type <- symbolETaccBase$new(name = '') # should never be looked at because ETaccess has no return type
+    if(length(inserts) == 0) NULL else inserts
+  }
+)
+
 nCompiler:::inLabelAbstractTypesEnv(
   DoubleBracket <- function(code, symTab, auxEnv, handlingInfo) {
     # specializations from generic will have already been handled

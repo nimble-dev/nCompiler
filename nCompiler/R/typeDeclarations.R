@@ -366,7 +366,7 @@ typeDeclarationList <- list(
   ##   symbolRcppType$new(RcppType = "Rcpp::Named", ...)
   ## },
   RcppDataFrame = function(...) {
-    symbolRcppType$new(RcppType = "Rcpp::DataFrame")
+    symbolRcppType$new(RcppType = "Rcpp::DataFrame", ...)
   },
   RcppLogicalMatrix = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::LogicalMatrix", ...)
@@ -413,6 +413,9 @@ typeDeclarationList <- list(
     ttype <- nCaptureType(type)
     elementSym <- type2symbol({{ttype}}, where = parent.frame())
     symbolNcppVec$new(elementSym = elementSym)
+  },
+  ETaccessor = function(...) {
+    symbolETaccBase$new(...)
   },
   ## determine type from an evaluated object
   typeDeclarationFromObject = function(x) {
