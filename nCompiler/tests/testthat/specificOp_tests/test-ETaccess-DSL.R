@@ -1,6 +1,65 @@
 library(nCompiler)
 library(testthat)
 
+test_that("ETaccessor type works", {
+  nc <- nClass(
+    Cpublic = list(
+      s = 'numericScalar',
+      v = 'numericVector',
+      m = 'numericMatrix',
+      get_s = nFunction(
+        function() {
+          ans <- ETaccess(s)
+          return(ans)
+          returnType('ETaccessor')
+        }
+      ),
+      get_inner = nFunction(
+        function(vn = 'string') {
+          ans <- self[[vn]]
+          return(ans)
+          returnType('ETaccessor')
+        }
+      ),
+      use = nFunction(
+        function(acc = 'ETaccessor') {
+          return(as(acc, "numericMatrix"))
+          returnType("numericMatrix")
+        }
+      ),
+      get = nFunction(
+        function(i = 'integerScalar', vn = 'string') {
+          nSwitch(i, 1:4,
+                  eta <- get_s(),
+                  eta <- get_inner(vn),
+                  eta <- self[[vn]],
+                  {
+                    eta <- self[[vn]]
+                    res <- use(eta)
+                  }
+                  )
+          if(i < 4)
+            res <- as(eta, "numericMatrix")
+          return(res)
+          returnType("numericMatrix")
+        }
+      )
+    ),
+    compileInfo=list(interfaceMembers = c("s","v","m", "get"))
+  )
+
+  cnc <- nCompile(nc)
+  obj <- cnc$new()
+  obj$s <- 1.2
+  obj$v <- c(2.3, 3.4)
+  obj$m <- matrix(5:10, nrow = 3)
+  expect_equal(obj$get(1, "not_used"), matrix(1.2))
+  expect_equal(obj$get(2, "v"), matrix(obj$v))
+  expect_equal(obj$get(3, "m"), obj$m)
+  expect_equal(obj$get(4, "v"), matrix(obj$v))
+  rm(obj); gc()
+})
+
 test_that("obj[['x']] works like obj$x", {
   nc <- nClass(
     Cpublic = list(

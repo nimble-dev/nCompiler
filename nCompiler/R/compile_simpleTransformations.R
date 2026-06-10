@@ -157,3 +157,12 @@ inSimpleTransformationsEnv(
     if(code$caller$name != "{") stop("nSwitch can not be used within an expression. It does not return anything.")
   }
 )
+
+inSimpleTransformationsEnv(
+  EvalCompileArgs <- function(code, symTab, auxEnv, info) {
+    for(argname in names(code$aux$compileArgs)) {
+      evaled_arg <- eval(code$aux$compileArgs[[argname]], envir = auxEnv$where)
+      code$aux$compileArgs[[argname]] <- evaled_arg
+    }
+  }
+)

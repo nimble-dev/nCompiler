@@ -112,6 +112,20 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
 }
 
 assignOperatorDef(
+  'ETaccess',
+  list(
+    matchDef = function(obj, copy=FALSE) {},
+    compileArgs = "copy",
+    simpleTransformations = list(
+      handler = 'EvalCompileArgs'),
+    labelAbstractTypes = list(
+      handler = 'ETaccess'),
+    cppOutput = list(
+      handler = 'ETaccess')
+  )
+)
+
+assignOperatorDef(
   'nCppVec',
   list(
     matchDef = function(type, length) {},

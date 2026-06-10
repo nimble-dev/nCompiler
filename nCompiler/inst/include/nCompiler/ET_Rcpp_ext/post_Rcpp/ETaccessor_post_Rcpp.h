@@ -2,6 +2,7 @@
 #define NCOMPILER_ETACCESSOR_POST_RCPP_H_
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <memory>
 #include <type_traits>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
@@ -392,6 +393,18 @@ template<bool copy, typename T>
 std::enable_if_t<copy, ETaccessor<T, true>>
 ETaccess(const T &x) {
   return ETaccessor<T, true>(x);
+}
+
+template<bool copy=false, typename T>
+std::enable_if_t<!copy, std::unique_ptr<ETaccessorBase>>
+ETaccessPtr(T &x) {
+  return std::make_unique<ETaccessor<T, false>>(x);
+}
+
+template<bool copy, typename T>
+std::enable_if_t<copy, std::unique_ptr<ETaccessorBase>>
+ETaccessPtr(const T &x) {
+  return std::make_unique<ETaccessor<T, true>>(x);
 }
 
 // end ETaccess
