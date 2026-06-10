@@ -342,12 +342,22 @@ addGenericInterface_impl <- function(self) {
   while(!done) {
     NCint <- NCinternals(current_NCgen)
     NCcompInfo <- NCint$compileInfo
-    interfaceMembers <- NCcompInfo$interfaceMembers
-    useIM <- !is.null(interfaceMembers)
+    interfaceInclude <- NCcompInfo$interfaceInclude
+    interfaceExclude <- NCcompInfo$interfaceExclude
+    useIM <- !is.null(interfaceInclude) || !is.null(interfaceExclude)
+    if(useIM) {
+      if(!is.null(interfaceExclude) && !is.null(interfaceInclude)) {
+        stop("interfaceExclude and interfaceInclude cannot both be non-null.  Something is wrong.")
+      }
+      use_include <- !is.null(interfaceInclude)
+    }
     methodNames <- NCint$methodNames
     for(mName in methodNames) {
       if(mName %in% outputMethodNames) next
-      if(useIM && !(mName %in% interfaceMembers)) next
+      if(useIM) {
+        if(use_include && !(mName %in% interfaceInclude)) next
+        if(!use_include && (mName %in% interfaceExclude)) next
+      }
       NFint <- NFinternals(NC_get_Cpub_class(current_NCgen)$public_methods[[mName]])
       NFcompInfo <- NFint$compileInfo
       if(!useIM && !isTRUE(NFcompInfo$callFromR)) next
@@ -379,8 +389,16 @@ addGenericInterface_impl <- function(self) {
     # I am belaboring what could be done with unique or setdiff to be more
     # sure that order is preserved aligning fieldNames and cpp_fieldNames
     new_fieldNames <- NCint$symbolTable$getSymbolNames()
-    do_interface <- NCint$symbolTable$getSymbols() |>
-      lapply(\(x) isTRUE(x$interface)) |> unlist()
+    if(!useIM || !use_include) 
+      do_interface <- NCint$symbolTable$getSymbols() |>
+        lapply(\(x) isTRUE(x$interface)) |> unlist()
+    if(useIM) {
+      if(use_include) {
+        do_interface <- (new_fieldNames %in% interfaceInclude)
+      } else {
+        do_interface <- do_interface & !(new_fieldNames %in% interfaceExclude)
+      }
+    }
     new_fieldNames <- new_fieldNames[do_interface]
     new_fieldNames <- new_fieldNames[!(new_fieldNames %in% fieldNames)]
     fieldNames <- c(fieldNames, new_fieldNames)

@@ -18,7 +18,7 @@ NC_InternalsClass <- R6::R6Class(
     compileInfo = list(),
     inherit_base_provided = FALSE,
     # compileInfo will include interface ("full", "generic", or "none"),
-    # interfaceMembers, exportName, and depends
+    # interfaceInclude, exportName, and depends
     depends = list(),
     RcppPacket = NULL,
     isOnlyC = FALSE, ## somewhat redundant but perhaps convenient - TBD.
