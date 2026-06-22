@@ -284,18 +284,19 @@ nCompiler:::inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                           handlingInfo, useArgs = useArgs)
     if(inherits(code$args[[1]]$type, "symbolNC")) {
-      if(isTRUE(code$args[[2]]$isLiteral)) {
-        # This case is from the end of DollarSign (could be combined)
-        innerName <- as.character(code$args[[2]]$name)
-        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
-        if(is.null(symbol))
-          stop(exprClassProcessingErrorMsg(
-            code,
-            paste0('member variable ', innerName, ' of ', code$args[[1]]$name, ' could not be found.')
-          ), call. = FALSE)
-        code$type <- symbol$clone(deep = TRUE)
-        code$name <- '->member'
-      } else {
+      # if(isTRUE(code$args[[2]]$isLiteral)) {
+      #   # This case is from the end of DollarSign (could be combined)
+      #   innerName <- as.character(code$args[[2]]$name)
+      #   symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
+      #   if(is.null(symbol))
+      #     stop(exprClassProcessingErrorMsg(
+      #       code,
+      #       paste0('member variable ', innerName, ' of ', code$args[[1]]$name, ' could not be found.')
+      #     ), call. = FALSE)
+      #   code$type <- symbol$clone(deep = TRUE)
+      #   code$name <- '->member'
+      # } else {
+      {
         code$type <- symbolETaccBase$new(name = '')
         code$name <- '->method'
         insertArg(code, 2, exprClass$new(name = 'access', isName = TRUE, isCall = FALSE, 

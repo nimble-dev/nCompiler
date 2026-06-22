@@ -501,6 +501,7 @@ symbolETaccBase <- R6::R6Class(
   public = list(
     initialize = function(...) {
       super$initialize(...)
+      self$interface <- FALSE
       self$type <- "ETaccessorBase"
     },
     print = function() {

@@ -120,7 +120,7 @@ NF_InternalsClass <- R6::R6Class(
       ## changeKeywords.R
       self$code <- body(fun_to_use)
       if(code[[1]] != '{')
-        self$code <- substitute({CODE}, list(CODE=code))
+        self$code <- substitute({CODE}, list(CODE=self$code))
       ## check all code except.nCompiler package nFunctions
       ##            if(check && "package.nCompiler" %in% search())
       ##                nf_checkDSLcode(code, methodNames, setupVarNames)
@@ -193,6 +193,13 @@ NF_InternalsClass <- R6::R6Class(
           self$ADcontent$cpp_code_name <- paste0(cpp_code_name,"_AD__")
         }
       }
+    },
+    updateCode = function(newCode) {
+      self$code <- newCode
+      if(self$code[[1]] != '{')
+        self$code <- substitute({CODE}, list(CODE=self$code))
+      if(isTRUE(self$control$changeKeywords))
+        self$code <- nf_changeKeywords(self$code)
     },
     getFunction = function() {
       #functionAsList <- list(as.name('function'))
