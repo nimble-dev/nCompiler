@@ -28,13 +28,15 @@ nTypeSpec <- function(type = NULL) {
   }
   ## allow e.g. 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse)) {
+    funExpr <- typeToUse
     funName <- deparse(typeToUse)
     args <- list()
   } else {
-    funName <- deparse(typeToUse[[1]])
+    funExpr <- typeToUse[[1]]
+    funName <- deparse(funExpr)
     args <- typeToUse[-1] |> as.list()
   }
-  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter) |> 
+  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter, funExpr = funExpr) |> 
     structure(class = "nTypeSpec")
 }
 
@@ -829,13 +831,18 @@ check_unknown_types <- function(type, where = parent.frame(),
   if(is.null(typeSpec)) {
     typeSpec <- nTypeSpec(ttype)
   }
-  funName <- typeSpec$funName
   if(!identical(rlang::quo_get_env(ttype), emptyenv())) {
     where <- rlang::quo_get_env(ttype)
   }
-  candidate <- nGet(funName,
-                  where = where,
-                  project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
+  funName <- typeSpec$funName
+  funExpr <- typeSpec$funExpr
+  if(!is.name(funExpr)) {
+    candidate <- eval(funExpr, env = where)
+  } else {
+    candidate <- nGet(funName,
+                      where = where,
+                      project_env = project_env)
+  }
   if(!isNCgenerator(candidate)) {
     candidate2 <- check_built_types(candidate = candidate,
             typeSpec = typeSpec, where = where,
@@ -863,8 +870,13 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     }
     ttype <- nType(expr = Rexpr, env = where)
     typeSpec <- nTypeSpec(ttype)
-    if(!is.null(candidate))
+    if(is.null(candidate))
+    funExpr <- typeSpec$funExpr
+    if(!is.name(funExpr)) {
+      candidate <- rlang::eval(funExpr, env = where)
+    } else {
       candidate <- nGet(typeSpec$funName, where = where) #project_env not useful here
+    }
   }
 
   if(inherits(candidate, "nClassBuilder")) {

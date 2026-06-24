@@ -130,7 +130,6 @@ NC_InternalsClass <- R6::R6Class(
         if(!isNCgenerator(inherit_obj))
           stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
         self$inheritNCinternals <- NCinternals(inherit_obj)
-        message("add check that base class has interface 'none'")
         if(!self$inherit_base_provided) {
           self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
         }

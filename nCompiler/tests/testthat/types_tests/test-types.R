@@ -566,6 +566,18 @@ test_that("symbolTBD works",
                "std::shared_ptr<nClass_1> nc1obj")
 })
 
+test_that("symbolTBD works with a function from a call", {
+  nCompiler:::resetLabelFunctionCreators()
+  myenv <- new.env()
+  myenv$nc1 <- nClass(
+    Cpublic = list(a = 'numericScalar')
+  )
+#  sym_nc1 <- nCompiler:::type2symbol("myenv$nc1", "nc1obj")
+  sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
+  debug(nCompiler:::check_unknown_types)
+  res <- sym_nc1$resolveSym()
+})
+
 cat("\nSee test-types.R for notes on remaining issues to test.\n")
 ## Need to make refs work with slices and blocks
 ## Need to enforce that with isRef=TRUE, no form of default value is valid,
