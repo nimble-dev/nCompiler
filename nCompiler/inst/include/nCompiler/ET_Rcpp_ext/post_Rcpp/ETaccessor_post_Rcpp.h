@@ -5,6 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
+#include <nCompiler/ET_ext/RuntimeFlatView.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorFlex.h>
 
@@ -102,6 +103,12 @@ class ETaccessorBase {
 
   template<typename Scalar = double>
   Scalar &scalar();
+
+  // Flattened get/set view of the whole object (ss empty, the default) or
+  // a strided subview of it (ss: one b__ block per raw dimension), without
+  // needing to know the object's rank at compile time. See RuntimeFlatView.h.
+  template<typename Scalar = double>
+  RuntimeFlatView<Scalar> flatten(const std::vector<b__> &ss = {});
 
   virtual ~ETaccessorBase(){};
 };
@@ -214,6 +221,11 @@ class ETaccessorTyped : public ETaccessorBase {
     set_output_dims(this->intDims(), outDim, output_nDim);
     return ETM<output_nDim>(data(), outDim);
   }
+
+  RuntimeFlatView<Scalar> flattenTyped(const std::vector<b__> &ss = {}) {
+    return RuntimeFlatView<Scalar>(data(), RuntimeSubviewInfo(this->intDims(), ss));
+  }
+
   ~ETaccessorTyped(){};
 };
 
@@ -236,6 +248,13 @@ Scalar& ETaccessorBase::scalar() {
   auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
   if(castptr == nullptr) Rcpp::stop("Problem using scalar() from some form of access().\n");
   return castptr->scalarTyped();
+}
+
+template<typename Scalar>
+RuntimeFlatView<Scalar> ETaccessorBase::flatten(const std::vector<b__> &ss) {
+  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  if(castptr == nullptr) Rcpp::stop("Problem creating a flatten() view from some form of access().\n");
+  return castptr->flattenTyped(ss);
 }
 
 // default to throwing an error

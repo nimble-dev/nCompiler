@@ -718,3 +718,27 @@ test_that("ETaccess<true> copies data and isolates from original", {
   expect_equal(obj$DV_copy_expr(DV), DV * 2)
   rm(obj); gc()
 })
+
+test_that("ETaccess flattening works", {
+
+  nc <- nClass(
+    Cpublic = list(
+      flatten_2D = nFunction(
+        function(x = 'numericMatrix') {
+          cppLiteral("auto acc = ETaccess(x)")
+          cppLiteral("ETaccessorBase* accptr = static_cast<ETaccessorBase*>(&acc)")
+          cppLiteral("auto flattener = accptr->flatten()")
+          res <- numeric(length = 12)
+          cppLiteral("flattener.copyIntoVector(res)")
+          return(res)
+          returnType(double(1))
+        }
+      )
+    )
+  )
+  comp <- nCompile(nc)
+  x <- matrix(seq(1.1, 12.1, by = 1), nrow = 4)
+  storage.mode(x)
+  obj <- comp$new()
+  obj$flatten_2D(x)
+})

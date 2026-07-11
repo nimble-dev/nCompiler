@@ -572,10 +572,10 @@ test_that("symbolTBD works with a function from a call", {
   myenv$nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
   )
-#  sym_nc1 <- nCompiler:::type2symbol("myenv$nc1", "nc1obj")
   sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
-  debug(nCompiler:::check_unknown_types)
   res <- sym_nc1$resolveSym()
+  expect_true(inherits(res, "symbolNC"))
+  expect_equal(res$type, myenv$nc1$classname)
 })
 
 cat("\nSee test-types.R for notes on remaining issues to test.\n")

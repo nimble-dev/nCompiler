@@ -93,6 +93,12 @@ NC_InternalsClass <- R6::R6Class(
         for(mN in methodNames) {
           self$orig_methodName_to_cpp_code_name[[mN]] <- NFinternals(Cpublic[[mN]])$cpp_code_name
         }
+        # The next three are normally set up during inheritance processing below,
+        # but if an nClass is predefined and used in wierd compilation workflow 
+        # like in nimble2, then we need defaults set up, and here they are:
+        # self$allMethodNames <- self$allMethodNames_self. # already done above
+        self$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
+        # self$allFieldNames <- self$allFieldNames_self. # already done above
       }
       # An over-riding base class can be provided either through inherit or nClass_inherit.
       if(!is.null(self$compileInfo$inherit$base) || !is.null(self$compileInfo$nClass_inherit$base))

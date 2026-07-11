@@ -45,7 +45,7 @@ test_that("ETaccessor type works", {
         }
       )
     ),
-    compileInfo=list(interfaceMembers = c("s","v","m", "get"))
+    compileInfo=list(interfaceInclude = c("s","v","m", "get"))
   )
 
   cnc <- nCompile(nc)
