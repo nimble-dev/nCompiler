@@ -184,6 +184,12 @@ public:
     views_.push_back(std::move(view));
   }
 
+  void clear() {
+    views_.clear();
+    offsets_.clear();
+    totalSize_ = 0;
+  }
+
   long totalSize() const { return totalSize_; }
   size_t numViews() const { return views_.size(); }
   const RuntimeFlatView<Scalar> &view(size_t i) const { return views_[i]; }
@@ -210,11 +216,27 @@ public:
       views_[i].copyFromVector(src + offsets_[i]);
   }
 
-  void copyFromVector(Eigen::Tensor<Scalar, 1> &src) {
+  void copyFromVector(const Eigen::Tensor<Scalar, 1> &src) {
     if(src.size() != totalSize())
       throw std::runtime_error("RuntimeFlatViewGroup::copyFromVector: src.size() != totalSize()");
     copyFromVector(src.data());
   }
+
+  // Proxy returned by setValues() so `group.setValues() = input;` reads as an
+  // assignment while dispatching to copyFromVector. Overloads mirror
+  // copyFromVector's own parameter types.
+  class SetValuesProxy {
+  public:
+    explicit SetValuesProxy(RuntimeFlatViewGroup &group) : group_(group) {}
+
+    void operator=(const Scalar *src) { group_.copyFromVector(src); }
+    void operator=(const Eigen::Tensor<Scalar, 1> &src) { group_.copyFromVector(src); }
+
+  private:
+    RuntimeFlatViewGroup &group_;
+  };
+
+  SetValuesProxy setValues_() { return SetValuesProxy(*this); }
 
 private:
   std::vector<RuntimeFlatView<Scalar>> views_;
