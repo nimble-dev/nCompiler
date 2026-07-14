@@ -118,7 +118,6 @@ inSimpleTransformationsEnv(
         assign_name <- paste0(name, "<-")
         code$name <- assign_name
         arg2 <- code$args[[2]]
-        code$args <- list()
         arg1names <- names(arg1$args)
         code$args <- list() # rebuild from scratch
         for(i in seq_along(arg1$args)) {
