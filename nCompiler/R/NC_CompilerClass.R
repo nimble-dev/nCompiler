@@ -6,6 +6,7 @@ NC_CompilerClass <- R6::R6Class(
   portable = FALSE,
   public = list(
     NCgenerator = NULL
+  , inheritInfo = NULL
   , NFcompilers = list() ## list of NF_CompilerClass objects for methods
   , symbolTable = NULL
   , cppDef = NULL
@@ -14,7 +15,8 @@ NC_CompilerClass <- R6::R6Class(
   , neededTypes = list(),
     initialize = function(NC = NULL,
                           className = NULL,
-                          compileInfo = NULL) {
+                          compileInfo = NULL,
+                          project_env = new.env()) {
       if(!isNCgenerator(NC)) {
         if(isNC(NC))
           stop(paste0("nClass object was provided to NCvirtual_CompilerClass. ",
@@ -25,6 +27,8 @@ NC_CompilerClass <- R6::R6Class(
              call. = FALSE)
       }
       NCgenerator <<- NC
+      nClass_info <- register_known_nClass(NCgenerator, project_env = project_env)
+      inheritInfo <<- nClass_info$inheritInfo
       myNCinternals <- NCinternals(NCgenerator)
       if(is.null(className)) {
         name <<- myNCinternals$cpp_classname
@@ -32,7 +36,7 @@ NC_CompilerClass <- R6::R6Class(
         name <<- className
       }
       if(is.null(compileInfo))
-        self$compileInfo <- myNCinternals$compileInfo
+        self$compileInfo <- myNCinternals$compileInfo # will fail if there is inheritance, but normally compileInfo is provided
       else
         self$compileInfo <- compileInfo
       if(length(compileInfo$exportName)==0) {
@@ -56,7 +60,7 @@ NC_CompilerClass <- R6::R6Class(
           #NFinternals(thisMethod)$cpp_code_name <- self$name
           NFinternals(thisMethod)$cpp_code_name <- self$name
         } else {
-          thisName <- myNCinternals$all_methodName_to_cpp_code_name[[m]]
+          thisName <- self$inheritInfo$all_methodName_to_cpp_code_name[[m]]
         }
         NFcompilers[[m]] <<- NF_CompilerClass$new(f = thisMethod,
                                                   name = thisName)
@@ -121,11 +125,13 @@ NC_CompilerClass <- R6::R6Class(
     },
     makeSymbolTables = function(project_env = new.env()) {
       if(is.null(symbolTable)) {
-        symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
-        ## Update any symbolTBD symbols by scoped lookup
-        resolveTBDsymbols(symbolTable,
-                          NCgenerator,
-                          project_env = project_env)
+        nClass_info <- register_known_nClass(self$NCgenerator, project_env = project_env)
+        symbolTable <<- nClass_info$symbolTable
+        # symbolTable <<- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
+        # ## Update any symbolTBD symbols by scoped lookup
+        # resolveTBDsymbols(symbolTable,
+        #                   NCgenerator,
+        #                   project_env = project_env)
         ## Add 'self' so method bodies can reference the current object.
         ## genCppVar() gives a special cppVar case where generate() returns ""
         ## and generateUse returns "nC_shared_from_this()".

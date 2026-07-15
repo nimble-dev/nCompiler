@@ -306,7 +306,8 @@ processNFstages <- function(NFcompiler,
                       env = NFcompiler$auxEnv[['where']],
                       project_env = project_env)
     NFcompiler$returnSymbol <- resolveOneTBDsymbol(NFcompiler$returnSymbol,
-                                                   env = NFcompiler$auxEnv[['where']])
+                                                   env = NFcompiler$auxEnv[['where']],
+                                                   project_env = project_env)
     if(inherits(NFcompiler$returnSymbol, "symbolNC")) {
       NFcompiler$auxEnv$needed_nClasses <- c(NFcompiler$auxEnv$needed_nClasses, NFcompiler$returnSymbol$NCgenerator)
     }

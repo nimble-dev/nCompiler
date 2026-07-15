@@ -6,14 +6,14 @@ NC_InternalsClass <- R6::R6Class(
     symbolTable = NULL,
     cppSymbolNames = NULL,
     methodNames = character(),
-    allMethodNames = character(), # including inherited methods
+    #allMethodNames = character(), # including inherited methods
     allMethodNames_self = character(), # not including inherited methods
     fieldNames = character(),
-    allFieldNames = character(), # including inherited methods
+    #allFieldNames = character(), # including inherited methods
     allFieldNames_self = character(), # not including inherited methods
     classname = character(),
     cpp_classname = character(),
-    all_methodName_to_cpp_code_name = list(),
+    #all_methodName_to_cpp_code_name = list(),
     orig_methodName_to_cpp_code_name = list(),
     compileInfo = list(),
     inherit_base_provided = FALSE,
@@ -25,13 +25,13 @@ NC_InternalsClass <- R6::R6Class(
     enableDerivs = NULL,
     enableSaving = NULL,
     predefined = FALSE, # directory for reading and (default) writing predefined nClass saved RcppPacket. Writing location can be over-ridden by compileInfo$predefined_output_dir
-    inheritNCinternals = NULL,
+    # inheritNCinternals = NULL,
     env = NULL,
     inheritQ = NULL, # quoted inherit expression, to defer access to the inherited nClass generator itself.
-    process_inherit_done = FALSE,
+    # process_inherit_done = FALSE,
     virtualMethodNames_self = character(), # will be used when checking inherited method validity, only for locally implemented methods
-    virtualMethodNames = character(),
-    check_inherit_done = FALSE,
+    # virtualMethodNames = character(),
+    #check_inherit_done = FALSE,
     classID = NULL,
     #Cpub_class_code = NULL,
     #main_class_code = NULL,
@@ -71,7 +71,7 @@ NC_InternalsClass <- R6::R6Class(
           }
         }
         has_Cpublic_init <- "initialize" %in% names(Cpublic)
-        self$virtualMethodNames <- names(Cpublic)[isVirtual]
+        #self$virtualMethodNames <- names(Cpublic)[isVirtual]
         self$symbolTable <- typeList2symbolTable(Cpublic[!isMethod], where = env)
         self$cppSymbolNames <- Rname2CppName(symbolTable$getSymbolNames())
         self$methodNames <- names(Cpublic)[isMethod]
@@ -83,11 +83,11 @@ NC_InternalsClass <- R6::R6Class(
         }
         self$allMethodNames_self <- methodNames
         self$virtualMethodNames_self <- names(Cpublic)[isVirtual]
-        self$allMethodNames <- methodNames
+        #self$allMethodNames <- methodNames
         self$fieldNames <- names(Cpublic)[!isMethod]
         if(has_Cpublic_init) self$fieldNames <- setdiff(self$fieldNames, "initialize")
         self$allFieldNames_self <- fieldNames
-        self$allFieldNames <- fieldNames
+        #self$allFieldNames <- fieldNames
         self$orig_methodName_to_cpp_code_name <- structure(vector("list", length=length(methodNames)),
                                                        names = methodNames)
         for(mN in methodNames) {
@@ -97,7 +97,7 @@ NC_InternalsClass <- R6::R6Class(
         # but if an nClass is predefined and used in wierd compilation workflow 
         # like in nimble2, then we need defaults set up, and here they are:
         # self$allMethodNames <- self$allMethodNames_self. # already done above
-        self$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
+        #self$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
         # self$allFieldNames <- self$allFieldNames_self. # already done above
       }
       # An over-riding base class can be provided either through inherit or nClass_inherit.
@@ -128,42 +128,64 @@ NC_InternalsClass <- R6::R6Class(
       self$predefined <- predefined
       self$enableSaving <- enableSaving
     },
-    connect_inherit = function() {
-      # These are steps that need to be done after all classes are defined
-      # and do not require recursion up the inheritance tree.
+    # connect_inherit = function(inheritInfo, symbolTable, project_env) {
+    #   # These are steps that need to be done after all classes are defined
+    #   # and do not require recursion up the inheritance tree.
+    #   if(!is.null(self$inheritQ)) {
+    #     inherit_obj <- eval(self$inheritQ, envir = self$env) #inheritQ can be an expression but it must always return the same generator object
+    #     if(!isNCgenerator(inherit_obj))
+    #       stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
+    #     # self$inheritNCinternals <- NCinternals(inherit_obj)
+    #     parent_nClass_Info <- register_known_nClass(inherit_obj, project_env)
+    #     symbolTable$setParentST(parent_nClass_Info$symbolTable)
+    #     inheritInfo$inheritNCinternals <- NCinternals(inherit_obj)
+    #     inheritInfo$nClass_inherit <- self$compileInfo$nClass_inherit
+    #     if(!self$inherit_base_provided) {
+    #       #self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
+    #       inheritInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname
+    #     }
+    #   }
+    #   inheritInfo$process_inherit_done <- FALSE
+    #   inheritInfo$check_inherit_done <- FALSE
+    # },
+    process_inherit = function(inheritInfo, symbolTable, project_env) {
+      # These are steps that need to be done after connect_inherit
+      # and require recursion up the inheritance tree, using flags.
+      # TO-DO: Error trap in methods of same name but different argument signatures.
+      if(isTRUE(inheritInfo$process_inherit_done)) return()
       if(!is.null(self$inheritQ)) {
         inherit_obj <- eval(self$inheritQ, envir = self$env) #inheritQ can be an expression but it must always return the same generator object
         if(!isNCgenerator(inherit_obj))
           stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
-        self$inheritNCinternals <- NCinternals(inherit_obj)
-        if(!self$inherit_base_provided) {
-          self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
-        }
-      }
-      self$process_inherit_done <- FALSE
-      self$check_inherit_done <- FALSE
-    },
-    process_inherit = function() {
-      # These are steps that need to be done after connect_inherit
-      # and require recursion up the inheritance tree, using flags.
-      # TO-DO: Error trap in methods of same name but different argument signatures.
-      if(self$process_inherit_done) return()
-      if(!is.null(self$inheritQ)) {
-        self$inheritNCinternals$process_inherit()
-        self$symbolTable$setParentST(self$inheritNCinternals$symbolTable)
+        # self$inheritNCinternals <- NCinternals(inherit_obj)
+        parent_nClass_Info <- register_known_nClass(inherit_obj, project_env)
+        symbolTable$setParentST(parent_nClass_Info$symbolTable)
+        inheritInfo$inheritNCinternals <- NCinternals(inherit_obj)
+        inheritInfo$nClass_inherit <- self$compileInfo$nClass_inherit
+        # if(!self$inherit_base_provided) {
+        #   #self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
+        #   inheritInfo$nClass_inherit$base <- inheritInfo$inheritNCinternals$cpp_classname
+        # }
+        #self$inheritNCinternals$process_inherit()
+        #self$symbolTable$setParentST(self$inheritNCinternals$symbolTable)
         newMethodNames <- setdiff(self$allMethodNames_self,
-                                  self$inheritNCinternals$allMethodNames)
-        self$allMethodNames <- c(newMethodNames, self$inheritNCinternals$allMethodNames)
-        self$all_methodName_to_cpp_code_name <- c(self$orig_methodName_to_cpp_code_name[newMethodNames],
-                                                self$inheritNCinternals$all_methodName_to_cpp_code_name)
-        self$allFieldNames <- c(self$allFieldNames_self, self$inheritNCinternals$allFieldNames)
+                                  parent_nClass_Info$inheritInfo$allMethodNames)
+        inheritInfo$allMethodNames <- c(newMethodNames, parent_nClass_Info$inheritInfo$allMethodNames)
+        inheritInfo$all_methodName_to_cpp_code_name <- c(self$orig_methodName_to_cpp_code_name[newMethodNames],
+                                                parent_nClass_Info$inheritInfo$all_methodName_to_cpp_code_name)
+        inheritInfo$allFieldNames <- c(self$allFieldNames_self, parent_nClass_Info$inheritInfo$allFieldNames)
+        # self$allMethodNames <- c(newMethodNames, self$inheritNCinternals$allMethodNames)
+        # self$all_methodName_to_cpp_code_name <- c(self$orig_methodName_to_cpp_code_name[newMethodNames],
+        #                                         self$inheritNCinternals$all_methodName_to_cpp_code_name)
+        # self$allFieldNames <- c(self$allFieldNames_self, self$inheritNCinternals$allFieldNames)
       } else {
-        self$allMethodNames <- self$allMethodNames_self
-        self$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
-        self$allFieldNames <- self$allFieldNames_self
-        self$symbolTable$setParentST(NULL)
+        inheritInfo$allMethodNames <- self$allMethodNames_self
+        inheritInfo$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
+        inheritInfo$allFieldNames <- self$allFieldNames_self
+        symbolTable$setParentST(NULL)
       } 
-      self$process_inherit_done <- TRUE
+      inheritInfo$process_inherit_done <- TRUE
+      inheritInfo$check_inherit_done <- FALSE
     }
   )
 )

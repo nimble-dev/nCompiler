@@ -843,18 +843,21 @@ check_unknown_types <- function(type, where = parent.frame(),
                       where = where,
                       project_env = project_env)
   }
+  candidate2 <- NULL
   if(!isNCgenerator(candidate)) {
     candidate2 <- check_built_types(candidate = candidate,
             typeSpec = typeSpec, where = where,
             project_env = project_env,
             returnID = returnID)
-    if(returnID) return(candidate2) # candidate2 *can* be NULL.
+    if(returnID) return(candidate2) # candidate2 *can* be NULL. We are *checking*, not gauranteed we'll find one.
     candidate <- candidate2 %||% candidate
   }
   if(isNCgenerator(candidate)) {
     if(returnID) {
       return(NCinternals(candidate)$classID)
     }
+    if(is.null(candidate2))
+      register_known_nClass(candidate, project_env = project_env)
     # return(candidate)
   }
   candidate
@@ -884,10 +887,15 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     args2 <- c(args, .ID=TRUE)
     ID <- do.call(candidate, args2, envir = where) # get the classID for this type
     if(returnID) return(ID)
-    NCgen <- project_env$built_types[[ID]]
+    NCgen <- NULL
+    nClass_info <- project_env$known_nClasses[[ID]]
+    if(!is.null(nClass_info)) {
+      NCgen <- nClass_info$NCgenerator
+    }
     if(is.null(NCgen)) {
       NCgen <- do.call(candidate, args, envir = where) # get the NCgenerator for this type
-      project_env$built_types[[ID]] <- NCgen
+      register_known_nClass(NCgen, project_env = project_env, classID = ID)
+      # project_env$built_types[[ID]] <- NCgen
     }
     ##cpp_classname <- NCinternals(NCgen)$cpp_classname
     ##list(NCgen) |> setNames(cpp_classname)

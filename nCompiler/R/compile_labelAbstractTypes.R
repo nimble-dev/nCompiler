@@ -45,6 +45,7 @@ compile_labelAbstractTypes <- function(code,
         obj <- nGet(code$name, where = auxEnv$where, project_env = auxEnv$project_env)
         if(!is.null(obj)) {
           if(isNCgenerator(obj)) {
+            register_known_nClass(obj, project_env = auxEnv$project_env)
             newSym <- symbolNCgenerator$new(name = code$name,
                                             type = code$name,
                                             NCgenerator = obj)
@@ -358,6 +359,7 @@ inLabelAbstractTypesEnv(
       ## 2. Check if RHS is a field
       innerName <- code$args[[2]]$name
       method <- NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)
+      nClass_info <- register_known_nClass(code$args[[1]]$type$NCgenerator, project_env = auxEnv$project_env)
       if(!is.null(method)) { ## Is RHS a method?
         obj_internals <- NFinternals(method)
         returnSym <- symbolNF$new(
@@ -372,11 +374,12 @@ inLabelAbstractTypesEnv(
         code$name <- '->member'
         code$args[[2]]$aux$obj_internals <- obj_internals
         code$args[[2]]$aux$nFunctionName <- innerName
-        code$args[[2]]$name <- NCinternals(code$args[[1]]$type$NCgenerator)$all_methodName_to_cpp_code_name[[innerName]]
+        code$args[[2]]$name <- nClass_info$inheritInfo$all_methodName_to_cpp_code_name[[innerName]]
         
         obj_internals <- NULL
       } else {  ## Is RHS a field?
-        symbol <- NCinternals(code$args[[1]]$type$NCgenerator)$symbolTable$getSymbol(innerName, inherits=TRUE)
+        obj_symbolTable <- nClass_info$symbolTable
+        symbol <- obj_symbolTable$getSymbol(innerName, inherits=TRUE)
         if(is.null(symbol))
           stop(exprClassProcessingErrorMsg(
             code,

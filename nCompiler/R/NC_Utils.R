@@ -158,7 +158,7 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
 # the case in an R6 class hierarchy, so we disallow it unless a user allows it by option).
 #
 # The previous calls will have initialized NCint$check_inherit_done to FALSE
-NC_check_inheritance <- function(NCgenerator) {
+NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
   allow_method_overloading <- isTRUE(get_nOption('allow_method_overloading'))
   allow_inherited_field_duplicates <- isTRUE(get_nOption('allow_inherited_field_duplicates'))
   if(allow_method_overloading && allow_inherited_field_duplicates) return(invisible(NULL))
@@ -168,29 +168,31 @@ NC_check_inheritance <- function(NCgenerator) {
   NCint <- NCinternals(NCgenerator)
 
   if(is.null(NCint$inheritQ)) {
-    NCint$check_inherit_done <- TRUE
-    NCint$virtualMethodNames <- NCint$virtualMethodNames_self
-    return(NCint$virtualMethodNames_self)
+    inheritInfo$check_inherit_done <- TRUE
+    inheritInfo$virtualMethodNames <- NCint$virtualMethodNames_self
+    return(inheritInfo$virtualMethodNames)
   }
-  if(NCint$check_inherit_done) return(NCint$virtualMethodNames)
+  if(inheritInfo$check_inherit_done) return(inheritInfo$virtualMethodNames)
   # At this point, we have inheritance and have checked this NCgenerator yet.
-  inheritNCinternals <- NCint$inheritNCinternals
+  inheritNCinternals <- inheritInfo$inheritNCinternals
   inheritNCgenerator <- eval(NCint$inheritQ, envir = NCint$env)
+  parent_nClass_Info <- register_known_nClass(inheritNCgenerator, project_env = project_env)
   # Recurse up the inheritance ladder
   # A design dilemma here was that the virtual marker is in the NFinternals,
   # which can be accessed from the NCgenerator but not the NCinternals.
   # That is why this function is not a method of NCinternals.
-  inherit_virtualMethodNames <- NC_check_inheritance(inheritNCgenerator)
+  inherit_virtualMethodNames <- NC_check_inheritance(inheritNCgenerator, parent_nClass_Info$inheritInfo,
+                                                      project_env = project_env)
   new_virtualMethodNames <- character()
 
   if(!allow_method_overloading) {
     local_virtualMethodNames <- NCint$virtualMethodNames_self
     # default: check for disallowed method overloading
-    allMethodNames <- NCint$allMethodNames
+    allMethodNames <- inheritInfo$allMethodNames
     for(mN in allMethodNames) {
       # if a method is not in the self method names, it was inherited, so there is nothing to check
       if(!(mN %in% NCint$allMethodNames_self)) next
-      if(!(mN %in% inheritNCinternals$allMethodNames)) {
+      if(!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
         # current level is the first one with this method name, so here we tag its virtual status
         new_virtualMethodNames <- c(new_virtualMethodNames, mN)
         next
@@ -223,7 +225,7 @@ NC_check_inheritance <- function(NCgenerator) {
     #
     # If any of my own field names already existed from my inherited classes,
     # that's not allowed
-    badFields <- NCint$allFieldNames_self %in% inheritNCinternals$allFieldNames
+    badFields <- NCint$allFieldNames_self %in% parent_nClass_Info$inheritInfo$allFieldNames
     if(any(badFields))
       stop(paste0("Problem with field(s): ", paste(NCint$allFieldNames_self[badFields], collapse = ", "),
                   ". Fields with the same name are not allowed in base and inherited classes.",
@@ -231,7 +233,7 @@ NC_check_inheritance <- function(NCgenerator) {
                 " set nOptions(allow_inherited_field_duplicates=TRUE)"),
            call. = FALSE  )
   }
-  NCint$check_inherit_done <- TRUE
+  inheritInfo$check_inherit_done <- TRUE
   c(new_virtualMethodNames, inherit_virtualMethodNames)
 }
 

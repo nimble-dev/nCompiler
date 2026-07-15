@@ -142,6 +142,15 @@ nCompile_createCppDefsInfo <- function(units,
                                       project_env = project_env)
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
     } else if(unitTypes[i] == "nCgen") {
+      # update compileInfo for explicit inheritance base class if provided.
+      nClass_info <- register_known_nClass(units[[i]], project_env)
+      NCint <- NCinternals(units[[i]])
+      if(!is.null(NCint$inheritQ)) {      
+        if(!NCint$inherit_base_provided) {
+          compileInfo$nClass_inherit$base <- 
+            nClass_info$inheritInfo$inheritNCinternals$cpp_classname
+        }
+      }
       oneResult <- nCompile_nClass(units[[i]],
                                   stopAfterCppDef = TRUE,
                                   env = env,
@@ -273,18 +282,21 @@ nCompile_prepare_units <- function(...,
   # to be called with inherit = some_nClass before some_nClass is defined.
   # Note that each step must be done for all units before the next step is done
   # for all units.
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nCgen")
-      NCinternals(units[[i]])$connect_inherit()
-  }
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nCgen")
-      NCinternals(units[[i]])$process_inherit()
-  }
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nCgen")
-      NC_check_inheritance(units[[i]])
-  }
+  #
+  # These are being replaced in the register_known_nClass system.
+  # for(i in seq_along(units)) {
+  #   if(unitTypes[i] == "nCgen")
+  #     NCinternals(units[[i]])$connect_inherit()
+  # }
+  # for(i in seq_along(units)) {
+  #   if(unitTypes[i] == "nCgen")
+  #     NCinternals(units[[i]])$process_inherit()
+  # }
+  # for(i in seq_along(units)) {
+  #   if(unitTypes[i] == "nCgen")
+  #     NC_check_inheritance(units[[i]])
+  # }
+
   # set up exportNames, returnNames, and packageNames
   # exportNames: These appear in C++ as [[Rcpp::export(exportName = <exportName>)]].
   #              Thus they give the name of the R function that will call the C++ version of the nFunction or nClass generator function.
@@ -465,16 +477,51 @@ nCompile_prepare_units <- function(...,
      packageNames = packageNames)
 }
 
-update_built_types <- function(new_units, new_unitTypes, cppDefs_project_env) {
-  built_types <- cppDefs_project_env$built_types
+update_known_nClasses <- function(new_units, new_unitTypes, project_env) {
   for(i in seq_along(new_units)) {
     if(new_unitTypes[i] == "nCgen") {
-      classID <- NCinternals(new_units[[i]])$classID
-      if(exists(classID, envir = built_types, inherits = FALSE)) next
-      built_types[[classID]] <- new_units[[i]]
+      register_known_nClass(new_units[[i]], project_env)
     }
   }
-  built_types
+}
+
+register_known_nClass <- function(NCgenerator, project_env, classID = NULL) {
+  # classID will be non-null when called to register a built type such as an nList.
+  known_nClasses <- project_env$known_nClasses
+  if(is.null(classID)) {
+    classID <- NCinternals(NCgenerator)$classID
+  }
+  if(exists(classID, envir = known_nClasses, inherits = FALSE)) 
+    return(known_nClasses[[classID]])
+  # creating an entry before the next step is needed to avoid
+  # infinite recursion potential from resolving TBD symbols.
+  known_nClasses[[classID]] <- list2env(list(NCgenerator = NCgenerator,
+                                            symbolTable = NULL,
+                                            inheritInfo = NULL))
+  update_known_nClass_info(NCgenerator, classID, project_env = project_env)
+  known_nClasses[[classID]]
+}
+
+process_inheritance <- function(NCgenerator, symbolTable, project_env = new.env()) {
+  inheritInfo <- new.env()
+  NCint <- NCinternals(NCgenerator)
+  NCint$process_inherit(inheritInfo = inheritInfo, symbolTable = symbolTable, project_env = project_env)
+  NC_check_inheritance(NCgenerator, inheritInfo = inheritInfo, project_env = project_env)
+  inheritInfo
+}
+
+update_known_nClass_info <- function(NCgenerator, classID, project_env = new.env()) {
+  symbolTable <- NCinternals(NCgenerator)$symbolTable$clone(deep = TRUE)
+  ## Update any symbolTBD symbols by scoped lookup
+  known_nClasses <- project_env$known_nClasses
+  resolveTBDsymbols(symbolTable,
+                    NCgenerator,
+                    project_env = project_env)
+  inheritInfo <- process_inheritance(NCgenerator,
+                                    symbolTable = symbolTable,
+                                    project_env = project_env)
+  known_nClasses[[classID]]$symbolTable <- symbolTable
+  known_nClasses[[classID]]$inheritInfo <- inheritInfo
 }
 
 #' @export
@@ -530,13 +577,24 @@ nCompile <- function(...,
   # to decide whether it is allowed to generate predefined code. For auto_included units, NO.
   new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
 
-  cppDefs_project_env <- new.env()
-  cppDefs_project_env$built_types <- new.env()
+  project_env <- new.env()
+  # # built_types is for types created by nClassBuilders.
+  # # It uses key-value pairs with key being the unique classID and value being the nClass generator.
+  # # (key is a name in the environment; object is its value)
+  # project_env$built_types <- new.env()
+  # known_nClasses is a registry for nClass generators that are known to the project.
+  # It also holds symbol tables with TBD symbols resolved and inheritance-related content.
+  # It uses key-value pairs with key being the unique classID and value being a list with
+  #  - NCgenerator: the nClass generator
+  #  - symbolTable: the symbol table with resolved TBD symbols
+  #  - inheritInfo: an environment with inheritance-related content
+  project_env$known_nClasses <- new.env()
 
   while(!done_finding_units) {
-    update_built_types(new_units, new_unitTypes, cppDefs_project_env)
-    existing_built_type_names <- ls(cppDefs_project_env$built_types)
-    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, new_compileInfos, cppDefs_project_env)
+    update_known_nClasses(new_units, new_unitTypes, project_env)
+    existing_known_nClass_names <- ls(project_env$known_nClasses)
+    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, 
+                                               new_compileInfos, project_env)
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
 
@@ -555,15 +613,15 @@ nCompile <- function(...,
     #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
     #
-    updated_built_type_names <- ls(cppDefs_project_env$built_types)
-    new_needed_built_nClasses <- lapply(setdiff(updated_built_type_names, existing_built_type_names),
-                                     \(x) cppDefs_project_env$built_types[[x]])
+    updated_known_nClass_names <- ls(project_env$known_nClasses)
+    new_needed_known_nClasses <- lapply(setdiff(updated_known_nClass_names, existing_known_nClass_names),
+                                     \(x) project_env$known_nClasses[[x]]$NCgenerator)
     # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
     # A bit of design irony: At this point, the needed units are
     # nicely organized into nClasses and nFunctions,
     # but we are going to mix them together as if they were an arbitrary
     # input list because that's what nCompiler_prepare_units and nCompile_createCppDefsInfo uses.
-    new_needed_nClasses <- c(new_needed_nClasses, new_needed_built_nClasses) |> unique_units()
+    new_needed_nClasses <- c(new_needed_nClasses, new_needed_known_nClasses) |> unique_units()
     new_units <- c(new_needed_nClasses, new_needed_nFunctions)
     ## Use unit_is_duplicate() rather than identical() so that parameterised nClass
     ## types (e.g. nList) are correctly identified as duplicates even when they

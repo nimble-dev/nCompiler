@@ -230,7 +230,8 @@ cpp_nClassClass <- R6::R6Class(
         }
         self$add_nClass_inheritance(oneInheritance)
       }
-      inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals
+      inheritNCinternals <- Compiler$inheritInfo$inheritNCinternals
+#      inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals
       if(!is.null(inheritNCinternals)) {
         include_filebase <- make_cpp_filebase(inheritNCinternals$cpp_classname)
         self$Hincludes <- c(self$Hincludes, paste0("\"",include_filebase, ".h", "\""))

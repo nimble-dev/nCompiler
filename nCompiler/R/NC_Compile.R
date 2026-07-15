@@ -70,7 +70,8 @@ nCompile_nClass <- function(NC,
     regular_filename <-  NCinternals(NC)$cpp_classname
     if(gather_needed_units)
       needed_units <- nCompile_process_manual_needed_units(NCinternals(NC),
-                                                                NC$parent_env, isNC = TRUE)
+                                                                NC$parent_env, isNC = TRUE,
+                                                                project_env = project_env)
     allow_write_predefined <- !isTRUE(compileInfo$auto_included)
   }
   if(is_predefined && (isFALSE(controlFull$generate_predefined) || !allow_write_predefined)) {
@@ -82,7 +83,8 @@ nCompile_nClass <- function(NC,
     if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC,
-                                        compileInfo = compileInfo)
+                                        compileInfo = compileInfo,
+                                        project_env = project_env)
     ## Use the compiler to generate a cppDef
     class_env <- new.env()
     NC_Compiler$createCpp(control = controlFull,
