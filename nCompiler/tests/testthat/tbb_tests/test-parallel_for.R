@@ -93,6 +93,123 @@ test_that("basic usage of parallel_reduce", {
     expect_identical(Cobj$go(2:6), as.numeric(c(2, 2*(3:6))))
  })
 
+test_that("use of `self`", {
+  nc <- nClass(
+        Cpublic = list(
+            myconst = 'numericScalar',
+            twice = nFunction(
+                fun=function(x = 'numericScalar') {
+                    return(2*x)
+                }, returnType = 'numericScalar'
+            ),
+            go = nFunction(
+                fun = function(x = 'numericVector') {
+                    y <- x
+                    parallel_for(i, 1:length(x), {y[i] <- self$myconst + twice(x[i])})
+                    return(y)
+                },
+                returnType = 'numericVector'
+            )
+        )
+  )
+  Cnc <- nCompile(nc)
+  obj <- nc$new()
+  obj$myconst <- 1
+  Cobj <- Cnc$new()
+  Cobj$myconst <- 1
+  expect_identical(obj$go(2:6), as.numeric(1 + 2*2:6)) 
+  expect_identical(Cobj$go(2:6), as.numeric(1 + 2*2:6)) 
+
+  nc <- nClass(
+        Cpublic = list(
+            myconst = 'numericScalar',
+            twice = nFunction(
+                fun=function(x = 'numericScalar') {
+                    return(2*x)
+                }, returnType = 'numericScalar'
+            ),
+            go = nFunction(
+                fun = function(x = 'numericVector') {
+                    y <- x
+                    parallel_for(i, 1:length(x), {y[i] <- myconst + self$twice(x[i])})
+                    return(y)
+                },
+                returnType = 'numericVector'
+            )
+        )
+  )
+  Cnc <- nCompile(nc)
+  obj <- nc$new()
+  obj$myconst <- 1
+  Cobj <- Cnc$new()
+  Cobj$myconst <- 1
+  expect_identical(obj$go(2:6), as.numeric(1 + 2*2:6))
+  expect_identical(Cobj$go(2:6), as.numeric(1 + 2*2:6))
+
+  nc <- nClass(
+        Cpublic = list(
+            myconst = 'numericScalar',
+            twice = nFunction(
+                fun=function(x = 'numericScalar') {
+                    return(2*x)
+                }, returnType = 'numericScalar'
+            ),
+            go = nFunction(
+                fun = function(x = 'numericVector') {
+                    y <- x
+                    parallel_for(i, 1:length(x), {y[i] <- self$twice(self$myconst + x[i])})
+                    return(y)
+                },
+                returnType = 'numericVector'
+            )
+        )
+  )
+  Cnc <- nCompile(nc)
+  Cnc <- nCompile(nc)
+  obj <- nc$new()
+  obj$myconst <- 1
+  Cobj <- Cnc$new()
+  Cobj$myconst <- 1
+  expect_identical(obj$go(2:6), as.numeric(2*3:7))
+  expect_identical(Cobj$go(2:6), as.numeric(2*3:7))
+
+  nc <- nClass(
+        Cpublic = list(
+            myconst = 'numericScalar',
+            myotherconst = 'numericScalar',
+            twice = nFunction(
+                fun=function(x = 'numericScalar') {
+                    return(2*x)
+                }, returnType = 'numericScalar'
+            ),
+            thrice = nFunction(
+                fun=function(x = 'numericScalar') {
+                    return(3*x)
+                }, returnType = 'numericScalar'
+            ),
+            go = nFunction(
+                fun = function(x = 'numericVector') {
+                  y <- x
+                  tmp <- self$myotherconst + 3   # Use `self` outside of parallel body.
+                  parallel_for(i, 1:length(x), {y[i] <- tmp + self$myconst + myotherconst + self$twice(thrice(x[i]))})
+                  return(y)
+                },
+                returnType = 'numericVector'
+            )
+        )
+    )
+    
+    Cnc <- nCompile(nc)
+    obj <- nc$new()
+    obj$myconst <- 7
+    obj$myotherconst <- 1
+    Cobj <- Cnc$new()
+    Cobj$myconst <- 7
+    Cobj$myotherconst <- 1
+    expect_identical(obj$go(2:6), as.numeric(6*(2:6)+12))
+    expect_identical(Cobj$go(2:6), as.numeric(6*(2:6)+12))
+})
+
 test_that("use of object from another class", {
     nc0 <- nClass(
         Cpublic = list(

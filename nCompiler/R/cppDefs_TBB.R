@@ -104,7 +104,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
     sym$ref <- TRUE
     newSymTab$addSymbol(sym)  
   }
-  if(length(aux$localMethods)) 
+  if(length(aux$localMethods) || isTRUE(aux$liftedSelf)) 
     newSymTab$addSymbol(cppVarFullClass$new(name = selfNameInLiftedBlock,
                                             baseType = aux$class,
                                             ref = TRUE))
@@ -267,7 +267,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   initializerList[[2]] <- nParse(
     substitute(X(X_), list(X = as.name(vector_name),
                            X_ = as.name(paste0('parent.', vector_name)))))
-  if(length(aux$localMethods)) 
+  if(length(aux$localMethods) || isTRUE(aux$liftedSelf)) 
     initializerList[[3]] <- nParse(
       substitute(X(X_), list(X = selfNameInLiftedBlock, 
                              X_ = as.name(paste0('parent.', selfNameInLiftedBlock)))))

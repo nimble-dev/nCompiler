@@ -383,7 +383,7 @@ symbolSelf <- R6::R6Class(
   inherit = symbolNC,
   portable = TRUE,
   public = list(
-    initialize = function(name, type, NCgenerator, isArg = FALSE) {
+      initialize = function(name, type, NCgenerator, isArg = FALSE) {
       super$initialize(name = name,
                        type = type,
                        NCgenerator = NCgenerator,
@@ -395,7 +395,7 @@ symbolSelf <- R6::R6Class(
     # The cppVar for self is only used if self is used as a value, such as in an argument or return value.
     genCppVar = function() cppVarSelfClass$new()
   )
-)
+  )
 
 ## type is the unique ID of the NCgenerator.
 ## same value as for a symbolNC for an object of the class.

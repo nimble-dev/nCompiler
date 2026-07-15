@@ -63,7 +63,7 @@ inFinalTransformationsEnv(
              exprClass$new(name = thisVar, 
                            isCall = FALSE, isName = TRUE, isLiteral = FALSE, isAssign = FALSE))
     }
-    if(length(code$aux$localMethods))
+    if(length(code$aux$localMethods) || isTRUE(code$aux$liftedSelf))
       setArg(loop_body_expr, iv+1, nParse('cppLiteral("*this")'))
     setArg(parallel_expr, 2, loop_body_expr)
     setArg(code$caller, code$callerArgID, parallel_expr)
@@ -75,7 +75,8 @@ inFinalTransformationsEnv(
 )
 
 inFinalTransformationsEnv(
-  ParallelFor <- function(code, symTab, auxEnv, info) {
+    ParallelFor <- function(code, symTab, auxEnv, info) {
+        if(exists('paciorek')) browser()
     nThreads_arg <- removeArg(code, 'nThreads')
     ## TODO: not sure if we will do more work on arg matching such that
     ## code$args[[4]] and code$args[[5]] will always exist and correspond to `copyVars` and `shareVars`
@@ -106,7 +107,14 @@ inFinalTransformationsEnv(
     ## Any argument, class member variable, nFunction local variable by default is shared.
     ## Any local variable in the loop body by default is copied.
     vars <- all.vars(code$args[[3]]$Rexpr)
-    vars2 <- vars[vars != nDeparse(code$args[[1]])]  # Omit index variable.
+    nms <- all.names(code$args[[3]]$Rexpr)
+
+    vars2 <- vars[!vars %in% c("self", nDeparse(code$args[[1]]))]  # Last item is index variable.
+    # Omit vars only referenced by `self`.
+    # This reliance on ordering of result of `all.names` feels fragile.
+    nonSelfNames <- nms[-(which(nms == "self") + 1)]
+    vars2 <- vars2[vars2 %in% nonSelfNames]
+    
     inST <- vars2 %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
     defaultCopyVars <- code$aux$localVars  # Local vars in for loop body.
     defaultCopyVars <- defaultCopyVars[!defaultCopyVars %in% shareVars]
@@ -115,8 +123,7 @@ inFinalTransformationsEnv(
     defaultShareVars <- defaultShareVars[!defaultShareVars %in% copyVars]
 
     ## Find nClass objects (if methods are used; members would have been found above).
-    nms <- all.names(code$args[[3]]$Rexpr)
-    nms <- nms[!nms %in% vars]
+    nms <- nms[!nms %in% c(vars, "self")]
     objects <- nms[nms %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())]
     ## Make sure the items are actually nClass objects.
     if(length(objects))  
@@ -144,6 +151,8 @@ inFinalTransformationsEnv(
     ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
     nms <- all.names(code$args[[3]]$Rexpr)
     code$aux$localMethods <- nms[nms %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods))]
+    if("self" %in% nms)  # This is needed to catch case of `self$<field>` but is redundant with the above line for `self$<method>`.
+      code$aux$liftedSelf <- TRUE
     code$aux$class <- auxEnv$where$classname
 
     code$aux$bodyName <- parallelForBodyLabelMaker()
@@ -174,9 +183,12 @@ inFinalTransformationsEnv(
     ## Perhaps there is a better way to get this information.
     ## This information is used to ensure that the self object is passed into the lifted TBB code.
     ## Currently we don't use the actual identified `localMethods` values, just whether there are any.
+    if ("self" %in% all.names(code$Rexpr))
+      code$aux$liftedSelf <- TRUE
     nm <- code$args[[1]]$Rexpr
     if(is.character(nm) && nm %in% c(names(auxEnv$where$public_methods), names(auxEnv$where$private_methods)))
       code$aux$localMethods <- nm else code$aux$localMethods <- character(0)
+      
     code$aux$class <- auxEnv$where$classname
 
     code$aux$bodyName <- parallelReduceBodyLabelMaker()
@@ -255,7 +267,7 @@ inFinalTransformationsEnv(
 
     nms <- all.vars(code$Rexpr)
     nClass_object <- nms[nms %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames()) &
-                  !nms %in% inputVar]
+                  !nms %in% c(inputVar, "self")]
     if(length(nClass_object) > 1)
             stop(exprClassProcessingErrorMsg(
                 code$Rexpr,

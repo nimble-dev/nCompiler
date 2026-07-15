@@ -105,7 +105,7 @@ test_that("basic usage of parallel_reduce", {
   Cobj <- Cnc$new()
   expect_identical(Cobj$go(1:3), 9)
   expect_identical(obj$go(1:3), 9)
-  
+
 })
 
 test_that("error trapping for parallel_reduce", {
@@ -314,6 +314,33 @@ test_that("user-defined reduction functions", {
     Cnc <- nCompile(nc, nc0)
     Cobj = Cnc[[1]]$new()
     expect_identical(Cobj$go(1:5), 15)
+
+    # Using `self`. Currently we can't handle `self$x` as the vector just as we can't handle `obj$x`.
+    # We also can't handle the `init` not being a literal.
+    nc <- nClass(
+      Cpublic = list(
+        reduction_fun = nFunction(
+          fun = function(x = 'numericScalar', y = 'numericScalar') {
+            ans <- x + y
+            return(ans)
+          },
+          returnType = 'numericScalar'
+        ),
+        go = nFunction(
+          fun = function(x = 'numericVector') {
+            y <- parallel_reduce(self$reduction_fun, x, 0)
+            return(y)
+          },
+          returnType = 'numericScalar'
+        )
+      )
+    )
+    Cnc <- nCompile(nc)
+    obj <- nc$new()
+    Cobj = Cnc$new()
+    expect_identical(obj$go(1:5), 15)
+    expect_identical(Cobj$go(1:5), 15)
+
 })
 
 

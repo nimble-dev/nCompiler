@@ -425,10 +425,15 @@ inGenCppEnv(
   ## Member(A, x) -> A.x
   Member <- function(code, symTab, connector = '.') {
     isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
-    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
-    paste0( '(',
-           objOutput,
-           ')', connector, code$args[[2]]$name)
+    isLiftedSelf <- code$args[[1]]$name == 'liftedSelf' && inherits(code$args[[1]]$type, "symbolSelf")
+    if(!isLiftedSelf) {    
+      objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
+      return(paste0( '(',
+                    objOutput,
+                    ')', connector, code$args[[2]]$name)
+             )
+    }
+    return(paste0(selfNameInLiftedBlock, ".", code$args[[2]]$name))
   }
 )
 

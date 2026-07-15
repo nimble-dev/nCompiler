@@ -320,9 +320,16 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       ## TO-DO: Check for exactly 2 arguments
       # Special handling for "new"
+      
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo,
                                             useArgs = c(TRUE, FALSE))
+
+      # We need to handle `self$` differently in parallel body code
+      # as the code is lifted out of the class method in a new class.
+      if(isTRUE(auxEnv$inParallelBody) && code$args[[1]]$name == "self")
+        code$args[[1]]$name <- "liftedSelf"
+
       ## TO-DO: Check that LHS type is symbolNC or symbolNCgenerator
       ## TO-DO: Improve these error messages
       if(inherits(code$args[[1]]$type, "symbolNCgenerator")) {
@@ -800,15 +807,18 @@ inLabelAbstractTypesEnv(
     ## For now, we will handle local vars in body as `copyVars` that become vars
     ## in the encompassing method, but consider setting up local symbol table for
     ## the loop body with the loop body C++ function declaring its own variables.
+    auxEnv$inParallelBody <- TRUE  # Needed for replacement of `self`.
     symbolsNoBody <- symTab$getSymbolNames()
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    auxEnv$inParallelBody <- NULL
     
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
-    ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+
     symbols <- symTab$getSymbolNames()
     code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
 
+    ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
     
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
@@ -864,7 +874,9 @@ inLabelAbstractTypesEnv(
                 deparse(code$args[['operator']]$Rexpr))),
           call. = FALSE)  
       code$args[['operator']] <- wrapInExprClass(code$args[['operator']], 'chainedCall')
+      auxEnv$inParallelBody <- TRUE  # Needed for replacement of `self`.
       inserts <- c(inserts, compile_labelAbstractTypes(code$args[['operator']], symTab, auxEnv))
+      auxEnv$inParallelBody <- NULL
     }
     
     ## Give reduce operator the same return type as the input vector.
