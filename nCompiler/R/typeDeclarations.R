@@ -824,7 +824,7 @@ typeList2symbolTable <- function(typeList,
 # take a type (quosure or ready to become one)
 # and look for NCgenerator or nClassBuilder
 check_unknown_types <- function(type, where = parent.frame(),
-                                project_env = new.env(), returnID = FALSE,
+                                project_env = NULL, returnID = FALSE,
                                 typeSpec = NULL) {
 
   ttype <- nCaptureType(type)
@@ -856,7 +856,7 @@ check_unknown_types <- function(type, where = parent.frame(),
     if(returnID) {
       return(NCinternals(candidate)$classID)
     }
-    if(is.null(candidate2))
+    if(is.null(candidate2) && !is.null(project_env))
       register_known_nClass(candidate, project_env = project_env)
     # return(candidate)
   }
@@ -866,7 +866,7 @@ check_unknown_types <- function(type, where = parent.frame(),
 check_built_types <- function(Rexpr = NULL, candidate = NULL,
                               typeSpec = NULL,
                               where = parent.frame(),
-                              project_env = new.env(), returnID = FALSE) {
+                              project_env = NULL, returnID = FALSE) {
   if(!is.null(Rexpr)) {
     if(!is.null(typeSpec)) {
       stop("In check_built_types, either Rexpr or typeSpec should be NULL.")
@@ -888,13 +888,16 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     ID <- do.call(candidate, args2, envir = where) # get the classID for this type
     if(returnID) return(ID)
     NCgen <- NULL
-    nClass_info <- project_env$known_nClasses[[ID]]
+    nClass_info <- 
+      if(!is.null(project_env)) project_env$known_nClasses[[ID]]
+      else NULL    
     if(!is.null(nClass_info)) {
       NCgen <- nClass_info$NCgenerator
     }
     if(is.null(NCgen)) {
       NCgen <- do.call(candidate, args, envir = where) # get the NCgenerator for this type
-      register_known_nClass(NCgen, project_env = project_env, classID = ID)
+      if(!is.null(project_env))
+        register_known_nClass(NCgen, project_env = project_env, classID = ID)
       # project_env$built_types[[ID]] <- NCgen
     }
     ##cpp_classname <- NCinternals(NCgen)$cpp_classname
@@ -917,14 +920,14 @@ type2cpp_typename <- function(type, where = parent.frame()) {
 }
 
 resolveOneTBDsymbol <- function(symbol, env = parent.frame(),
-                                project_env = new.env()) {
+                                project_env = NULL) {
   symbol <- symbol$resolveSym(project_env = project_env)
   symbol #return unmodified symbol if nothing to do
 }
 
 resolveTBDsymbols <- function(symTab,
                               env = parent.frame(),
-                              project_env = new.env()) {
+                              project_env = NULL) {
   for(i in seq_along(symTab$symbols)) {
     symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env, project_env)
   }
