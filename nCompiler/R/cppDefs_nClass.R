@@ -286,7 +286,8 @@ cpp_nClassClass <- R6::R6Class(
               noncopyVars = as.list(c(parallelReduceContent[[j]]$args[['input']],
                                       parallelReduceContent[[j]]$args[['output']],
                                       parallelReduceContent[[j]]$args[['nClass_object']])),              
-              aux = parallelReduceContent[[j]]$aux)
+              aux = parallelReduceContent[[j]]$aux,
+              lastUse = (j == length(parallelReduceContent)))
             self$memberCppDefs[[parallelReduceContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
         }

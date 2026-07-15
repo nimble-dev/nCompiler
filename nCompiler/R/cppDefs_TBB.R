@@ -169,14 +169,16 @@ cppParallelReduceBodyClass <- R6::R6Class(
                           symbolTable,
                           copyVars = character(),
                           noncopyVars = character(),
-                          aux = list()) {
+                          aux = list(),
+                          lastUse = FALSE) {
       cppParallelReduceBodyClass_init_impl(self,
                                            loop_body = loop_body,
                                            loop_var = loop_var,
                                            symbolTable = symbolTable,
                                            copyVars = copyVars,
                                            noncopyVars = noncopyVars,
-                                           aux = aux)
+                                           aux = aux,
+                                           lastUse = lastUse)
     },
     generate = function(declaration = FALSE, ...) {
       ## This version of generate creates a fully inlined version
@@ -212,7 +214,8 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                                  symbolTable,
                                                  copyVars,
                                                  noncopyVars,
-                                                 aux) {
+                                                 aux,
+                                                 lastUse) {
   ## 1. call cppParallelBodyClass_init_impl which creates GeneralFor
   ## 2. make some minor alterations to the body of `operator()`
   ## 3. Create split constructor
@@ -327,9 +330,10 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                    join = join))
 
   ## Remove index and value variables so not defined in calling method.
-  symbolTable$removeSymbol(loop_var$name)
-  symbolTable$removeSymbol(value_name)
- 
+  if(lastUse) {
+    symbolTable$removeSymbol(loop_var$name)
+    symbolTable$removeSymbol(value_name)
+  }
   invisible(NULL)
 }
 

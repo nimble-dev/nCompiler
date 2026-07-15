@@ -75,8 +75,7 @@ inFinalTransformationsEnv(
 )
 
 inFinalTransformationsEnv(
-    ParallelFor <- function(code, symTab, auxEnv, info) {
-        if(exists('paciorek')) browser()
+  ParallelFor <- function(code, symTab, auxEnv, info) {
     nThreads_arg <- removeArg(code, 'nThreads')
     ## TODO: not sure if we will do more work on arg matching such that
     ## code$args[[4]] and code$args[[5]] will always exist and correspond to `copyVars` and `shareVars`
@@ -112,7 +111,9 @@ inFinalTransformationsEnv(
     vars2 <- vars[!vars %in% c("self", nDeparse(code$args[[1]]))]  # Last item is index variable.
     # Omit vars only referenced by `self`.
     # This reliance on ordering of result of `all.names` feels fragile.
-    nonSelfNames <- nms[-(which(nms == "self") + 1)]
+    if("self" %in% nms) {
+      nonSelfNames <- nms[-(which(nms == "self") + 1)]
+    } else nonSelfNames <- nms
     vars2 <- vars2[vars2 %in% nonSelfNames]
     
     inST <- vars2 %in% c(symTab$getSymbolNames(), symTab$parentST$getSymbolNames())
