@@ -1,4 +1,4 @@
-test_that("basic usage of parallel_reduce", {
+test_that("basic usage of parallel_for", {
     nc <- nClass(
         Cpublic = list(
             go = nFunction(

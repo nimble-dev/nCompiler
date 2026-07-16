@@ -937,7 +937,10 @@ inLabelAbstractTypesEnv(
        
 
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
-    
+
+    auxEnv$uses_TBB <- TRUE
+    nCompiler_pluginEnv$uses_TBB <- TRUE
+  
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
