@@ -1419,7 +1419,7 @@ nCompiler:::inLabelAbstractTypesEnv(
       types <- code$aux$compileArgs$types
       if(!is.null(types)) {
         if(!is.list(types)) types <- eval(types)
-        newSymTab <- typeList2symbolTable(types, where=auxEnv$where)
+        newSymTab <- typeList2symbolTable(types, where=auxEnv$closure)
         resolveTBDsymbols(newSymTab, auxEnv$where, project_env = auxEnv$project_env)
         symbols <- newSymTab$getSymbols()
         for (sym in symbols) symTab$addSymbol(sym)

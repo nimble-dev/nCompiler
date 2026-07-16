@@ -35,3 +35,5 @@ nCompiler.Rproj
 sketches/
 .vscode/
 .positai
+# devtools::load_all() convenience symlink (inst/include -> include)
+nCompiler/include
