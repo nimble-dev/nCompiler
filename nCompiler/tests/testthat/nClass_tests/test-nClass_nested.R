@@ -115,3 +115,54 @@ test_that("One nClass holds another by a base class and uses it", {
     gc()
   }
 })
+
+test_that("TBD type in a nested class is resolved correctly", {
+  # In nc3, the go() function will only compile correctly
+  # if "nc2obj$nc1obj" resolves correctly, meaning that a symbolTable for
+  # nc2 is being used that has already had TBD types resolved.
+  # This test checks that.
+  nc1 <- nClass(
+    Cpublic = list(
+      foo = nFunction(
+        function() {return(1.2); returnType("numericScalar")}
+      )
+    )
+  )
+
+  nc2 <- nClass(
+    classname = "nc2",
+    Cpublic = list(
+      nc1obj = 'nc1()',
+      nc2 = nFunction(
+        function() {
+          nc1obj <- nc1$new()
+        },
+        compileInfo = list(constructor = TRUE)
+      )
+    )
+  )
+
+  nc3 <- nClass(
+    classname = "nc3",
+    Cpublic = list(
+      nc2obj = 'nc2()',
+      nc3 = nFunction(
+        function() {
+          nc2obj <- nc2$new()
+        },
+        compileInfo = list(constructor = TRUE)
+      ),
+      go = nFunction(
+        function() {
+          ans <- nc2obj$nc1obj$foo()
+          return(ans)
+          returnType(double(0))
+        }
+      )
+    )
+  )
+
+  comp <- nCompile(nc1, nc2, nc3)
+  nc3obj <- comp$nc3$new()
+  expect_equal(nc3obj$go(), 1.2)
+})
