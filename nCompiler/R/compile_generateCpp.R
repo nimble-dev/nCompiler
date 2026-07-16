@@ -259,6 +259,20 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
+  nClass_method_in_lifted <- function(code, symTab) {
+    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$cpp_code_name
+    paste0(selfNameInLiftedBlock, ".", cpp_code_name,
+           '(', paste0(unlist(lapply(code$args,
+                                     compile_generateCpp,
+                                     symTab,
+                                     asArg = TRUE) ),
+                       collapse = ', '),
+           ')' )
+  }
+)
+
+
+inGenCppEnv(
   nClass_constructor <- function(code, symTab) {
     paste0("nClass_builder<" , code$type$name ,">()")
   }
@@ -277,7 +291,7 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  MidOperator <- function(code, symTab) {
+    MidOperator <- function(code, symTab) {
     if(length(code$args) != 2) stop('Error: expecting 2 arguments for operator ',code$name)
     if(is.null(code$caller)) useParens <- FALSE
     else {
@@ -411,15 +425,20 @@ inGenCppEnv(
   ## Member(A, x) -> A.x
   Member <- function(code, symTab, connector = '.') {
     isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
-    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
-    paste0( '(',
-           objOutput,
-           ')', connector, code$args[[2]]$name)
+    isLiftedSelf <- code$args[[1]]$name == 'liftedSelf' && inherits(code$args[[1]]$type, "symbolSelf")
+    if(!isLiftedSelf) {    
+      objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
+      return(paste0( '(',
+                    objOutput,
+                    ')', connector, code$args[[2]]$name)
+             )
+    }
+    return(paste0(selfNameInLiftedBlock, ".", code$args[[2]]$name))
   }
 )
 
 inGenCppEnv(
-  ## Member(A, x) -> A.x
+  ## PtrMember(A, x) -> A->x
   PtrMember <- function(code, symTab) {
     Member(code, symTab, connector = '->')
   }
@@ -709,5 +728,17 @@ inGenCppEnv(
     res <- compile_generateCpp(code, symTab)
     code$name <- orig_name
     res
+  }
+)
+
+inGenCppEnv(
+  ParallelExpr <- function(code, symTab) {
+    nThreads_arg <- removeArg(code, 3)
+    paste0('{',
+      paste0('tbb::global_control gc(tbb::global_control::max_allowed_parallelism, getNumThreads(',
+             compile_generateCpp(nThreads_arg, symTab),
+             '));'),
+      paste0(eval(call("AsIs", code, symTab), envir = genCppEnv), ';'),
+      '}', collapse = '\n')
   }
 )

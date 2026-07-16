@@ -12,6 +12,8 @@ returnTypeCodes <- list(
   promoteToDoubleOrAD = 6L,
   promoteNoLogical = 7L)
 
+liftedBlockOperatorsArg <- c("parallel_for" = 3, "parallel_reduce" = 1) # These are used for flagging when methods in lifted code block will need to have their object reference them explicitly via `obj__.<methodname>`. The values are the argID where the method needs to occur.
+
 returnTypeString2Code <- function(returnTypeString) {
   if(is.character(returnTypeString))
     do.call('switch', c(list("double"), returnTypeCodes))
@@ -163,6 +165,16 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'nClass_method_in_lifted', # This is used for local method calls in the body of lifted code blocks (currently `parallel_{for,reduce}`).
+  list(
+    labelAbstractTypes = list(
+      handler = 'nFunction_or_method_call'),
+    cppOutput = list(
+      handler = 'nClass_method_in_lifted')
+  )
+)
+
+assignOperatorDef(
   'custom_default',
   list(
     labelAbstractTypes = list(
@@ -238,6 +250,10 @@ updateOperatorDef(
   c('nMatrix', 'nArray'),
   'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
 )
+updateOperatorDef(
+  'nMatrix',
+  'matchDef', val = function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {}
+)
 
 assignOperatorDef(
   'type_is',
@@ -301,20 +317,26 @@ assignOperatorDef(
 assignOperatorDef(
   c('parallel_for'),
   list(
+    matchDef = function(index, range, body, copyVars, shareVars, nThreads=0) {},
     labelAbstractTypes = list(
       handler = 'ParallelFor'),
     finalTransformations = list(
-      handler = "ParallelFor") ## Creates GeneralFor in the parallel_loop_body class
+      handler = "ParallelFor"), ## Creates GeneralFor in the parallel_loop_body class
+    cppOutput = list(
+      handler = 'ParallelExpr')  
   )
 )
 
 assignOperatorDef(
   c('parallel_reduce'),
-  list(
+  list(  
+    matchDef = function(operator, object, init, nThreads=0) {},
     labelAbstractTypes = list(
       handler = 'ParallelReduce'),
     finalTransformations = list(
-      handler = 'ParallelReduce')
+      handler = 'ParallelReduce'),
+    cppOutput = list(
+      handler = 'ParallelExpr')      
   )
 )
 
@@ -554,9 +576,11 @@ assignOperatorDef(
           )
         ),
         cppOutput = list(
-          handler = 'BinaryOrUnary')
+          handler = 'BinaryOrUnary'),
+        reduction = 0
     )
 )
+updateOperatorDef('-', 'reduction', val = NULL)
 
 assignOperatorDef(
   c('inprod'),
@@ -603,11 +627,13 @@ assignOperatorDef(
     labelAbstractTypes = list(
         handler = 'BinaryCwise',
         returnTypeCode = returnTypeCodes$promoteNoLogical),
-    cppOutput = list()
+    cppOutput = list(),
+    reduction = Inf
   )
 )
 updateOperatorDef('pairmax', 'cppOutput', 'cppString', 'std::max')
 updateOperatorDef('pairmin', 'cppOutput', 'cppString', 'std::min')
+updateOperatorDef('pairmax', 'reduction', val = -Inf)
 
 assignOperatorDef(
   c('pmin', 'pmax'),
@@ -984,7 +1010,8 @@ assignOperatorDef(
       )
     ),
     cppOutput = list(
-      handler = 'MidOperator')
+      handler = 'MidOperator'),
+    reduction = 1
   )
 )
 

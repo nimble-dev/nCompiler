@@ -258,16 +258,15 @@ cpp_nClassClass <- R6::R6Class(
     buildParallelClassDefs = function() {
       for(i in seq_along(Compiler$NFcompilers)) {
         parallelContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelContent
-        if(!is.null(parallelContent)) {
-          for(j in seq_along(parallelContent)) {
-            cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
+        if(length(parallelContent)) {
+            for(j in seq_along(parallelContent)) {
+             cppDef_TBB <- cppParallelBodyClass$new(loop_body = parallelContent[[j]]$args[[3]],
                                                    loop_var = parallelContent[[j]]$args[[1]],
                                                    symbolTable = memberCppDefs[[i]]$code$symbolTable,
-                                                   copyVars = parallelContent[[j]]$args[[4]],
-                                                   noncopyVars = parallelContent[[j]]$args[[5]])
-            ## The name is hard-wired expecting only a single case of parallel content.
-            ## TO-DO: generalize the name with unique identifier.
-            self$memberCppDefs[["parallel_loop_body"]] <<- cppDef_TBB
+                                                   copyVars = parallelContent[[j]]$args[['copyVars']],
+                                                   noncopyVars = parallelContent[[j]]$args[['shareVars']],
+                                                   aux = parallelContent[[j]]$aux)
+            self$memberCppDefs[[parallelContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
         }
         parallelReduceContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelReduceContent
@@ -282,12 +281,12 @@ cpp_nClassClass <- R6::R6Class(
               loop_var = parallelReduceContent[[j]]$args[[1]],
               symbolTable = memberCppDefs[[i]]$code$symbolTable,
               copyVars = list(),
-              noncopyVars = list(parallelReduceContent[[j]]$args[[4]],
-                                 parallelReduceContent[[j]]$args[[5]])
-            )
-            ## The name is hard-wired expecting only a single case of parallel content.
-            ## TO-DO: generalize the name with unique identifier.
-            self$memberCppDefs[["parallel_reduce_body"]] <<- cppDef_TBB
+              noncopyVars = as.list(c(parallelReduceContent[[j]]$args[['input']],
+                                      parallelReduceContent[[j]]$args[['output']],
+                                      parallelReduceContent[[j]]$args[['nClass_object']])),              
+              aux = parallelReduceContent[[j]]$aux,
+              lastUse = (j == length(parallelReduceContent)))
+            self$memberCppDefs[[parallelReduceContent[[j]]$aux$bodyName]] <<- cppDef_TBB
           }
         }
       }

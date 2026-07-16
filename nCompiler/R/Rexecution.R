@@ -14,6 +14,18 @@ parallel_for <- function(index, range, body, ...) {
 
 #' @export
 parallel_reduce <- function(f, x, init, ...) {
+  if(is.character(f)) {  # Not clear how to convert to char ...
+    operatorDef <- operatorDefEnv[[f]]
+    if(!is.null(operatorDef) && is.null(operatorDef$reduction))
+        stop("`", f, "` is not a valid reduction function/operator")
+  }
+  if(missing(init)) {
+    if(!is.character(f) || is.null(operatorDef) || is.null(operatorDef$reduction))
+      stop("`init` argument is missing and no default value provided for reduction function/operator")
+    init <- operatorDef$reduction
+  }
+  if(identical(f, "pairmin")) f <- "pmin"
+  if(identical(f, "pairmax")) f <- "pmax"
   Reduce(f, x, init)
 }
 
@@ -406,18 +418,18 @@ nRep <- function(x, ...) {
 }
 
 #' Sequence Generation
-#'
+#' 
 #' In a \code{nFunction}, \code{nSeq} is (mostly) equivalent to \code{base::seq}
 #'
-#' @details This function is similar to R's \code{\link{seq}} function, but
-#'   can be used in a nFunction and compiled using \code{nCompile}.
-#'
+#' @details This function is similar to R's \code{\link{seq}} function, but 
+#'   can be used in a nFunction and compiled using \code{nCompile}.  
+#' 
 #' @param from the starting value of the sequence.
-#'
+#' 
 #' @param to the ending value of the sequence.
-#'
+#' 
 #' @param by increment of the sequence
-#'
+#' 
 #' @param length.out desired length of the sequence
 #'
 #' @details
@@ -428,7 +440,6 @@ nRep <- function(x, ...) {
 #' There are no nCompiler versions of \code{seq.int}, \code{seq_along} or \code{seq_len}.
 
 #' @export
-#'
 nSeq <- function(...) {
   base::seq(...)
 }
@@ -513,6 +524,6 @@ nVar <- function(x) {
 #' Wrapper for sd
 #'
 #' @export
-nSd <- function(x) {
-  sd(x)
+nSd <- function(x) { 
+  sd(x) 
 }

@@ -320,9 +320,16 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       ## TO-DO: Check for exactly 2 arguments
       # Special handling for "new"
+      
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo,
                                             useArgs = c(TRUE, FALSE))
+
+      # We need to handle `self$` differently in parallel body code
+      # as the code is lifted out of the class method in a new class.
+      if(isTRUE(auxEnv$inParallelBody) && code$args[[1]]$name == "self")
+        code$args[[1]]$name <- "liftedSelf"
+
       ## TO-DO: Check that LHS type is symbolNC or symbolNCgenerator
       ## TO-DO: Improve these error messages
       if(inherits(code$args[[1]]$type, "symbolNCgenerator")) {
@@ -574,7 +581,7 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
-  InitData <- function(code, symTab, auxEnv, handlingInfo) {
+    InitData <- function(code, symTab, auxEnv, handlingInfo) {
     ## TODO: handle 'init' arg
     ## defaults:
     ## n{Numeric|Integer|Logical}(length = 0, value = 0, init = TRUE)
@@ -770,11 +777,12 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 5) 
+    if(length(code$args) < 3 || !identical(names(code$args)[1:3],
+                                               c('index','range','body')))
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelFor:',
-              'expected 5 arguments to a parallel_for-loop')), call. = FALSE)
+              'expected arguments `index`, `range`, and `body` to a parallel_for-loop')), call. = FALSE)
     ## first handle type of the indexing variable
     if(!inherits(code$args[[2]], 'exprClass'))
       stop(
@@ -794,71 +802,145 @@ inLabelAbstractTypesEnv(
     if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
       if (TRUE) 
         symTab$addSymbol(code$args[[1]]$type)
-
-    ## Now the 3rd arg, the body of the loop, can be processed
+        
+    ## Now the 3rd arg, the body of the loop, can be processed.
+    ## For now, we will handle local vars in body as `copyVars` that become vars
+    ## in the encompassing method, but consider setting up local symbol table for
+    ## the loop body with the loop body C++ function declaring its own variables.
+    auxEnv$inParallelBody <- TRUE  # Needed for replacement of `self`.
+    symbolsNoBody <- symTab$getSymbolNames()
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
+    auxEnv$inParallelBody <- NULL
     
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
+
+    symbols <- symTab$getSymbolNames()
+    code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
+
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
+    
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )
 
 inLabelAbstractTypesEnv(
   ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
-    if (length(code$args) != 3)
+    inserts <- NULL
+    if(is.null(symTab$parentST))   #  TODO: this seems kludgey and perhaps should be done at a different processing stage.
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In labelAbstractTypes handler ParallelReduce: ',
+               'parallel_reduce must be used in a method of an nClass, not in a stand-alone nFunction.')),
+        call. = FALSE)          
+    operatorDef <- operatorDefEnv[[code$args[['operator']]$name]]
+    if (code$args[['operator']]$name != '$' && !is.null(operatorDef) && is.null(operatorDef$reduction))   # Check for validity only for our operators.
+    # TODO: perhaps this should just be a warning.        
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0('In labelAbstractTypes handler ParallelReduce: ',
+               'function/operator `', code$args[['operator']]$name, '` is not a valid reduction function/operator.')),
+        call. = FALSE)
+    if (length(code$args) < 3 || !'operator' %in% names(code$args) || !'object' %in% names(code$args))
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected 3 arguments but got', length(code$args))),
+              'unexpected arguments -- at least two arguments (`operator` and `object`) are required.')),
         call. = FALSE)
-    ## process the initial value
-    inserts <- compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv)
-    if (code$args[[3]]$type$nDim != 0)
+    if(code$args[['operator']]$isName) {  ## Handle reduction function as function not char.        
+      code$args[['operator']]$isName <- FALSE
+      code$args[['operator']]$isLiteral <- TRUE
+      code$args[['operator']]$Rexpr <- deparse(code$args[['operator']]$Rexpr)
+    }
+    ## Process the reduce operator.
+    if (isTRUE(code$args[['operator']]$isLiteral)) {
+      if (!is.character(code$args[['operator']]$name))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'do not know how to use a reduce operator of type',
+                typeof(code$args[['operator']]$name))),
+          call. = FALSE)
+      code$args[['operator']]$isLiteral <- FALSE
+      code$args[['operator']]$isCall <- TRUE
+    }
+    if(code$args[['operator']]$name == "$") {
+      if(code$args[['operator']]$args[[1]]$name == "$")
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste('In labelAbstractTypes handler ParallelReduce:',
+                'too many levels of class hierarchy in reduction operator',
+                deparse(code$args[['operator']]$Rexpr))),
+          call. = FALSE)  
+      code$args[['operator']] <- wrapInExprClass(code$args[['operator']], 'chainedCall')
+      auxEnv$inParallelBody <- TRUE  # Needed for replacement of `self`.
+      inserts <- c(inserts, compile_labelAbstractTypes(code$args[['operator']], symTab, auxEnv))
+      auxEnv$inParallelBody <- NULL
+    }
+    
+    ## Give reduce operator the same return type as the input vector.
+    ## TODO: Maybe symbolNF is the right type for the reduction op.
+    code$args[['operator']]$type <-
+      symbolBasic$new(name = code$args[['operator']]$name,
+                      nDim = 0, type = code$args[['object']]$type$type)
+    ## Process the vector arg.
+    ## TODO: we want to handle if vector is an expression (including obj$x),
+    ## presumably by lifting.
+    if(!code$args[['object']]$isName)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'vector argument for parallel_reduce must be a variable, but found an expression `',
+              deparse(code$args[['object']]$Rexpr),
+              '`. Please create a temporary variable to use as the second argument.')),
+        call. = FALSE)
+            
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['object']], symTab, auxEnv))
+    if (code$args[['object']]$type$nDim != 1)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              'expected the `object` argument to be a vector but got nDim = ',
+              code$args[['object']]$type$nDim)),
+        call. = FALSE)
+    code$type <- symbolBasic$new(name = code$name, nDim = 0,
+                                 type = code$args[['object']]$type$type)
+
+
+    ## Process the initial value.
+    if(!'init' %in% names(code$args) && !is.null(operatorDef$reduction))
+      setArg(code, 'init', nParse(operatorDef$reduction), add = TRUE)
+    if(!'init' %in% names(code$args))
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste('In labelAbstractTypes handler ParallelReduce:',
+              '`init` argument not provided and no default `init` is available for the operator')),
+        call. = FALSE)
+            
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['init']], symTab, auxEnv))
+    if (code$args[['init']]$type$nDim != 0)
       stop(exprClassProcessingErrorMsg(
         code,
         paste('In labelAbstractTypes handler ParallelReduce:',
               'initial value for parallel_reduce should be scalar but got',
               ' nDim = ', code$args[[3]]$type$nDim)),
         call. = FALSE)
-    if (isFALSE(code$args[[3]]$isLiteral))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'initial value for parallel_reduce must be a literal')),
-        call. = FALSE)
-    ## process the reduce operator
-    if (isTRUE(code$args[[1]]$isLiteral)) {
-      if (!is.character(code$args[[1]]$name))
+    if (isFALSE(code$args[['init']]$isLiteral)) {
+      if(!(code$args[['init']]$name == "-" && isTRUE(code$args[['init']]$args[[1]]$isLiteral)))  # Handle negative init.
         stop(exprClassProcessingErrorMsg(
           code,
           paste('In labelAbstractTypes handler ParallelReduce:',
-                'do not know how to use a reduce operator of type',
-                typeof(code$args[[1]]$name))),
+                'initial value for parallel_reduce must be a literal value, not a variable or expression')),
           call. = FALSE)
-      code$args[[1]]$isLiteral <- FALSE
-      code$args[[1]]$isCall <- TRUE
     }
-    ## give reduce operator the same return type as the initial value
-    ## TODO: Maybe symbolNF is the right type for the reduction op.
-    code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[3]]$type$type)
-    ## finish by processing the vector arg
-    inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
-    if (code$args[[2]]$type$nDim != 1)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected the second argument to be a vector but got nDim = ',
-              code$args[[2]]$type$nDim)),
-        call. = FALSE)
-    code$type <- symbolBasic$new(name = code$name, nDim = 0,
-                                 type = code$args[[3]]$type$type)
-    
+       
+
+    inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
+
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
+  
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )

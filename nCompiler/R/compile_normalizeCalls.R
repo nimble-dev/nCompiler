@@ -1,3 +1,9 @@
+## Special cases placed here by analogy with `eigenizeUseArgs`,
+## but perhaps should be in handler list.
+normalizeCallsFunctionArgs <- list(
+    parallel_reduce = 1
+)
+
 normalizeCallsEnv <- new.env()
 normalizeCallsEnv$.debug <- FALSE
 
@@ -24,9 +30,19 @@ compile_normalizeCalls <- function(code,
   logging <- get_nOption('compilerOptions')[['logging']]
   if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
 
-  if(code$isLiteral) return(NULL)
-  if(code$isName) return(NULL)
-  if(code$isCall) {
+  ## Handle arguments that are functions (`parallel_reduce`).
+  ## Do this by looking for parallel_reduce as the caller rather than as the call
+  ## so that other args are handled as usual.
+  fxnArg <- NULL
+  if(!is.null(code$caller)) {
+    fxnArg <- normalizeCallsFunctionArgs[[code$caller$name]]
+    if(!is.null(fxnArg) && fxnArg != code$callerArgID)
+      fxnArg <- NULL
+  }
+  
+  if(code$isLiteral && is.null(fxnArg)) return(NULL)
+  if(code$isName && is.null(fxnArg)) return(NULL)
+  if(code$isCall || !is.null(fxnArg)) {
     if(code$name == '{') {
       ## recurse over lines
       for(i in seq_along(code$args)) {
@@ -88,13 +104,15 @@ compile_normalizeCalls <- function(code,
       return(NULL)
     }
 
-    opDef <- cachedOpInfo$opDef
-    matchDef <- opDef[["matchDef"]]
-    if(is.null(matchDef))
-      matchDef <- cachedOpInfo$obj_internals$default_matchDef
-    if(!is.null(matchDef)) {
-      exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
-      # code <- replaceArgInCaller(code, matched_code)
+    if(is.null(fxnArg)) {
+      opDef <- cachedOpInfo$opDef
+      matchDef <- opDef[["matchDef"]]
+      if(is.null(matchDef))
+        matchDef <- cachedOpInfo$obj_internals$default_matchDef
+      if(!is.null(matchDef)) {
+        exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
+        # code <- replaceArgInCaller(code, matched_code)
+      }
     }
     normalizeCallsEnv$recurse_normalizeCalls(code, symTab, auxEnv, handlingInfo)
   }
@@ -152,7 +170,9 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         obj <- NC_find_method(where, code$name, inherits=TRUE)
         if(!is.null(obj)) {
           if(isNF(obj)) {
-            cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            if(!checkForLiftedBody(code)) {  # Current lifted body cases are `parallel_{for,reduce}`.
+              cachedOpInfo$case <- "nClass method" # possibly disambiguate method from keyword
+            } else cachedOpInfo$case <- "nClass method in lifted"  # a method call in a code block that will be lifted out of the class def and wil
             cachedOpInfo$obj_internals <- NFinternals(obj)
             opDef <- cachedOpInfo$obj_internals$compileInfo$opDef # might be NULL
           } else {
@@ -213,6 +233,10 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
       if(cachedOpInfo$case == "nFunction" || cachedOpInfo$case == "nClass method") {
         opDef <- getOperatorDef("nFunction_default")
       }
+      if(cachedOpInfo$case == "nClass method in lifted") {
+        opDef <- getOperatorDef("nClass_method_in_lifted")
+      }
+      
     }
   }
   if(is.null(opDef)) {
@@ -234,3 +258,14 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
   code$aux$cachedOpInfo <- cachedOpInfo
   cachedOpInfo
 }
+
+checkForLiftedBody <- function(code) {
+  while(!is.null(code$caller)) {  # Caller needs to be in specific set of operators and method in particular argument.
+    if(code$caller$isCall && code$caller$name %in% names(liftedBlockOperatorsArg))
+      if(code$callerArgID %in% liftedBlockOperatorsArg[[code$caller$name]])
+       return(TRUE) else return(FALSE)
+    return(checkForLiftedBody(code$caller))
+  }
+  return(FALSE)
+}
+    
