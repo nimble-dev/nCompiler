@@ -182,7 +182,7 @@ test_that("user-defined reduction functions", {
         },
         returnType = 'numericScalar'
     )
-    
+    assign("reduction_fun", reduction_fun, envir = .GlobalEnv)
     
     nc <- nClass(
         Cpublic = list(
@@ -500,7 +500,12 @@ test_that("multiple reduction functions", {
     expect_identical(obj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
     expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
 
-    ## Nested case.
+    # Avoid issue perhaps caused by persistence of TBB arena/pool/global_control object,
+    # resulting in `longjmp causes uninitialized stack frame ***: terminated`
+    rm(Cnc, Cobj); gc()
+})
+
+test_that("nested reduction functions", {
     nc <- nClass(
         Cpublic = list(
             adder = nFunction(
