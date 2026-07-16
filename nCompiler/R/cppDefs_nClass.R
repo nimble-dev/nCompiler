@@ -270,10 +270,6 @@ cpp_nClassClass <- R6::R6Class(
           }
         }
         parallelReduceContent <- Compiler$NFcompilers[[i]]$auxEnv$parallelReduceContent
-        ## TODO: if there are multiple nFunctions in a class, they share the
-        ## auxEnv and as a result we'll find the parallelReduceContent even for
-        ## the wrong NFcompiler (and thus pass the wrong symbolTable to
-        ## cppParallelReduceBodyClass$new
         if(!is.null(parallelReduceContent)) {
           for(j in seq_along(parallelReduceContent)) {
             cppDef_TBB <- cppParallelReduceBodyClass$new(
