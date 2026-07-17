@@ -45,7 +45,7 @@ test_that("ETaccessor type works", {
         }
       )
     ),
-    compileInfo=list(interfaceMembers = c("s","v","m", "get"))
+    compileInfo=list(interfaceInclude = c("s","v","m", "get"))
   )
 
   cnc <- nCompile(nc)
@@ -60,38 +60,46 @@ test_that("ETaccessor type works", {
   rm(obj); gc()
 })
 
-test_that("obj[['x']] works like obj$x", {
-  nc <- nClass(
-    Cpublic = list(
-      x = 'numericVector'
-    )
-  )
-  nc2 <- nClass(
-    Cpublic = list(
-      nf = nFunction(
-        function(obj = 'nc') {
-          v <- obj[["x"]]
-          return(v)
-          returnType('numericVector')
-        }
-      )
-    )
-  )
-  for(mode in c("R","non-pkg", "pkg")) {
-    if(mode == "R") {
-      obj <- nc$new()
-      obj2 <- nc2$new()
-    } else {
-      package <- mode=="pkg"
-      comp <- nCompile(nc, nc2, package = package)
-      obj <- comp$nc$new()
-      obj2 <- comp$nc2$new()
-    }
-    obj$x <- c(1.2, 2.3)
-    expect_equal(obj2$nf(obj), obj$x)
-    rm(obj); gc()
-  }
-})
+## This test is disabled because we have for now
+## changed the design decision about how this should work
+## It should work like obj[[varName]] even if varName "x"
+## so that `[[` always returns the same type.
+## This is a real point of debate and may be reconsidered
+## again.
+## There was some problem encountered that led to this change.
+##
+## test_that("obj[['x']] works like obj$x", {
+##   nc <- nClass(
+##     Cpublic = list(
+##       x = 'numericVector'
+##     )
+##   )
+##   nc2 <- nClass(
+##     Cpublic = list(
+##       nf = nFunction(
+##         function(obj = 'nc') {
+##           v <- obj[["x"]]
+##           return(v)
+##           returnType('numericVector')
+##         }
+##       )
+##     )
+##   )
+##   for(mode in c("R","non-pkg", "pkg")) {
+##     if(mode == "R") {
+##       obj <- nc$new()
+##       obj2 <- nc2$new()
+##     } else {
+##       package <- mode=="pkg"
+##       comp <- nCompile(nc, nc2, package = package)
+##       obj <- comp$nc$new()
+##       obj2 <- comp$nc2$new()
+##     }
+##     obj$x <- c(1.2, 2.3)
+##     expect_equal(obj2$nf(obj), obj$x)
+##     rm(obj); gc()
+##   }
+## })
 
 
 test_that("obj[[var_name]] works", {

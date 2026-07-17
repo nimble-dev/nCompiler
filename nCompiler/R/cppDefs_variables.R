@@ -198,7 +198,7 @@ cppNcppVec <- function(name = character(),
 cppETaccBase <- function(name = character(), ...) {
   cppVarFullClass$new(name = name,
                       baseType = "std::unique_ptr",
-                      templateArgs = list("ETaccessorBase"), 
+                      templateArgs = list("ETaccessorBase"),
                       ...)
 }
 

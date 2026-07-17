@@ -284,6 +284,12 @@ test_that("nClass custom opDefs of 3 kinds works through a sequence of changes a
       }, argTypes=list(), returnType=quote(double())
   )
 
+  # compiling call_foo uses opDef for foo, which is in the nFunction's compileInfo
+  # This emits two messages and replaces foo with foo2, which is handled next.
+  # The foo2 opDef is in the nClass' compileInfo, and that emits a msg and replaces
+  # foo2 with foo3, which has a handler in the nClass and doesn't even exist
+  # as a method. This emits a message and replaces foo3 with foo4, which does
+  # not emit a message but does modify the genCpp stage so we get a specific bit of math.
   foo_class <- nClass(
     Cpublic = list(
       foo = foo,
@@ -318,4 +324,25 @@ test_that("nClass custom opDefs of 3 kinds works through a sequence of changes a
   obj <- comp$foo_class$new()
   expect_equal(obj$call_foo(), 10*3.4 + 4.5)
   rm(obj); gc()
+
+  cat("Need extension of custom opDefs in nClasses to work in obj$op() calls\n")
+
+  # Next check that the various opDefs above are used when called as obj$op() from another nFunction.
+  ## use_foo_class <- nFunction(
+  ##   function(my_foo_class = 'foo_class()') {
+  ##     res1 <- my_foo_class$foo()
+  ##     res2 <- my_foo_class$foo2()
+  ##     res3 <- my_foo_class$foo3()
+  ##     res4 <- my_foo_class$call_foo()
+  ##     return(res1)
+  ##     returnType("numericScalar")
+  ##   }
+  ## )
+
+  ## debug(nCompiler:::compile_labelAbstractTypes)
+  ## debug(nCompiler:::labelAbstractTypesEnv$ChainedCall)
+  ## debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
+  ## comp <- nCompile(use_foo_class, foo_class, foo)
+  ## my_foo_class <- comp$foo_class$new()
+  ## comp$use_foo_class()
 })

@@ -65,6 +65,14 @@ class genericInterfaceBaseC {
     return std::unique_ptr<ETaccessorBase>(nullptr);
   }
 
+  // return a named member that is itself a genericInterfaceBaseC-derived
+  // (nClass) object, as a shared_ptr to its generic interface base.
+  // Derived classes should provide valid implementations.
+  virtual std::shared_ptr<genericInterfaceBaseC> get_interface_ptr(const std::string &name) {
+    std::cout<<"Error: you should be in a derived genericInterfaceC class for get_interface_ptr"<<std::endl;
+    return nullptr;
+  }
+
   // return a named member converted to a SEXP.
   // Derived classes should provide valid implementations.
   virtual SEXP get_value(const std::string &name) const {
@@ -168,6 +176,9 @@ public:
   std::unique_ptr<ETaccessorBase> access(const std::string &name) override {
       return FirstFound::access(name);
   }
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr(const std::string &name) override {
+      return FirstFound::get_interface_ptr(name);
+  }
   SEXP get_value(const std::string &name) const override {
       return FirstFound::get_value(name);
   }
@@ -208,6 +219,9 @@ public:
   }
   std::unique_ptr<ETaccessorBase> access(const std::string &name) override {
       return FirstFound::access(name);
+  }
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr(const std::string &name) override {
+      return FirstFound::get_interface_ptr(name);
   }
   SEXP get_value(const std::string &name) const override {
       return FirstFound::get_value(name);

@@ -17,6 +17,16 @@ using namespace Rcpp;
 RESET_EIGEN_ERRORS
 return(true);
 }
+    int  nListBase_nClass::setLength ( int length ) {
+RESET_EIGEN_ERRORS
+std::cout<<"Compiled base class setLength should not be called."<<std::endl;;
+return(0.0);
+}
+    int  nListBase_nClass::getLength (  ) {
+RESET_EIGEN_ERRORS
+std::cout<<"Compiled base class getLength should not be called."<<std::endl;;
+return(0.0);
+}
       nListBase_nClass::nListBase_nClass (  ) {
 RESET_EIGEN_ERRORS
 }
@@ -37,7 +47,9 @@ NCOMPILER_INTERFACE(
 nListBase_nClass,
 NCOMPILER_FIELDS(),
 NCOMPILER_METHODS(
-method("ping", &nListBase_nClass::ping, args({{}}))
+method("ping", &nListBase_nClass::ping, args({{}})),
+method("setLength", &nListBase_nClass::setLength, args({{arg("length",copy)}})),
+method("getLength", &nListBase_nClass::getLength, args({{}}))
 )
 )
 #endif

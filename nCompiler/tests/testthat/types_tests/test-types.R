@@ -554,16 +554,53 @@ test_that("list arguments handled correctly",
 
 test_that("symbolTBD works",
 {
-  `:::`("nCompiler", "resetLabelFunctionCreators")()
+  nCompiler:::resetLabelFunctionCreators()
   nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
   )
-  sym_nc1 <- `:::`("nCompiler", "type2symbol")('nc1', 'nc1obj')
-  symTab <- `:::`("nCompiler", "symbolTableClass")$new()
+  sym_nc1 <- nCompiler:::type2symbol('nc1', 'nc1obj')
+  symTab <- nCompiler:::symbolTableClass$new()
   symTab$addSymbol(sym_nc1)
-  `:::`("nCompiler", "resolveTBDsymbols")(symTab)
+  nCompiler:::resolveTBDsymbols(symTab)
   expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
                "std::shared_ptr<nClass_1> nc1obj")
+
+  nCompiler:::resetLabelFunctionCreators()
+  nc1 <- nClass(
+      Cpublic = list(a = 'numericScalar')
+  )
+  sym_nc1 <- nCompiler:::type2symbol('nc1', 'nc1obj')
+  symTab <- nCompiler:::symbolTableClass$new()
+  symTab$addSymbol(sym_nc1)
+  project_env <- new.env()
+  project_env$known_nClasses <- new.env()
+  nCompiler:::resolveTBDsymbols(symTab, project_env = project_env)
+  expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
+               "std::shared_ptr<nClass_1> nc1obj")
+})
+
+test_that("symbolTBD works with a function from a call", {
+  nCompiler:::resetLabelFunctionCreators()
+  myenv <- new.env()
+  myenv$nc1 <- nClass(
+    Cpublic = list(a = 'numericScalar')
+  )
+  sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
+  res <- sym_nc1$resolveSym()
+  expect_true(inherits(res, "symbolNC"))
+  expect_equal(res$type, myenv$nc1$classname)
+
+  nCompiler:::resetLabelFunctionCreators()
+  myenv <- new.env()
+  myenv$nc1 <- nClass(
+      Cpublic = list(a = 'numericScalar')
+  )
+  sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
+  project_env <- new.env()
+  project_env$known_nClasses <- new.env()
+  res <- sym_nc1$resolveSym(project_env)
+  expect_true(inherits(res, "symbolNC"))
+  expect_equal(res$type, myenv$nc1$classname)
 })
 
 cat("\nSee test-types.R for notes on remaining issues to test.\n")

@@ -473,7 +473,8 @@ test_that("One predefined nClass can use another, separately and by inheritance,
 
     dir <- file.path(tempdir(), "use_predefined_nC_testdir2")
 
-    expect_no_error(comp <- with(my_defs,
+    expect_no_error(
+        comp <- with(my_defs,
                                  nCompile(use_foo, foo, foo_base,
                                           dir=dir,
                                           control=list(generate_predefined=TRUE),

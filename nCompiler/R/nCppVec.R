@@ -50,6 +50,32 @@ nListBase_nClass <- NLdevel %||% nClass(
         name = "ping",
         function() {return(TRUE); returnType(logical())},
         compileInfo = list(virtual=TRUE)
+    ),
+    setLength = nFunction(
+      name = "setLength",
+      function(length) {
+        stop("Uncompiled base class setLength should not be called.")
+      },
+      returnType = "integerScalar()",
+      compileInfo = list(
+        C_fun = function(length='integerScalar') {
+          cppLiteral('std::cout<<"Compiled base class setLength should not be called."<<std::endl;')
+          return(0)
+        },
+      virtual=TRUE)
+    ),
+    getLength = nFunction(
+      name = "getLength",
+      function() {
+        stop("Uncompiled base class getLength should not be called.")
+      },
+      returnType = "integerScalar()",
+      compileInfo = list(
+        C_fun = function() {
+          cppLiteral('std::cout<<"Compiled base class getLength should not be called."<<std::endl;')
+          return(0)
+        },
+      virtual=TRUE)
     )
   ),
   # See comment above about needing to ensure a virtual destructor
@@ -58,14 +84,24 @@ nListBase_nClass <- NLdevel %||% nClass(
                    createFromR = FALSE,
                    # Hincludes = paste0("<", file.path("nCompiler", "predef", "nList_", "nList_.h"),  ">"),
                    #needed_units = list("nListBase_nClass"),
+                   cpp_classname = "nListBase_nClass",
                    exportName = "nListBase_nClass_new",
-                   packageNames = c(uncompiled="nListBase_nClass", compiled="nListBase_nClass_C")
+                   packageNames = c(uncompiled="nListBase_nClass", compiled="nListBase_nClass_C"),
+                   overloadDefs = list(
+                    length = list(
+                      labelAbstractTypes = list(handler = nList_length_labelAbsTypes),
+                      eigenImpl = list(handler = 'PtrMethod', methodName = "getLength")
+                    ),
+                    "length<-" = list(
+                      labelAbstractTypes = list(handler = nList_length_labelAbsTypes ),
+                      eigenImpl = list(handler = 'LengthAssign', ptr=TRUE, methodName = "setLength")
+                    )
                    )
+  )
 )
 # Manually add
 # #include <nCompiler/predef/nList_/nList_.h>
 # to the nListBase_nClass header file after the class declaration.
-
 rm(NLdevel)
 
 #' @export
@@ -319,15 +355,16 @@ nList_nClass <- function(type, env = parent.frame()) {
           "[[<-" = list(
             labelAbstractTypes = list(handler = nList_doubleBracket_labelAbsTypes),
             eigenImpl = list(handler = 'PtrMethod', methodName = 'doubleBracket_set_cpp')
-          ),
-          length = list(
-            labelAbstractTypes = list(handler = nList_length_labelAbsTypes),
-            eigenImpl = list(handler = 'PtrMethod', methodName = "getLength")
-          ),
-          "length<-" = list(
-            labelAbstractTypes = list(handler = nList_length_labelAbsTypes ),
-            eigenImpl = list(handler = 'LengthAssign', ptr=TRUE, methodName = "setLength")
           )
+          # ,
+          # length = list(
+          #   labelAbstractTypes = list(handler = nList_length_labelAbsTypes),
+          #   eigenImpl = list(handler = 'PtrMethod', methodName = "getLength")
+          # ),
+          # "length<-" = list(
+          #   labelAbstractTypes = list(handler = nList_length_labelAbsTypes ),
+          #   eigenImpl = list(handler = 'LengthAssign', ptr=TRUE, methodName = "setLength")
+          # )
         )
       )
     ),

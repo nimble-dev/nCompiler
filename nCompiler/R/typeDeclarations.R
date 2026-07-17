@@ -28,13 +28,15 @@ nTypeSpec <- function(type = NULL) {
   }
   ## allow e.g. 'scalarInteger' to become scalarInteger()
   if(is.name(typeToUse)) {
+    funExpr <- typeToUse
     funName <- deparse(typeToUse)
     args <- list()
   } else {
-    funName <- deparse(typeToUse[[1]])
+    funExpr <- typeToUse[[1]]
+    funName <- deparse(funExpr)
     args <- typeToUse[-1] |> as.list()
   }
-  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter) |> 
+  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter, funExpr = funExpr) |> 
     structure(class = "nTypeSpec")
 }
 
@@ -822,32 +824,40 @@ typeList2symbolTable <- function(typeList,
 # take a type (quosure or ready to become one)
 # and look for NCgenerator or nClassBuilder
 check_unknown_types <- function(type, where = parent.frame(),
-                                project_env = new.env(), returnID = FALSE,
+                                project_env = NULL, returnID = FALSE,
                                 typeSpec = NULL) {
 
   ttype <- nCaptureType(type)
   if(is.null(typeSpec)) {
     typeSpec <- nTypeSpec(ttype)
   }
-  funName <- typeSpec$funName
   if(!identical(rlang::quo_get_env(ttype), emptyenv())) {
     where <- rlang::quo_get_env(ttype)
   }
-  candidate <- nGet(funName,
-                  where = where,
-                  project_env = project_env) # project_env should not be relevant but can be checked in case of trickiness
+  funName <- typeSpec$funName
+  funExpr <- typeSpec$funExpr
+  if(!is.name(funExpr)) {
+    candidate <- eval(funExpr, env = where)
+  } else {
+    candidate <- nGet(funName,
+                      where = where,
+                      project_env = project_env)
+  }
+  candidate2 <- NULL
   if(!isNCgenerator(candidate)) {
     candidate2 <- check_built_types(candidate = candidate,
             typeSpec = typeSpec, where = where,
             project_env = project_env,
             returnID = returnID)
-    if(returnID) return(candidate2) # candidate2 *can* be NULL.
+    if(returnID) return(candidate2) # candidate2 *can* be NULL. We are *checking*, not gauranteed we'll find one.
     candidate <- candidate2 %||% candidate
   }
   if(isNCgenerator(candidate)) {
     if(returnID) {
       return(NCinternals(candidate)$classID)
     }
+    if(is.null(candidate2) && !is.null(project_env))
+      register_known_nClass(candidate, project_env = project_env)
     # return(candidate)
   }
   candidate
@@ -856,15 +866,20 @@ check_unknown_types <- function(type, where = parent.frame(),
 check_built_types <- function(Rexpr = NULL, candidate = NULL,
                               typeSpec = NULL,
                               where = parent.frame(),
-                              project_env = new.env(), returnID = FALSE) {
+                              project_env = NULL, returnID = FALSE) {
   if(!is.null(Rexpr)) {
     if(!is.null(typeSpec)) {
       stop("In check_built_types, either Rexpr or typeSpec should be NULL.")
     }
     ttype <- nType(expr = Rexpr, env = where)
     typeSpec <- nTypeSpec(ttype)
-    if(!is.null(candidate))
+    if(is.null(candidate))
+    funExpr <- typeSpec$funExpr
+    if(!is.name(funExpr)) {
+      candidate <- rlang::eval(funExpr, env = where)
+    } else {
       candidate <- nGet(typeSpec$funName, where = where) #project_env not useful here
+    }
   }
 
   if(inherits(candidate, "nClassBuilder")) {
@@ -872,10 +887,18 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     args2 <- c(args, .ID=TRUE)
     ID <- do.call(candidate, args2, envir = where) # get the classID for this type
     if(returnID) return(ID)
-    NCgen <- project_env$built_types[[ID]]
+    NCgen <- NULL
+    nClass_info <- 
+      if(!is.null(project_env)) project_env$known_nClasses[[ID]]
+      else NULL    
+    if(!is.null(nClass_info)) {
+      NCgen <- nClass_info$NCgenerator
+    }
     if(is.null(NCgen)) {
       NCgen <- do.call(candidate, args, envir = where) # get the NCgenerator for this type
-      project_env$built_types[[ID]] <- NCgen
+      if(!is.null(project_env))
+        register_known_nClass(NCgen, project_env = project_env, classID = ID)
+      # project_env$built_types[[ID]] <- NCgen
     }
     ##cpp_classname <- NCinternals(NCgen)$cpp_classname
     ##list(NCgen) |> setNames(cpp_classname)
@@ -897,14 +920,14 @@ type2cpp_typename <- function(type, where = parent.frame()) {
 }
 
 resolveOneTBDsymbol <- function(symbol, env = parent.frame(),
-                                project_env = new.env()) {
+                                project_env = NULL) {
   symbol <- symbol$resolveSym(project_env = project_env)
   symbol #return unmodified symbol if nothing to do
 }
 
 resolveTBDsymbols <- function(symTab,
                               env = parent.frame(),
-                              project_env = new.env()) {
+                              project_env = NULL) {
   for(i in seq_along(symTab$symbols)) {
     symTab$symbols[[i]] <- resolveOneTBDsymbol(symTab$symbols[[i]], env, project_env)
   }

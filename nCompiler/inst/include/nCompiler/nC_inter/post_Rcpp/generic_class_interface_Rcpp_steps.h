@@ -207,6 +207,15 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
     return (access->second->ETaccess(this));
   }
 
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr(const std::string &name) {
+    name2access_type::iterator access = name2access.find(name);
+    if(access == name2access.end()) {
+      std::cout<<"Problem: \""<<name<<"\" is not a field in this nClass."<<std::endl;
+      return nullptr;
+    }
+    return (access->second->getInterfacePtr(this));
+  }
+
   // SEXP& value(const std::string &name) {
   //   name2access_type::iterator access = name2access.find(name);
   //   access->second;
