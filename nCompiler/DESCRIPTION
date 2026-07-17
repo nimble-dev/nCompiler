@@ -46,6 +46,7 @@ Collate:
     cppDefs_TBB.R
     cppDefs_variables.R
     developerTools.R
+    distributions_implementations.R
     symbolTable.R
     symbolTableClass.R
     symbolTable_utils.R
