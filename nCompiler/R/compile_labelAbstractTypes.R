@@ -818,6 +818,9 @@ inLabelAbstractTypesEnv(
     symbols <- symTab$getSymbolNames()
     code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
 
+    symbols <- symTab$getSymbolNames()
+    code$aux$localVars <- symbols[!symbols %in% symbolsNoBody]
+
     ## I think there shouldn't be any inserts returned since the body should be a bracket expression.
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[['nThreads']], symTab, auxEnv))
     
@@ -940,7 +943,7 @@ inLabelAbstractTypesEnv(
 
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
-  
+
     return(if (length(inserts) == 0) invisible(NULL) else inserts)
   }
 )

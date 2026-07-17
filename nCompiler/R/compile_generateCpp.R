@@ -742,3 +742,17 @@ inGenCppEnv(
       '}', collapse = '\n')
   }
 )
+
+inGenCppEnv(
+  ParallelExpr <- function(code, symTab) {
+    nThreads_arg <- removeArg(code, 3)
+    paste0('{',
+           "depth_counter mydc;",   ## This increments TBB_DEPTH and destructor will decrement.
+           paste0('tbb::global_control gc(tbb::global_control::max_allowed_parallelism, getNumThreads(',
+                  compile_generateCpp(nThreads_arg, symTab),
+                  '));'),
+           AsIs(code, symTab),
+           ';}',
+           collapse = '\n')
+  }
+)

@@ -191,7 +191,6 @@ inFinalTransformationsEnv(
       code$aux$localMethods <- nm else code$aux$localMethods <- character(0)
       
     code$aux$class <- auxEnv$where$classname
-
     code$aux$bodyName <- parallelReduceBodyLabelMaker()
     ## remove the vector, initial value, and nThreads args and save for later
     vector_arg <- removeArg(code, 'object')

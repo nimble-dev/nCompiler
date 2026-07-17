@@ -1,10 +1,13 @@
 inline int getNumThreads(double value_) {
+  static int nThreads_nOption=0;   // This variable is preserved across calls.
+  if(TBB_DEPTH==1) {   // Avoid calls to R API within threads.
+     Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
+     Rcpp::Function get_nOption = nc["get_nOption"];
+     nThreads_nOption=Rcpp::as<int>(get_nOption("nThreads"));
+  }
   int value = (int) value_;
-  Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
-  Rcpp::Function get_nOption = nc["get_nOption"];
-  int option_value = Rcpp::as<int>(get_nOption("nThreads"));
-  if (option_value > 0)
-    value = option_value;
+  if (nThreads_nOption > 0)
+    value = nThreads_nOption;
   if(value == 0)
     value = 100000;
   return value;

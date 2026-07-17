@@ -46,7 +46,7 @@ global_R_interface_cppDef <-
       "    get_genericInterfaceBaseC(Xptr);\n",
       "  //  std::cout << name << std::endl;\n",
       "  return(obj->call_method( name, Sargs ));\n",
-      "}\n"),
+      "};\n"),
     name = "R_interfaces"
   )
 
