@@ -1172,3 +1172,89 @@ test_that("nList compiled: set_all_values from uncompiled nList", {
   for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
   rm(src, obj); gc()
 })
+
+test_that("nList ETaccess at C++ level works", {
+  nc_inner <- nClass(
+    Cpublic = list(x = "numericScalar")
+  )
+  NL1 = nList(nc_inner())
+  NL2 = nList("numericVector()")
+
+  nc_outer <- nClass(
+    classname = "nc_outer",
+    Cpublic = list(
+      NLinner = "NL1",
+      NLvec  = "NL2",
+      nc_outer = nFunction(
+        function() {
+          NLinner <<- NL1$new()
+          NLvec <<- NL2$new()
+          length(NLinner) <- 2
+          length(NLvec) <- 2
+          NLinner[[2]] <- nc_inner$new()
+          NLvec[[2]] <- 1:3
+        },
+        compileInfo = list(constructor = TRUE)
+      ),
+      check1 = nFunction(
+        function() {
+        },
+        returnType = "numericVector()",
+        compileInfo = list(
+          C_fun = function() {
+            nCpp("acc = NLvec->access_at(2-1)", types = list(acc = "ETaccessor"))
+            ans <- nAs(acc, "numericVector()")
+            return(ans)
+          }
+        )
+      ),
+      check2 = nFunction(
+        function() {
+        },
+        returnType = "numericVector()",
+        compileInfo = list(
+          C_fun = function() {
+            ## expect error from this
+            nCpp("acc = NLinner->access_at(2-1)", types = list(acc = "ETaccessor"))
+            ans <- nAs(acc, "numericVector()")
+            return(ans)
+          }
+        )
+      ),
+      check3 = nFunction(
+        function() {
+        },
+        returnType = "SEXP",
+        compileInfo = list(
+          C_fun = function() {
+            nCpp("ptr = NLinner->get_interface_ptr_at(2-1)", types = list(ptr = "nCpp('std::shared_ptr<genericInterfaceBaseC>')"))
+            nCpp("ans = ptr->get_value(\"x\")", types = list(ans = "SEXP"))
+            return(ans)
+          }
+        )
+      ),
+      check4 = nFunction(
+        function() {
+        },
+        returnType = "SEXP",
+        compileInfo = list(
+          C_fun = function() {
+            ## expect error
+            nCpp("ptr = NLvec->get_interface_ptr_at(2-1)", types = list(ptr = "nCpp('std::shared_ptr<genericInterfaceBaseC>')"))
+            nCpp("ans = ptr->get_value(\"x\")", types = list(ans = "SEXP"))
+            return(ans)
+          }
+        )
+      )
+    )
+  )
+
+  comp <- nCompile(nc_outer, nc_inner)
+  obj <- comp$nc_outer$new()
+  obj$NLvec |> as.list()
+  expect_equal(obj$check1(), 1:3)
+  expect_error(obj$check2())
+  obj$NLinner[[2]]$x <- 3
+  expect_equal(obj$check3(), 3)
+  expect_error(obj$check4())
+})

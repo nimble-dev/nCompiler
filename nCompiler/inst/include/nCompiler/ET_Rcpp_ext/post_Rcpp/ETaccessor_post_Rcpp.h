@@ -264,6 +264,10 @@ RuntimeFlatView<Scalar> ETaccessorBase::flatten(const std::vector<b__> &ss) {
 template<typename ERROR, bool copy=false>
 class ETaccessor : public ETaccessorTyped<double> {
   public:
+  // Assignment operators are never inherited: the compiler's implicit
+  // copy-assignment operator for this class would otherwise hide the
+  // virtual ETaccessorBase::operator=(SEXP), breaking `ETaccess(x) = SEXP`.
+  using ETaccessorBase::operator=;
   using ET = Eigen::Tensor<double, 0>;
   // I think to compile this all needs to be valid in terms of types but throw run-time errors everywhere.
   // It should never get past the constructor because that throws an error, but other errors are written
@@ -301,6 +305,8 @@ class ETaccessor : public ETaccessorTyped<double> {
 template<typename Scalar, int nDim, bool copy>
 class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Scalar> {
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   using ET = Eigen::Tensor<Scalar, nDim>;
   // using Scalar = typename ET::Scalar;
   typedef typename Eigen::internal::traits<ET>::Index Index;
@@ -337,6 +343,8 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim>, true> :
   private ETaccessorCopyHolder<Eigen::Tensor<Scalar, nDim>>,
   public ETaccessor<Eigen::Tensor<Scalar, nDim>, false> {
 public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   using ET = Eigen::Tensor<Scalar, nDim>;
   using Holder = ETaccessorCopyHolder<ET>;
   ETaccessor(const ET &obj_) : Holder(obj_), ETaccessor<ET, false>(Holder::obj_copy) {};
@@ -346,6 +354,8 @@ public:
 template<typename Scalar, bool copy=false>
 class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   ETaccessorScalar(Scalar &obj_) : obj(obj_) {};
   ~ETaccessorScalar() {};
   Scalar *data() override {return &obj;}
@@ -365,6 +375,8 @@ class ETaccessorScalar<Scalar, true> :
   private ETaccessorCopyHolder<Scalar>,
   public ETaccessorScalar<Scalar, false> {
 public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   using ET = ETaccessorScalar<Scalar, false>;
   using Holder = ETaccessorCopyHolder<Scalar>;
   ETaccessorScalar(const Scalar &obj_) : Holder(obj_), ET(Holder::obj_copy) {};
@@ -375,6 +387,8 @@ template<bool copy>
 class ETaccessor<double, copy> : public ETaccessorScalar<double, copy> {
   using Ref = std::conditional_t<copy, const double&, double&>;
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   ETaccessor(Ref obj_) : ETaccessorScalar<double, copy>(obj_) {};
   ~ETaccessor() {};
 };
@@ -383,6 +397,8 @@ template<bool copy>
 class ETaccessor<int, copy> : public ETaccessorScalar<int, copy> {
   using Ref = std::conditional_t<copy, const int&, int&>;
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   ETaccessor(Ref obj_) : ETaccessorScalar<int, copy>(obj_) {};
   ~ETaccessor() {};
 };
@@ -391,6 +407,8 @@ template<bool copy>
 class ETaccessor<bool, copy> : public ETaccessorScalar<bool, copy> {
   using Ref = std::conditional_t<copy, const bool&, bool&>;
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   ETaccessor(Ref obj_) : ETaccessorScalar<bool, copy>(obj_) {};
   ~ETaccessor() {};
 };

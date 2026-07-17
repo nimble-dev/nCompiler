@@ -12,6 +12,30 @@ public:
     virtual int getLength_() {
         return static_cast<int>(contents_.size());
     }
+
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr_at(int i) override {
+    if constexpr(is_shared_ptr<Element>::value) {
+      if constexpr(std::is_base_of_v<genericInterfaceBaseC, typename Element::element_type>) {
+        return std::dynamic_pointer_cast<genericInterfaceBaseC>(contents_.at(i));
+      } else {
+        Rcpp::stop("nList_::get_interface_ptr: Element's pointee type does not derive from genericInterfaceBaseC.");
+        return nullptr;
+      }
+    } else {
+      Rcpp::stop("nList_::get_interface_ptr: Element type is not a shared_ptr and has no generic interface.");
+      return nullptr;
+    }
+  }
+  std::unique_ptr<ETaccessorBase> access_at(int i) override {
+    if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor> ||
+                 std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return ETaccessPtr(contents_.at(i));
+    } else {
+      Rcpp::stop("nList_::access: Element type is not an Eigen::Tensor or scalar type and has no ETaccessor.");
+      return nullptr;
+    }
+  }
+
     size_t doubleBracket_inds_2_size_t(const Rcpp::RObject &inds, bool check_upper = true) {
       if (Rf_xlength(inds) != 1) {
         Rcpp::stop("single-bracket getter expects index of length 1");
