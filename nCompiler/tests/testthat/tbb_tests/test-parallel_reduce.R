@@ -313,7 +313,6 @@ test_that("user-defined reduction functions", {
     Cnc <- nCompile(nc, nc0)
     Cobj = Cnc[[1]]$new()
     expect_identical(Cobj$go(1:5), 15)
-<<<<<<< HEAD
 
     # Using `self`. Currently we can't handle `self$x` as the vector just as we can't handle `obj$x`.
     # We also can't handle the `init` not being a literal.
@@ -500,7 +499,6 @@ test_that("multiple reduction functions", {
     expect_identical(obj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
     expect_identical(Cobj$go(1:3, 4:7), sum(1:3)+3*sum(4:7))
 
-<<<<<<< HEAD
     # Avoid issue perhaps caused by persistence of TBB arena/pool/global_control object,
     # resulting in `longjmp causes uninitialized stack frame ***: terminated`
     rm(Cnc, Cobj); gc()
