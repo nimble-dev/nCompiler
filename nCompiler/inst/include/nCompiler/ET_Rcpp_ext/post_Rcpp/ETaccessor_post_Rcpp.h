@@ -446,4 +446,10 @@ ETaccessPtr(const T &x) {
 
 // end ETaccess
 
+template<typename Scalar, typename SStype>
+RuntimeFlatView<Scalar> makeRuntimeFlatView(std::unique_ptr<ETaccessorBase> &acc, 
+                                            const SStype &ss) {
+  return RuntimeFlatView<Scalar>(acc->template S<Scalar>().data(), acc->intDims(), ss);
+}
+
 #endif // NCOMPILER_ETACCESSOR_POST_RCPP_H_

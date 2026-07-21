@@ -175,7 +175,6 @@ symbolBasic <- R6::R6Class(
               FALSE)
       super$genCppVar(cType = cType)
     }
-
   )
 )
 

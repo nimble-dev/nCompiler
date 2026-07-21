@@ -104,7 +104,11 @@ public:
   RuntimeFlatView() : data_(nullptr) {}
   RuntimeFlatView(Scalar *data, RuntimeSubviewInfo info)
     : data_(data), info_(std::move(info)) {}
-
+  RuntimeFlatView(Scalar *data, const std::vector<int> &intDims, const std::vector<b__> &ss)
+    : data_(data), info_(RuntimeSubviewInfo(intDims, ss)) {}
+  template<typename vecT>
+  RuntimeFlatView(Scalar *data, const std::vector<int> &intDims, const std::vector<vecT> &ss)
+    : data_(data), info_(RuntimeSubviewInfo(intDims, vec_2_vecB__(ss))) {}
   long size() const { return info_.totalSize; }
   size_t nDim() const { return info_.nDim(); }
   const RuntimeSubviewInfo &info() const { return info_; }
