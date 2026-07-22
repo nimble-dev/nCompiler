@@ -486,6 +486,16 @@ update_known_nClasses <- function(new_units, new_unitTypes, project_env) {
 }
 
 register_known_nClass <- function(NCgenerator, project_env, classID = NULL) {
+  # project_env may be NULL when resolving a type outside of an nCompile() call,
+  # e.g. an nClassBuilder like nList() being called at nClass-definition time.
+  # In that case we use a scratch project_env so resolution can proceed; it is
+  # not cached or reused, so it costs one registration/inheritance walk and is
+  # thrown away (no different from the pre-existing uncached behavior in
+  # check_built_types() when project_env is NULL).
+  if(is.null(project_env)) {
+    project_env <- new.env()
+    project_env$known_nClasses <- new.env()
+  }
   # classID will be non-null when called to register a built type such as an nList.
   known_nClasses <- project_env$known_nClasses
   if(is.null(classID)) {

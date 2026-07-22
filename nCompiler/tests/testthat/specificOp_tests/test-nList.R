@@ -618,9 +618,12 @@ test_that("limits of T() notation vs {{}} in nested cases", {
   # then we see that by full use of rlang, with {{}}
   # to pass expressions with environments,
   # there is no problem
-  problem <- quote({  myt3 <- nType(double())
-  v7 <- nCompiler:::type2cpp_typename(nList({{myt3}}))})
+  problem <- quote({
+    myt3 <- nType(double())
+    v7 <- nCompiler:::type2cpp_typename(nList({{myt3}}))
+  })
   myenv <- new.env()
+  eval(problem, envir = myenv)
   expect_no_error(eval(problem, envir = myenv))
   expect_identical(myenv$v7, "std::shared_ptr<nList_D0>")
 })
