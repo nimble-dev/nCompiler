@@ -1,14 +1,13 @@
-
 ## How creating and passing around types works
-## The raw expression information of types is recorded 
-## in rlang quosures. The idiom for programming with 
+## The raw expression information of types is recorded
+## in rlang quosures. The idiom for programming with
 ## a type as an input is:
 ## function(type) {
 ##   ttype <- nCaptureType(type)
 ##   next_res <- foo({{ttype}})
 ## }
 ## This also means that the above function can be
-## called with with arguments like "type = numericVector()", 
+## called with with arguments like "type = numericVector()",
 ##. type = 'numericVector', or type = {{ type_var }},
 ## where type_var was either the result of nCaptureType
 ## a call like nType(numericVector()) or nType("numericVector")
@@ -36,7 +35,7 @@ nTypeSpec <- function(type = NULL) {
     funName <- deparse(funExpr)
     args <- typeToUse[-1] |> as.list()
   }
-  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter, funExpr = funExpr) |> 
+  list(funName = funName, args = args, inputAsCharacter = inputAsCharacter, funExpr = funExpr) |>
     structure(class = "nTypeSpec")
 }
 
@@ -140,7 +139,7 @@ nTypeList <- function(..., .list = NULL, .where = parent.frame()) {
 ## The next sections of code handle types to symbols
 ##
 
-## each entry in the typeDeclarationList
+## each entry in the typeDeclarationEnv
 ## gives a function to convert the arguments of a
 ## type declaration into a symbol object.
 
@@ -175,7 +174,7 @@ nSparseType <- function(scalarType, nDim, isRef = FALSE, ...) {
                    ...)
 }
 
-typeDeclarationList <- list(
+typeDeclarationEnv <- list2env(list(
   ref = function(internalType) {
     tIntT <- nCaptureType(internalType)
     ans <- type2symbol({{tIntT}},
@@ -439,10 +438,10 @@ typeDeclarationList <- list(
            call. = FALSE)
     nTypeBasic(scalarType, nDim)
   },
-  ## O(obj) allows a syntax for explicitly saying there is an object 
+  ## O(obj) allows a syntax for explicitly saying there is an object
   ## to look at for the type.
   O = function(x) {
-    typeDeclarationList$typeDeclarationFromObject(x)
+    typeDeclarationEnv$typeDeclarationFromObject(x)
   },
   CppVar = function(...) { # symbolBaseArgs will be passed to symbolBase$initialize
     symbolCppVar$new(...)
@@ -451,7 +450,7 @@ typeDeclarationList <- list(
     symbolCppVar$new(baseType = value, ...)
   },
   T = function(symbol) { ## This is semi-defunct but could be resurrected.
-    # The use of T(mytype) indicates that mytype evaluates to an 
+    # The use of T(mytype) indicates that mytype evaluates to an
     # existing type object in the evalEnv.
     # So this is a splice point between base R expression handling
     # and rlang.
@@ -466,7 +465,31 @@ typeDeclarationList <- list(
     #    symbol$clone(deep=TRUE)
   }
   ## universal handler for creating symbolBasic objects
-)
+))
+
+userTypeDeclarationEnv <- new.env(parent = typeDeclarationEnv)
+
+#' @export
+#' @importFrom R6 is.R6Class
+registerTypeDeclaration <- function(typeName, handler) {
+  if(R6::is.R6Class(handler)) {
+    handle_R6gen <- handler
+    handler <- function(...) {
+      handler_R6gen$new(...)
+    }
+  }
+  assign(typeName, handler, envir = userTypeDeclarationEnv)
+}
+
+#' @export
+deregisterTypeDeclaration <- function(typeName) {
+  rm(list = typeName, envir = userTypeDeclarationEnv) |> suppressWarnings()
+}
+
+getTypeDeclarationFun <- function(funName) {
+  userTypeDeclarationEnv[[funName]] %||%
+    typeDeclarationEnv[[funName]]
+}
 
 #' @export
 type2cpp <- function(...) {
@@ -476,11 +499,12 @@ type2cpp <- function(...) {
 quo_strip_quote <- \(qq) {
 #  qq <- q
   if(identical(rlang::quo_get_expr(qq), rlang::missing_arg())) return(qq)
-  e <- rlang::quo_get_expr(qq)  
+  e <- rlang::quo_get_expr(qq)
   e <- if(is.call(e) && deparse1(e[[1]])=="quote") e[[2]] else e
   rlang::quo_set_expr(qq, e)
 }
 
+#' @export
 type2symbol <- function(type,
                         name = character(),
                         origName = "",
@@ -496,7 +520,7 @@ type2symbol <- function(type,
   texplicitType <- nCaptureType(explicitType)
   ttype <- quo_strip_quote(ttype)
   texplicitType <- quo_strip_quote(texplicitType)
-  
+
   if(!is.null(explicitType)) {
 #    typeToUse <- explicitType
     ttypeToUse <- texplicitType
@@ -507,8 +531,8 @@ type2symbol <- function(type,
 
   # The idea here was to check if a symbol itself is provided,
   # but now using rlang quosures, we don't want to assume we
-  # can evaluate the type argument. 
-  # 
+  # can evaluate the type argument.
+  #
   ## First check if what was provided is actually a symbol, and if so return a copy.
   ## This could be restricted to inherits(typeToUse, "symbolBase")
   ## but "R6" allows an even wider range of flexibility.
@@ -537,7 +561,7 @@ type2symbol <- function(type,
     ##
     ## Case 2: It is a valid declaration
     funName <- typeSpec$funName # deparse(typeToUse[[1]])
-    handler <- typeDeclarationList[[funName]]
+    handler <- getTypeDeclarationFun(funName)
     if(!is.null(handler)) {
       symbol <- do.call(handler, typeSpec$args, envir = where) #as.list(typeToUse[-1]))
       symbol$name <- name
@@ -574,7 +598,7 @@ type2symbol <- function(type,
       # we evaluate the type and see if it (evaluated) is consistent with the explicitType.
       # It is not clear if this is really a good idea in all cases.
       #
-      # Because input could be a quosure already, we need for null based on 
+      # Because input could be a quosure already, we need for null based on
       # the expression of the quosure, which could be missing_arg or NULL.
       if(identical(rlang::quo_get_expr(texplicitType), rlang::missing_arg()) ||
           is.null(rlang::quo_get_expr(texplicitType)))
@@ -593,7 +617,7 @@ type2symbol <- function(type,
           else
             eval(rlang::quo_get_expr(ttype), envir=where)
             # eval(type, envir = evalEnv) # ttype is a quosure of a default value, since the type spec is in explicitType
-          checkSymbol <- typeDeclarationList[["typeDeclarationFromObject"]](checkObject)
+          checkSymbol <- typeDeclarationEnv[["typeDeclarationFromObject"]](checkObject)
           need_warning <- !identical(symbol$type, checkSymbol$type)
           ## If dimensions don't match, trigger an error...
           need_error <- !identical(as.integer(symbol$nDim),
@@ -640,7 +664,7 @@ type2symbol <- function(type,
         else
           eval(rlang::quo_get_expr(ttype), envir=where) # eval(type, envir = evalEnv)
         symbol <-
-          typeDeclarationList[["typeDeclarationFromObject"]](demoObject)
+          typeDeclarationEnv[["typeDeclarationFromObject"]](demoObject)
         symbol$name <- name
         symbol$isArg <- isArg
         if(isTRUE(isRef) | isTRUE(isBlockRef)) {
@@ -888,9 +912,9 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     ID <- do.call(candidate, args2, envir = where) # get the classID for this type
     if(returnID) return(ID)
     NCgen <- NULL
-    nClass_info <- 
+    nClass_info <-
       if(!is.null(project_env)) project_env$known_nClasses[[ID]]
-      else NULL    
+      else NULL
     if(!is.null(nClass_info)) {
       NCgen <- nClass_info$NCgenerator
     }
@@ -903,7 +927,7 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     ##cpp_classname <- NCinternals(NCgen)$cpp_classname
     ##list(NCgen) |> setNames(cpp_classname)
     NCgen
-  } else 
+  } else
     NULL
 }
 

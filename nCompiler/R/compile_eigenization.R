@@ -79,9 +79,10 @@ compile_eigenize <- function(code,
     if(isGeneric) {
       if(length(code$args) > 0) {
         arg1 <- code$args[[1]]
-        if(inherits(arg1$type, "symbolNC")) {
-          handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "eigenImpl", inherits=TRUE)
-        }
+        handlingInfo <- symbol_find_overload(arg1$type, code$name, "eigenImpl", inherits=TRUE)
+        # if(inherits(arg1$type, "symbolNC")) {
+        #   handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "eigenImpl", inherits=TRUE)
+        # }
       }
     }
     if(is.null(handlingInfo))

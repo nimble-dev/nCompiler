@@ -101,9 +101,10 @@ compile_generateCpp <- function(code,
   if(isGeneric) {
     if(length(code$args) > 0) {
       arg1 <- code$args[[1]]
-      if(inherits(arg1$type, "symbolNC")) {
-        handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "cppOutput", inherits=TRUE)
-      }
+      handlingInfo <- symbol_find_overload(arg1$type, code$name, "cppOutput", inherits=TRUE)
+      # if(inherits(arg1$type, "symbolNC")) {
+      #   handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "cppOutput", inherits=TRUE)
+      # }
       handler <- handlingInfo[['handler']]
     }
   }
@@ -115,22 +116,22 @@ compile_generateCpp <- function(code,
   #   handlingInfo <- opInfo[["cppOutput"]]
   #   if(!is.null(handlingInfo)) {
   #     handler <- handlingInfo$handler
-      if(!is.null(handler)) {
-        if (logging)
-          appendToLog(paste('Calling handler', handler, 'for', code$name))
-        if(is.function(handler))
-          res <- handler(code, symTab)
-        else
-          res <- eval(call(handler,
-                          code,
-                          symTab),
-                      envir = genCppEnv)
-        if (logging) {
-          appendToLog(paste('Finished handling', handler, 'for',
-                            code$name, 'with result:'))
-          appendToLog(res)
-        }
-        return(res)
+  if(!is.null(handler)) {
+    if (logging)
+      appendToLog(paste('Calling handler', handler, 'for', code$name))
+    if(is.function(handler))
+      res <- handler(code, symTab)
+    else
+      res <- eval(call(handler,
+                      code,
+                      symTab),
+                  envir = genCppEnv)
+    if (logging) {
+      appendToLog(paste('Finished handling', handler, 'for',
+                        code$name, 'with result:'))
+      appendToLog(res)
+    }
+    return(res)
       }
   #   }
   # }

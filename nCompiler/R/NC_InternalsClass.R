@@ -178,10 +178,19 @@ NC_InternalsClass <- R6::R6Class(
         # self$all_methodName_to_cpp_code_name <- c(self$orig_methodName_to_cpp_code_name[newMethodNames],
         #                                         self$inheritNCinternals$all_methodName_to_cpp_code_name)
         # self$allFieldNames <- c(self$allFieldNames_self, self$inheritNCinternals$allFieldNames)
+        # 
+        # copy inherited overloadDefs and then add or replace with any overloadDefs from this class.
+        # This should automatically create the hierarchy correctly.
+        overloadDefs <- parent_nClass_Info$inheritInfo$overloadDefs
+        new_overloadDefs <- self$compileInfo$overloadDefs
+        for(mN in names(new_overloadDefs)) {
+          overloadDefs[[mN]] <- new_overloadDefs[[mN]]
+        }
       } else {
         inheritInfo$allMethodNames <- self$allMethodNames_self
         inheritInfo$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
         inheritInfo$allFieldNames <- self$allFieldNames_self
+        inheritInfo$overloadDefs <- self$compileInfo$overloadDefs %||% list()
         symbolTable$setParentST(NULL)
       } 
       inheritInfo$process_inherit_done <- TRUE

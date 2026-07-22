@@ -7,18 +7,21 @@ symbolBase <- R6::R6Class(
     isRef = FALSE,
     isArg = FALSE,
     interface = TRUE,
+    overloadDefs = NULL,
     implementation = NULL,
     initialize = function(name = NULL,
                           type = character(),
                           isArg = FALSE,
                           isRef = FALSE,
                           interface = TRUE,
+                          overloadDefs = NULL,
                           implementation = NULL) {
       self$name <- name
       self$type <- type
       self$isArg <- isArg
       self$isRef <- isRef
       self$interface <- interface
+      self$overloadDefs <- overloadDefs
       self$implementation <- implementation
     },
     shortPrint = function() {
@@ -279,10 +282,13 @@ symbolTBD <- R6::R6Class(
       candidate <- self$check_unknown_types(returnID = FALSE,
                                             project_env = project_env)
       if(isNCgenerator(candidate)) {
+        # if check_unknown_types is updated to return the NC_info, then we can avoid this call to register_known_nClass
+        NC_info <- register_known_nClass(candidate, project_env = project_env)
         newSym <- symbolNC$new(name = self$name,
-                             type = NCinternals(candidate)$cpp_classname, # will this work for the type field??
-                             isArg = self$isArg,
-                             NCgenerator = candidate)
+                              type = NCinternals(candidate)$cpp_classname, # will this work for the type field??
+                              isArg = self$isArg,
+                              overloadDefs = NC_info$inheritInfo$overloadDefs,
+                              NCgenerator = candidate)
         return(newSym)
       } else {
         stop("In resolveSym method for symbolTBD (", self$name, ", ", self$type, "), could not resolve an nClass generator.")

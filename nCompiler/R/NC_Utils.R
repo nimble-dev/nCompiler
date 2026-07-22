@@ -96,31 +96,36 @@ NCinternals <- function(x) {
   x
 }
 
-NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
-  if(!isNCgenerator(NCgenerator))
-    stop("Input must be a nClass generator.")
-  current_NCgen <- NCgenerator
-  done <- FALSE
-  overload <- NULL
-  # If there is an overload, it will be at
-  # overloadDefs[[name]][[stage]]$handler
-  # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
-  while(!done) {
-    overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
-    if(!is.null(overloadDefs)) {
-      overload <- overloadDefs[[name]][[stage]]
-      done <- !is.null(overload)
-    }
-    if(!done) {
-      if(inherits)  {
-        current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
-        done <- !isNCgenerator(current_NCgen)
-      } else
-        done <- TRUE
-    }
-  }
-  overload
+symbol_find_overload <- function(symbol, name, stage, inherits=TRUE) {
+  overload <- symbol$overloadDefs[[name]][[stage]]
+  overload # may be NULL
 }
+
+# NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
+#   if(!isNCgenerator(NCgenerator))
+#     stop("Input must be a nClass generator.")
+#   current_NCgen <- NCgenerator
+#   done <- FALSE
+#   overload <- NULL
+#   # If there is an overload, it will be at
+#   # overloadDefs[[name]][[stage]]$handler
+#   # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
+#   while(!done) {
+#     overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
+#     if(!is.null(overloadDefs)) {
+#       overload <- overloadDefs[[name]][[stage]]
+#       done <- !is.null(overload)
+#     }
+#     if(!done) {
+#       if(inherits)  {
+#         current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+#         done <- !isNCgenerator(current_NCgen)
+#       } else
+#         done <- TRUE
+#     }
+#   }
+#   overload
+# }
 
 # Utility function to allow searching up an inheritance
 # ladder to find a method.

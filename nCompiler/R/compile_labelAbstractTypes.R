@@ -110,12 +110,16 @@ compile_labelAbstractTypes <- function(code,
         inserts <- labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv,
                                               handlingInfo, useArgs = c(TRUE, rep(FALSE, length(code$args)-1)))
         inserts <- NULL # highlighting that currently these are thrown out -- possibly a problem.
-        if(inherits(arg1$type, "symbolNC")) {
-          handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
-          if(!is.null(handlingInfo)) {
-            handler <- handlingInfo[['handler']]
-          }
+        handlingInfo <- symbol_find_overload(arg1$type, code$name, "labelAbstractTypes", inherits=TRUE)
+        if(!is.null(handlingInfo)) {
+          handler <- handlingInfo[['handler']]
         }
+        # if(inherits(arg1$type, "symbolNC")) {
+        #   handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
+        #   if(!is.null(handlingInfo)) {
+        #     handler <- handlingInfo[['handler']]
+        #   }
+        # }
       }
     }
     if(is.null(handlingInfo)) {
@@ -333,11 +337,14 @@ inLabelAbstractTypesEnv(
             code,
             'left-hand-side of `$new( )` is not an nClass generator (i.e. returned by a call to nClass).'
           ), call. = FALSE)
+        NCgen <- code$args[[1]]$type$NCgenerator
+        NC_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
         returnSym <- symbolNC$new(name = '',
                                   type = code$args[[1]]$type$name,
                                   isArg = FALSE,
-                                  NCgenerator = code$args[[1]]$type$NCgenerator)
-        newSym <- symbolNF$new(name = NCinternals(code$args[[1]]$type$NCgenerator)$cpp_classname,
+                                  overloadDefs = NC_info$inheritInfo$overloadDefs,
+                                  NCgenerator = NCgen)
+        newSym <- symbolNF$new(name = NCinternals(NCgen)$cpp_classname,
                                returnSym = returnSym)
         code$name <- 'construct_new_nClass'
         code$type <- newSym
@@ -547,7 +554,7 @@ inLabelAbstractTypesEnv(
           newExpr <- wrapExprClassOperator(
             code = arg,
             funName = 'nNumeric',
-            type = typeDeclarationList$nNumeric()
+            type = typeDeclarationEnv$nNumeric()
           )
           # set vector length
           insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
@@ -1204,7 +1211,7 @@ inLabelAbstractTypesEnv(
           newExpr <- wrapExprClassOperator(
             code = arg,
             funName = 'nNumeric',
-            type = typeDeclarationList$nNumeric()
+            type = typeDeclarationEnv$nNumeric()
           )
           # set vector length
           insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
@@ -1234,7 +1241,7 @@ inLabelAbstractTypesEnv(
         newExpr <- wrapExprClassOperator(
           code = arg,
           funName = 'nNumeric',
-          type = typeDeclarationList$nNumeric()
+          type = typeDeclarationEnv$nNumeric()
         )
         # set vector length
         insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
