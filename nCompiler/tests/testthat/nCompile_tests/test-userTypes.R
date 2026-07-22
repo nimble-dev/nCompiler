@@ -77,4 +77,37 @@ test_that("user type works", {
   nCompiler:::deregisterTypeDeclaration("mySym")
   obj <- nCompiler:::type2symbol("mySym")
   expect_true(inherits(obj, "symbolTBD"))
+
+  cat("A\n")
+
+  # provide the type as a symbol
+  foo2 <- nFunction(
+    function(x = 'numericVector') {
+      nCpp("xptr = &x[0];", type = list(xptr = mySymbolClass$new()))
+      x2 <- xptr[2] + 2
+      return(x2)
+      returnType(double())
+    }
+  )
+  output <- capture_output(cfoo2 <- nCompile(foo2))
+  expect_true(grepl("MSG1", output))
+  expect_true(grepl("MSG2", output))
+  expect_equal(cfoo2(3:4), 6)
+
+  cat("B\n")
+
+  # provide the type as a symbol in two steps
+  mySymType <- mySymbolClass$new()
+  foo3 <- nFunction(
+    function(x = 'numericVector') {
+      nCpp("xptr = &x[0];", type = list(xptr = "T(mySymType)"))
+      x2 <- xptr[2] + 2
+      return(x2)
+      returnType(double())
+    }
+  )
+  output <- capture_output(cfoo3 <- nCompile(foo3))
+  expect_true(grepl("MSG1", output))
+  expect_true(grepl("MSG2", output))
+  expect_equal(cfoo3(3:4), 6)
 })

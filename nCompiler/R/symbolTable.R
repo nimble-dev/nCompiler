@@ -356,13 +356,21 @@ symbolNC <- R6::R6Class(
                           type,
                           NCgenerator,
                           isArg,
+                          overloadDefs = NULL,
                           implementation = NULL) {
-      self$name <- name
-      self$type <- type
+      super$initialize(name = name,
+                       type = type,
+                       isArg = isArg,
+                       overloadDefs = overloadDefs,
+                       implementation = implementation)
+#      self$name <- name
+#      self$type <- type
       self$NCgenerator <- NCgenerator
-      self$isArg <- isArg
+#      self$overloadDefs <- overloadDefs
+#      self$isArg <- isArg
+#      self$overloadDefs <- overloadDefs
 ##      self$isRef <- TRUE
-      self$implementation <- implementation
+#      self$implementation <- implementation
     },
     print = function() {
       writeLines(paste0(self$name, ': symbolNC of type ', self$type))
