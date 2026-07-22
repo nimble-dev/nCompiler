@@ -1411,10 +1411,10 @@ inLabelAbstractTypesEnv(
     #   setArg(code, 'drop', drop_arg, add = TRUE)
     # }
 
-                                        # TODO: double check the assumption that output will always be a
-                                        # symbolBasic type as it is understood today.  this is handling for the
-                                        # subsetting operator, [], but will it always be subsetted to a symbolBasic
-                                        # type?
+    # TODO: double check the assumption that output will always be a
+    # symbolBasic type as it is understood today.  this is handling for the
+    # subsetting operator, [], but will it always be subsetted to a symbolBasic
+    # type?
     code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
     invisible(NULL)
   }

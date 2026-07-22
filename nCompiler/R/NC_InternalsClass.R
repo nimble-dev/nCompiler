@@ -186,6 +186,7 @@ NC_InternalsClass <- R6::R6Class(
         for(mN in names(new_overloadDefs)) {
           overloadDefs[[mN]] <- new_overloadDefs[[mN]]
         }
+        inheritInfo$overloadDefs <- overloadDefs
       } else {
         inheritInfo$allMethodNames <- self$allMethodNames_self
         inheritInfo$all_methodName_to_cpp_code_name <- self$orig_methodName_to_cpp_code_name
