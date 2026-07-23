@@ -392,4 +392,121 @@ Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
   return view.data() + offset;
 }
 
+// Shared by make_nodeSTM and rebind_nodeSTM: resolves obj's named field and
+// inds selection into the (data pointer, native dims, per-dimension b__
+// blocks) a StridedTensorMap needs, either to construct one (make_nodeSTM)
+// or to rebind an existing one in place (rebind_nodeSTM). intDims is a real
+// copy (not a reference into the accessor), since acc -- and its own
+// intDims() storage -- goes out of scope when this function returns; data
+// remains valid regardless, because it points into the field's own storage
+// in obj, not into the accessor.
+//
+// inds is a column-major (nDim x 2) matrix-like container (any type
+// supporting operator()(row, col), e.g. Eigen::Tensor<int, 2>), one row per
+// raw dimension of the field, giving [start, stop] for that dimension:
+//   - both columns missing (R's NA or negative)  -> whole dimension (kept)
+//   - only the stop column missing                -> single index at start
+//                                                     (drops this dimension)
+//   - both given (may be equal)                   -> range [start, stop]
+//                                                     (kept; extent is 1
+//                                                     when start == stop,
+//                                                     the dimension is not
+//                                                     dropped)
+// subtract_ones converts from R's 1-based indices (subtracted only from
+// non-missing values, after the missing/negative check).
+//
+// The number of kept (non-dropped) dimensions must equal output_nDim: this
+// is checked explicitly before construction, because createSubTensorInfoGeneral
+// fills a fixed-size Eigen::array<long, output_nDim> by counting kept
+// dimensions as it walks ss, and silently leaves slots uninitialized (rather
+// than erroring) if that count doesn't match output_nDim.
+template<typename Scalar>
+struct nodeSTM_spec {
+  Scalar *data;
+  std::vector<int> intDims;
+  std::vector<b__> ss;
+};
+
+template<int output_nDim, typename Scalar, typename IndsT>
+nodeSTM_spec<Scalar>
+resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
+                      const std::string &var,
+                      const IndsT &inds,
+                      bool subtract_ones) {
+  auto acc = obj->access(var);
+  if (!acc)
+    Rcpp::stop("make_nodeSTM: field \"" + var + "\" not found.");
+  nodeSTM_spec<Scalar> spec;
+  spec.data = acc->template S<Scalar>().data();
+  spec.intDims = acc->intDims(); // copy: acc (and its intDims() storage) won't outlive this function
+  const size_t nDim = spec.intDims.size();
+  const long origin = subtract_ones ? 1 : 0;
+
+  spec.ss.reserve(nDim);
+  int nKept = 0;
+  for (size_t k = 0; k < nDim; ++k) {
+    const long rawStart = static_cast<long>(inds(k, 0));
+    const long rawStop  = static_cast<long>(inds(k, 1));
+    const bool startMissing = (rawStart == NA_INTEGER || rawStart < 0);
+    const bool stopMissing  = (rawStop  == NA_INTEGER || rawStop  < 0);
+    if (startMissing && stopMissing) {
+      spec.ss.emplace_back(); // whole dimension
+      ++nKept;
+    } else if (startMissing) {
+      Rcpp::stop("make_nodeSTM: start is missing but stop is given, in dimension " +
+                 std::to_string(k) + " of field \"" + var + "\".");
+    } else if (stopMissing) {
+      const long idx = rawStart - origin;
+      if (idx < 0 || idx >= spec.intDims[k])
+        Rcpp::stop("make_nodeSTM: single index " + std::to_string(rawStart) +
+                   " out of range in dimension " + std::to_string(k) +
+                   " of field \"" + var + "\" (size " + std::to_string(spec.intDims[k]) + ").");
+      spec.ss.emplace_back(idx); // single index: drops this dimension
+    } else {
+      const long start = rawStart - origin;
+      const long stop  = rawStop - origin;
+      if (start < 0 || stop >= spec.intDims[k] || start > stop)
+        Rcpp::stop("make_nodeSTM: range [" + std::to_string(rawStart) + ", " +
+                   std::to_string(rawStop) + "] out of range in dimension " +
+                   std::to_string(k) + " of field \"" + var + "\" (size " +
+                   std::to_string(spec.intDims[k]) + ").");
+      spec.ss.emplace_back(start, stop); // range, kept even if start == stop
+      ++nKept;
+    }
+  }
+  if (nKept != output_nDim)
+    Rcpp::stop("make_nodeSTM: selection keeps " + std::to_string(nKept) +
+               " dimension(s) but output_nDim is " + std::to_string(output_nDim) +
+               " for field \"" + var + "\".");
+  return spec;
+}
+
+// StridedTensorMap view over a (possibly strided, possibly rank-reducing)
+// subview of a named field of obj, with the output rank output_nDim fixed
+// at compile time. Sibling to make_scalarNodePtr for the multi-element case.
+// See resolve_nodeSTM_spec above for the meaning of inds and subtract_ones.
+template<int output_nDim, typename Scalar = double, typename IndsT>
+Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>>
+make_nodeSTM(const std::shared_ptr<genericInterfaceBaseC> &obj,
+             const std::string &var,
+             const IndsT &inds,
+             bool subtract_ones = false) {
+  auto spec = resolve_nodeSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
+  return Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>>(spec.data, spec.intDims, spec.ss);
+}
+
+// Rebinds an existing (persistent) StridedTensorMap member in place, e.g. one
+// built once via a default-constructed, empty StridedTensorMap and bound here
+// before millions of repeated accesses. See resolve_nodeSTM_spec above for
+// the meaning of inds and subtract_ones.
+template<int output_nDim, typename Scalar = double, typename IndsT>
+void rebind_nodeSTM(Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>> &target,
+                    const std::shared_ptr<genericInterfaceBaseC> &obj,
+                    const std::string &var,
+                    const IndsT &inds,
+                    bool subtract_ones = false) {
+  auto spec = resolve_nodeSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
+  target.rebind(spec.data, spec.intDims, spec.ss);
+}
+
 #endif // GENERIC_CLASS_INTERFACE_RCPP_STEPS_H_

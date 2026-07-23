@@ -181,7 +181,10 @@ nDim <- function(obj) {
 
 is.blank <- function(arg) {
   if(is.null(arg)) return(FALSE)
-  return(identical(arg, quote(x[])[[3]]))
+  # better approach borrowed from rlang::is_missing
+  return(identical(arg, quote(expr =)))
+  # old approach
+  #return(identical(arg, quote(x[])[[3]]))
 }
 
 

@@ -186,7 +186,40 @@ namespace Eigen {
                                                                                 m_startIndices,
                                                                                 m_stopIndices);
     }
-   
+
+    // Default constructor: leaves the map empty (m_data == nullptr). Only
+    // valid use before rebind() is destruction or another rebind()/assignment
+    // from a fully-constructed StridedTensorMap; element access is guarded by
+    // eigen_assert below (debug-only, so this costs nothing in release builds).
+    // Added for StridedTensorMap so a persistent class member can be declared
+    // once (e.g. before the underlying object/field is known) and bound later
+    // via rebind(), without needing a wrapper like std::optional.
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap() : m_data(nullptr) {}
+
+    EIGEN_DEVICE_FUNC
+    EIGEN_STRONG_INLINE bool isEmpty() const { return m_data == nullptr; } // Added for StridedTensorMap
+
+    // Re-seats this map in place to a new data pointer/shape/selection, reusing
+    // the same setup as the (data, input_sizes, ss) constructor above. Unlike
+    // operator=, which is an elementwise value-copy through the *existing*
+    // m_data (matching Eigen's Map/Tensor assignment convention), rebind()
+    // changes what this map points to -- the only way to (re)point an
+    // already-constructed (or default-constructed/empty) StridedTensorMap
+    // somewhere new. Added for StridedTensorMap.
+    template<typename ss_type, typename input_sizes_type>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void rebind(Scalar *data,
+                                                       const input_sizes_type &input_sizes,
+                                                       const ss_type &ss)
+    {
+      m_data = data;
+      createSubTensorInfoGeneral<ss_type, input_sizes_type, NumIndices, Scalar>(ss,
+                                                                                input_sizes,
+                                                                                m_dimensions, // sizes
+                                                                                m_strides,
+                                                                                m_startIndices,
+                                                                                m_stopIndices);
+    }
+
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index rank() const { return m_dimensions.rank(); }
     EIGEN_DEVICE_FUNC
@@ -212,6 +245,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(const array<Index, NumIndices>& indices) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       // StridedTensorMap: TO-DO
       //      eigen_assert(checkIndexRange(indices));
       if (PlainObjectType::Options&RowMajor) {
@@ -226,6 +260,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()() const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       EIGEN_STATIC_ASSERT(NumIndices == 0, YOU_MADE_A_PROGRAMMING_MISTAKE)
         return m_data[0];
     }
@@ -233,6 +268,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index index) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       eigen_internal_assert(index >= 0 && index < size());
       return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
@@ -242,6 +278,7 @@ namespace Eigen {
     template<typename... IndexTypes> EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in variadic const case"<<std::endl;
       EIGEN_STATIC_ASSERT(sizeof...(otherIndices) + 2 == NumIndices, YOU_MADE_A_PROGRAMMING_MISTAKE)
         if (PlainObjectType::Options&RowMajor) {
@@ -256,6 +293,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i1 + i0 * m_dimensions[1];
@@ -268,6 +306,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in const operator()"<<std::endl;
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
@@ -284,6 +323,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2, Index i3) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0));
@@ -299,6 +339,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2, Index i3, Index i4) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         const Index index = i4 + m_dimensions[4] * (i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0)));
         return m_data[index];
@@ -319,6 +360,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(const array<Index, NumIndices>& indices)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       // StridedTensorMap: TO-DO
       //      eigen_assert(checkIndexRange(indices));
       if (PlainObjectType::Options&RowMajor) {
@@ -333,6 +375,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()()
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       EIGEN_STATIC_ASSERT(NumIndices == 0, YOU_MADE_A_PROGRAMMING_MISTAKE)
         return m_data[0];
     }
@@ -340,6 +383,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index index)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       eigen_internal_assert(index >= 0 && index < size());
       return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
@@ -349,6 +393,7 @@ namespace Eigen {
     template<typename... IndexTypes> EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in variadic non-const case"<<std::endl;
       static_assert(sizeof...(otherIndices) + 2 == NumIndices || NumIndices == Dynamic, "Number of indices used to access a tensor coefficient must be equal to the rank of the tensor.");
       const std::size_t NumDims = sizeof...(otherIndices) + 2;
@@ -364,6 +409,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i1 + i0 * m_dimensions[1];
@@ -376,6 +422,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in non-variadic non-const case"<<std::endl;
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
@@ -391,6 +438,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2, Index i3)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0));
@@ -406,6 +454,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2, Index i3, Index i4)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i4 + m_dimensions[4] * (i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0)));
