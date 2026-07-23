@@ -127,6 +127,19 @@ public:
     return data_[offset];
   }
 
+  // Random access by a full multi-index, one 0-based entry per kept
+  // dimension (indsT any container supporting operator[], e.g.
+  // std::vector<int> or Eigen::Tensor<int, 1>). Unlike at(flatIndex), this
+  // is a direct dot-product against info_.strides -- no unflattening.
+  // No bounds checking; inds must have at least info_.sizes.size() entries.
+  template<typename IndsT>
+  Scalar &at(const IndsT &inds) const {
+    long offset = info_.baseOffset;
+    for (size_t k = 0; k < info_.sizes.size(); ++k)
+      offset += static_cast<long>(inds[k]) * info_.strides[k];
+    return data_[offset];
+  }
+
   // dest[0..size()-1] = this view, in canonical (column-major over kept
   // dims) order, via incremental offset updates only.
   void copyIntoVector(Scalar *dest) const {

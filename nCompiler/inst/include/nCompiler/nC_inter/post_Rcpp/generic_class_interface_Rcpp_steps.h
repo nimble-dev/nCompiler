@@ -354,5 +354,42 @@ return Sans;
 #endif
 };
 
+// Pointer to a single element of a named field of obj, addressed by a
+// multi-index (one entry per raw dimension of the field, e.g.
+// Eigen::Tensor<int, 1>), 0-based unless subtract_ones is set (R callers
+// pass 1-based indices; subtract_ones folds the -1 into the same pass that
+// already walks inds for bounds-checking, rather than copying/mutating inds
+// or teaching RuntimeFlatView about 1-based indexing).
+// obj->access(var) is only used to locate the field's data pointer and
+// shape; the returned pointer is into the field's own storage and stays
+// valid for as long as obj does (the accessor itself is a temporary, not
+// the owner of that storage).
+template<typename Scalar = double, typename IndsT>
+Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
+                           const std::string &var,
+                           const IndsT &inds,
+                           bool subtract_ones = false) {
+  auto acc = obj->access(var);
+  if (!acc)
+    Rcpp::stop("make_scalarNodePtr: field \"" + var + "\" not found.");
+  auto view = acc->flatten<Scalar>();
+  const RuntimeSubviewInfo &info = view.info();
+  const std::vector<long> &sizes = info.sizes;
+  if (static_cast<size_t>(inds.size()) != sizes.size())
+    Rcpp::stop("make_scalarNodePtr: inds has " + std::to_string(inds.size()) +
+               " entries but field \"" + var + "\" has " + std::to_string(sizes.size()) +
+               " dimensions.");
+  const long origin = subtract_ones ? 1 : 0;
+  long offset = info.baseOffset;
+  for (size_t k = 0; k < sizes.size(); ++k) {
+    const long idx = static_cast<long>(inds[k]) - origin;
+    if (idx < 0 || idx >= sizes[k])
+      Rcpp::stop("make_scalarNodePtr: index " + std::to_string(inds[k]) +
+                 " out of range for dimension " + std::to_string(k) +
+                 " of field \"" + var + "\" (size " + std::to_string(sizes[k]) + ").");
+    offset += idx * info.strides[k];
+  }
+  return view.data() + offset;
+}
 
 #endif // GENERIC_CLASS_INTERFACE_RCPP_STEPS_H_
