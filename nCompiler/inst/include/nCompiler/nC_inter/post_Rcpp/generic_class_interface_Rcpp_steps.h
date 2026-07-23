@@ -365,18 +365,18 @@ return Sans;
 // valid for as long as obj does (the accessor itself is a temporary, not
 // the owner of that storage).
 template<typename Scalar = double, typename IndsT>
-Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
-                           const std::string &var,
-                           const IndsT &inds,
-                           bool subtract_ones = false) {
+Scalar* make_scalarFieldPtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
+                            const std::string &var,
+                            const IndsT &inds,
+                            bool subtract_ones = false) {
   auto acc = obj->access(var);
   if (!acc)
-    Rcpp::stop("make_scalarNodePtr: field \"" + var + "\" not found.");
+    Rcpp::stop("make_scalarFieldPtr: field \"" + var + "\" not found.");
   auto view = acc->flatten<Scalar>();
   const RuntimeSubviewInfo &info = view.info();
   const std::vector<long> &sizes = info.sizes;
   if (static_cast<size_t>(inds.size()) != sizes.size())
-    Rcpp::stop("make_scalarNodePtr: inds has " + std::to_string(inds.size()) +
+    Rcpp::stop("make_scalarFieldPtr: inds has " + std::to_string(inds.size()) +
                " entries but field \"" + var + "\" has " + std::to_string(sizes.size()) +
                " dimensions.");
   const long origin = subtract_ones ? 1 : 0;
@@ -384,7 +384,7 @@ Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
   for (size_t k = 0; k < sizes.size(); ++k) {
     const long idx = static_cast<long>(inds[k]) - origin;
     if (idx < 0 || idx >= sizes[k])
-      Rcpp::stop("make_scalarNodePtr: index " + std::to_string(inds[k]) +
+      Rcpp::stop("make_scalarFieldPtr: index " + std::to_string(inds[k]) +
                  " out of range for dimension " + std::to_string(k) +
                  " of field \"" + var + "\" (size " + std::to_string(sizes[k]) + ").");
     offset += idx * info.strides[k];
@@ -392,10 +392,10 @@ Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
   return view.data() + offset;
 }
 
-// Shared by make_nodeSTM and rebind_nodeSTM: resolves obj's named field and
+// Shared by make_fieldSTM and rebind_fieldSTM: resolves obj's named field and
 // inds selection into the (data pointer, native dims, per-dimension b__
-// blocks) a StridedTensorMap needs, either to construct one (make_nodeSTM)
-// or to rebind an existing one in place (rebind_nodeSTM). intDims is a real
+// blocks) a StridedTensorMap needs, either to construct one (make_fieldSTM)
+// or to rebind an existing one in place (rebind_fieldSTM). intDims is a real
 // copy (not a reference into the accessor), since acc -- and its own
 // intDims() storage -- goes out of scope when this function returns; data
 // remains valid regardless, because it points into the field's own storage
@@ -421,26 +421,54 @@ Scalar* make_scalarNodePtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
 // dimensions as it walks ss, and silently leaves slots uninitialized (rather
 // than erroring) if that count doesn't match output_nDim.
 template<typename Scalar>
-struct nodeSTM_spec {
+struct fieldSTM_spec {
   Scalar *data;
   std::vector<int> intDims;
   std::vector<b__> ss;
 };
 
 template<int output_nDim, typename Scalar, typename IndsT>
-nodeSTM_spec<Scalar>
-resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
-                      const std::string &var,
-                      const IndsT &inds,
-                      bool subtract_ones) {
+fieldSTM_spec<Scalar>
+resolve_fieldSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
+                       const std::string &var,
+                       const IndsT &inds,
+                       bool subtract_ones) {
   auto acc = obj->access(var);
   if (!acc)
-    Rcpp::stop("make_nodeSTM: field \"" + var + "\" not found.");
-  nodeSTM_spec<Scalar> spec;
+    Rcpp::stop("make_fieldSTM: field \"" + var + "\" not found.");
+  fieldSTM_spec<Scalar> spec;
   spec.data = acc->template S<Scalar>().data();
   spec.intDims = acc->intDims(); // copy: acc (and its intDims() storage) won't outlive this function
   const size_t nDim = spec.intDims.size();
   const long origin = subtract_ones ? 1 : 0;
+
+  // inds is (rows x 2); there's no generic "row count" across arbitrary
+  // matrix-like containers, so derive it from .size() (already used the same
+  // way for make_scalarFieldPtr's 1-D inds), checked for an even total first.
+  if (inds.size() % 2 != 0)
+    Rcpp::stop("make_fieldSTM: inds must have 2 columns (start, stop) per row; got " +
+               std::to_string(inds.size()) + " total entries for field \"" + var + "\".");
+  const size_t indsRows = static_cast<size_t>(inds.size()) / 2;
+
+  if (indsRows == 0) {
+    // No selection given (0 rows): map the whole field. This is the only
+    // safe way to detect "no inds" when going through this overload --
+    // reading inds(k, 0)/inds(k, 1) for a field dimension inds doesn't
+    // actually have a row for is an out-of-bounds read, not a graceful
+    // fallback, so this check has to happen before the loop below, not
+    // inside it.
+    if (nDim != static_cast<size_t>(output_nDim))
+      Rcpp::stop("make_fieldSTM: field \"" + var + "\" has " + std::to_string(nDim) +
+                 " dimension(s) but output_nDim is " + std::to_string(output_nDim) +
+                 ", and inds was empty (no subview selection given).");
+    spec.ss.assign(nDim, b__()); // whole field: every dimension kept, native extent
+    return spec;
+  }
+
+  if (indsRows != nDim)
+    Rcpp::stop("make_fieldSTM: inds has " + std::to_string(indsRows) +
+               " row(s) but field \"" + var + "\" has " + std::to_string(nDim) +
+               " dimension(s).");
 
   spec.ss.reserve(nDim);
   int nKept = 0;
@@ -453,12 +481,12 @@ resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
       spec.ss.emplace_back(); // whole dimension
       ++nKept;
     } else if (startMissing) {
-      Rcpp::stop("make_nodeSTM: start is missing but stop is given, in dimension " +
+      Rcpp::stop("make_fieldSTM: start is missing but stop is given, in dimension " +
                  std::to_string(k) + " of field \"" + var + "\".");
     } else if (stopMissing) {
       const long idx = rawStart - origin;
       if (idx < 0 || idx >= spec.intDims[k])
-        Rcpp::stop("make_nodeSTM: single index " + std::to_string(rawStart) +
+        Rcpp::stop("make_fieldSTM: single index " + std::to_string(rawStart) +
                    " out of range in dimension " + std::to_string(k) +
                    " of field \"" + var + "\" (size " + std::to_string(spec.intDims[k]) + ").");
       spec.ss.emplace_back(idx); // single index: drops this dimension
@@ -466,7 +494,7 @@ resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
       const long start = rawStart - origin;
       const long stop  = rawStop - origin;
       if (start < 0 || stop >= spec.intDims[k] || start > stop)
-        Rcpp::stop("make_nodeSTM: range [" + std::to_string(rawStart) + ", " +
+        Rcpp::stop("make_fieldSTM: range [" + std::to_string(rawStart) + ", " +
                    std::to_string(rawStop) + "] out of range in dimension " +
                    std::to_string(k) + " of field \"" + var + "\" (size " +
                    std::to_string(spec.intDims[k]) + ").");
@@ -475,7 +503,7 @@ resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
     }
   }
   if (nKept != output_nDim)
-    Rcpp::stop("make_nodeSTM: selection keeps " + std::to_string(nKept) +
+    Rcpp::stop("make_fieldSTM: selection keeps " + std::to_string(nKept) +
                " dimension(s) but output_nDim is " + std::to_string(output_nDim) +
                " for field \"" + var + "\".");
   return spec;
@@ -483,29 +511,31 @@ resolve_nodeSTM_spec(const std::shared_ptr<genericInterfaceBaseC> &obj,
 
 // StridedTensorMap view over a (possibly strided, possibly rank-reducing)
 // subview of a named field of obj, with the output rank output_nDim fixed
-// at compile time. Sibling to make_scalarNodePtr for the multi-element case.
-// See resolve_nodeSTM_spec above for the meaning of inds and subtract_ones.
+// at compile time. Sibling to make_scalarFieldPtr for the multi-element case.
+// See resolve_fieldSTM_spec above for the meaning of inds and subtract_ones
+// (including the 0-row inds case, which maps the whole field).
 template<int output_nDim, typename Scalar = double, typename IndsT>
 Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>>
-make_nodeSTM(const std::shared_ptr<genericInterfaceBaseC> &obj,
-             const std::string &var,
-             const IndsT &inds,
-             bool subtract_ones = false) {
-  auto spec = resolve_nodeSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
+make_fieldSTM(const std::shared_ptr<genericInterfaceBaseC> &obj,
+              const std::string &var,
+              const IndsT &inds,
+              bool subtract_ones = false) {
+  auto spec = resolve_fieldSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
   return Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>>(spec.data, spec.intDims, spec.ss);
 }
 
 // Rebinds an existing (persistent) StridedTensorMap member in place, e.g. one
 // built once via a default-constructed, empty StridedTensorMap and bound here
-// before millions of repeated accesses. See resolve_nodeSTM_spec above for
-// the meaning of inds and subtract_ones.
+// before millions of repeated accesses. See resolve_fieldSTM_spec above for
+// the meaning of inds and subtract_ones (including the 0-row inds case,
+// which rebinds to the whole field).
 template<int output_nDim, typename Scalar = double, typename IndsT>
-void rebind_nodeSTM(Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>> &target,
-                    const std::shared_ptr<genericInterfaceBaseC> &obj,
-                    const std::string &var,
-                    const IndsT &inds,
-                    bool subtract_ones = false) {
-  auto spec = resolve_nodeSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
+void rebind_fieldSTM(Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim>> &target,
+                     const std::shared_ptr<genericInterfaceBaseC> &obj,
+                     const std::string &var,
+                     const IndsT &inds,
+                     bool subtract_ones = false) {
+  auto spec = resolve_fieldSTM_spec<output_nDim, Scalar>(obj, var, inds, subtract_ones);
   target.rebind(spec.data, spec.intDims, spec.ss);
 }
 

@@ -104,7 +104,7 @@ Eigen::Tensor<double, 2>  STM9 ( Eigen::Tensor<double, 3> x )  {
 double STM10 ( Eigen::Tensor<double, 3> x )  {
   // Tests the default constructor and rebind(): a default-constructed
   // StridedTensorMap starts empty (isEmpty()), and rebind() gives it the
-  // same data/shape/selection that make_nodeSTM/rebind_nodeSTM pass to it
+  // same data/shape/selection that make_fieldSTM/rebind_fieldSTM pass to it
   // (a raw Scalar* plus generic input_sizes/ss containers), as opposed to
   // STM1's InputType&-based constructor. Same slice/index as STM1.
   Eigen::StridedTensorMap<Eigen::Tensor<double, 3> > xMap;
@@ -122,7 +122,7 @@ double STM10 ( Eigen::Tensor<double, 3> x )  {
 Rcpp::List STM11 ( Eigen::Tensor<double, 3> x, Eigen::Tensor<double, 3> y )  {
   // Tests that rebind() can be called again on an already-bound
   // StridedTensorMap to re-seat it to a different tensor's storage -- the
-  // "declare once, rebind at setup" persistent-member pattern rebind_nodeSTM
+  // "declare once, rebind at setup" persistent-member pattern rebind_fieldSTM
   // is meant to support for repeated access in a hot loop.
   Eigen::StridedTensorMap<Eigen::Tensor<double, 3> > map;
   std::vector<b__> ss = {b__(0, 5), b__(1, 1), b__(0, 3)};

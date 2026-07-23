@@ -19,7 +19,7 @@ test_that("basic uses of StridedTensorMap work",{
   x <- array(1:(6*5*4), dim = c(6, 5, 4))
   y <- array(101:(100 + 6*5*4), dim = c(6, 5, 4))
   # Default-constructed (empty) map, then rebind() to the raw-pointer path
-  # used by make_nodeSTM/rebind_nodeSTM; same slice/index as STM1.
+  # used by make_fieldSTM/rebind_fieldSTM; same slice/index as STM1.
   expect_equal(STM10(x), x[, 2:3, ][2, 2, 3])
   # rebind() called a second time re-seats the same map object to a
   # different tensor's storage, rather than copying values into the old one.
