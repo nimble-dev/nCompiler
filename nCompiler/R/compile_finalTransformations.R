@@ -239,7 +239,7 @@ inFinalTransformationsEnv(
     setArg(assign_expr, 2, reduce_op)
 
     ## Put the vector arg and an aggregation variable called 'value__' into the
-    ## AST as literals. These will be noncopyVars in the cppParallelReduceBodyClass.
+    ## AST as literals. These will be shareVars in the cppParallelReduceBodyClass.
     setArg(code, 4, exprClass$new(name = vector_arg$name, isName = FALSE, isCall = FALSE,
                                   isLiteral = TRUE, isAssign = FALSE))
     value_name <- 'value__'

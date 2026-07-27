@@ -14,14 +14,14 @@ cppParallelBodyClass <- R6::R6Class(
                           loop_var,
                           symbolTable,
                           copyVars = character(),
-                          noncopyVars = character(),
+                          shareVars = character(),
                           aux = list()) {
       cppParallelBodyClass_init_impl(self,
                                      loop_body = loop_body,
                                      loop_var = loop_var,
                                      symbolTable = symbolTable,
                                      copyVars = copyVars,
-                                     noncopyVars = noncopyVars,
+                                     shareVars = shareVars,
                                      aux = aux)
     },
     generate = function(declaration = FALSE, ...) {
@@ -57,9 +57,9 @@ cppParallelBodyClass_init_impl <- function(cppDef,
                                            loop_var,
                                            symbolTable,
                                            copyVars,
-                                           noncopyVars,
+                                           shareVars,
                                            aux) {
-  ## 1. Create symbolTable for copyVars + noncopyVars
+  ## 1. Create symbolTable for copyVars + shareVars
   ## 2. Create operator()
   ## 3. Create constructor
   #####
@@ -94,7 +94,7 @@ cppParallelBodyClass_init_impl <- function(cppDef,
     localSym$constructor <- paste0("(", sym$name, ")")
     newLocalSymTab$addSymbol(localSym) ## put in local symbol table
   }
-  for(v in noncopyVars) {
+  for(v in shareVars) {
     sym <- symbolTable$getSymbol(v, inherits = TRUE)
     if(is.null(sym)) {
       stop(paste0("No variable named: ", v),
@@ -168,7 +168,7 @@ cppParallelReduceBodyClass <- R6::R6Class(
                           loop_var,
                           symbolTable,
                           copyVars = character(),
-                          noncopyVars = character(),
+                          shareVars = character(),
                           aux = list(),
                           lastUse = FALSE) {
       cppParallelReduceBodyClass_init_impl(self,
@@ -176,7 +176,7 @@ cppParallelReduceBodyClass <- R6::R6Class(
                                            loop_var = loop_var,
                                            symbolTable = symbolTable,
                                            copyVars = copyVars,
-                                           noncopyVars = noncopyVars,
+                                           shareVars = shareVars,
                                            aux = aux,
                                            lastUse = lastUse)
     },
@@ -213,7 +213,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
                                                  loop_var,
                                                  symbolTable,
                                                  copyVars,
-                                                 noncopyVars,
+                                                 shareVars,
                                                  aux,
                                                  lastUse) {
   ## 1. call cppParallelBodyClass_init_impl which creates GeneralFor
@@ -226,7 +226,7 @@ cppParallelReduceBodyClass_init_impl <- function(cppDef,
   orig_caller <- copyExprClass(loop_body$caller)
 
   cppParallelBodyClass_init_impl(cppDef, loop_body, loop_var,
-                                 symbolTable, copyVars, noncopyVars, aux)
+                                 symbolTable, copyVars, shareVars, aux)
 
   ## get the local aggregation var copy variable
   val_expr <- copyExprClass(loop_body$args[[1]])
