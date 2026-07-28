@@ -119,7 +119,7 @@ NF_InternalsClass <- R6::R6Class(
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
       self$code <- body(fun_to_use)
-      if(code[[1]] != '{')
+      if(self$code[[1]] != '{')
         self$code <- substitute({CODE}, list(CODE=self$code))
       ## check all code except.nCompiler package nFunctions
       ##            if(check && "package.nCompiler" %in% search())

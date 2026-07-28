@@ -1,3 +1,12 @@
+#ifndef NCOMPILER_NLIST__H_
+#define NCOMPILER_NLIST__H_
+
+inline std::shared_ptr<nListBase_nClass> interface_ptr_2_nList_ptr(std::shared_ptr<genericInterfaceBaseC> interface_ptr) {
+  std::shared_ptr<nListBase_nClass> ans = std::dynamic_pointer_cast<nListBase_nClass>(interface_ptr);
+  if(!ans) Rcpp::stop("interface_ptr_2_nList_ptr: interface_ptr is not a nListBase_nClass.");
+  return ans;
+}
+
 template<class Element>
 class nList_ : public nListBase_nClass {
 public:
@@ -552,3 +561,5 @@ public:
     auto& operator[](size_t i) { return contents_[i]; }
     const auto& operator[](size_t i) const { return contents_[i]; }
 };
+
+#endif // NCOMPILER_NLIST__H_

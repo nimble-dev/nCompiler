@@ -461,7 +461,6 @@ length.nList <- function(x) {
   x
 }
 
-# Draft for a new version of nCppVec.
 #' @export
 nList <- function(type, .ID = FALSE, env = parent.frame()) {
   ttype <- nCaptureType(type)

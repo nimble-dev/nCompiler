@@ -1429,7 +1429,8 @@ nCompiler:::inLabelAbstractTypesEnv(
         newSymTab <- typeList2symbolTable(types, where=auxEnv$closure)
         resolveTBDsymbols(newSymTab, auxEnv$where, project_env = auxEnv$project_env)
         symbols <- newSymTab$getSymbols()
-        for (sym in symbols) symTab$addSymbol(sym)
+        for (sym in symbols) if(sym$name != "return") symTab$addSymbol(sym)
+        code$type <- symbols[["return"]] # may be NULL if the code is an entire line
       }
     }
     invisible(NULL)
