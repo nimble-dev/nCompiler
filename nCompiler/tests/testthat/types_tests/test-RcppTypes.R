@@ -732,3 +732,48 @@ test_that("RcppEnvironment works in nClasses", {
   expect_equal(myEnv$x, 11:13)
   rm(my_nc); gc()
 })
+
+test_that("RcppList works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppList",
+    Cpublic = list(
+      x = "RcppList",
+      set_x = nFunction(
+        fun = function(myList = "RcppList", new_x = "RcppNumericVector") {
+          x <- myList
+          nCpp('x["x"] = new_x;')
+          return(x)
+        },
+        returnType = "RcppList()"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  myList <- list(A = 1:3, B = 2:4)
+  my_nc$set_x(myList, 11:13)
+  expect_equal(my_nc$x, c(myList, list(x = 11:13)))
+  rm(my_nc); gc()
+})
+
+test_that("RcppObject works in nClasses", {
+  nc <- nClass(
+    classname = "test_RcppObject",
+    Cpublic = list(
+      x = "RcppObject",
+      set_x = nFunction(
+        fun = function(myObj = "RcppObject") {
+          x <- myObj
+          return(x)
+        },
+        returnType = "RcppObject()"
+      )
+    )
+  )
+  ncC <- nCompile(nc)
+  my_nc <- ncC$new()
+  myList <- list(A = 1:3, B = 2:4)
+  my_nc$set_x(myList)
+  expect_equal(my_nc$x, myList)
+  rm(my_nc); gc()
+})

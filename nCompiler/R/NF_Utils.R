@@ -44,8 +44,12 @@ isConstructor <- function(NF) {
 ## If the name is not found, NULL is returned.
 nGet <- function(name, where, project_env = NULL) {
   if(!is.null(project_env)) {
-    obj <- project_env$built_types[[name]]
-    if(!is.null(obj)) return(obj)
+    obj <- project_env$known_nClasses[[name]]
+    if(!is.null(obj)) {
+      obj <- obj$NCgenerator
+      if(!is.null(obj))
+        return(obj)
+    }
   }
   if(inherits(where, "R6ClassGenerator")) {
     if(exists(name, envir = where, inherits = FALSE))

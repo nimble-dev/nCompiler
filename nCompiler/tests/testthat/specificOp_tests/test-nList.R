@@ -1261,3 +1261,26 @@ test_that("nList ETaccess at C++ level works", {
   expect_equal(obj$check3(), 3)
   expect_error(obj$check4())
 })
+
+test_that("nList new operation works inline", {
+  foo <- nFunction(
+    function() {
+      x <- nList(integerVector())$new()
+      return(x)
+      returnType(nList(integerVector()))
+    }
+  )
+
+  cfoo <- nCompile(foo)
+  res <- cfoo()
+  expect_true(inherits(res, "nList"))
+  length(res) <- 3
+  expect_equal(length(res), 3)
+  expect_true(res$isCompiled())
+
+  res <- foo()
+  expect_true(inherits(res, "nList"))
+  length(res) <- 3
+  expect_equal(length(res), 3)
+  expect_false(res$isCompiled())
+})

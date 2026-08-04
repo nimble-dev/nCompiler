@@ -317,6 +317,9 @@ typeDeclarationEnv <- list2env(list(
     symbolCppVar$new(baseType = "SEXP", ...)
   },
   ## Rcpp types
+  RcppObject = function(...) {
+    symbolRcppType$new(RcppType = "Rcpp::RObject", ...)
+  },
   RcppEnvironment = function(...) {
     symbolRcppType$new(RcppType = "Rcpp::Environment", ...)
   },
@@ -897,12 +900,13 @@ check_built_types <- function(Rexpr = NULL, candidate = NULL,
     }
     ttype <- nType(expr = Rexpr, env = where)
     typeSpec <- nTypeSpec(ttype)
-    if(is.null(candidate))
-    funExpr <- typeSpec$funExpr
-    if(!is.name(funExpr)) {
-      candidate <- rlang::eval(funExpr, env = where)
-    } else {
-      candidate <- nGet(typeSpec$funName, where = where) #project_env not useful here
+    if(is.null(candidate)) {
+      funExpr <- typeSpec$funExpr
+      if(!is.name(funExpr)) {
+        candidate <- rlang::eval(funExpr, env = where)
+      } else {
+        candidate <- nGet(typeSpec$funName, where = where) #project_env not useful here
+      }
     }
   }
 

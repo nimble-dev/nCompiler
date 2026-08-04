@@ -545,7 +545,7 @@ symbolRcppType<- R6::R6Class(
       self$type
     },
     uniqueID = function() {
-      stop("uniqueID() is not yet implemented for symbolRcppType.")
+      paste0("RcppType_", self$type)
     },
     print = function() {
       writeLines(
@@ -557,7 +557,6 @@ symbolRcppType<- R6::R6Class(
     }
   )
 )
-
 
 symbolRcppNumericVector <- R6::R6Class(
   classname = "symbolRcppNumericVector",
