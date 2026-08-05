@@ -45,14 +45,18 @@ to_generic_interface <- function(obj) {
 }  
 
 #' @export
-new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL) {
+new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = NULL) {
   # This will be true if called from an nFunction (or nClass method) returning an object
+  # When is_full is NULL, we follow the default for the class (return_mode below)
+  # When is_full is provided, we over-ride the default.
   ans <- new.loadedObjectEnv(extptr, parentEnv)
   if(!is.null(parentEnv)) { # This doesn't really do anything
-    if(exists('.R6interface', parentEnv) &&
-       parentEnv$return_mode == "full") {
+    if(exists('.R6interface', parentEnv)) {
+      is_full <- is_full %||% (parentEnv$return_mode == "full")
+      if(is_full) {
         fullAns <- parentEnv$.R6interface$new(CppObj = ans)
         return(fullAns)
+      }
     }
   }
   ans

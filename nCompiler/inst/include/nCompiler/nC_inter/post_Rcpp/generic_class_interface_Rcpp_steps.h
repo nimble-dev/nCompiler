@@ -96,6 +96,22 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
     }
   };
 
+  template<typename P, typename T2, typename AUX>
+    class accessor_class_aux : public accessor_class<P, T2> {
+  public:
+    typedef P T2::*ptrtype; // T2 will only be T or a base class of T.
+    AUX aux;
+    typedef std::pair<P, AUX> wrap_type;
+    accessor_class_aux(ptrtype ptr_, AUX aux_) :
+      accessor_class<P, T2>(ptr_), aux(aux_) {};
+    SEXP get(const genericInterfaceBaseC *intBasePtr) const {
+#ifdef SHOW_FIELDS
+      std::cout<<"in derived get"<<std::endl;
+#endif
+      return Rcpp::wrap(wrap_type(dynamic_cast<const T*>(intBasePtr)->*(this->ptr), aux));
+    }
+  };
+
  // static maps from character names
  static int name_count;
  // typedef std::map<std::string,int> name2index_type;
@@ -119,6 +135,18 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
     return name_access_pair(
                             name,
                             std::shared_ptr<accessor_base>(new accessor_class<P, T2>(ptr))
+                            );
+      }
+
+  template<typename P, typename T2, typename AUX>
+    static name_access_pair field(std::string name, P T2::*ptr, AUX aux) {
+#ifdef SHOW_FIELDS
+    std::cout<<"adding "<<name<<std::endl;
+#endif
+    name2index[name] = name_count++;
+    return name_access_pair(
+                            name,
+                            std::shared_ptr<accessor_base>(new accessor_class_aux<P, T2, AUX>(ptr, aux))
                             );
       }
 

@@ -452,6 +452,17 @@ typeDeclarationEnv <- list2env(list(
   nCpp = function(value, ...) {
     symbolCppVar$new(baseType = value, ...)
   },
+  nClass = function(value, ...) {
+    # e.g nClass(myClass(), interface = "generic")
+    # this allows member-level control over interface option
+    ttype <- nCaptureType(value)
+    typeSpec <- nTypeSpec(ttype)
+    symbolTBD$new(type = typeSpec$funName,
+                  typeSpec = typeSpec,
+                  quo = ttype,
+                  where = parent.frame(),
+                  ...)
+  },
   T = function(symbol) { ## This is semi-defunct but could be resurrected.
     # The use of T(mytype) indicates that mytype evaluates to an
     # existing type object in the evalEnv.
@@ -525,10 +536,8 @@ type2symbol <- function(type,
   texplicitType <- quo_strip_quote(texplicitType)
 
   if(!is.null(explicitType)) {
-#    typeToUse <- explicitType
     ttypeToUse <- texplicitType
   } else {
-#    typeToUse <- type
     ttypeToUse <- ttype
   }
 

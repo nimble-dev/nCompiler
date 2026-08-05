@@ -174,7 +174,7 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
 
   if(is.null(NCint$inheritQ)) {
     inheritInfo$check_inherit_done <- TRUE
-    inheritInfo$virtualMethodNames <- NCint$virtualMethodNames_self
+    inheritInfo$virtualMethodNames <- NCint$virtualMethodNames
     return(inheritInfo$virtualMethodNames)
   }
   if(inheritInfo$check_inherit_done) return(inheritInfo$virtualMethodNames)
@@ -191,12 +191,11 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
   new_virtualMethodNames <- character()
 
   if(!allow_method_overloading) {
-    local_virtualMethodNames <- NCint$virtualMethodNames_self
     # default: check for disallowed method overloading
     allMethodNames <- inheritInfo$allMethodNames
     for(mN in allMethodNames) {
       # if a method is not in the self method names, it was inherited, so there is nothing to check
-      if(!(mN %in% NCint$allMethodNames_self)) next
+      if(!(mN %in% NCint$methodNames)) next
       if(!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
         # current level is the first one with this method name, so here we tag its virtual status
         new_virtualMethodNames <- c(new_virtualMethodNames, mN)
@@ -230,9 +229,9 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
     #
     # If any of my own field names already existed from my inherited classes,
     # that's not allowed
-    badFields <- NCint$allFieldNames_self %in% parent_nClass_Info$inheritInfo$allFieldNames
+    badFields <- NCint$fieldNames %in% parent_nClass_Info$inheritInfo$allFieldNames
     if(any(badFields))
-      stop(paste0("Problem with field(s): ", paste(NCint$allFieldNames_self[badFields], collapse = ", "),
+      stop(paste0("Problem with field(s): ", paste(NCint$fieldNames[badFields], collapse = ", "),
                   ". Fields with the same name are not allowed in base and inherited classes.",
                   " (If you want to allow local fields of the same name in C++ by turning off this requirement,",
                 " set nOptions(allow_inherited_field_duplicates=TRUE)"),
