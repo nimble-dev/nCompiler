@@ -138,6 +138,7 @@ nList_nClass <- function(type, env = parent.frame()) {
 
   classname <- "nList"
   inner_cpp_typename <- type2cpp_typename({{ttype}}, where = env)
+  # cpp_classname matches the unique ID returned by nList(type, .ID=TRUE).
   cpp_classname <- Rname2CppName(paste0("nList_", type2uniqueID({{ttype}}, where = env)))
   # We need the C++ type for the nClass_inherit$base class,
   # but we can defer determining that until code generation

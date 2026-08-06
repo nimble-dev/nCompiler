@@ -282,7 +282,30 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
  //   UNPROTECT(2);
     SEXP Sans = PROTECT(method->second.method_ptr->call(this, Sargs));
     UNPROTECT(1);
-return Sans;
+    return Sans;
+  }
+
+  // Return the names of either the methods (methods==true) or the data
+  // members/fields (methods==false), for R-level introspection (e.g.
+  // interface_names() in R). Built fresh on each call rather than cached,
+  // since this is not a hot-path operation and caching a static SEXP would
+  // risk dangling across package unload/reload.
+  SEXP get_names(bool methods) const {
+    if(methods) {
+      Rcpp::CharacterVector ans(name2method.size());
+      size_t i = 0;
+      for(typename name2method_type::const_iterator it = name2method.begin();
+          it != name2method.end(); ++it, ++i)
+        ans[i] = it->first;
+      return ans;
+    } else {
+      Rcpp::CharacterVector ans(name2access.size());
+      size_t i = 0;
+      for(name2access_type::const_iterator it = name2access.begin();
+          it != name2access.end(); ++it, ++i)
+        ans[i] = it->first;
+      return ans;
+    }
   }
 
   template<typename P, typename T2, bool use_const=false, typename ...ARGS>

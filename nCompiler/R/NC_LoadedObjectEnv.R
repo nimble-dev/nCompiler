@@ -27,8 +27,10 @@ new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
 #' @export
 to_full_interface <- function(LOE) {
 #  parentEnv <- parent.env(LOE)
-  if(!is.loadedObjectEnv(LOE))
-    stop("LOE should be a loadedObjectEnv")
+  if(!is.loadedObjectEnv(LOE)) {
+    if(isCNC(obj)) return(LOE)
+    else stop("LOE should be a loadedObjectEnv")
+  }
   CnCenv <- get_CnCenv(LOE)
   if(exists('.R6interface', CnCenv)) {
     fullAns <- CnCenv$.R6interface$new(CppObj = LOE)
@@ -39,8 +41,10 @@ to_full_interface <- function(LOE) {
 
 #'@export
 to_generic_interface <- function(obj) {
-  if(!isCNC(obj))
-    stop("obj should be a compiled nClass object")
+  if(!isCNC(obj)) {
+    if(is.loadedObjectEnv(obj)) return(obj)
+    else stop("obj should be a compiled nClass object")
+  }
   obj$private$Cpublic_obj$private$CppObj
 }  
 
@@ -161,7 +165,8 @@ setup_nClass_environments_from_package <- function(nClass_exportNames,
     reqdFuns <- c(reqdFuns,
                   "call_method",
                   "get_value",
-                  "set_value")
+                  "set_value",
+                  "get_names")
   for(i in seq_along(interfaceTypes)) {
     if(createFromR[i])
       reqdFuns <- c(reqdFuns, nClass_exportNames[i])
@@ -252,7 +257,8 @@ setup_DLLenv <- function(compiledFuns,
                       "new_serialization_mgr",
                       "get_value",
                       "set_value",
-                      "call_method"
+                      "call_method",
+                      "get_names"
                       )
   
   compiledFuns <- move_funs_from_list_to_env(namesForDLLenv,
