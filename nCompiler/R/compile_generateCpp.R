@@ -404,9 +404,9 @@ inGenCppEnv(
   }
 )
 
-cppOutputMemberData <- function(code, symTab) {
-  paste0( nimGenerateCpp(code$args[[1]], symTab), '.', code$args[[2]]$name)
-}
+# cppOutputMemberData <- function(code, symTab) {
+#   paste0( nimGenerateCpp(code$args[[1]], symTab), '.', Rname2CppName(code$args[[2]]$name))
+# }
 
 inGenCppEnv(
   ## Member(A, x) -> A.x
@@ -415,7 +415,7 @@ inGenCppEnv(
     objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
     paste0( '(',
            objOutput,
-           ')', connector, code$args[[2]]$name)
+           ')', connector, Rname2CppName(code$args[[2]]$name))
   }
 )
 

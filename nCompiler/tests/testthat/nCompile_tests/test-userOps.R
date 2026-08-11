@@ -29,7 +29,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
                                  fillZeros=TRUE, recycle=TRUE, nDim,
                                  type="double") {},
              simpleTransformations=list(handler = nimArrayHandler))))
-  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), "nimArray")
+  expect_equal(ls(nCompiler:::operatorDefUserEnv), "nimArray")
 
   registerOpDef(
     list(nimArray2 =
@@ -39,7 +39,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
                                  type="double") {},
              simpleTransformations=list(handler = 'replace',
                                         replacement = 'nArray'))))
-  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), c("nimArray", "nimArray2"))
+  expect_equal(ls(nCompiler:::operatorDefUserEnv), c("nimArray", "nimArray2"))
 
   nc <- nClass(
     Cpublic = list(
@@ -66,7 +66,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
   #
   deregisterOpDef("nimArray")
   deregisterOpDef("nimArray2")
-  expect_equal(length(ls(`:::`("nCompiler", "operatorDefUserEnv"))), 0)
+  expect_equal(length(ls(nCompiler:::operatorDefUserEnv)), 0)
 })
 
 cat("User opDef could be dangerous prior to genCpp because it won't update cachedOpDef\n")

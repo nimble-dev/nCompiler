@@ -77,7 +77,7 @@ registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
 
 #' @export
 deregisterOpDef <- function(names) {
-  if(!isTRUE(is.character(names))) names <- ls(names) # in case an env or list is passed in as names.
+  if(!isTRUE(is.character(names))) names <- ls(names, all.names = TRUE) # in case an env or list is passed in as names.
   suppressWarnings(rm(list=names, envir=operatorDefUserEnv))
 }
 

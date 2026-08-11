@@ -356,7 +356,7 @@ compileNimble <- function(..., project, dirName = NULL, projectName = '',
 
   names(nComp_units) <- names(units)
   registerOpDef(nimble_nCompiler_opDefs)
-  on.exit({deregisterOpDef(ls(nimble_nCompiler_opDefs))})
+  on.exit({deregisterOpDef(ls(nimble_nCompiler_opDefs, all.names = TRUE))})
   ans <- do.call(nCompile, nComp_units)
   if(sum(nfUnits) > 0) {
     whichUnits <- which(nfUnits)

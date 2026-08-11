@@ -602,7 +602,7 @@ nCompile <- function(...,
 
   while(!done_finding_units) {
     update_known_nClasses(new_units, new_unitTypes, project_env)
-    existing_known_nClass_names <- ls(project_env$known_nClasses)
+    existing_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, 
                                                new_compileInfos, project_env)
     new_cppDefs <- cppDefs_info$cppDefs
@@ -623,7 +623,7 @@ nCompile <- function(...,
     #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
     #
-    updated_known_nClass_names <- ls(project_env$known_nClasses)
+    updated_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
     new_needed_known_nClasses <- lapply(setdiff(updated_known_nClass_names, existing_known_nClass_names),
                                      \(x) project_env$known_nClasses[[x]]$NCgenerator)
     # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
@@ -1350,7 +1350,7 @@ WP_writeMemberData <- function(memberData, datDir) {
   # Write out data
   if (length(memberData) > 0) {
     datEnv <- as.environment(memberData)
-    ls_datEnv <- ls(datEnv)
+    ls_datEnv <- ls(datEnv, all.names = TRUE)
     for (i in seq_along(ls_datEnv)) {
       save(list = ls_datEnv[i], envir = datEnv,
            file = file.path(datDir, paste0(ls_datEnv[i], ".RData")))

@@ -952,6 +952,41 @@ test_that("argument name mangling and argument ordering work together", {
     expect_equal(comp2$bar2(1.2,TRUE), dnorm(1.2,0,1,TRUE))
 })
 
+test_that("Rname2CppName mangling works for variables including members", {
+  nc1 <- nClass(
+    Cpublic = list(
+      .x = "numericVector",
+      .foo = nFunction(
+        function(.y = "numericVector") {
+          .s <- .x[1] + 1 # Induce a scalar assignment to see flex(dot_s) work
+          .z <- .x + .y
+          .z <- .z + 1
+          return(.z)
+          returnType("numericVector")
+        }
+      )
+    )
+  )
+  nc2 <- nClass(
+    Cpublic = list(
+      nc1a = "nc1",
+      go = nFunction(
+        function(.x = "numericVector", .y = "numericVector") {
+          nc1a <- nc1$new()
+          nc1a$.x <- .x
+          ans <- nc1a$.foo(.y)
+          return(ans)
+          returnType("numericVector")
+        }
+      )
+    )
+  )
+  expect_no_error(comp <- nCompile(nc1, nc2, returnList = TRUE))
+  obj <- comp$nc2$new()
+  expect_equal(obj$go(1:3, 4:6), 1:3 + 4:6 + 1)
+})
+
+
 test_that("showing types works", {
     test <- nFunction(
         name = "test",
