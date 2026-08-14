@@ -313,10 +313,15 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Sca
   // NumIndices should match nDim, so this is a bit redundant.
   static const Index NumIndices = ET::NumIndices; // StridedTensorMap: This is output number of dimensions (indices).
   typedef typename ET::Dimensions Dimensions;
-  ETaccessor(ET &obj_) : obj(obj_), intDims_(NumIndices) {};
+  ETaccessor(ET &obj_) : obj(obj_) {};
   ~ETaccessor() {};
   Scalar *data() override {return obj.data();}
+  // Sized lazily here rather than in the constructor: a no-op (no
+  // reallocation) on every call after the first, but avoids the allocation
+  // entirely for an ETaccessor whose intDims() is never called (e.g. only
+  // data() is used).
   std::vector<int> &intDims() override {
+    intDims_.resize(NumIndices);
     Dimensions dim = obj.dimensions();
     std::copy(dim.begin(), dim.end(), intDims_.begin());
     return intDims_;
