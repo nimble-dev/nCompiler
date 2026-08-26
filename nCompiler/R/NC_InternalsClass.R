@@ -55,10 +55,12 @@ NC_InternalsClass <- R6::R6Class(
       if(numEntries) {
         isMethod <- rep(FALSE, numEntries)
         isVirtual <- rep(FALSE, numEntries)
+        isAbstract <- rep(FALSE, numEntries)
         for(i in seq_along(Cpublic)) {
           if(isNF(Cpublic[[i]])) {
             isMethod[i] <- TRUE
             isVirtual[i] <- isTRUE(NFinternals(Cpublic[[i]])$compileInfo$virtual)
+            isAbstract[i] <- isTRUE(NFinternals(Cpublic[[i]])$compileInfo$abstract)
             # NFinternals(Cpublic[[i]])$isMethod <- TRUE 
             next;
           }
@@ -66,6 +68,12 @@ NC_InternalsClass <- R6::R6Class(
             stop(paste0('Cpublic methods should be provided as nFunctions, ',
                         'not functions. ', names(Cpublic)[i], ' is a function.'),
                  call. = FALSE)
+          }
+        }
+        if(any(isAbstract)) {
+          if(!isFALSE(compileInfo$createFromR)) {
+            warning("Setting compileInfo$createFromR = FALSE since at least one method is abstract.")
+            self$compileInfo$createFromR <- FALSE
           }
         }
         has_Cpublic_init <- "initialize" %in% names(Cpublic)

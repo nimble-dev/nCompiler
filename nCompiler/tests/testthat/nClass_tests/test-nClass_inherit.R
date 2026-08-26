@@ -453,7 +453,7 @@ test_that("inheritance with interfaces at multiple levels", {
           return(base_x); returnType('numericScalar')
         },
         name = "get_x"),
-    # get_x_virt will be virtual
+      # get_x_virt will be virtual
       get_x_virt = nFunction(
         function() {
           return(base_x); returnType('numericScalar')
@@ -644,21 +644,21 @@ test_that("inheritance with interfaces at multiple levels", {
   # base accessing an actual base
   expect_equal(c(
     obj$useBase(1)
-    ,obj$useBase(2)
-    ,obj$useBase(3)
-    ,obj$useBase(4)), rep(11, 4))
+   ,obj$useBase(2)
+   ,obj$useBase(3)
+   ,obj$useBase(4)), rep(11, 4))
 
   # der accessing an actual der
   expect_equal(c(
     obj$useDer(1)
-    ,obj$useDer(2)
-    ,obj$useDer(3)
-    ,obj$useDer(4)), c(3, 1, 3, 1))
+   ,obj$useDer(2)
+   ,obj$useDer(3)
+   ,obj$useDer(4)), c(3, 1, 3, 1))
 
   expect_equal(c(
     obj$useDer(5)
-    ,obj$useDer(6)
-    ,obj$useDer(7)), c(1, 2, 2))
+   ,obj$useDer(6)
+   ,obj$useDer(7)), c(1, 2, 2))
 
   expect_equal(c(
     obj$useDer(8)
@@ -670,9 +670,9 @@ test_that("inheritance with interfaces at multiple levels", {
   obj$myBase <- Cder
   expect_equal(c(
     obj$useBase(1)
-    ,obj$useBase(2)
-    ,obj$useBase(3)
-    ,obj$useBase(4)), c(3,1,1,1))
+   ,obj$useBase(2)
+   ,obj$useBase(3)
+   ,obj$useBase(4)), c(3,1,1,1))
 
 
   # base pointing to a mid
@@ -713,7 +713,7 @@ test_that("manual access to derived interfaced members works", {
     function(obj = ncDer()) {
       cppLiteral("auto ETacc = obj->access(\"x\");")
       cppLiteral("ans = ETacc->map<1, double>();", types=list(ans="numericVector"))
-     # Cppliteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
+      # Cppliteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
       return(ans)
       returnType(numericVector())
     }
@@ -722,7 +722,7 @@ test_that("manual access to derived interfaced members works", {
     function(obj = ncBase()) {
       cppLiteral("auto ETacc = obj->access(\"x\");")
       cppLiteral("ans = ETacc->map<1, double>();", types=list(ans="numericVector"))
-#      cppLiteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
+      #      cppLiteral("ans = Rcpp::as<Eigen::Tensor<double, 1> >(obj->get_value(\"x\"));", types=list(ans = "numericVector"))
       return(ans)
       returnType(numericVector())
     }
@@ -734,4 +734,117 @@ test_that("manual access to derived interfaced members works", {
   comp$foo(obj)
   comp$foo2(obj)
   rm(obj); gc()
+})
+
+test_that("abstract functions in a base class work", {
+  ncBase <- nClass(
+    classname = "ncBase",
+    Cpublic = list(
+      foo = nFunction(
+        name = "foo",
+        function(x = double(1)) {
+          returnType(double(1))
+        },
+        compileInfo = list(virtual = TRUE, abstract = TRUE)
+      ),
+      bar = nFunction(
+        name = "bar",
+        function(x = double(1)) {
+          returnType(double(1))
+          return(x + 1)
+        }
+      )
+    ),
+    compileInfo = list(
+      createFromR = FALSE
+    )
+  )
+  ncDer <- nClass(
+    classname = "ncDer",
+    inherit = ncBase,
+    Cpublic = list(
+      foo = nFunction(
+        function(x = double(1)) {
+          return(x + 2)
+          returnType(double(1))
+        }
+      )
+    )
+  )
+  comp <- expect_no_error(
+    nCompile(ncBase, ncDer, control = list(return_cppDefs = TRUE))
+  )
+  out <- capture_output( comp[[1]]$generate(declaration = TRUE) |> writeCode() )
+  expect_true(grepl(" = 0;", out))
+  expect_true(grepl("foo", out))
+  out <- capture_output( comp[[1]]$generate() |> writeCode())
+  expect_false(grepl("foo", out))
+  expect_no_error(comp <- nCompile(ncBase, ncDer))
+  obj <- comp$ncDer$new()
+  expect_equal(obj$foo(1:3), 3:5)
+  rm(obj); gc()
+
+  expect_warning(
+    ncBase <- nClass(
+      classname = "ncBase",
+      Cpublic = list(
+        foo = nFunction(
+          name = "foo",
+          function(x = double(1)) {
+            returnType(double(1))
+          },
+          compileInfo = list(virtual = TRUE, abstract = TRUE)
+        ),
+        bar = nFunction(
+          name = "bar",
+          function(x = double(1)) {
+            returnType(double(1))
+            return(x + 1)
+          }
+        )
+      )
+    ),
+    "Setting compileInfo\\$createFromR = FALSE")
+  comp <- expect_no_error(
+    nCompile(ncBase, ncDer, control = list(return_cppDefs = TRUE))
+  )
+  out <- capture_output( comp[[1]]$generate(declaration = TRUE) |> writeCode() )
+  expect_true(grepl(" = 0;", out))
+  expect_true(grepl("foo", out))
+  out <- capture_output( comp[[1]]$generate() |> writeCode())
+  expect_false(grepl("foo", out))
+
+
+  expect_warning(
+    ncBase <- nClass(
+      classname = "ncBase",
+      Cpublic = list(
+        foo = nFunction(
+          name = "foo",
+          function(x = double(1)) {
+            returnType(double(1))
+          },
+          compileInfo = list(abstract = TRUE)
+        ),
+        bar = nFunction(
+          name = "bar",
+          function(x = double(1)) {
+            returnType(double(1))
+            return(x + 1)
+          }
+        )
+      ),
+      compileInfo = list(
+        createFromR = FALSE
+      )
+    ),
+    "Setting compileInfo\\$virtual = TRUE")
+  comp <- expect_no_error(
+    nCompile(ncBase, ncDer, control = list(return_cppDefs = TRUE))
+  )
+  out <- capture_output( comp[[1]]$generate(declaration = TRUE) |> writeCode() )
+  expect_true(grepl(" = 0;", out))
+  expect_true(grepl("foo", out))
+  out <- capture_output( comp[[1]]$generate() |> writeCode())
+  expect_false(grepl("foo", out))
 })

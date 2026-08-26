@@ -110,6 +110,7 @@ nClass <- function(classname,
   #   accessor specifier, typically "public", e.g. "public some_class".
   #   Similarly, template arguments (include CRTP) should be in the text explicitly.
   # needed_units: list of needed nClasses and nFunctions to include, by name or object
+  # createFromR: Default TRUE, whether to enable creation of objects from R.
   #
   # packageNames: can be a vector or list of two names, possibly named by "uncompiled" and "compiled",
   #  and taken in that order if unnamed. 

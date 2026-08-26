@@ -193,6 +193,12 @@ NF_InternalsClass <- R6::R6Class(
           self$ADcontent$cpp_code_name <- paste0(cpp_code_name,"_AD__")
         }
       }
+      # Check on virtual and abstract
+      if(isTRUE(self$compileInfo$abstract)) {
+        if(!isTRUE(self$compileInfo$virtual))
+          warning("Setting compileInfo$virtual = TRUE since compileInfo$abstract = TRUE")
+        self$compileInfo$virtual <- TRUE
+      }
     },
     updateCode = function(newCode) {
       self$code <- newCode

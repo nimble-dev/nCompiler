@@ -793,11 +793,11 @@ cppFunctionClass <- R6::R6Class(
                                     scopes = character(),
                                     ...) {
 
-                  if((!declaration) && is.null(self$code$code) && is.null(compileInfo$body))
+                  if((!declaration) && isTRUE(self$abstract))
                     return(character(0))
-                  ## There is no code. This can occur for
-                  ## a nFunctionVirtual that is an
-                  ## abstract base class.
+
+                  # if((!declaration) && is.null(self$code$code) && is.null(compileInfo$body))
+                  #   return(character(0))
 
                   argsListToUse <- if(inherits(self$args, 'symbolTableClass'))
                                      self$args$getSymbols()
@@ -849,84 +849,7 @@ cppFunctionClass <- R6::R6Class(
                 }
                 )
   )
-                ##   ## old
-                ##   argsListToUse <- if(inherits(self$args, 'symbolTableClass'))
-                ##                      self$args$getSymbols()
-                ##   else {
-                ##     list()
-                ##   }
-                ##   if(declaration) {
-                ##     outputCode <- paste0(
-                ##       if(self$virtual)
-                ##         'virtual '
-                ##       else
-                ##         character(0),
 
-                ##       generateFunctionHeader(self$returnType,
-                ##                              self$name,
-                ##                              argsListToUse,
-                ##                              scopes,
-                ##                              self$template,
-                ##                              self$static, ...),
-
-                ##       if(self$const)
-                ##         ' const '
-                ##       else
-                ##         character(0),
-
-                ##       if(self$abstract)
-                ##         '= 0'
-                ##       else
-                ##         character(0),
-
-                ##       ';'
-                ##     ) ## end paste
-                ##     if(isTRUE(self$externC))
-                ##       outputCode <- paste0('extern "C" ', outputCode)
-                ##     return(outputCode)
-                ##   } else {
-                ##     if(is.null(self$code$code))
-                ##       ## There is no code. This can occur for
-                ##       ## a nFunctionVirtual that is an
-                ##       ## abstract base class.
-                ##       return(character(0))
-                ##   }
-                ##   c(self$commentsAbove,
-                ##     paste0(
-                ##       generateFunctionHeader(self$returnType,
-                ##                              self$name,
-                ##                              argsListToUse,
-                ##                              scopes,
-                ##                              self$template,
-                ##                              static = FALSE,
-                ##                              ...), ' ',
-                ##       if(self$const)
-                ##         ' const '
-                ##       else
-                ##         character(),
-                ##       ' ',
-
-                ##       if(!is.null(self$initializerList))
-                ##         generateInitializerList(self$initializerList) ## We can add a symbolTable to use later if necessary
-                ##       else
-                ##         character(0),
-                ##       '{'
-                ##     ), ## end paste,
-                ##     'RESET_EIGEN_ERRORS'[
-                ##       isTRUE(nOptions('compilerOptions')$throwEigenErrors)
-                ##     ],
-                ##     'BEGIN_NC_ERRORTRAP'[
-                ##       isTRUE(nOptions('compilerOptions')$cppStacktrace)
-                ##     ],
-                ##     self$code$generate(...),
-                ##     'END_NC_ERRORTRAP'[
-                ##       isTRUE(nOptions('compilerOptions')$cppStacktrace)
-                ##     ],
-                ##     list('}')
-                ##     )## end c()
-                ## }
-                ## )
-#)
 
 generateInitializerList <- function(initializerList) {
   ## initializerList should be a list of exprClass objects
@@ -944,12 +867,6 @@ generateFunctionHeader <- function(self,
                                    scopes,
                                    args
                                    ) {
-  #returnType,
-  #                                 name,
-#                                   args,
- #                                  scopes = character(),
-  #                                 template = character(),
-  #                                 static = FALSE) {
 
   compileInfo <- self$compileInfo
 
@@ -965,8 +882,6 @@ generateFunctionHeader <- function(self,
       virtual_text <- compileInfo$virtual
     else if(isTRUE(self$virtual))
       virtual_text <- 'virtual '
-    # virtual_text <- compileInfo$virtual
-    # if(is.null(virtual_text)) virtual_text <- if(isTRUE(self$virtual)) 'virtual ' else character()
 
     isAbstract <- compileInfo$abstract
     if(is.null(isAbstract)) isAbstract <- self$abstract
@@ -1011,7 +926,7 @@ generateFunctionHeader <- function(self,
   qualifier_text <- compileInfo$qualifiers
   if(is.null(qualifier_text)) {
     qualifier_text <- if(self$const) 'const ' else character()
-    if(self$abstract) qualifier_text <- c(qualifier_text, "= 0")
+    # if(self$abstract) qualifier_text <- c(qualifier_text, "= 0")
   }
 
   header <- list(
@@ -1023,7 +938,8 @@ generateFunctionHeader <- function(self,
       returnType_text,
       scopes_name_text,
       args_text,
-      qualifier_text
+      qualifier_text,
+      abstract_text
     )
   )
   header
