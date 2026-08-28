@@ -185,7 +185,7 @@ nClass <- function(classname,
     init_body_text <- deparse(body(Rpublic[['initialize']]))
     has_super_init    <- any(grepl("super\\$initialize",  init_body_text))
     has_init_cpublic  <- any(grepl("initialize_Cpublic", init_body_text))
-    if(!has_super_init && !has_init_cpublic)
+    if(!has_super_init && !has_init_cpublic && isTRUE(get_nOption("NCwarn")))
       warning(
         "The Rpublic 'initialize' function does not call 'super$initialize()' or ",
         "'initialize_Cpublic()'. Without one of these, the Cpublic component will not ",

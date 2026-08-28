@@ -72,7 +72,8 @@ NC_InternalsClass <- R6::R6Class(
         }
         if(any(isAbstract)) {
           if(!isFALSE(compileInfo$createFromR)) {
-            warning("Setting compileInfo$createFromR = FALSE since at least one method is abstract.")
+            if(isTRUE(get_nOption("NCwarn")))
+              warning("Setting compileInfo$createFromR = FALSE since at least one method is abstract.")
             self$compileInfo$createFromR <- FALSE
           }
         }
