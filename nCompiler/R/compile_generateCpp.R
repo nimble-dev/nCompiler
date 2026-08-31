@@ -614,25 +614,54 @@ inGenCppEnv(
     }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
     nMessage <- function(code, symTab) {
-        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-               '; Rmessage(', compile_generateCpp(code$args[[1]], symTab), ', _nCompiler_global_output)')
+      paste0(
+        "{\n",
+        "std::ostringstream _nCompiler_error_output; \n",
+        "_nCompiler_error_output << ",
+        paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+        "<<\"\\n\";\n",
+        "nMessage_(", compile_generateCpp(code$args[[1]], symTab), ", _nCompiler_error_output);\n",
+        "}\n"
+      )
+#        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+#               '; nMessage_(', compile_generateCpp(code$args[[1]], symTab), ', _nCompiler_global_output)')
     }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
     nWarning <- function(code, symTab) {
-        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-               '; Rwarning(_nCompiler_global_output)')
+#        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+#               '; Rwarning(_nCompiler_global_output)')
+      Output(code, symTab, "nWarning_")
     }
 )
 
-inGenCppEnv(
-    nStop <- function(code, symTab) {
-        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-               '; nStop(_nCompiler_global_output)')
-    }
+nCompiler:::inGenCppEnv(
+  # We generate a new ostringstream instead of using a global shared one like nimble did.
+  # This avoids needing to clean it up, or generate its string first, and should be thread-safe.
+  # Apparently ostringstream is not thread-safe so shouldn't be shared.
+  nStop <- function(code, symTab) {
+    Output(code, symTab, "nStop_")
+  }
+)
+
+nCompiler:::inGenCppEnv(
+  # We generate a new ostringstream instead of using a global shared one like nimble did.
+  # This avoids needing to clean it up, or generate its string first, and should be thread-safe.
+  # Apparently ostringstream is not thread-safe so shouldn't be shared.
+  Output <- function(code, symTab, output_fun) {
+    paste0(
+      "{\n",
+      "std::ostringstream _nCompiler_error_output; \n",
+      "_nCompiler_error_output << ",
+      paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
+      "<<\"\\n\";\n",
+      output_fun, "(_nCompiler_error_output);\n",
+      "}\n"
+    )
+  }
 )
 
 inGenCppEnv(

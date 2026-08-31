@@ -26,7 +26,7 @@ inline void nCompiler_print_to_R(std::ostringstream &input) {
   input.clear();
 }
 
-inline void Rmessage(LogLevel level, std::ostringstream &input) {
+inline void Rmessage_old(LogLevel level, std::ostringstream &input) {
   Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
   Rcpp::Function message = nc["nMessage"];
   message(int(level), input.str().c_str());
@@ -35,20 +35,18 @@ inline void Rmessage(LogLevel level, std::ostringstream &input) {
   return;
 }
 
-inline void Rwarning(std::ostringstream &input) {
-  Rcpp::Environment base = Rcpp::Environment::namespace_env("base");
-  Rcpp::Function warning = base["warning"];
-  warning(input.str().c_str());
-  input.str("");
-  input.clear();  
-  return;
+template<bool add_newline = false>
+void nMessage_(std::ostringstream &output) {
+    if constexpr (add_newline) Rcpp::Rcout<<output.str()<<"\n";
+    else Rcpp::Rcout<<output.str();
 }
 
-inline void nStop(std::ostringstream &input) {
-  NERROR("%s", input.str().c_str());
-  input.str("");
-  input.clear();
-  return;
+inline void nWarning_(std::ostringstream &output) {
+    Rcpp::warning(output.str());
+}
+
+inline void nStop_(std::ostringstream &output) {
+  Rcpp::stop(output.str());
 }
 
 inline void Rprogress_bar(string msg, int total) {

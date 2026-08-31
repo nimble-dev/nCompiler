@@ -128,7 +128,7 @@ static SEXP Sexpr_2_data(SEXP Sexpr, SEXP Senv) {
       Rcpp::stop("Problem: Argument to refBlock should be a name or language object.");
     }
   }
-  SEXP Robj = PROTECT(Rf_findVarInFrame(Senv, Ssym)); // This does not search up environments
+  SEXP Robj = PROTECT(R_getVarEx(Senv, Ssym, FALSE, R_UnboundValue)); // This does not search up environments
   // SEXP Robj = PROTECT(Rf_findVar(Ssym, Senv)); // This does.
   // For now the reference behavior only works in the immediate calling environment.
   // Passing by reference is already dangerous, so the user should be careful,
