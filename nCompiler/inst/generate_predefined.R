@@ -12,4 +12,4 @@ comp <- nCompile(nL1)
 obj <- comp$new()
 length(obj) <- 3
 obj[[1]] <- 1:3
-obj |> as.list()
+testthat::expect_equal(obj |> as.list(), list(1:3, integer(), integer()))

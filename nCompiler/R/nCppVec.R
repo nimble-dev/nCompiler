@@ -76,6 +76,32 @@ nListBase_nClass <- NLdevel %||% nClass(
           return(0)
         },
       virtual=TRUE)
+    ),
+    get_interface_ptr_at = nFunction(
+      name = "get_interface_ptr_at",
+      function(i) {
+        stop("Uncompiled base class get_interface_ptr_at should not be called.")
+      },
+      returnType = 'nCpp("std::shared_ptr<genericInterfaceBaseC>")',
+      compileInfo = list(
+        C_fun = function(i='integerScalar') {
+          cppLiteral('Rcpp::stop("nListBase_nClass::get_interface_ptr_at should be called.")')
+          cppLiteral("return(nullptr)")
+        },
+      virtual=TRUE)
+    ),
+    access_at = nFunction(
+      name = "access_at",
+      function(i) {
+        stop("Uncompiled base class access_at should not be called.")
+      },
+      returnType = 'nCpp("std::unique_ptr<ETaccessorBase>")',
+      compileInfo = list(
+        C_fun = function(i='integerScalar') {
+          cppLiteral('Rcpp::stop("nListBase_nClass::access_at should be called.")')
+          cppLiteral("return(nullptr)")
+        },
+      virtual=TRUE)
     )
   ),
   # See comment above about needing to ensure a virtual destructor
@@ -87,6 +113,7 @@ nListBase_nClass <- NLdevel %||% nClass(
                    cpp_classname = "nListBase_nClass",
                    exportName = "nListBase_nClass_new",
                    packageNames = c(uncompiled="nListBase_nClass", compiled="nListBase_nClass_C"),
+                   interfaceExclude = c("get_interface_ptr_at", "access_at"),
                    overloadDefs = list(
                     length = list(
                       labelAbstractTypes = list(handler = nList_length_labelAbsTypes),
@@ -111,6 +138,7 @@ nList_nClass <- function(type, env = parent.frame()) {
 
   classname <- "nList"
   inner_cpp_typename <- type2cpp_typename({{ttype}}, where = env)
+  # cpp_classname matches the unique ID returned by nList(type, .ID=TRUE).
   cpp_classname <- Rname2CppName(paste0("nList_", type2uniqueID({{ttype}}, where = env)))
   # We need the C++ type for the nClass_inherit$base class,
   # but we can defer determining that until code generation
@@ -434,7 +462,6 @@ length.nList <- function(x) {
   x
 }
 
-# Draft for a new version of nCppVec.
 #' @export
 nList <- function(type, .ID = FALSE, env = parent.frame()) {
   ttype <- nCaptureType(type)

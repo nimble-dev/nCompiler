@@ -96,31 +96,36 @@ NCinternals <- function(x) {
   x
 }
 
-NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
-  if(!isNCgenerator(NCgenerator))
-    stop("Input must be a nClass generator.")
-  current_NCgen <- NCgenerator
-  done <- FALSE
-  overload <- NULL
-  # If there is an overload, it will be at
-  # overloadDefs[[name]][[stage]]$handler
-  # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
-  while(!done) {
-    overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
-    if(!is.null(overloadDefs)) {
-      overload <- overloadDefs[[name]][[stage]]
-      done <- !is.null(overload)
-    }
-    if(!done) {
-      if(inherits)  {
-        current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
-        done <- !isNCgenerator(current_NCgen)
-      } else
-        done <- TRUE
-    }
-  }
-  overload
+symbol_find_overload <- function(symbol, name, stage, inherits=TRUE) {
+  overload <- symbol$overloadDefs[[name]][[stage]]
+  overload # may be NULL
 }
+
+# NC_find_overload <- function(NCgenerator, name, stage, inherits=TRUE) {
+#   if(!isNCgenerator(NCgenerator))
+#     stop("Input must be a nClass generator.")
+#   current_NCgen <- NCgenerator
+#   done <- FALSE
+#   overload <- NULL
+#   # If there is an overload, it will be at
+#   # overloadDefs[[name]][[stage]]$handler
+#   # e.g. overloadDefs[["[["]][["labelAbstractTypes"]]$handler
+#   while(!done) {
+#     overloadDefs <- NCinternals(current_NCgen)$compileInfo$overloadDefs
+#     if(!is.null(overloadDefs)) {
+#       overload <- overloadDefs[[name]][[stage]]
+#       done <- !is.null(overload)
+#     }
+#     if(!done) {
+#       if(inherits)  {
+#         current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+#         done <- !isNCgenerator(current_NCgen)
+#       } else
+#         done <- TRUE
+#     }
+#   }
+#   overload
+# }
 
 # Utility function to allow searching up an inheritance
 # ladder to find a method.
@@ -169,7 +174,7 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
 
   if(is.null(NCint$inheritQ)) {
     inheritInfo$check_inherit_done <- TRUE
-    inheritInfo$virtualMethodNames <- NCint$virtualMethodNames_self
+    inheritInfo$virtualMethodNames <- NCint$virtualMethodNames
     return(inheritInfo$virtualMethodNames)
   }
   if(inheritInfo$check_inherit_done) return(inheritInfo$virtualMethodNames)
@@ -186,12 +191,11 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
   new_virtualMethodNames <- character()
 
   if(!allow_method_overloading) {
-    local_virtualMethodNames <- NCint$virtualMethodNames_self
     # default: check for disallowed method overloading
     allMethodNames <- inheritInfo$allMethodNames
     for(mN in allMethodNames) {
       # if a method is not in the self method names, it was inherited, so there is nothing to check
-      if(!(mN %in% NCint$allMethodNames_self)) next
+      if(!(mN %in% NCint$methodNames)) next
       if(!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
         # current level is the first one with this method name, so here we tag its virtual status
         new_virtualMethodNames <- c(new_virtualMethodNames, mN)
@@ -225,9 +229,9 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
     #
     # If any of my own field names already existed from my inherited classes,
     # that's not allowed
-    badFields <- NCint$allFieldNames_self %in% parent_nClass_Info$inheritInfo$allFieldNames
+    badFields <- NCint$fieldNames %in% parent_nClass_Info$inheritInfo$allFieldNames
     if(any(badFields))
-      stop(paste0("Problem with field(s): ", paste(NCint$allFieldNames_self[badFields], collapse = ", "),
+      stop(paste0("Problem with field(s): ", paste(NCint$fieldNames[badFields], collapse = ", "),
                   ". Fields with the same name are not allowed in base and inherited classes.",
                   " (If you want to allow local fields of the same name in C++ by turning off this requirement,",
                 " set nOptions(allow_inherited_field_duplicates=TRUE)"),

@@ -110,6 +110,7 @@ nClass <- function(classname,
   #   accessor specifier, typically "public", e.g. "public some_class".
   #   Similarly, template arguments (include CRTP) should be in the text explicitly.
   # needed_units: list of needed nClasses and nFunctions to include, by name or object
+  # createFromR: Default TRUE, whether to enable creation of objects from R.
   #
   # packageNames: can be a vector or list of two names, possibly named by "uncompiled" and "compiled",
   #  and taken in that order if unnamed. 
@@ -184,7 +185,7 @@ nClass <- function(classname,
     init_body_text <- deparse(body(Rpublic[['initialize']]))
     has_super_init    <- any(grepl("super\\$initialize",  init_body_text))
     has_init_cpublic  <- any(grepl("initialize_Cpublic", init_body_text))
-    if(!has_super_init && !has_init_cpublic)
+    if(!has_super_init && !has_init_cpublic && isTRUE(get_nOption("NCwarn")))
       warning(
         "The Rpublic 'initialize' function does not call 'super$initialize()' or ",
         "'initialize_Cpublic()'. Without one of these, the Cpublic component will not ",

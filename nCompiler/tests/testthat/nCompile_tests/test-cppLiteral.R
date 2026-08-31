@@ -127,7 +127,7 @@ test_that("nCpp works with evaluation in correct environment", {
   expect_identical(capture.output(obj$nf())[1], "hw 10")
 })
 
-test_that("nCpp works within a line", {
+test_that("nCpp works as a type declaration", {
   make_nf <- function() {
     nf <- nFunction(
       fun = function(ivec = nCpp('Eigen::Tensor<int, 1>')) {
@@ -139,4 +139,19 @@ test_that("nCpp works within a line", {
   nf <- make_nf()
   nfC <- nCompile(nf)
   expect_identical(nfC(1:3), 1:3)
+})
+
+test_that("nCpp works within a line", {
+  make_nf <- function() {
+    nf <- nFunction(
+      fun = function(ivec = integerVector()) {
+        x <- nCpp("(ivec + int(1))", types = list(return = 'integerVector')) + 2L
+        return(x)
+        returnType('integerVector')
+      }
+    )
+  }
+  nf <- make_nf()
+  nfC <- nCompile(nf)
+  expect_equal(nfC(1:3), (1:3)+3)
 })

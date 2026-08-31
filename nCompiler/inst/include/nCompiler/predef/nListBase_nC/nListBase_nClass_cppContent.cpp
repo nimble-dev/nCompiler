@@ -27,6 +27,16 @@ RESET_EIGEN_ERRORS
 std::cout<<"Compiled base class getLength should not be called."<<std::endl;;
 return(0.0);
 }
+    std::shared_ptr<genericInterfaceBaseC>  nListBase_nClass::get_interface_ptr_at ( int i ) {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_interface_ptr_at should be called.");
+return(nullptr);
+}
+    std::unique_ptr<ETaccessorBase>  nListBase_nClass::access_at ( int i ) {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::access_at should be called.");
+return(nullptr);
+}
       nListBase_nClass::nListBase_nClass (  ) {
 RESET_EIGEN_ERRORS
 }

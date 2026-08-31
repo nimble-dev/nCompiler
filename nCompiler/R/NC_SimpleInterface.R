@@ -45,6 +45,19 @@ value <- function(obj, name) {
 }
 
 #' @export
+interface_names <- function(obj, what = c("members", "methods")) {
+  what <- match.arg(what)
+  if(inherits(obj, "nClass"))
+    if(obj$isCompiled())
+      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
+    else
+      stop("interface_names() can only be used on compiled nClass objects.")
+  DLLenv <- get_DLLenv(obj)
+  extptr <- getExtptr(obj)
+  DLLenv$get_names(extptr, methods = (what == "methods"))
+}
+
+#' @export
 `value<-` <- function(obj, name = NULL, value) {
    if(inherits(obj, "nClass")) {
     if(obj$isCompiled())

@@ -110,9 +110,9 @@ compilerStage_initializeAuxEnv <- function(NFcompiler,
                                            class_env = new.env(),
                                            project_env = new.env(),
                                            debug = FALSE) {
-  if(!exists("built_types", envir = project_env)) {
-    project_env$built_types <- list()
-  }
+  #if(!exists("built_types", envir = project_env)) {
+  #  project_env$built_types <- list()
+  #}
   nameSubList <- NFcompiler$nameSubList
   NFcompiler$auxEnv[['uses_nCppVec']] <- FALSE
   NFcompiler$auxEnv[['needed_nFunctions']] <- list()

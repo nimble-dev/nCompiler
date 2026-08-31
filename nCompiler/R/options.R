@@ -10,6 +10,7 @@ updateDefaults <- function(defaults, control) {
   list(
     enableSaving = TRUE,
     check_nFunction = TRUE,  ## check syntax of nFunction fun
+    NCwarn = TRUE, ## issue warnings from issues when creating an nClass
     showCompilerOutput = FALSE,
     use_nCompLocal = FALSE,
     debugSizeProcessing = FALSE,

@@ -82,24 +82,45 @@ struct wrap_shared_ptr_to_R
   }
 };
 
+// nCwrapMode is defined in shared_ptr_as_wrap_forward_declarations.h
+
 template<typename T>
 struct wrap_shared_ptr_to_R< T,
                              typename std::enable_if<std::is_base_of<loadedObjectHookC<T>, T >::value>::type > {
   static SEXP go(std::shared_ptr< T > obj) {
-    SEXP Sans = PROTECT(loadedObjectHookC<T>::setup_R_return_object_full( PROTECT(return_nCompiler_object< T >(obj) ) ) );
+    SEXP Sans = PROTECT(loadedObjectHookC<T>::setup_R_return_object_full(
+      PROTECT(return_nCompiler_object< T >(obj) ) ) );
+    UNPROTECT(2);
+    return Sans;
+  }
+  static SEXP go(std::pair<std::shared_ptr< T >, nCwrapMode> pair_obj) {
+    SEXP Sans = PROTECT(loadedObjectHookC<T>::setup_R_return_object_dyn(
+      PROTECT(return_nCompiler_object< T >(pair_obj.first) ),
+      pair_obj.second ) );
     UNPROTECT(2);
     return Sans;
   }
 };
 
 namespace Rcpp {
-    template<typename T>
-    SEXP wrap( std::shared_ptr< T > obj ) {
+  template<typename T>
+  SEXP wrap( std::shared_ptr< T > obj ) {
     SEXP Sans;
     if(!obj) {
       return(R_NilValue);
     }
     Sans = PROTECT(wrap_shared_ptr_to_R<T>::go( obj ) );
+    UNPROTECT(1);
+    return Sans;
+  }
+
+  template<typename T>
+  SEXP wrap( std::pair<std::shared_ptr< T >, nCwrapMode> pair_obj ) {
+    SEXP Sans;
+    if(!pair_obj.first) {
+      return(R_NilValue);
+    }
+    Sans = PROTECT(wrap_shared_ptr_to_R<T>::go( pair_obj ) );
     UNPROTECT(1);
     return Sans;
   }

@@ -46,6 +46,14 @@ global_R_interface_cppDef <-
       "    get_genericInterfaceBaseC(Xptr);\n",
       "  //  std::cout << name << std::endl;\n",
       "  return(obj->call_method( name, Sargs ));\n",
+      "}\n\n",
+
+      "// This is completely generic, good for all derived classes\n",
+      "// [[Rcpp::export]]\n",
+      "SEXP get_names(SEXP Xptr, bool methods) {\n",
+      "  genericInterfaceBaseC *obj =\n",
+      "    get_genericInterfaceBaseC(Xptr);\n",
+      "  return(obj->get_names( methods ));\n",
       "}\n"),
     name = "R_interfaces"
   )

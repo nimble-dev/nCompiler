@@ -7,18 +7,21 @@ symbolBase <- R6::R6Class(
     isRef = FALSE,
     isArg = FALSE,
     interface = TRUE,
+    overloadDefs = NULL,
     implementation = NULL,
     initialize = function(name = NULL,
                           type = character(),
                           isArg = FALSE,
                           isRef = FALSE,
                           interface = TRUE,
+                          overloadDefs = NULL,
                           implementation = NULL) {
       self$name <- name
       self$type <- type
       self$isArg <- isArg
       self$isRef <- isRef
       self$interface <- interface
+      self$overloadDefs <- overloadDefs
       self$implementation <- implementation
     },
     shortPrint = function() {
@@ -175,7 +178,6 @@ symbolBasic <- R6::R6Class(
               FALSE)
       super$genCppVar(cType = cType)
     }
-
   )
 )
 
@@ -280,10 +282,14 @@ symbolTBD <- R6::R6Class(
       candidate <- self$check_unknown_types(returnID = FALSE,
                                             project_env = project_env)
       if(isNCgenerator(candidate)) {
+        # if check_unknown_types is updated to return the NC_info, then we can avoid this call to register_known_nClass
+        NC_info <- register_known_nClass(candidate, project_env = project_env)
         newSym <- symbolNC$new(name = self$name,
-                             type = NCinternals(candidate)$cpp_classname, # will this work for the type field??
-                             isArg = self$isArg,
-                             NCgenerator = candidate)
+                              type = NCinternals(candidate)$cpp_classname, # will this work for the type field??
+                              isArg = self$isArg,
+                              overloadDefs = NC_info$inheritInfo$overloadDefs,
+                              NCgenerator = candidate,
+                              interface = self$interface)
         return(newSym)
       } else {
         stop("In resolveSym method for symbolTBD (", self$name, ", ", self$type, "), could not resolve an nClass generator.")
@@ -347,17 +353,39 @@ symbolNC <- R6::R6Class(
   portable = TRUE,
   public = list(
     NCgenerator = NULL,
+    interfaceAux = NULL,
     initialize = function(name,
                           type,
                           NCgenerator,
                           isArg,
+                          interface,
+                          overloadDefs = NULL,
                           implementation = NULL) {
-      self$name <- name
-      self$type <- type
+      super$initialize(name = name,
+                       type = type,
+                       isArg = isArg,
+                       overloadDefs = overloadDefs,
+                       implementation = implementation)
       self$NCgenerator <- NCgenerator
-      self$isArg <- isArg
-##      self$isRef <- TRUE
-      self$implementation <- implementation
+      # interface may be TRUE or FALSE or
+      # "full", "generic", or "none"
+      if(!missing(interface)) {
+        if(is.logical(interface)) {
+          self$interface <- interface
+        }
+        if(is.character(interface)) {
+          self$interface <- interface != "none"
+          # The symbol owns its own C++ representation (cf. genCppVar()), so
+          # the nCwrapMode(...) text is built here, not by addGenericInterface_impl.
+          # That keeps addGenericInterface_impl (and NC_InternalsClass$process_inherit,
+          # which just flattens this across inheritance) generic: it only ever
+          # does a null-check and string concat, with no knowledge of what kind
+          # of aux content a symbol type produces.
+          if(self$interface)
+            self$interfaceAux <- paste0("nCwrapMode(",
+              if(interface == "full") "true" else "false", ")")
+        }
+      }
     },
     print = function() {
       writeLines(paste0(self$name, ': symbolNC of type ', self$type))
@@ -387,7 +415,8 @@ symbolSelf <- R6::R6Class(
       super$initialize(name = name,
                        type = type,
                        NCgenerator = NCgenerator,
-                       isArg = isArg)
+                       isArg = isArg,
+                       interface = FALSE)
     },
     # Note that the genCppOutput handlers for 'Method' and 'Member'
     # intercept this. If they see a name "self" with type that inherits from "symbolSelf",
@@ -532,7 +561,7 @@ symbolRcppType<- R6::R6Class(
       self$type
     },
     uniqueID = function() {
-      stop("uniqueID() is not yet implemented for symbolRcppType.")
+      paste0("RcppType_", self$type)
     },
     print = function() {
       writeLines(
@@ -544,7 +573,6 @@ symbolRcppType<- R6::R6Class(
     }
   )
 )
-
 
 symbolRcppNumericVector <- R6::R6Class(
   classname = "symbolRcppNumericVector",

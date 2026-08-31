@@ -94,6 +94,15 @@ class genericInterfaceBaseC {
     return R_NilValue;
   }
 
+  // Return the available names (data members if methods==false, methods if
+  // methods==true) for R-level introspection (e.g. interface_names() in R).
+  // Derived classes should provide valid implementations.
+  virtual SEXP get_names(bool methods) const {
+    std::cout<<"Error: you should be in a derived genericInterfaceC class for get_names"<<std::endl;
+    // return something to avoid compiler warning; equivalent of character(0).
+    return R_NilValue;
+  }
+
 #ifdef NCOMPILER_USES_CEREAL
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {}
@@ -194,6 +203,9 @@ public:
   SEXP make_deserialized_return_SEXP() override {
       return FirstFound::make_deserialized_return_SEXP();
   }
+  SEXP get_names(bool methods) const override {
+      return FirstFound::get_names(methods);
+  }
 };
 
 // Single-arg specialization: root nClass (no nClass parent).
@@ -238,6 +250,9 @@ public:
   SEXP make_deserialized_return_SEXP() override {
       return FirstFound::make_deserialized_return_SEXP();
   }
+  SEXP get_names(bool methods) const override {
+      return FirstFound::get_names(methods);
+  }
 };
 
 // Empty specialization: nClass with no generic interface (no enable_shared_from_this).
@@ -250,6 +265,12 @@ private:
 public:
   const name2access_type& get_name2access() const override {
       return FirstFound::get_name2access();
+  }
+  std::unique_ptr<ETaccessorBase> access(const std::string &name) override {
+      return FirstFound::access(name);
+  }
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr(const std::string &name) override {
+      return FirstFound::get_interface_ptr(name);
   }
   SEXP get_value(const std::string &name) const override {
       return FirstFound::get_value(name);
@@ -265,6 +286,9 @@ public:
   }
   SEXP make_deserialized_return_SEXP() override {
       return FirstFound::make_deserialized_return_SEXP();
+  }
+  SEXP get_names(bool methods) const override {
+      return FirstFound::get_names(methods);
   }
 };
 

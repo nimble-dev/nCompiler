@@ -1,5 +1,100 @@
 # (These work when run directly, but not when run through test_package().)
 
+test_that("member-specific control over full vs generic return works", {
+  nc1 <- nClass(
+    Cpublic = list(
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+1)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar')
+    ),
+    compileInfo = list(interface = "generic")
+  )
+
+  nc1a <- nClass(
+    Cpublic = list(
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+2)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar')
+    ),
+    compileInfo = list(interface = "full")
+  )
+
+  nc1b <- nClass(
+    Cpublic = list(
+      Cfoo = nFunction(
+        fun = function(x) {
+          return(x+3)
+        },
+        argTypes = list(x = 'numericScalar'),
+        returnType = 'numericScalar')
+    )
+    # pick up interface setting nCompile call.
+  )
+
+  nc2 <- nClass(
+    Cpublic = list(
+      x1 = "nc1()",
+      x2 = "nClass(nc1())",
+      x3 = "nClass(nc1(), interface = 'full')",
+      x4 = "nClass(nc1(), interface = 'generic')",
+      x5 = "nClass(nc1a(), interface = 'full')",
+      x6 = "nClass(nc1a(), interface = 'generic')",
+      x7 = "nClass(nc1b(), interface = 'full')",
+      x8 = "nClass(nc1b(), interface = 'generic')"
+    )
+  )
+
+  comp <- nCompile(nc2, nc1, nc1a, nc1b)
+  obj2 <- comp$nc2$new()
+  expect_equal(interface_names(obj2), paste0("x", 1:8))
+  expect_equal(interface_names(obj2, "methods"), character())
+  obj1 <- comp$nc1()
+  expect_equal(interface_names(obj1), character())
+  expect_equal(interface_names(obj1, "methods"), "Cfoo")
+  obj1a <- comp$nc1a$new()
+  obj1b <- comp$nc1b$new()
+
+  obj2$x1 <- obj1
+  obj2$x2 <- obj1
+  obj2$x3 <- obj1
+  obj2$x4 <- obj1
+  obj2$x5 <- obj1a
+  obj2$x6 <- obj1a
+  obj2$x7 <- obj1b
+  obj2$x8 <- obj1b
+
+  expect_true(is.loadedObjectEnv(obj2$x1))
+  expect_false(isNC(obj2$x1))
+  expect_true(is.loadedObjectEnv(obj2$x2))
+  expect_false(isNC(obj2$x2))
+  expect_false(is.loadedObjectEnv(obj2$x3))
+  expect_true(isNC(obj2$x3))
+  expect_true(is.loadedObjectEnv(obj2$x4))
+  expect_false(isNC(obj2$x4))
+  expect_false(is.loadedObjectEnv(obj2$x5))
+  expect_true(isNC(obj2$x5))
+  expect_true(is.loadedObjectEnv(obj2$x6))
+  expect_false(isNC(obj2$x6))
+  expect_false(is.loadedObjectEnv(obj2$x7))
+  expect_true(isNC(obj2$x7))
+  expect_true(is.loadedObjectEnv(obj2$x8))
+  expect_false(isNC(obj2$x8))
+
+  expect_equal(interface_names(obj2$x7), character())
+  expect_equal(interface_names(obj2$x7, "methods"), "Cfoo")
+  expect_equal(interface_names(obj2$x8), character())
+  expect_equal(interface_names(obj2$x8, "methods"), "Cfoo")
+
+  rm(obj2, obj1, obj1a, obj1b); gc()
+})
+
+
 test_that(
   "Basic and full interfaces work",
   {
@@ -19,9 +114,11 @@ test_that(
           returnType = 'numericScalar')
       )
     )
-#    ans <- nCompile_nClass(nc1, interface = "generic")
+
     ans <- nCompile(nc1, interfaces = "generic")
     obj <- ans()
+    expect_equal(interface_names(obj), sort(c("Ca", "Cv")))
+    expect_equal(interface_names(obj, "methods"), "Cfoo")
     value(obj, 'Cv') <- 2.3
     check <- value(obj, 'Cv')
     expect_equal(check, 2.3, info = "scalar value() and `value<-()`")
@@ -66,10 +163,14 @@ test_that(
           returnType = 'numericScalar')
       )
     )
-#    ans <- nCompile_nClass(nc1, interface = "full")
+
     ans <- nCompile(nc1, interfaces = "full")
     expect_true(isCompiledNCgenerator(ans))
     obj <- ans$new()
+
+    expect_equal(interface_names(obj), sort(c("Ca", "Cv")))
+    expect_equal(interface_names(obj, "methods"), "Cfoo")
+
     expect_true(inherits(obj, "nClass"))
     obj$Cv <- 2.3
     check <- obj$Cv
@@ -83,7 +184,7 @@ test_that(
     expect_equal(check, 4.4, info = "method from a full interface")
   })
 
-test_that("getting a generic interface pointer within C++ works", {
+test_that("getting an interface base class pointer within C++ works", {
   nc1 <- nList("integerVector()")
   nc2 <- nClass(
     classname = "nc2",

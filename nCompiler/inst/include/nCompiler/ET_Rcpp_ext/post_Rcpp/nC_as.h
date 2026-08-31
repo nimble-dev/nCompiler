@@ -17,6 +17,12 @@
 //   RHSCastProxy<Src,Tgt,N>            — cross-scalar RHS; lazy, no allocation
 //   CastingProxy<Tgt,ViewType>         — cross-scalar LHS; eager copy + write-back
 //   RuntimeCastingProxy<Tgt,N>         — runtime-source (ETaccessorBase)
+//
+// A fifth proxy, KnownProxy<TargetType>, is selected explicitly by
+// known_nC<TargetType>() rather than by as_nC(): it is for a runtime source
+// (ETaccessorBase&) whose type the caller *guarantees* at the call site, so
+// it skips all cast/copy/write-back machinery and just caches a direct
+// reference to the source's own storage after a one-time downcast.
 // ---------------------------------------------------------------------------
 
 // EmptyProxy<ViewType>
@@ -262,6 +268,66 @@ public:
 
   TM operator()() { return TM(data_ptr_, dims_); }
 };
+
+// KnownProxy was added using Claude as a potentially useful feature,
+// particularly as a target for nimble2 keyword-processing needs.
+// At the time of initial drafting it remains to be seen if it will
+// actually be used.
+//
+// KnownProxy<TargetType>
+//
+// Runtime-source proxy for a target type the caller *guarantees* matches the
+// actual runtime type behind an ETaccessorBase (e.g. "I know this is a 2D
+// double tensor"). Unlike RuntimeCastingProxy, there is no cross-scalar
+// fallback: the downcast either succeeds outright or throws (via
+// ETaccessorBase::ref()/scalar(), same as calling them directly). Since it
+// is a hard guarantee rather than a soft cast, operator()() returns a
+// reference to the source's own storage (an actual Eigen::Tensor&, not a
+// TensorMap view) — no copy, no write-back, no reshaping of singleton dims.
+//
+// The downcast happens once, in the constructor; operator()() just returns
+// the cached reference, so it is safe and cheap to call repeatedly as long
+// as the source outlives the proxy:
+//
+//   auto my_proxy = known_nC<Eigen::Tensor<double, 2>>(my_ETaccessorBase);
+//   Y = my_proxy() + B;
+template<typename TargetType>
+class KnownProxy {
+  // Primary template covers true scalar targets (double, int, bool).
+  TargetType& ref_;
+public:
+  explicit KnownProxy(ETaccessorBase& acc) : ref_(acc.template scalar<TargetType>()) {}
+  KnownProxy(const KnownProxy&) = delete;
+  KnownProxy& operator=(const KnownProxy&) = delete;
+  TargetType& operator()() { return ref_; }
+};
+
+template<typename Scalar, int nDim>
+class KnownProxy<Eigen::Tensor<Scalar, nDim>> {
+  Eigen::Tensor<Scalar, nDim>& ref_;
+public:
+  explicit KnownProxy(ETaccessorBase& acc) : ref_(acc.template ref<nDim, Scalar>()) {}
+  KnownProxy(const KnownProxy&) = delete;
+  KnownProxy& operator=(const KnownProxy&) = delete;
+  Eigen::Tensor<Scalar, nDim>& operator()() { return ref_; }
+};
+
+// known_nC — public API for KnownProxy, mirroring as_nC's runtime-source
+// overloads (ETaccessorBase&, unique_ptr<ETaccessorBase>& / &&).
+template<typename TargetType>
+KnownProxy<TargetType> known_nC(ETaccessorBase& acc) {
+  return KnownProxy<TargetType>(acc);
+}
+
+template<typename TargetType>
+KnownProxy<TargetType> known_nC(std::unique_ptr<ETaccessorBase>& acc) {
+  return KnownProxy<TargetType>(*acc);
+}
+
+template<typename TargetType>
+KnownProxy<TargetType> known_nC(std::unique_ptr<ETaccessorBase>&& acc) {
+  return KnownProxy<TargetType>(*acc);
+}
 
 // ---------------------------------------------------------------------------
 // as_nC — the single public API emitted by the nCompiler code generator.

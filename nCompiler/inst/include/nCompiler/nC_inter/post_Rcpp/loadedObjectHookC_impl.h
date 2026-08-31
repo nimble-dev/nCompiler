@@ -19,6 +19,12 @@ public:
     Rcpp::Function newLOE(nc["new.loadedObjectEnv"]);
     return newLOE(Xptr, CnClass_env);
   };
+  static SEXP setup_R_return_object_dyn(SEXP Xptr, const nCwrapMode &mode) {
+    Rcpp::Environment nc = Rcpp::Environment::namespace_env("nCompiler");
+    Rcpp::Function newLOE(nc["new.loadedObjectEnv_full"]);
+    Rcpp::LogicalVector is_full(1, mode.get() == nCwrapMode::mode::full);
+    return newLOE(Xptr, CnClass_env, is_full);
+  };
   /* SEXP base_setup_R_return_object(SEXP Xptr) { */
   /*   Rcpp::Environment nc("package:nCompiler"); */
   /*   Rcpp::Function newLOE = nc["new.loadedObjectEnv"]; */

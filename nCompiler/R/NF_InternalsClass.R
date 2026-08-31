@@ -119,7 +119,7 @@ NF_InternalsClass <- R6::R6Class(
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
       self$code <- body(fun_to_use)
-      if(code[[1]] != '{')
+      if(self$code[[1]] != '{')
         self$code <- substitute({CODE}, list(CODE=self$code))
       ## check all code except.nCompiler package nFunctions
       ##            if(check && "package.nCompiler" %in% search())
@@ -192,6 +192,12 @@ NF_InternalsClass <- R6::R6Class(
           # to-do: process types. make and AD__() function that returns ADfun from an nFunctionClass
           self$ADcontent$cpp_code_name <- paste0(cpp_code_name,"_AD__")
         }
+      }
+      # Check on virtual and abstract
+      if(isTRUE(self$compileInfo$abstract)) {
+        if(!isTRUE(self$compileInfo$virtual))
+          warning("Setting compileInfo$virtual = TRUE since compileInfo$abstract = TRUE")
+        self$compileInfo$virtual <- TRUE
       }
     },
     updateCode = function(newCode) {

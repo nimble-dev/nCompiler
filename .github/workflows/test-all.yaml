@@ -39,14 +39,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
-      - name: Install nimbleModel
-        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel", auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
-        env:
-          GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -95,14 +91,10 @@ jobs:
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
-      - name: Install nimbleModel
-        run: R -q -e 'remotes::install_github("https://github.com/perrydv/nimbleModel", subdir="nimbleModel", auth_token=Sys.getenv("GITHUB_TOKEN_NIMBLEMODEL"))'
-        env:
-          GITHUB_TOKEN_NIMBLEMODEL: ${{ secrets.GH_NM_PAT }}
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -110,7 +102,6 @@ jobs:
       - name: Run nCompile and other tests
         run: |
           library(nCompiler)
-          # testthat::test_dir("nCompiler/tests/testthat/nimble_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/nClass_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/types_tests", reporter = "summary")
           testthat::test_dir("nCompiler/tests/testthat/serialization_tests", reporter = "summary")
@@ -157,7 +148,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler

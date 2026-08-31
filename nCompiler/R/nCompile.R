@@ -486,6 +486,16 @@ update_known_nClasses <- function(new_units, new_unitTypes, project_env) {
 }
 
 register_known_nClass <- function(NCgenerator, project_env, classID = NULL) {
+  # project_env may be NULL when resolving a type outside of an nCompile() call,
+  # e.g. an nClassBuilder like nList() being called at nClass-definition time.
+  # In that case we use a scratch project_env so resolution can proceed; it is
+  # not cached or reused, so it costs one registration/inheritance walk and is
+  # thrown away (no different from the pre-existing uncached behavior in
+  # check_built_types() when project_env is NULL).
+  if(is.null(project_env)) {
+    project_env <- new.env()
+    project_env$known_nClasses <- new.env()
+  }
   # classID will be non-null when called to register a built type such as an nList.
   known_nClasses <- project_env$known_nClasses
   if(is.null(classID)) {
@@ -592,7 +602,7 @@ nCompile <- function(...,
 
   while(!done_finding_units) {
     update_known_nClasses(new_units, new_unitTypes, project_env)
-    existing_known_nClass_names <- ls(project_env$known_nClasses)
+    existing_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, 
                                                new_compileInfos, project_env)
     new_cppDefs <- cppDefs_info$cppDefs
@@ -613,7 +623,7 @@ nCompile <- function(...,
     #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
     #
-    updated_known_nClass_names <- ls(project_env$known_nClasses)
+    updated_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
     new_needed_known_nClasses <- lapply(setdiff(updated_known_nClass_names, existing_known_nClass_names),
                                      \(x) project_env$known_nClasses[[x]]$NCgenerator)
     # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
@@ -1340,7 +1350,7 @@ WP_writeMemberData <- function(memberData, datDir) {
   # Write out data
   if (length(memberData) > 0) {
     datEnv <- as.environment(memberData)
-    ls_datEnv <- ls(datEnv)
+    ls_datEnv <- ls(datEnv, all.names = TRUE)
     for (i in seq_along(ls_datEnv)) {
       save(list = ls_datEnv[i], envir = datEnv,
            file = file.path(datDir, paste0(ls_datEnv[i], ".RData")))

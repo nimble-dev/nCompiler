@@ -237,9 +237,15 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
         if(is.null(newCobjFun))
           stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
         CppObj <- newCobjFun()
+      } else {
+        if(isCNC(CppObj)) {
+          CppObj <- CppObj$private$Cpublic_obj$private$CppObj
+        }
       }
+      if(!nCompiler:::is.loadedObjectEnv(CppObj))
+        stop("in initializeCpp: CppObj should be a loadedObjectEnv")
       private$CppObj <- CppObj
-      private$DLLenv <- `:::`("nCompiler", "get_DLLenv")(CppObj) # workaround static code scanning for nCompiler:::get_DLLenv(CppObj)
+      private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
     },
     list(
       NEWCOBJFUN = if(package) as.name(newCobjFun)

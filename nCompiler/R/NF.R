@@ -106,7 +106,7 @@ nFunction <- function(fun,
   compileInfo <- updateDefaults(
     list(C_fun = NULL,
          callFromR = TRUE,
-         virtual=FALSE, abstract=FALSE, const=FALSE,
+         virtual = FALSE, abstract = FALSE, const = FALSE,
         depends = list()),
     compileInfo
   )

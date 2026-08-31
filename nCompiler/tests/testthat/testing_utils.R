@@ -289,16 +289,16 @@ modifyBatchOnMatch <-
 get_matching_ops <- function(field, subfield = NULL, test = isTRUE) {
   ## Returns vector of operator names where the value in a given field (or its
   ## subfield) returns TRUE when the test function is applied to it.
-  ops <- ls(`:::`("nCompiler", "operatorDefEnv"))
-  values <- sapply(ops, `:::`("nCompiler", "getOperatorDef"), field, subfield)
+  ops <- ls(nCompiler:::operatorDefEnv, all.names = TRUE)
+  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield)
   if (is.null(values)) return(character(0))
   names(values)[sapply(values, test)]
 }
 
 get_ops_values <- function(field, subfield = NULL) {
   ## Return a named (by operator) list of the values found in field/subfield.
-  ops <- ls(`:::`("nCompiler", "operatorDefEnv"))
-  values <- sapply(ops, `:::`("nCompiler", "getOperatorDef"), field, subfield,
+  ops <- ls(nCompiler:::operatorDefEnv, all.names = TRUE)
+  values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield,
                    simplify = FALSE)
   non_null <- sapply(values, function(x) !is.null(x))
   return(values[non_null])
