@@ -42,7 +42,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -94,7 +94,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
@@ -148,7 +148,7 @@ jobs:
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
-        run: R -q -e 'remotes::install_cran(c("inline", "nimble"))'
+        run: R -q -e 'remotes::install_cran(c("inline"))'
       - name: Build Package
         run: |
             R CMD build nCompiler
