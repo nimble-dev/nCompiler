@@ -30,8 +30,7 @@ compile_labelAbstractTypes <- function(code,
       code$type <- symbolBasic$new(name = 'NONAME',
                                    type = 'logical',
                                    nDim = 0)
-        return(NULL)
-      }
+      return(NULL)
     } else if(is.character(code$name)) {
       warnings("Type labeling of a literal string is not handled yet in labelAbstractTypes.")
     }
