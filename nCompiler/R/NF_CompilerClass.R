@@ -106,6 +106,8 @@ NF_CompilerClass <- R6::R6Class(
               sourceObj = sourceObj,
               class_env = class_env,
               project_env = project_env)
+      if(NFcompilerMaybeStopAfter(self$stageCompleted, controlFull))
+        return(invisible(NULL))
       createCppInternal()
     },
     createCppInternal = function() {
@@ -341,7 +343,7 @@ processNFstages <- function(NFcompiler,
   if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
   if(!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    ## Make modifications that do not need size processing
+    ## Make modifications that do not need abstract type information
     NFtry(
       compilerStage_simpleTransformations(
         NFcompiler,
