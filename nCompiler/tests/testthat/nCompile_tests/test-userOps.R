@@ -346,3 +346,63 @@ test_that("nClass custom opDefs of 3 kinds works through a sequence of changes a
   ## my_foo_class <- comp$foo_class$new()
   ## comp$use_foo_class()
 })
+
+test_that("matchDef of user-defined op is used", {
+  foo <- nFunction(
+    fun = function() {
+      bar(B = 2, A = 1) # See if this gets reordered
+    }
+  )
+  # first give an opDef without matchDef
+  on.exit(deregisterOpDef("bar"))
+  registerOpDef(
+    list(bar =
+           list()))
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(B = 2, A = 1\\)", nDeparse(test$code)[2]))
+  
+  registerOpDef(
+    list(bar =
+           list(
+             matchDef = function(A, B) {}
+           )))
+  
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
+})
+
+test_that("matchDef of another nFunction is used", {
+  bar <- nFunction(function(A = "numericScalar", B = "numericScalar") {})
+  foo <- nFunction(
+    fun = function() {
+      bar(B = 2, A = 1) # See if this gets reordered
+    }
+  )
+  # Args can't be re-ordered here because normalizeCalls does not see type of obj.
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
+})
+
+test_that("matchDef of method or user-defined op in an nClass is used", {
+  nc <- nClass(
+    classname = "nc",
+    Cpublic = list(
+      bar = nFunction(function(A = "numericScalar", B = "numericScalar") {})
+    )
+  )
+  foo <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      obj$bar(B = 2, A = 1) # See if this gets reordered
+    }
+  )
+  
+  debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
+  test <- nCompile(foo)
+  
+  # Args can't be re-ordered here because normalizeCalls does not see type of obj.
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  
+  nOptions(pause_after_writing_files = TRUE)
+  test <- nCompile(foo)  
+})

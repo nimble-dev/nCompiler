@@ -7,6 +7,8 @@
 library(nCompiler)
 library(testthat)
 
+# PAIO = put arguments in order
+
 PAIOtest <- function(input, def, expected, compileArgs = NULL, auxExpected) {
   inputcode <- nParse(input)
   expecterror = expected=="error"
@@ -72,7 +74,6 @@ test_that("unary compileArg", {
   PAIOtest("foo(A=a)", \(A){}, "foo()", compileArgs="A", auxExpected = auxExpected)
   PAIOtest("foo(B=b)", \(A){}, "error")
 })
-
 
 test_that("binary def", {
   # with both defaults
@@ -202,13 +203,13 @@ test_that("binary def with dots at the end", {
   PAIOtest("foo(C = c, D = d, A = 1)", \(A = a, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, A = 1, D = d)", \(A = a, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d)", \(A = a, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(1, 2, C = c)", \(A = a, B = b, ...){}, "foo(A = 1, B = 2, C = c)", auxExpected=auxExpected)
   PAIOtest("foo(1, 2, C = c, 3)", \(A = a, B = b, ...){}, "foo(A = 1, B = 2, C = c, 3)", auxExpected=auxExpected)
   PAIOtest("foo(C = c, 1, D = d, 2)", \(A = a, B = b, ...){}, "foo(A = 1, B = 2, C = c, D = d)", auxExpected=auxExpected)
   PAIOtest("foo(C = c, B = 2, D = d, A = 1)", \(A = a, B = b, ...){}, "foo(A = 1, B = 2, C = c, D = d)", auxExpected=auxExpected)
   PAIOtest("foo(C = c, B = 2, D = d, 1)", \(A = a, B = b, ...){}, "foo(A = 1, B = 2, C = c, D = d)", auxExpected=auxExpected)
-  
+
   auxExpectedNoB=list(provided_as_missing=c("B","..."), missing=character(), compileArgs=list())
   auxExpected=list(provided_as_missing="...", missing=character(), compileArgs=list())
   PAIOtest("foo(A = a)", \(A = a, B = b, ...){}, "foo(A = a, B = b)", auxExpected=auxExpectedNoB)
@@ -216,7 +217,7 @@ test_that("binary def with dots at the end", {
   PAIOtest("foo(a, B = 2)", \(A = a, B = b, ...){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
   PAIOtest("foo(A = a, B = 2)", \(A = a, B = b, ...){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
   PAIOtest("foo(B = 2, A = a)", \(A = a, B = b, ...){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
-  
+
   # No default for A
   #auxExpectedNoAB=list(provided_as_missing=c("A", "B"), missing=character(), compileArgs=list())
   auxExpectedNoA=list(provided_as_missing=c("A", "B"), missing="A", compileArgs=list())
@@ -224,12 +225,12 @@ test_that("binary def with dots at the end", {
   auxExpected=list(provided_as_missing=character(), missing=character(), compileArgs=list())
   PAIOtest("foo(C = c, D = d)", \(A, B = b, ...){}, "foo(B = b, C = c, D = d)", auxExpected=auxExpectedNoA)
   PAIOtest("foo(1, C = c, D = d)", \(A, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(A = 1, C = c, D = d)", \(A, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, D = d, A = 1)", \(A, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, A = 1, D = d)", \(A, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d)", \(A, B = b, ...){}, "foo(A = 1, B = b, C = c, D = d)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(1, 2, C = c)", \(A, B = b, ...){}, "foo(A = 1, B = 2, C = c)", auxExpected=auxExpected)
   PAIOtest("foo(1, 2, C = c, 3)", \(A, B = b, ...){}, "foo(A = 1, B = 2, C = c, 3)", auxExpected=auxExpected)
   PAIOtest("foo(C = c, 1, D = d, 2)", \(A, B = b, ...){}, "foo(A = 1, B = 2, C = c, D = d)", auxExpected=auxExpected)
@@ -257,13 +258,13 @@ test_that("binary def with dots in the middle", {
   PAIOtest("foo(C = c, D = d, A = 1)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, A = 1, D = d)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(1, 2, C = c)", \(A = a, ..., B = b){}, "foo(A = 1, 2, C = c, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(1, 2, C = c, 3)", \(A = a, ..., B = b){}, "foo(A = 1, 2, C = c, 3, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d, 2)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, 2, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, B = 2, D = d, A = 1)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, B = 2)", auxExpected=auxExpected)
   PAIOtest("foo(C = c, B = 2, D = d, 1)", \(A = a, ..., B = b){}, "foo(A = 1, C = c, D = d, B = 2)", auxExpected=auxExpected)
-  
+
   auxExpectedNoB=list(provided_as_missing=c("...", "B"), missing=character(), compileArgs=list())
   auxExpected=list(provided_as_missing="...", missing=character(), compileArgs=list())
   PAIOtest("foo(A = a)", \(A = a, ..., B = b){}, "foo(A = a, B = b)", auxExpected=auxExpectedNoB)
@@ -273,22 +274,22 @@ test_that("binary def with dots in the middle", {
   PAIOtest("foo(a, B = 2)", \(A = a, ..., B = b){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
   PAIOtest("foo(A = a, B = 2)", \(A = a, ..., B = b){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
   PAIOtest("foo(B = 2, A = a)", \(A = a, ..., B = b){}, "foo(A = a, B = 2)", auxExpected=auxExpected)
-  
+
   # No default for A
   auxExpectedNoAB=list(provided_as_missing=c("A", "B"), missing="A", compileArgs=list())
   auxExpectedNoA=list(provided_as_missing=c("A"), missing="A", compileArgs=list())
   auxExpectedNoB=list(provided_as_missing="B", missing=character(), compileArgs=list())
   auxExpected=list(provided_as_missing=character(), missing=character(), compileArgs=list())
-  
+
   PAIOtest("foo(C = c, D = d)", \(A, ..., B = b){}, "foo(C = c, D = d, B = b)", auxExpected=auxExpectedNoAB)
-  
+
   PAIOtest("foo(1, C = c, D = d)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(A = 1, C = c, D = d)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, D = d, A = 1)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, A = 1, D = d)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, B = b)", auxExpected=auxExpectedNoB)
-  
+
   PAIOtest("foo(1, 2, C = c)", \(A, ..., B = b){}, "foo(A = 1, 2, C = c, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(1, 2, C = c, 3)", \(A, ..., B = b){}, "foo(A = 1, 2, C = c, 3, B = b)", auxExpected=auxExpectedNoB)
   PAIOtest("foo(C = c, 1, D = d, 2)", \(A, ..., B = b){}, "foo(A = 1, C = c, D = d, 2, B = b)", auxExpected=auxExpectedNoB)

@@ -238,7 +238,7 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
           stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
         CppObj <- newCobjFun()
       } else {
-        if(isCNC(CppObj)) {
+        if(nCompiler::isCNC(CppObj)) { # Might be called from a different namespace.
           CppObj <- CppObj$private$Cpublic_obj$private$CppObj
         }
       }
