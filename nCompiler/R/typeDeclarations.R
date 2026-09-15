@@ -276,9 +276,20 @@ typeDeclarationEnv <- list2env(list(
   },
   nArray = function(value,
                     dim,
+                    nDim,
                     ...,
                     type = "double") {
-    nTypeBasic(type, length(dim), ...)
+    if(missing(nDim)) {
+      if(missing(dim))
+        stop("nArray must have either dim or nDim specified.")
+      nDim <- length(dim)
+    } else {
+      if(!missing(dim)) {
+        if(length(dim) != nDim)
+          stop("nArray has both dim and nDim specified, but they are inconsistent.")
+      }
+    }
+    nTypeBasic(type, nDim, ...)
   },
   ## vector versions with type embedded in keyword
   nInteger = function(length = NA,
@@ -308,6 +319,9 @@ typeDeclarationEnv <- list2env(list(
   },
   void = function(...) {
     symbolVoid$new(...)
+  },
+  character = function(...) {
+    symbolBasicString$new(nDim = 0, ...)
   },
   string = function(...) {
     symbolBasicString$new(nDim = 0, ...)

@@ -141,6 +141,12 @@ compile_labelAbstractTypes <- function(code,
         else
           ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
                       envir = labelAbstractTypesEnv)
+        # A returnSym from another function or method could be a symbolTBD, so we resolve:
+        if(!is.null(code$type)) {
+          if(inherits(code$type, "symbolTBD")) {
+            code$type <- resolveOneTBDsymbol(code$type, project_env = auxEnv$project_env)
+          }
+        }
         nErrorEnv$stateInfo <- character()
         if (logging) {
           appendToLog(paste('Finished handling', handler, 'for', code$name))
@@ -490,7 +496,7 @@ inLabelAbstractTypesEnv(
                         ' does not have a valid returnType.')
           ), call. = FALSE
         )
-      code$type <- returnSym$clone() ## Not sure if a clone is needed, but it seems safer to make one.
+      code$type <- returnSym$clone() ## clone is needed because we might resolve a TBD symbol and we don't want to change the original returnSym
       inserts
     }
 )
