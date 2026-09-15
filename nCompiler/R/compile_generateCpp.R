@@ -681,7 +681,7 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
   # Lambda (anonymous) function (expression) in C++/
   # These are not part of the user-facing language for nCompiler
   # but may be created as part of an implementation.
@@ -692,12 +692,12 @@ inGenCppEnv(
   # This has two arguments. The first is a literal whose
   # character string gives
   # the '[](double x)' or variants of it.
-  # The second is to be genreated as the code, with
+  # The second is to be generated as the code, with
   # extra {} for good measure.
   LambdaFun_ <- function(code, symTab) {
     paste0(compile_generateCpp(code$args[[1]], symTab),
            '{',
-           compile_generateCpp(code$args[[2]], symTab),
+           paste0(unlist(compile_generateCpp(code$args[[2]], symTab)), collapse = '\n'),
            ';}'
            )
   }

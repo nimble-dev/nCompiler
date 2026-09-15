@@ -521,15 +521,15 @@ inLabelAbstractTypesEnv(
 ##     }
 ## )
 
-inLabelAbstractTypesEnv(
-  RecurseAndLabel <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
-    nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
-    code$type <- symbolBasic$new(type = type, nDim = nDim)
-    invisible(inserts)
-  }
-)
+# inLabelAbstractTypesEnv(
+#   RecurseAndLabel <- function(code, symTab, auxEnv, handlingInfo) {
+#     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+#     type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+#     nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
+#     code$type <- symbolBasic$new(type = type, nDim = nDim)
+#     invisible(inserts)
+#   }
+# )
 
 inLabelAbstractTypesEnv(
   nC <- function(code, symTab, auxEnv, handlingInfo) {
@@ -553,15 +553,20 @@ inLabelAbstractTypesEnv(
       for(arg in code$args) {
         if(arg$type$nDim == 0) {
           # wrap the scalar in a vector
+          funName <- switch(arg$type$type,
+                            double = "nNumeric",
+                            integer = "nInteger",
+                            logical = "nLogical")
           newExpr <- wrapExprClassOperator(
             code = arg,
-            funName = 'nNumeric',
-            type = typeDeclarationEnv$nNumeric()
+            funName = funName,
+            type = arg$type# typeDeclarationEnv$nNumeric()
           )
           # set vector length
           insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
           # name arguments
           names(newExpr$args) = c('value', 'length')
+          inserts <- c(inserts, compile_labelAbstractTypes(newExpr, symTab, auxEnv))
         }
       }
     invisible(inserts)
@@ -593,26 +598,36 @@ inLabelAbstractTypesEnv(
     ## n{Numeric|Integer|Logical}(length = 0, value = 0, init = TRUE)
     ## nMatrix(value = 0, nrow = 1, ncol = 1, init = TRUE, type = 'double')
     ## nArray(value = 0, dim = c(1, 1), init = TRUE, type = 'double')
-    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical'))
-      inserts <- RecurseAndLabel(code, symTab, auxEnv, handlingInfo)
+    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical')) {
+      # inserts <- RecurseAndLabel(code, symTab, auxEnv, handlingInfo)
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      # get return type from handlingInfo$returnTypeCode, fall back to value type.
+      type <- setReturnType(handlingInfo, code$args[["value"]]$type$type)
+      # Get nDim from handlingInfo$return_nDim (default) or fall back to nDim of value.
+      nDim <- setReturn_nDim(handlingInfo, code$args[["value"]]$type$nDim)
+      code$type <- symbolBasic$new(type = type, nDim = nDim)
+      invisible(inserts)
+    }
     else if (code$name %in% c('nMatrix', 'nArray')) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-      if ('type' %in% names(code$args))
-        code$type <- symbolBasic$new(type = code$args[['type']]$name)
-      else if ('value' %in% names(code$args))
+      if ('type' %in% names(code$aux$compileArgs)) {
+        thisType <- eval(code$aux$compileArgs[['type']], envir = auxEnv$where)
+        code$type <- symbolBasic$new(type = thisType)
+      } else if ('value' %in% names(code$args))
         code$type <- symbolBasic$new(type = code$args[['value']]$type$type)
       else
         code$type <- symbolBasic$new(type = 'double')
       if (code$name == 'nMatrix') code$type$nDim <- 2
       else {
         dim_provided <- 'dim' %in% names(code$args)
-        nDim_provided <- 'nDim' %in% names(code$args)
+        nDim_provided <- 'nDim' %in% names(code$aux$compileArgs)
         if (!(dim_provided || nDim_provided))
           code$type$nDim <- 2 ## default is a 1x1 array
         else {
           if (dim_provided) {
             if (inherits(code$args[['dim']], 'exprClass') &&
                   code$args[['dim']]$isCall && code$args[['dim']]$name == 'nC') {
+              # N2FIXME: This should check that each argument of nC is a literal or scalar.
               nDim_from_dim <- length(code$args[['dim']]$args)
               ## 'dim' must be of type integer
               code$args[['dim']]$type$type <- 'integer'
@@ -639,13 +654,13 @@ inLabelAbstractTypesEnv(
             }
           }
           if (nDim_provided) {
-            nDim <- code$args[['nDim']]$name
-            if (!code$args[['nDim']]$isLiteral || !is.numeric(nDim))
+            nDim <- eval(code$aux$compileArgs[['nDim']], envir = auxEnv$where)
+            if (!is.numeric(nDim))
               stop(
                 exprClassProcessingErrorMsg(
                   code,
                   paste('In labelAbstractTypes handler InitData:',
-                        "'nDim' argument must be a numeric literal.")
+                        "'nDim' argument must be numeric.")
                 ), call. = FALSE
               )
             if (dim_provided && nDim_from_dim != -1 && nDim != nDim_from_dim) {

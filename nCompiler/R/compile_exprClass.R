@@ -114,7 +114,7 @@ exprClass_print <- function(AST,
     }
   }
   ## close brackets
-  if(AST$name=='{')
+  if(isTRUE(AST$name=='{')) # if AST$name is NA, this returns NA, so we must check isTRUE
     writeLines(paste0(indent,'}'))
 }
 

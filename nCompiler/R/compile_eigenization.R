@@ -1075,10 +1075,17 @@ nCompiler:::inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  nC <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    promoteTypes(code)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   TensorCreation <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     code_args <- code$args
     code$args <- NULL
-    value_provided <- 'value' %in% names(code_args)
+    value_provided <- !('value' %in% code$aux$provided_as_missing)
     if (value_provided)
       setArg(code, 1, code_args[['value']])
     else {
@@ -1091,7 +1098,7 @@ inEigenizeEnv(
       setArg(code, 1, value_expr)
     }
     if (code$name %in% c('nNumeric', 'nInteger', 'nLogical')) {
-      if ('length' %in% names(code_args))
+      if (!('length' %in% code$aux$provided_as_missing))
         setArg(code, 2, code_args[['length']])
       else {
         if (value_provided && code_args[['value']]$type$nDim != 0)
@@ -1105,8 +1112,8 @@ inEigenizeEnv(
         setArg(code, 2, literalIntegerExpr(0))
       }
     } else if (code$name == 'nMatrix') {
-      nrow_provided <- 'nrow' %in% names(code_args)
-      ncol_provided <- 'ncol' %in% names(code_args)
+      nrow_provided <- !('nrow' %in% code$aux$provided_as_missing)
+      ncol_provided <- !('ncol' %in% code$aux$provided_as_missing)
       ## TODO: calcMissingMatrixSize
       if ((nrow_provided || ncol_provided) &&
             !(nrow_provided && ncol_provided))
@@ -1134,17 +1141,20 @@ inEigenizeEnv(
         setArg(code, 3, code_args[['ncol']])
       }
     } else if (code$name == 'nArray') {
-      if ('dim' %in% names(code_args)) {
+      if (!('dim' %in% code$aux$provided_as_missing)) {
         if (code_args[['dim']]$name == 'nC') {
           ## TODO: this won't be needed when 'nC' is implemented
           nC_arg <- code_args[['dim']]
           promoteTypes(nC_arg)
-          for (i in seq_along(nC_arg$args)) {
-            setArg(code, i + 1, nC_arg$args[[i]])
-          }
+          # for (i in seq_along(nC_arg$args)) {
+          #   setArg(code, i + 1, nC_arg$args[[i]])
+          # }
+          setArg(code, 2, nC_arg)
         } else {
           setArg(code, 2, code_args[['dim']])
         }
+        if(inherits(code$args[[2]], "exprClass"))
+          eigenCast(code, 2, "integer")
       } else {
         if (value_provided && code_args[['value']]$type$nDim != 0)
           stop(

@@ -193,7 +193,9 @@ assignOperatorDef( # c()
       handler = 'nC',
       return_nDim = 1,
       returnTypeCode = returnTypeCodes$promote),
-    eigenImpl = list()
+    eigenImpl = list(
+      handler = 'nC'
+    )
   )
 )
 
@@ -206,17 +208,39 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
+  c('nAD', 'nNumeric', 'nInteger', 'nLogical'),
   list(
+    matchDef = function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {},
     labelAbstractTypes = list(
-      handler = 'InitData'),
+      handler = 'InitData',
+      return_nDim = 1),
     eigenImpl = list(
       handler = 'TensorCreation')
   )
 )
-updateOperatorDef(
-  c('nAD','nNumeric', 'nInteger', 'nLogical'),
-  'labelAbstractTypes', 'return_nDim', 1
+assignOperatorDef(
+  c('nMatrix'),
+  list(
+    matchDef = function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {},
+    compileArgs = c("type"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
+)
+assignOperatorDef(
+  c('nArray'),
+  list(
+    matchDef = function(value = 0, dim, init = TRUE, fillZeros = TRUE, recycle = TRUE, nDim, type = 'double'){},
+    compileArgs = c("type", "nDim"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
 )
 updateOperatorDef(
   'nAD',
@@ -233,10 +257,6 @@ updateOperatorDef(
 updateOperatorDef(
   'nLogical',
   'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
-)
-updateOperatorDef(
-  c('nMatrix', 'nArray'),
-  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
 )
 
 assignOperatorDef(
