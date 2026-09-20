@@ -15,7 +15,7 @@ public:
     std::vector<Element> &contents() {return contents_;}
     const std::vector<Element> &contents() const {return contents_;}
     virtual int setLength_(int length) {
-        contents_.resize(length);
+        contents_.resize(length); // std::vector::resize() should be data-preserving.
         return length;
     }
     virtual int getLength_() {

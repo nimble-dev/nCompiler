@@ -131,6 +131,9 @@ nCompile_createCppDefsInfo <- function(units,
   cpp_names <- character(length(units))
   needed_nClasses <- vector("list", length(units))
   needed_nFunctions <- vector("list", length(units))
+  raw_results <- vector("list", length(units))
+  use_raw_results <- FALSE # raw_results may be triggered by an error but also by debugging via a choice of control$endStage
+  raw_result_names <- character()
   for(i in seq_along(units)) {
     compileInfo <- compileInfos[[i]]
     if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
@@ -159,10 +162,27 @@ nCompile_createCppDefsInfo <- function(units,
                                   project_env = project_env)
       cpp_names[i] <- NCinternals(units[[i]])$cpp_classname
     }
-    if(!is.list(oneResult)) stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
-    unitResults[[i]] <- oneResult$cppDef
-    needed_nClasses[[i]] <- oneResult$needed_units$needed_nClasses
-    needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
+    # here is.list(oneResult) is a cheap check of whether we are in fully operational mode
+    if(!is.list(oneResult)) {
+      # stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
+      raw_result_names <- c(raw_result_names, names(units)[i])
+      use_raw_results <- TRUE
+    }
+    raw_results[[i]] <- oneResult
+    if(!use_raw_results) {
+      unitResults[[i]] <- oneResult$cppDef
+      needed_nClasses[[i]] <- oneResult$needed_units$needed_nClasses
+      needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
+    }
+  }
+  if((!use_raw_results) && (length(raw_results)))
+   for(i in length(raw_results):1) raw_results[[i]] <- NULL
+  if(use_raw_results) {
+    attr(raw_results, "raw_results") <- TRUE
+    warning("Not all compilation units completed (including at least ", paste(raw_result_names, collapse = ", "), ").\n",
+        "This may be due to an problem or use of debugging tools such as control$endStage.\n",
+        "Intermediate objects will be returned.")
+    return(raw_results)
   }
   list(cppDefs = unitResults,
        cpp_names = cpp_names,
@@ -605,6 +625,11 @@ nCompile <- function(...,
     existing_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
     cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, 
                                                new_compileInfos, project_env)
+    if(isTRUE(attr(cppDefs_info, "raw_results"))) {
+      # This is a failure case, likely due to an error or use of control$endStage for debugging.
+      # We return the raw results so the user can inspect them.
+      return(cppDefs_info)
+    }
     new_cppDefs <- cppDefs_info$cppDefs
     new_cpp_names <- cppDefs_info$cpp_names
 

@@ -13,7 +13,7 @@ updateDefaults <- function(defaults, control) {
     NCwarn = TRUE, ## issue warnings from issues when creating an nClass
     showCompilerOutput = FALSE,
     use_nCompLocal = FALSE,
-    debugSizeProcessing = FALSE,
+#    debugTypeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
     enableDerivs = FALSE,
     allow_method_overloading = FALSE,

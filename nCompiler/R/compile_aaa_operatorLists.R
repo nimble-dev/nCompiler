@@ -175,6 +175,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'DEBUG_LAT',
+  list(
+    labelAbstractTypes = list(
+      handler = 'DEBUG'
+    )
+  )
+)
+
+assignOperatorDef(
   c('dim'),
   list(
     labelAbstractTypes = list(

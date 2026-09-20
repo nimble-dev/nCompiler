@@ -117,12 +117,6 @@ compile_labelAbstractTypes <- function(code,
         if(!is.null(handlingInfo)) {
           handler <- handlingInfo[['handler']]
         }
-        # if(inherits(arg1$type, "symbolNC")) {
-        #   handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "labelAbstractTypes", inherits=TRUE)
-        #   if(!is.null(handlingInfo)) {
-        #     handler <- handlingInfo[['handler']]
-        #   }
-        # }
       }
     }
     if(is.null(handlingInfo)) {
@@ -473,8 +467,9 @@ nCompiler:::inLabelAbstractTypesEnv(
         inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                               handlingInfo)
       }
-      returnType <- handlingInfo[['returnType']]
-      code$type <- returnType$clone(deep = TRUE)
+      HIreturnType <- handlingInfo[['returnType']]
+      returnType <- type2symbol(!!HIreturnType, where = auxEnv$where)
+      code$type <- returnType # returnType$clone(deep = TRUE)
       if(length(inserts) == 0) NULL else inserts
     }
 )
@@ -1900,16 +1895,18 @@ inLabelAbstractTypesEnv(
   }
 )
 
-sizeProxyForDebugging <- function(code, symTab, auxEnv) {
-  browser()
-  origValue <- nOptions$debugSizeProcessing
-  message('Entering into size processing debugging. You may need to donOptions(debugSizeProcessing = FALSE) if this exits in any non-standard way.')
-  set_nOption('debugSizeProcessing', TRUE)
-  ans <- recurseSetSizes(code, symTab, auxEnv)
-  removeExprClassLayer(code$caller, 1)
-  set_nOption('debugSizeProcessing', origValue)
-  return(ans)
-}
+inLabelAbstractTypesEnv(
+  DEBUG <- function(code, symTab, auxEnv, handlingInfo) {
+    message('Entering into size processing debugging. Do debug(nCompiler:::compile_labelAbstractTypes) if you want to follow every step.')# You may need to do nOptions(debugTypeProcessing = FALSE) if this exits in any non-standard way.')
+    browser()
+#    origValue <- nOptions$debugTypeProcessing
+#    set_nOption('debugTypeProcessing', TRUE)
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    removeExprClassLayer(code$caller, 1)
+#    set_nOption('debugTypeProcessing', origValue)
+    if(is.null(inserts)) return(NULL) else return(inserts)
+  }
+)
 
 ## promote numeric output to most information-rich type, AD > double > integer > logical
 arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
