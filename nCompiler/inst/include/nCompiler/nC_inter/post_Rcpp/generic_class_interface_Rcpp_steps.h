@@ -113,9 +113,15 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
   };
 
  // static maps from character names
- static int name_count;
+ static int name_count_fields;
+ static int name_count_methods;
  // typedef std::map<std::string,int> name2index_type;
- static name2index_type name2index;
+ // These maps have two roles:
+ // They hold names in the order added, which in code generation should match the order of the nClass definition.
+ // This provides sanity for any name based ordering when a user calls get_names() (i.e. interface_namtes() in R).
+ // Second, in the future we could allow optimized code to do one-time name lookups and then use index-based access.
+ static name2index_type name2index_fields;
+ static name2index_type name2index_methods;
 
   // typedef std::map<std::string, std::shared_ptr<accessor_base> > name2access_type;
   // typedef std::pair<std::string, std::shared_ptr<accessor_base> > name_access_pair;
@@ -131,7 +137,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 #ifdef SHOW_FIELDS
     std::cout<<"adding "<<name<<std::endl;
 #endif
-    name2index[name] = name_count++;
+    name2index_fields[name] = name_count_fields++;
     return name_access_pair(
                             name,
                             std::shared_ptr<accessor_base>(new accessor_class<P, T2>(ptr))
@@ -143,7 +149,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 #ifdef SHOW_FIELDS
     std::cout<<"adding "<<name<<std::endl;
 #endif
-    name2index[name] = name_count++;
+    name2index_fields[name] = name_count_fields++;
     return name_access_pair(
                             name,
                             std::shared_ptr<accessor_base>(new accessor_class_aux<P, T2, AUX>(ptr, aux))
@@ -152,7 +158,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 
   // hello world to see if static maps were populated.
   void hw() {
-    std::cout<<"HW "<<name_count <<std::endl;
+    std::cout<<"HW "<<name_count_fields <<" "<<name_count_methods<<std::endl;
   }
 
   // return a member as a SEXP, chosen by name.
@@ -287,23 +293,35 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 
   // Return the names of either the methods (methods==true) or the data
   // members/fields (methods==false), for R-level introspection (e.g.
-  // interface_names() in R). Built fresh on each call rather than cached,
-  // since this is not a hot-path operation and caching a static SEXP would
-  // risk dangling across package unload/reload.
+  // interface_names() in R). Built fresh on each call rather than cached.
+  // Order is guaranteed to match order of nClass definition, from which order
+  // of FIELDS or METHODS macro for list-initialization is created, 
+  // because we pull names from the "name2index_[field | method]" and 
+  // use the index to order the result. N.B. std::map itself does not guarantee order.
   SEXP get_names(bool methods) const {
     if(methods) {
-      Rcpp::CharacterVector ans(name2method.size());
-      size_t i = 0;
-      for(typename name2method_type::const_iterator it = name2method.begin();
-          it != name2method.end(); ++it, ++i)
-        ans[i] = it->first;
+      // Rcpp::CharacterVector ans(name2method.size());
+      // size_t i = 0;
+      // for(typename name2method_type::const_iterator it = name2method.begin();
+      //     it != name2method.end(); ++it, ++i)
+      //   ans[i] = it->first;
+      // return ans;
+      Rcpp::CharacterVector ans(name2index_methods.size());
+      for(name2index_type::const_iterator it = name2index_methods.begin();
+          it != name2index_methods.end(); ++it)
+        ans[it->second] = it->first;
       return ans;
     } else {
-      Rcpp::CharacterVector ans(name2access.size());
-      size_t i = 0;
-      for(name2access_type::const_iterator it = name2access.begin();
-          it != name2access.end(); ++it, ++i)
-        ans[i] = it->first;
+      // Rcpp::CharacterVector ans(name2access.size());
+      // size_t i = 0;
+      // for(name2access_type::const_iterator it = name2access.begin();
+      //     it != name2access.end(); ++it, ++i)
+      //   ans[i] = it->first;
+      // return ans;
+      Rcpp::CharacterVector ans(name2index_fields.size());
+      for(name2index_type::const_iterator it = name2index_fields.begin();
+          it != name2index_fields.end(); ++it)
+        ans[it->second] = it->first;
       return ans;
     }
   }
@@ -377,6 +395,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 #ifdef SHOW_METHODS
     std::cout<<"adding method "<<name<<std::endl;
 #endif
+    name2index_methods[name] = name_count_methods++;
     return
       name_method_pair(name,
                        method_info(std::shared_ptr<method_base>(new method_class<P, T2, false, ARGS...>(fun)), args_)
@@ -392,6 +411,7 @@ class genericInterfaceC : virtual public genericInterfaceBaseC {
 #ifdef SHOW_METHODS
     std::cout<<"adding (const) method "<<name<<std::endl;
 #endif
+    name2index_methods[name] = name_count_methods++;
     return
       name_method_pair(name,
                        method_info(std::shared_ptr<method_base>(new method_class<P, T2, true, ARGS...>(fun)), args_)
