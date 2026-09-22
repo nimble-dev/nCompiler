@@ -174,6 +174,20 @@ Eigen::Tensor<double, 2> ex4p1(Eigen::Tensor<double, 2> x,
   return x;
 }
 
+// Assign to index vec of index vec with R indexing
+// Checks a bug fix 9/22/26 (Issue #215)
+// [[Rcpp::export]]
+Eigen::Tensor<double, 2> ex4p4(Eigen::Tensor<double, 2> x,
+                               Eigen::Tensor<int, 1> iv,
+                               Eigen::Tensor<int, 1> iv2,
+                               Eigen::Tensor<double, 2> v) {
+  // TRY MACRO VERSION
+  // nCompiler::IndexByVec<1>().op(iv2, nCompiler::IndexByVec<0>().op(iv,x)) = v;
+  IVEC_(1, iv2, IVEC_(0, iv, x, true), true) = v;
+  return x;
+}
+
+
 /////////////////////////////////////
 // INDEX VEC OF INDEX SCALAR AND VICE VERSA
 // Read

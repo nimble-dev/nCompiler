@@ -290,7 +290,7 @@ namespace Eigen {
       array<Index, NumDims> m_strides;
       Index m_stride_DimId, m_stride_DimId_plus_1_input, m_stride_DimId_plus_1;
       TensorEvaluator<ArgType, Device> m_impl;
-      TensorEvaluator<IV_Type, Device> m_IV_impl;
+      TensorEvaluator<const IV_Type, Device> m_IV_impl;
       const internal::IVDimensionId<DimId> m_dim;
       bool DimId_is_first, DimId_is_last;
     };
@@ -298,13 +298,11 @@ namespace Eigen {
 
   // Eval as lvalue
 
-  template <DenseIndex DimId, typename ArgType, typename IV_Type, typename Device>
-    struct TensorEvaluator<TensorIndexByVecOp<DimId, ArgType, IV_Type>, Device>
-    : public TensorEvaluator<const TensorIndexByVecOp<DimId, ArgType, IV_Type>,
-    Device> {
-    typedef TensorEvaluator<const TensorIndexByVecOp<DimId, ArgType, IV_Type>,
-      Device> Base;
-    typedef TensorIndexByVecOp<DimId, ArgType, IV_Type> XprType;
+  template <DenseIndex DimId, typename ArgType, typename IV_Type, typename Device, bool Rindexing>
+    struct TensorEvaluator<TensorIndexByVecOp<DimId, ArgType, IV_Type, Rindexing>, Device>
+    : public TensorEvaluator<const TensorIndexByVecOp<DimId, ArgType, IV_Type, Rindexing>, Device> {
+    typedef TensorEvaluator<const TensorIndexByVecOp<DimId, ArgType, IV_Type, Rindexing>, Device> Base;
+    typedef TensorIndexByVecOp<DimId, ArgType, IV_Type, Rindexing> XprType;
     typedef typename XprType::Index Index;
     static const int NumDims = internal::array_size<typename TensorEvaluator<ArgType, Device>::Dimensions>::value;
     typedef DSizes<Index, NumDims> Dimensions;
