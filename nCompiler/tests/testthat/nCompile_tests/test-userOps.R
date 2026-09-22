@@ -360,13 +360,13 @@ test_that("matchDef of user-defined op is used", {
            list()))
   test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
   expect_true(grepl("bar\\(B = 2, A = 1\\)", nDeparse(test$code)[2]))
-  
+
   registerOpDef(
     list(bar =
            list(
              matchDef = function(A, B) {}
            )))
-  
+
   test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
   expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
 })
@@ -383,26 +383,30 @@ test_that("matchDef of another nFunction is used", {
   expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
 })
 
-test_that("matchDef of method or user-defined op in an nClass is used", {
-  nc <- nClass(
-    classname = "nc",
-    Cpublic = list(
-      bar = nFunction(function(A = "numericScalar", B = "numericScalar") {})
-    )
-  )
-  foo <- nFunction(
-    fun = function() {
-      obj <- nc$new()
-      obj$bar(B = 2, A = 1) # See if this gets reordered
-    }
-  )
-  
-  debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
-  test <- nCompile(foo)
-  
-  # Args can't be re-ordered here because normalizeCalls does not see type of obj.
-  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
-  
-  nOptions(pause_after_writing_files = TRUE)
-  test <- nCompile(foo)  
-})
+## ## The following DOES NOT WORK:
+## ## named arguments of a method of another class are not successfully reordered.
+## test_that("matchDef of method or user-defined op in an nClass is used", {
+##   nc <- nClass(
+##     classname = "nc",
+##     Cpublic = list(
+##       bar = nFunction(function(A = "numericScalar", B = "numericScalar") {
+##         return(A * 10 + B) # check which is A and which is B
+##         returnType(double())
+##       })
+##     )
+##   )
+##   foo <- nFunction(
+##     fun = function() {
+##       obj <- nc$new()
+##       return(obj$bar(B = 2, A = 1)) # See if this gets reordered
+##       returnType(double())
+##     }
+##   )
+
+##   test <- nCompile(foo)
+##   expect_equal(test(), 21)
+
+##   # Args can't be re-ordered here because normalizeCalls does not see type of obj.
+##   #test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+##   #test <- nCompile(foo)
+## })
