@@ -8,7 +8,7 @@ test_that("C++ code for indexing and chipping works", {
   cppfile <- system.file(
     file.path('tests', 'testthat', 'cpp', 'general_indexing_examples.cpp'),
     package = 'nCompiler')
-  `:::`("nCompiler", "QuietSourceCpp")(cppfile)
+  nCompiler:::QuietSourceCpp(cppfile)
 
   # warming up and making sure Rcpp works:
   # Should print: hello world.  first element is 10
@@ -85,6 +85,15 @@ test_that("C++ code for indexing and chipping works", {
   iv2 <- c(3, 4) # 4, 5 in R
   v <- x[c(2,4), c(4, 5)] + 100
   test <- ex4p1(x, iv, iv2, v)
+  ans <- x; ans[c(2,4), c(4, 5)] <- v
+  expect_equal(test, ans)
+
+  # Assign (using R-based indexing)
+  x <- matrix(1:20, nrow = 4)
+  iv <- c(2, 4) # 2, 4 in R
+  iv2 <- c(4, 5) # 4, 5 in R
+  v <- x[c(2,4), c(4, 5)] + 100
+  test <- ex4p4(x, iv, iv2, v)
   ans <- x; ans[c(2,4), c(4, 5)] <- v
   expect_equal(test, ans)
 
