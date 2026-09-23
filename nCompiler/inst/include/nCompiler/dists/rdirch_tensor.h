@@ -27,7 +27,8 @@
 // isn't routed through Rcpp, so it keeps its own bracketing -- that's
 // unchanged and still correct.
 template<typename TensorExprAlpha>
-Eigen::Tensor<double, 1> rdirch(const TensorExprAlpha &alpha) {
+Eigen::Tensor<double, 1> rdirch(int n, // ignored for now, to be used in the future.
+                                const TensorExprAlpha &alpha) {
   const auto &alphaEval = asDenseTensor<1>(alpha);
 
   int K = static_cast<int>(alphaEval.dimension(0));

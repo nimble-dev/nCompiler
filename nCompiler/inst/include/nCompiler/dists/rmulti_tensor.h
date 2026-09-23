@@ -36,7 +36,8 @@
 // isn't routed through Rcpp, so it keeps its own bracketing -- that's
 // unchanged and still correct.
 template<typename TensorExprProb>
-Eigen::Tensor<double, 1> rmulti(double size, const TensorExprProb &prob) {
+Eigen::Tensor<double, 1> rmulti(int n, // ignored for now, to be used in the future.
+                                double size, const TensorExprProb &prob) {
   Eigen::Tensor<double, 1> probEval = prob.template cast<double>();
 
   int K = static_cast<int>(probEval.dimension(0));

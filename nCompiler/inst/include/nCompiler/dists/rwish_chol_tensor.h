@@ -33,7 +33,8 @@
 // (dists.cpp's C_rwish_chol) isn't routed through Rcpp, so it keeps its
 // own bracketing -- that's unchanged and still correct.
 template<typename TensorExprChol>
-Eigen::Tensor<double, 2> rwish_chol(const TensorExprChol &chol, double df,
+Eigen::Tensor<double, 2> rwish_chol(int n, // ignored for now, to be used in the future.
+const TensorExprChol &chol, double df,
                                      double scale_param) {
   Eigen::Tensor<double, 2> cholEval = chol.template cast<double>();
 

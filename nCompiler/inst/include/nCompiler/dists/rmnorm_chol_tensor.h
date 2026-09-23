@@ -35,23 +35,24 @@
 // (dists.cpp's C_rmnorm_chol) isn't routed through Rcpp, so it keeps its
 // own bracketing -- that's unchanged and still correct.
 template<typename TensorExprMean, typename TensorExprChol>
-Eigen::Tensor<double, 1> rmnorm_chol(const TensorExprMean &mean,
+Eigen::Tensor<double, 1> rmnorm_chol(int n, // ignored for now, to be used in the future.
+                                      const TensorExprMean &mean,
                                       const TensorExprChol &chol,
                                       double prec_param) {
   const auto &cholEval = asDenseTensor<2>(chol);
-  int n = static_cast<int>(cholEval.dimension(0));
+  int len = static_cast<int>(cholEval.dimension(0));
 
   Eigen::Tensor<double, 1> meanEval =
-    recycleToLength(asDenseTensor<1>(mean), n);
+    recycleToLength(asDenseTensor<1>(mean), len);
 
-  Eigen::Tensor<double, 1> ans(n);
+  Eigen::Tensor<double, 1> ans(len);
 
   // cholEval may alias the caller's own tensor (when no copy was needed
   // above); rmnorm_chol's double* signature is non-const only because it
   // predates const-correctness conventions here, but it never writes
   // through chol, so this cast is safe.
   rmnorm_chol(ans.data(), meanEval.data(),
-              const_cast<double*>(cholEval.data()), n, prec_param);
+              const_cast<double*>(cholEval.data()), len, prec_param);
 
   return ans;
 }

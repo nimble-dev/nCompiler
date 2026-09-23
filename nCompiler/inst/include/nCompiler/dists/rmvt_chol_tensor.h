@@ -33,7 +33,8 @@
 // isn't routed through Rcpp, so it keeps its own bracketing -- that's
 // unchanged and still correct.
 template<typename TensorExprMu, typename TensorExprChol>
-Eigen::Tensor<double, 1> rmvt_chol(const TensorExprMu &mu,
+Eigen::Tensor<double, 1> rmvt_chol(int n, // ignored for now, to be used in the future.
+const TensorExprMu &mu,
                                     const TensorExprChol &chol, double df,
                                     double prec_param) {
   const auto &cholEval = asDenseTensor<2>(chol);
