@@ -1147,6 +1147,101 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c("rmnorm_chol"),
+  list(
+    matchDef = function(n = 1, mean, cholesky, prec_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dmvt_chol"),
+  list(
+    matchDef = function(x, mu, cholesky, df, prec_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rmvt_chol"),
+  list(
+    matchDef = function(n = 1, mu, cholesky, df, prec_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dwish_chol"),
+  list(
+    matchDef = function(x, cholesky, df, scale_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rwish_chol"),
+  list(
+    matchDef = function(n = 1, cholesky, df, scale_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 2
+    )
+  )
+)
+
+assignOperatorDef(
+  c("ddirch"),
+  list(
+    matchDef = function(x, alpha, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rdirch"),
+  list(
+    matchDef = function(n = 1, alpha) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dmulti"),
+  list(
+    matchDef = function(x, size, prob, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rmulti"),
+  list(
+    matchDef = function(n = 1, size, prob) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
   c('nSwitch'),
   list(
     matchDef = function(expr, IDs, ...) {},

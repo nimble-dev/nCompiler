@@ -11,5 +11,23 @@
 
 #include <nCompiler/dists/dmnorm_chol.h>
 #include <nCompiler/dists/dmnorm_chol_tensor.h>
+#include <nCompiler/dists/rmnorm_chol.h>
+#include <nCompiler/dists/rmnorm_chol_tensor.h>
+#include <nCompiler/dists/dmvt_chol.h>
+#include <nCompiler/dists/dmvt_chol_tensor.h>
+#include <nCompiler/dists/rmvt_chol.h>
+#include <nCompiler/dists/rmvt_chol_tensor.h>
+#include <nCompiler/dists/dwish_chol.h>
+#include <nCompiler/dists/dwish_chol_tensor.h>
+#include <nCompiler/dists/rwish_chol.h>
+#include <nCompiler/dists/rwish_chol_tensor.h>
+#include <nCompiler/dists/ddirch.h>
+#include <nCompiler/dists/ddirch_tensor.h>
+#include <nCompiler/dists/rdirch.h>
+#include <nCompiler/dists/rdirch_tensor.h>
+#include <nCompiler/dists/dmulti.h>
+#include <nCompiler/dists/dmulti_tensor.h>
+#include <nCompiler/dists/rmulti.h>
+#include <nCompiler/dists/rmulti_tensor.h>
 
 #endif // _NCOMPILER_DISTS_POST_RCPP

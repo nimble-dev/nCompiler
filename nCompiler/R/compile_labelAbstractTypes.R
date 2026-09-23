@@ -569,9 +569,15 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  # Used for both multivariate density functions (e.g. dmnorm_chol), which
+  # return a scalar (nDim = 0, the default via setReturn_nDim), and their
+  # random-generation counterparts (e.g. rmnorm_chol), which return a
+  # vector -- set via `labelAbstractTypes = list(handler = 'MVDist',
+  # return_nDim = 1)` on the latter's operatorDef.
   MVDist <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- symbolBasic$new(type = 'double', nDim = 0)
+    code$type <- symbolBasic$new(type = 'double',
+                                  nDim = setReturn_nDim(handlingInfo, 0))
     invisible(inserts)
   }
 )
