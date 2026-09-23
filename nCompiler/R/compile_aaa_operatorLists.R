@@ -1137,6 +1137,16 @@ updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
 updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
+  c("dmnorm_chol"),
+  list(
+    matchDef = function(x, mean, cholesky, prec_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nSwitch'),
   list(
     matchDef = function(expr, IDs, ...) {},

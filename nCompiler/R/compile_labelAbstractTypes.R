@@ -569,6 +569,14 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  MVDist <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- symbolBasic$new(type = 'double', nDim = 0)
+    invisible(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type

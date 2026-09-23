@@ -29,28 +29,8 @@
 #include "dists.h"
 #include <R_ext/Lapack.h>
 
-// Detects NA
-bool R_IsNA_ANY(double* P, int s) {
-  for(int i = 0; i < s; ++i) if(R_IsNA(P[i])) return(true);
-  return(false);
-}
-
-// Detects NaN
-bool R_IsNaN_ANY(double* P, int s) {
-  for(int i = 0; i < s; ++i) if(R_IsNaN(P[i])) return(true);
-  return(false);
-}
-
-// Detects NA or NaN
-bool ISNAN_ANY(double* P, int s) {
-  for(int i = 0; i < s; ++i) if(ISNAN(P[i])) return(true);
-  return(false);
-}
-
-bool R_FINITE_ANY(double* P, int s) {
-  for(int i = 0; i < s; ++i) if(!R_FINITE(P[i])) return(false);
-  return(true);
-}
+// R_IsNA_ANY, R_IsNaN_ANY, ISNAN_ANY, and R_FINITE_ANY now come from
+// nCompiler/dists/dists_utils.h (included via dists.h).
 
 double dwish_chol(double* x, double* chol, double df, int p, double scale_param, int give_log, int overwrite_inputs) {
   char uplo('U');
@@ -1023,64 +1003,10 @@ SEXP C_rcat(SEXP n, SEXP prob) {
 
 
 
-double dmnorm_chol(double* x, double* mean, double* chol, int n, double prec_param, int give_log, int overwrite_inputs) {
-  char uplo('U');
-  char transPrec('N');
-  char transCov('T');
-  char diag('N');
-  int lda(n);
-  int incx(1);
-  double* xCopy;
-
-  double dens = -n * M_LN_SQRT_2PI;
-  int i;
-  // add diagonals of Cholesky
-
-  if (R_IsNA_ANY(x, n) || R_IsNA_ANY(mean, n) || R_IsNA_ANY(chol, n*n) || R_IsNA(prec_param))
-    return NA_REAL;
-  if (R_IsNaN_ANY(x, n) || R_IsNaN_ANY(mean, n) || R_IsNaN_ANY(chol, n*n) || R_IsNaN(prec_param))
-    return R_NaN;
-
-  if(!R_FINITE_ANY(x, n) || !R_FINITE_ANY(mean, n) || !R_FINITE_ANY(chol, n*n)) return R_D__0;
-
-
-
-  if(prec_param) {
-    for(i = 0; i < n*n; i += n + 1)
-      dens += log(chol[i]);
-  } else {
-    for(i = 0; i < n*n; i += n + 1)
-      dens -= log(chol[i]);
-  }
-
-  if(overwrite_inputs) {
-    xCopy = x;
-    for(i = 0; i < n; i++)
-      xCopy[i] -= mean[i];
-  } else {
-    xCopy = new double[n];
-    for(i = 0; i < n; i++)
-      xCopy[i] = x[i] - mean[i];
-  }
-
-  // do matrix-vector multiply with upper-triangular matrix stored column-wise as full n x n matrix (prec parameterization)
-  // or upper-triangular (transpose) solve (cov parameterization)
-  // dtr{m,s}v is a BLAS level-2 function
-  if(prec_param) F77_CALL(dtrmv)(&uplo, &transPrec, &diag, &n, chol, &lda, xCopy, &incx FCONE FCONE FCONE);
-  else F77_CALL(dtrsv)(&uplo, &transCov, &diag, &n, chol, &lda, xCopy, &incx FCONE FCONE FCONE);
-
-  // sum of squares to calculate quadratic form
-  double tmp = 0.0;
-  for(i = 0; i < n; i++)
-    tmp += xCopy[i] * xCopy[i];
-
-  dens += -0.5 * tmp;
-
-  if(!overwrite_inputs)
-    delete [] xCopy;
-
-  return give_log ? dens : exp(dens);
-}
+// dmnorm_chol (raw double* kernel) now comes from
+// nCompiler/dists/dmnorm_chol.h (included via dists.h). The Eigen::Tensor-
+// argument wrapper around it lives in nCompiler/dists/dmnorm_chol_tensor.h,
+// for use from nCompile-generated code; it's not needed here.
 
 SEXP C_dmnorm_chol(SEXP x, SEXP mean, SEXP chol, SEXP prec_param, SEXP return_log)
 // calculates mv normal density given Cholesky of precision matrix or covariance matrix

@@ -34,13 +34,9 @@
 #define __DISTS
 
 #include "Utils.h"
+#include <nCompiler/dists/dists_utils.h>
 
 using std::max;
-
-bool R_IsNA_ANY(double*, int);
-bool R_IsNaN_ANY(double*, int);
-bool ISNAN_ANY(double*, int);
-bool R_FINITE_ANY(double*, int);
 
 extern "C" {
 // BLAS/LAPACK routines
@@ -96,7 +92,7 @@ void rmulti(int*, double, double*, int);
 double ddirch(double*, double*, int, int);
 void rdirch(double*, double*, int);
 
-double dmnorm_chol(double*, double*, double*, int, double, int, int);
+#include <nCompiler/dists/dmnorm_chol.h>
 void rmnorm_chol(double *, double*, double*, int, double);
 void PDinverse_logdet_internal(double *matPtr, double *ans, int n);
 double dmnorm_inv_ld(double*, double*, double*, double*, int, int, int, int);
