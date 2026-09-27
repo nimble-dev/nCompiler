@@ -420,6 +420,7 @@ typeDeclarationEnv <- list2env(list(
   },
   ETaccessor = function(...) {
     symbolETaccBase$new(...)
+  },    
   simplicialLLT = function() {
     symbolSimplicialLLT$new()
   },

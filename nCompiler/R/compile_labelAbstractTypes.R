@@ -581,6 +581,9 @@ inLabelAbstractTypesEnv(
           name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
       )
     }
+    # CHECK: presumably we don't need to update `auxEnv$needed_nClasses`
+    # (see `nEigen` for example, as unlike with `nEigen(x)$values`,
+    # we don't expect user to use `Cholesky(X)$llt` directly in R.
     invisible(inserts)
   }
 )
