@@ -627,8 +627,10 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(inherits(argType, 'symbolSparse')) {
-      
-
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'direct Cholesky decomposition via `nChol` is not supported for sparse matrices; use `Cholesky`.'
+      ), call. = FALSE)
     } else {
       # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
       type <- setReturnType(handlingInfo, argType$type)
@@ -1744,18 +1746,18 @@ inLabelAbstractTypesEnv(
   }
 )
 
-inLabelAbstractTypesEnv(
-    # nChol
-  chol <- function(code, symTab, auxEnv, handlingInfo) {
-    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    if(inherits(argType, 'symbolSparse')) {
-      code$type <- symbolSimplicialLLT$new(name = code$name)
-    } else
-      code$type <- symbolLLT$new(name = code$name)
-    invisible(NULL)
-  }
-)
+## 2026-09-27: I believe this is defunct given `Cholesky` handling. // CP
+## inLabelAbstractTypesEnv(
+##   chol <- function(code, symTab, auxEnv, handlingInfo) {
+##     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+##     argType <- code$args[[1]]$type
+##     if(inherits(argType, 'symbolSparse')) {
+##       code$type <- symbolSimplicialLLT$new(name = code$name)
+##     } else
+##       code$type <- symbolLLT$new(name = code$name)
+##     invisible(NULL)
+##   }
+## )
 
 inLabelAbstractTypesEnv(
   nLogdet <-
