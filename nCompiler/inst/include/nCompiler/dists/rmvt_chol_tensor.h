@@ -38,19 +38,19 @@ const TensorExprMu &mu,
                                     const TensorExprChol &chol, double df,
                                     double prec_param) {
   const auto &cholEval = asDenseTensor<2>(chol);
-  int n = static_cast<int>(cholEval.dimension(0));
+  int len = static_cast<int>(cholEval.dimension(0));
 
   Eigen::Tensor<double, 1> muEval =
-    recycleToLength(asDenseTensor<1>(mu), n);
+    recycleToLength(asDenseTensor<1>(mu), len);
 
-  Eigen::Tensor<double, 1> ans(n);
+  Eigen::Tensor<double, 1> ans(len);
 
   // cholEval may alias the caller's own tensor (when no copy was needed
   // above); rmvt_chol's double* signature is non-const only because it
   // predates const-correctness conventions here, but it never writes
   // through chol, so this cast is safe.
   rmvt_chol(ans.data(), muEval.data(),
-            const_cast<double*>(cholEval.data()), df, n, prec_param);
+            const_cast<double*>(cholEval.data()), df, len, prec_param);
 
   return ans;
 }
