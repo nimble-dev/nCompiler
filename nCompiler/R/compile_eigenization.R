@@ -316,15 +316,16 @@ inEigenizeEnv(
 ##   }
 ## )
 
-# length<- is now done by setSize.
-# inEigenizeEnv(
-#   LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-#     # length(x) <- value becomes .method(x, "setLength", value)
-#     scalarCast(code, 2, 'integer')
-#     maybe_convertToMethod(code, handlingInfo, force = TRUE)
-#     invisible(NULL)
-#   }
-# )
+# length<- for vectors is now done by setSize.
+# but this is still used for nLists
+inEigenizeEnv(
+  LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    # length(x) <- value becomes .method(x, "setLength", value)
+    scalarCast(code, 2, 'integer')
+    maybe_convertToMethod(code, handlingInfo, force = TRUE)
+    invisible(NULL)
+  }
+)
 
 inEigenizeEnv(
   Assign_Before <- function(code, symTab, auxEnv, workEnv,
