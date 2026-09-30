@@ -13,6 +13,7 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <type_traits>
+#include <string>
 #include "tensorUtils.h"
 // Want to support flex_(y) = x;
 
@@ -324,7 +325,7 @@ template<typename ScalarType, typename XprType>
 ScalarType do_scalar_cast(const XprType &x, trueScalar) {return static_cast<ScalarType>(x);}
 
 template<typename ScalarType, typename XprType>
-ScalarType do_scalar_cast(const XprType &x, eigenTensor) {return x().template cast<ScalarType>();}
+ScalarType do_scalar_cast(const XprType &x, eigenTensor) {return static_cast<ScalarType>(x());}
 
 template<typename ScalarType, typename XprType>
 ScalarType do_scalar_cast(const XprType &x, eigenOp) {
@@ -352,19 +353,20 @@ TargetType do_flex_cast(const XprType &x, trueScalar) {
 
 template<typename TargetType, typename XprType, bool eval>
 decltype(auto) do_flex_cast(const XprType &x, eigenTensor) {
+  using TargetTensor = Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions>;
   // Rcpp::Rcout << "Debug flex_cast: casting eigenTensor to " << typeid(TargetType).name() << std::endl;
   // Rcpp::Rcout <<" eval = "<<eval<<std::endl;
   if constexpr (eval) {
-    // Always materialize when eval=true
+    // eval=true gives a concrete tensor. Note that Eigen's .eval() does NOT do that:
+    // it returns a lazy TensorForcedEvalOp that is evaluated into a raw temporary buffer,
+    // which skips destructors of non-arithmetic scalars (e.g. std::string) and adds a copy.
     if constexpr (std::is_same_v<TargetType, typename XprType::Scalar>) {
-      // Rcpp::Rcout<<"Using this branch (2)"<<std::endl;
-      // No casting needed, input is already concrete tensor with correct type
-      return x.eval();
+      // No casting needed, input is already concrete tensor with correct type.
+      // Return it by const reference (decltype(auto) of an id-expression) to avoid a copy.
+      return x;
     } else {
       // Cast and materialize
-      //Eigen::Tensor<TargetType, XprType::NumDimensions> result = x.template cast<TargetType>();
-      //return result;
-      return x.template cast<TargetType>().eval();
+      return TargetTensor(x.template cast<TargetType>());
     }
   } else {
     // Return lazy expression when eval=false
@@ -380,18 +382,16 @@ decltype(auto) do_flex_cast(const XprType &x, eigenTensor) {
 
 template<typename TargetType, typename XprType, bool eval>
 decltype(auto) do_flex_cast(const XprType &x, eigenOp) {
+  using TargetTensor = Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions>;
   // Rcpp::Rcout << "Debug flex_cast: casting eigenOp to " << typeid(TargetType).name() << std::endl;
   if constexpr (eval) {
-    // Always materialize when eval=true
+    // eval=true gives a concrete tensor (see note in the eigenTensor case above).
     if constexpr (std::is_same_v<TargetType, typename Eigen::internal::traits<XprType>::Scalar>) {
       // Same type but need to materialize the lazy expression
-      // Rcpp::Rcout<<"Using this branch"<<std::endl;
-      //Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions> result = x.eval();
-      return x.eval(); //result;
+      return TargetTensor(x);
     } else {
       // Different type and need to materialize
-      //Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions> result = x.template cast<TargetType>();
-      return x.template cast<TargetType>().eval(); //result;
+      return TargetTensor(x.template cast<TargetType>());
     }
   } else {
     // Return lazy expression when eval=false
@@ -525,6 +525,78 @@ ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroD
   return Lhs;
 }
 
+// smartAssignToScalar cases for a std::string Lhs.
+// Character objects are never cast to or from other scalar types,
+// so these require the Rhs scalar type to be std::string (checked at compile time)
+// and otherwise mirror the cases above without casting.
+// Because the Lhs parameter is std::string& rather than a template ScalarType&,
+// these are more specialized than the general versions and are chosen by overload resolution.
+template<typename T>
+struct flex_always_false : std::false_type {};
+
+template<typename XprType>
+constexpr bool flex_has_string_scalar_v =
+  std::is_same<typename std::remove_const<typename Eigen::internal::traits<XprType>::Scalar>::type,
+               std::string>::value;
+
+#define FLEX_STRING_TYPE_ERROR "flex_: a character (std::string) object can only be assigned from a character value. No casting is done to or from character."
+
+// Non-character true scalar (e.g. double). std::string itself and string literals
+// are assigned directly in flex__<std::string> and never reach here.
+template<typename RhsXprType>
+std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, trueScalar) {
+  static_assert(flex_always_false<RhsXprType>::value, FLEX_STRING_TYPE_ERROR);
+  return Lhs;
+}
+
+template<typename RhsXprType>
+std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, eigenTensor) {
+  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
+  Lhs = Rhs();
+  return Lhs;
+}
+
+template<typename RhsXprType>
+std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, eigenOp) {
+  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
+  Eigen::Tensor<std::string, 0> ans = Rhs;
+  Lhs = ans();
+  return Lhs;
+}
+
+template<typename RhsXprType>
+std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenOp) {
+  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
+  static const int RhsNumDim = Eigen::nDimTraits2<const RhsXprType>::NumDimensions;
+  bool ok = nDimTraits2_size(Rhs) == 1;
+  if(!ok) {
+    std::cout<<"Error: dimension mismatch\n"<<std::endl;
+    return Lhs;
+  }
+  Eigen::Tensor<std::string, RhsNumDim> temp = Rhs;
+  Lhs = temp(0);
+  return Lhs;
+}
+
+template<typename RhsXprType>
+std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenTensor) {
+  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
+  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
+
+  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
+  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
+  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
+  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
+
+  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
+  if(!ok) {
+    std::cout<<"Error: dimension mismatch\n"<<std::endl;
+    return Lhs;
+  }
+  Lhs = Rhs(0);
+  return Lhs;
+}
+
 // Specialization of flex_ to whole Eigen objects
 template<typename ScalarType, int nDim>
 class flex__<Eigen::Tensor<ScalarType, nDim> > {
@@ -538,6 +610,11 @@ public:
   xType& operator=(const oType &other) {
     // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
     // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
+    // smartAssignWholeObject does not cast, so character objects work as long as
+    // both sides are character.
+    if constexpr (std::is_same<ScalarType, std::string>::value) {
+      static_assert(flex_has_string_scalar_v<oType>, FLEX_STRING_TYPE_ERROR);
+    }
     return smartAssignWholeObject(x, other,
                        typename compare_nDim<xType, oType>::type());
   }
@@ -598,6 +675,29 @@ public:
                                typename type_category<oType>::type());
   }
 };
+template<>
+class flex__<std::string> {
+public:
+  typedef std::string ScalarType;
+  ScalarType &x;
+  explicit flex__(ScalarType &x_) : x(x_) {
+    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
+  }
+  template<typename oType>
+  ScalarType& operator=(const oType &other) {
+    // std::string, string literals (char[N]) and const char* are assigned directly.
+    // Checking this first also avoids needing nDimTraits or type_category for those types.
+    if constexpr (std::is_convertible<const oType&, std::string>::value) {
+      x = other;
+      return x;
+    } else {
+      return smartAssignToScalar(x, other,
+                                 typename is_zeroDim<oType>::type(),
+                                 typename type_category<oType>::type());
+    }
+  }
+};
+
 // Notes and ideas:
 // maybe try using decltype, constexpr
 // maybe make constexpr on condition of LHSNumDim vs. RHSNumDim and dispatch on that.

@@ -449,6 +449,16 @@ literalLogicalExpr <- function(value = TRUE) {
                 type = type)
 }
 
+literalCharacterExpr <- function(value = '') {
+  type <- symbolBasicString$new(name = 'NONAME',
+                                nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
 ## This modifies the code$caller in place
 ## and generates the temp expr
 buildSimpleIntermCall <- function(code) {

@@ -26,6 +26,7 @@ updateDefaults <- function(defaults, control) {
       rebuildCppDef = FALSE,
       rebuildCpp = FALSE,
       filebase = NULL,
+      debug_labelAbstractTypes = FALSE,
       debug = FALSE,
       debugCpp = FALSE,
       cppStacktrace = FALSE,

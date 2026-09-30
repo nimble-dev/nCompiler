@@ -316,14 +316,15 @@ inEigenizeEnv(
 ##   }
 ## )
 
-inEigenizeEnv(
-  LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    # length(x) <- value becomes .method(x, "setLength", value)
-    scalarCast(code, 2, 'integer')
-    maybe_convertToMethod(code, handlingInfo, force = TRUE)
-    invisible(NULL)
-  }
-)
+# length<- is now done by setSize.
+# inEigenizeEnv(
+#   LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+#     # length(x) <- value becomes .method(x, "setLength", value)
+#     scalarCast(code, 2, 'integer')
+#     maybe_convertToMethod(code, handlingInfo, force = TRUE)
+#     invisible(NULL)
+#   }
+# )
 
 inEigenizeEnv(
   Assign_Before <- function(code, symTab, auxEnv, workEnv,
@@ -432,7 +433,7 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   scalarTypeToCppType <- function(typeString) {
-    if (!typeString %in% c('double', 'integer', 'logical'))
+    if (!typeString %in% c('double', 'integer', 'logical', 'character'))
       stop(
         paste0("Don't know the correct C++ fundamental type keyword for ",
                typeString, "."), call. = FALSE
@@ -441,7 +442,8 @@ inEigenizeEnv(
       typeString,
       double = 'double',
       integer = 'int',
-      logical = 'bool'
+      logical = 'bool',
+      character = 'std::string'
     )
   }
 )
@@ -1093,11 +1095,12 @@ inEigenizeEnv(
         code$type$type,
         double = literalDoubleExpr(0),
         integer = literalIntegerExpr(0),
-        logical = literalLogicalExpr(FALSE)
+        logical = literalLogicalExpr(FALSE),
+        character = literalCharacterExpr('')
       )
       setArg(code, 1, value_expr)
     }
-    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical')) {
+    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical', 'nCharacter')) {
       if (!('length' %in% code$aux$provided_as_missing))
         setArg(code, 2, code_args[['length']])
       else {

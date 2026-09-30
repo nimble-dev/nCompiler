@@ -195,62 +195,6 @@ std::vector<b__> Rinputs_2_indexBlockArray(Rcpp::RObject Rdata,
   return(indexBlockArray);
 }
 
-
-template<typename Scalar>
-struct Rdataptr;
-
-template<>
-struct Rdataptr<double> {
-  static double *PTR(SEXP Sin) {
-    if(!Rf_isReal(Sin)) {
-      std::string passed_type = "unknown";
-      if(Rf_isInteger(Sin)) passed_type = "integer";
-      if(Rf_isLogical(Sin)) passed_type = "logical";
-      Rcpp::stop("Block reference argument expected type numeric but received type " + passed_type);
-    }
-    return REAL(Sin);
-  }
-  static bool matches_type(SEXP Sin) {
-    return Rf_isReal(Sin);
-  }
-  static const SEXPTYPE Rtype = REALSXP;
-};
-
-template<>
-struct Rdataptr<int> {
-  static int *PTR(SEXP Sin) {
-    if(!Rf_isInteger(Sin)) {
-      std::string passed_type = "unknown";
-      if(Rf_isReal(Sin)) passed_type = "numeric";
-      if(Rf_isLogical(Sin)) passed_type = "logical";
-      Rcpp::stop("Block reference argument expected type integer but received type " + passed_type);
-    }
-    return INTEGER(Sin);
-  }
-  static bool matches_type(SEXP Sin) {
-    return Rf_isInteger(Sin);
-  }
-  static const SEXPTYPE Rtype = INTSXP;
-};
-
-template<>
-struct Rdataptr<bool> {
-  static int *PTR(SEXP Sin) {
-    if(!Rf_isLogical(Sin)) {
-      std::string passed_type = "unknown";
-      if(Rf_isReal(Sin)) passed_type = "numeric";
-      if(Rf_isInteger(Sin)) passed_type = "integer";
-      Rcpp::stop("Block reference argument expected type logical but received type " + passed_type);
-    }
-    return INTEGER(Sin);// R bools are integers
-  }
-  static bool matches_type(SEXP Sin) {
-    return Rf_isLogical(Sin);
-  }
-  static const SEXPTYPE Rtype = LGLSXP;
-
-};
-
 template<class fromT, class toT, int nDim, typename Index>
 Eigen::Tensor<toT, nDim>
 castedSTMcopy( fromT *  from,
@@ -325,6 +269,38 @@ struct Rexpr_2_EigenTensor {
       std::cout<<"Bad type\n"<<std::endl;
     }
     return xCopy; // compiler should use copy elision
+  }
+};
+
+// Character input cannot be cast from other scalar types or mapped as std::string
+// directly from R memory. Instead, map the STRSXP's element pointers (SEXP) with a
+// StridedTensorMap and convert only the elements in the block to std::string.
+// This is safe because Rdata (holding the CHARSXPs) is protected by the caller
+// and nothing here allocates in R.
+template<int nInd>
+struct Rexpr_2_EigenTensor<std::string, nInd> {
+  typedef Eigen::Tensor<std::string, nInd> EigenTensorType;
+  typedef typename EigenTensorType::Index Index;
+
+  static EigenTensorType copy(Rcpp::RObject &Rdata,
+                              Rcpp::RObject &Rexpr,
+                              Rcpp::Environment &Renv) {
+    SEXP Sdata = static_cast<SEXP>(Rdata);
+    EigenTensorType xCopy;
+    if(TYPEOF(Sdata) != STRSXP) {
+      std::cout<<"  [Warning]: Invalid R object was provided where a character object was expected.\n"<<std::endl;
+      return xCopy;
+    }
+    std::vector<Index> indexArray(
+      SEXP_indices_2_IndexArray_general<Index, std::vector<Index> >(Sdata));
+    std::vector<b__> indexBlockArray(
+      Rinputs_2_indexBlockArray(
+        Rdata, Rexpr, Renv, indexArray));
+    // The map is only read from. Writing into a STRSXP must go through SET_STRING_ELT.
+    Eigen::StridedTensorMap<Eigen::Tensor<SEXP, nInd> >
+      xMap(const_cast<SEXP*>(STRING_PTR_RO(Sdata)), indexArray, indexBlockArray);
+    xCopy = xMap.unaryExpr([](SEXP s) { return std::string(CHAR(s)); });
+    return xCopy;
   }
 };
 

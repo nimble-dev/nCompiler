@@ -3,6 +3,7 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <type_traits>
+#include <string>
 
 namespace nCompiler {
 namespace tensor_creation_detail {
@@ -122,7 +123,9 @@ Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> createTensor(const DerivedIn& val
   // reshape into the output shape; the branch not taken here is discarded
   // before it is ever checked against the other case's requirements on
   // DerivedIn (a scalar has no .reshape(), a tensor can't setConstant()).
-  if constexpr (std::is_scalar<DerivedIn>::value) {
+  // For character output, the fill value may be a std::string or a string
+  // literal (DerivedIn = char[N]), so accept anything convertible to std::string.
+  if constexpr (std::is_scalar<DerivedIn>::value || std::is_convertible<const DerivedIn&, std::string>::value) {
     Eigen::Tensor<ScalarTypeOut, NumDimensionsOut> ans(dims);
     ans.setConstant(value);
     return(ans);
