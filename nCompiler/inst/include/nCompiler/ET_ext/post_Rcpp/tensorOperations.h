@@ -1157,7 +1157,7 @@ template<typename xType>
         * explicit conversion to extract diagonal from an Eigen::SparseMatrix
         */
         explicit operator Eigen::Tensor<Scalar, 1> ()  {
-         Eigen::Tensor<Scalar, 1> res(x.rows());
+         Eigen::Tensor<Scalar, 1> res(std::min(x.rows(), x.cols()));
          auto diagmap = matmap(res);
          diagmap = x.diagonal();
          return(res);

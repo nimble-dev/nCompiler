@@ -79,7 +79,8 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(std::shared_p
     const auto & b_eval = eval(b);
     // initialize storage for solution, given problem dimensions
     auto bdim = b.dimensions();
-    bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
+    // bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
+    bTensor res = initSolveX(b_eval);
     // map tensor objects to Eigen::Matrix types
     auto bmap = matmap(b_eval);
     auto resMap = matmap(res);
