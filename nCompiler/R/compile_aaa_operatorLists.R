@@ -1302,8 +1302,10 @@ assignOperatorDef(
   c('t'),
   list(
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
-      argTypeInd = 1
+      handler = 'Transpose'
+    ),
+    eigenImpl = list(
+      handler = 'Transpose'
     )
   )
 )

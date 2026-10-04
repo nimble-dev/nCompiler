@@ -417,6 +417,16 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  Transpose <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(inherits(code$args[[1]]$type, "symbolSparse")) {
+      code$name <- as.name('transpose')
+      maybe_convertToMethod(code, handlingInfo, force = TRUE)
+    }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   ## could be combined with cWiseBinary and Reduction?
   cWiseUnary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if(code$args[[1]]$type$nDim == 0) {

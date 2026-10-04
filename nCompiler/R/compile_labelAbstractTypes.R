@@ -133,7 +133,7 @@ compile_labelAbstractTypes <- function(code,
 
     # if(!is.null(handlingInfo)) {
     #   handler <- handlingInfo[['handler']]
-      if(!is.null(handler)) {
+    if(!is.null(handler)) {
         if (logging)
           appendToLog(paste('Calling handler', handler, 'for', code$name))
         if(is.function(handler))
@@ -147,7 +147,7 @@ compile_labelAbstractTypes <- function(code,
           logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
         }
         return(ans)
-      }
+    }
     # }
   }
   nErrorEnv$stateInfo <- character()
@@ -1719,6 +1719,7 @@ inLabelAbstractTypesEnv(
   }
 )
 
+
 inLabelAbstractTypesEnv(
   Transpose <- function(code, symTab, auxEnv, handlingInfo) {
     # validate usage of transpose function
@@ -1728,26 +1729,21 @@ inLabelAbstractTypesEnv(
         'trying to take the transpose of an ambiguous input.'
       ), call. = FALSE)
     }
-    # determine argument's type
-    insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
+    # recurse to determine argument types
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    # extract the return type
+    code$type <- code$args[[1]]$type
     # validate input of transpose function
-    if(argType$nDim > 2) {
+    if(code$type$nDim > 2) {
       stop(exprClassProcessingErrorMsg(
         code,
         'cannot transpose an object with more than two dimensions.'
       ), call. = FALSE)
     }
-    # create type object
-    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
-    # TODO: double check the assumption that output will always be a
-    # symbolBasic type as it is understood today.  Is a Vector always a dense
-    # vector?  Or do we really need a separate handler for vectors stored in
-    # different datastructures, such as SparseVectors, hashmaps, or lists?
-    code$type <- symbolBasic$new(nDim = 2, type = returnType)
-    invisible(insertions)
+    invisible(inserts)
   }
 )
+
 
 ## 2026-09-27: I believe this is defunct given `Cholesky` handling. // CP
 ## inLabelAbstractTypesEnv(

@@ -1213,6 +1213,14 @@ auto nDiag(xType && x) -> decltype(
     return x.shuffle(o);
  }
 
+/* TODO: This handles the scalar corner case for a basic t(x), but we should check
+   whether we'd want to promote the result to a 1x1 matrix to handle real use cases (if they exist). */
+double t(const double &x) {
+  return(x);
+}
+
+
+
 /**
  * Initialize an Eigen::Tensor object to store the unknown x in the linear
  * system A %*% x = b
