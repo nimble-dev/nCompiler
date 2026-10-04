@@ -1361,7 +1361,6 @@ inEigenizeEnv(
 inEigenizeEnv(
   
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    
     # handle "diag(x)" when x is a matrix and goal is to set or extract diagonal
     if(length(code$args) == 1) {
       if(code$args[[1]]$type$nDim == 2) {

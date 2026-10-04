@@ -930,6 +930,7 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
     return res;
  }
 
+ 
  /**
  * Generate a Sparse matrix with non-constant diagonal
  *
@@ -953,18 +954,26 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
 >
 Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
     // evaluate input if needed
+    Eigen::Index nrow_, ncol_;
+    Eigen::Index size_x = nDimTraits2_size(x);
+    if constexpr (std::is_same<Index, MakeSquareDiag__>::value) {
+        nrow_ = ncol_ = size_x;
+    } else {
+        nrow_ = nrow;
+        ncol_ = ncol;
+    }
     auto xEval = eval(x);
     // initialize output
-    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    Eigen::SparseMatrix<Scalar> res(nrow_, ncol_);
     // figure out how large the main diagonal is
-    Index nEntries = std::min(nrow, ncol);
-    if(x.size() != nEntries) {
+    Eigen::Index nEntries = std::min(nrow_, ncol_);
+    if(size_x != nEntries) {
         throw std::range_error(
-            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+            "nCompiler::nDiagonal - Diagonal entry vector length does not match matrix size"
         );
     }
     // populate diagonal and return
-    for(Index i = 0; i < nEntries; ++i) {
+    for(Eigen::Index i = 0; i < nEntries; ++i) {
         res.coeffRef(i,i) = xEval(i);
     }
     return res;
