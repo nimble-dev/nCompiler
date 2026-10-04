@@ -1606,7 +1606,7 @@ template<
     typename Xpr,
     typename Scalar = typename Xpr::Scalar,
     typename std::enable_if<
-        HasNumDimensionsN<Xpr, 2>(),
+        HasNumDimensionsN<Xpr, 2>() && !IsSparseMatrix<Xpr>::value,
         Xpr
     >::type* = nullptr
 >
@@ -1627,6 +1627,16 @@ Scalar nLogdet(const Xpr & x) {
     nColPivHouseholderQR<MatrixType> qrdecomp(xmap);
     return qrdecomp.logDeterminant();
 }
+
+double nLogdet(const Eigen::SparseMatrix<double>& x) { 
+  Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt;
+  llt.compute(x);
+  if (llt.info() != Eigen::Success)
+    throw std::runtime_error("sparse Cholesky factorization failed");
+  Eigen::SparseMatrix<double> L = llt.matrixL();
+  return 2*L.diagonal().array().log().sum();
+}
+
 
 // This is drafted but not yet used.
 template<typename Scalar >

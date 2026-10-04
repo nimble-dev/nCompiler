@@ -26,10 +26,6 @@ double nLogdet(std::shared_ptr<sparseCholFactor> ch) {
     return L.diagonal().array().log().sum();
 }
 
-
-// Should we implement nLogdet for operation directly on sparse matrix?
-
-
 // See tensorOperations.h for discussion of this size determination.
 
 template<typename Scalar>
