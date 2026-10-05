@@ -152,6 +152,7 @@ inEigenizeEnv(
   # to match type of foo(a, b).  promoting means casting from logical -> integer -> double.
   promoteTypes <- function(code, which_args = seq_along(code$args)) {
     resultType <- code$type$type
+    if(resultType == "character") return(NULL)
     for(i in which_args) {
       if(inherits(code$args[[i]], 'exprClass')) {
         if(code$args[[i]]$type$type != resultType) {

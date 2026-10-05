@@ -56,6 +56,7 @@ class ETaccessorBase {
   virtual void set(SEXP Sinput)=0;
   virtual SEXP get()=0;
   virtual SEXP operator=(SEXP RHS) {set(RHS); return RHS;}
+  operator SEXP() {return get();}
 
   virtual std::vector<int> &intDims()=0;
 
@@ -349,6 +350,7 @@ template<typename ET>
 struct ETaccessorCopyHolder {
   ET obj_copy;
   ETaccessorCopyHolder(const ET &src) : obj_copy(src) {}
+  ETaccessorCopyHolder(ET &&src) : obj_copy(std::move(src)) {}
 };
 
 template<typename Scalar, int nDim>
@@ -361,6 +363,7 @@ public:
   using ET = Eigen::Tensor<Scalar, nDim>;
   using Holder = ETaccessorCopyHolder<ET>;
   ETaccessor(const ET &obj_) : Holder(obj_), ETaccessor<ET, false>(Holder::obj_copy) {};
+  ETaccessor(ET &&obj_) : Holder(std::move(obj_)), ETaccessor<ET, false>(Holder::obj_copy) {};
   ~ETaccessor() {};
 };
 
