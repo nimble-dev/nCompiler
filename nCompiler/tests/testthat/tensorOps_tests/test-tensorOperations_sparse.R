@@ -15,16 +15,6 @@
 
 library(Matrix)
 
-library(nCompiler)
-foo <- nFunction(
-  function(x = 'numericMatrix', y = 'nSparseMatrix') {
-    ans <- x %*% y
-    return(ans)
-    returnType('numericMatrix')
-  }
-)
-cfoo <- nCompile(foo)
-
 #
 # test error trapping and generated C++ code that implements nCompiler's support
 # for evaluating binary operations and conversion between between sparse and

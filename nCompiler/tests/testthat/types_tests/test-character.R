@@ -107,5 +107,5 @@ test_that("character tensors work", {
   expect_equal(obj$ca, ca2)
   expect_equal(Cobj$ca, ca2)
 
-  rm(obj); gc()
+  rm(obj, Cobj); gc()
 })
