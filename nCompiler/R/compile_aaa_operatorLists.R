@@ -1237,25 +1237,6 @@ assignOperatorDef(
   )
 )
 
-## TODO: remove these next two as redundant with Cholesky.
-assignOperatorDef(
-  'sparseChol',
-  list(
-    labelAbstractTypes = list(
-      handler = 'sparseChol'
-    )
-  )
-)
-
-assignOperatorDef(
-  'denseChol',
-  list(
-    labelAbstractTypes = list(
-      handler = 'denseChol'
-    )
-  )
-)
-
 assignOperatorDef(
   c('nChol'),
   list(

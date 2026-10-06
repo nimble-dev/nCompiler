@@ -588,42 +588,6 @@ inLabelAbstractTypesEnv(
   }
 )
 
-## TODO: remove these next two as redundant with Cholesky
-inLabelAbstractTypesEnv(
-  sparseChol <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    if(inherits(argType, 'symbolSparse')) {
-        code$type <- symbolNC$new(
-          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
-      )
-    } else { 
-        code$type <- symbolNC$new(
-          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
-      )
-    }
-    invisible(inserts)
-  }
-)
-
-## Akin to `Matrix::Cholesky` in returning collection of information for further computation.
-inLabelAbstractTypesEnv(
-  denseChol <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    if(inherits(argType, 'symbolSparse')) {
-        code$type <- symbolNC$new(
-          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
-      )
-    } else { 
-        code$type <- symbolNC$new(
-          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
-      )
-    }
-    invisible(inserts)
-  }
-)
-
 ## Akin to R `chol` in returning U matrix.
 inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
