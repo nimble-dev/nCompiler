@@ -1624,12 +1624,14 @@ inLabelAbstractTypesEnv(
     # product between two input vectors, which returns a matrix
     resDim <- 2
     # return a dense object if any arguments are dense, o/w return sparse
-    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse'))) ||
-       inherits(code$args[[1]]$type, 'symbolSimplicialLLT') && inherits(code$args[[2]]$type, 'symbolSparse')) {
+    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse')))) {
       code$type <- symbolSparse$new(nDim = resDim, type = returnType)
     } else {
       code$type <- symbolBasic$new(nDim = resDim, type = returnType)
     }
+    if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor') && 
+         inherits(code$args[[2]]$type, 'symbolSparse'))
+      stop("Matrix multiplication of a Cholesky factor and a sparse matrix is not supported")
     invisible(inserts)
   }
 )
@@ -1649,6 +1651,19 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # extract the return type
     code$type <- code$args[[argTypeInd]]$type
+    invisible(inserts)
+  }
+)
+
+
+inLabelAbstractTypesEnv(
+  ## recurse and use the nth argument's type as the return type
+  Solve <- function(code, symTab, auxEnv, handlingInfo) {
+    # recurse to determine argument types
+    inserts <- ArgReturnType(code, symTab, auxEnv, handlingInfo)
+    if(code$args[[2]]$type$type %in% c('sparseCholFactor','denseCholFactor') || 
+         inherits(code$args[[2]]$type, 'symbolSparse'))
+      stop("Using solve/backsolve with a Cholesky factor or sparse matrix as the second argument is not supported")
     invisible(inserts)
   }
 )

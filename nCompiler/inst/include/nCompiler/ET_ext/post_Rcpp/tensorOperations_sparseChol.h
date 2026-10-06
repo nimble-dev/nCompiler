@@ -92,19 +92,14 @@ template<
     typename std::enable_if<
         HasNumDimensionsN<Ypr, 2>(),
         Ypr
-    >::type* = nullptr,
-    typename ResultType = typename std::conditional<
-        IsSparseType<Ypr>::value,
-        Eigen::SparseMatrix<typename Ypr::Scalar>,
-        Eigen::Tensor<typename Ypr::Scalar, 2>
-    >::type
+      >::type* = nullptr
 >
-ResultType nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto ymap = matmap(yeval);
-    ResultType res(ymap.rows(), ymap.cols());
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(ymap.rows(), ymap.cols());
     // map and multiply!
     matmap(res) = ch->llt.permutationPinv() * (ch->llt.matrixL() * ymap);
     return res;
@@ -112,26 +107,21 @@ ResultType nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
 
 
 // Multiply L by vector.
-// TODO: is there any way for us to return a vector instead of a matrix?
+// TODO: Could we combine this with the above by determining whether to use ymap.cols() or 1?
 template<
     typename Ypr,
     typename std::enable_if<
         HasNumDimensionsN<Ypr, 1>(),
         Ypr
-    >::type* = nullptr,
-    typename ResultType = typename std::conditional<
-        IsSparseType<Ypr>::value,
-        Eigen::SparseMatrix<typename Ypr::Scalar>,
-        Eigen::Tensor<typename Ypr::Scalar, 2>
-    >::type
+    >::type* = nullptr
 >
-ResultType nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
     // evaluate arguments, if necessary
     const auto & yeval = eval(y);
     // map inputs and initialize output
     auto ymap = matmap(yeval);
     // initialize output
-    ResultType res(ymap.size(), 1);
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(ymap.size(), 1);
     // map and multiply!
     matmap(res) = ch->llt.permutationPinv() * (ch->llt.matrixL() * ymap);
     return res;

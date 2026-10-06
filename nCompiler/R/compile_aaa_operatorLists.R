@@ -1292,7 +1292,7 @@ assignOperatorDef(
   c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
+      handler = 'Solve',
       argTypeInd = 2
     )
   )
