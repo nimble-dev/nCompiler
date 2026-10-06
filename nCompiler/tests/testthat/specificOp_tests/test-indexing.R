@@ -451,6 +451,39 @@ test_that("3:3 style indexing arg doesn't drop dimension", {
   expect_silent(nfc(x))
 })
 
+test_that("LHS indexing by a variable or expression works", {
+  # Issue #215
+  nf <- nFunction(
+    fun = function(x = 'numericVector') {
+      x[c(2,3,5)] <- rep(1,3)
+      return(x)
+      returnType('numericVector')
+    }
+  )
+  cnf <- nCompile(nf)
+  x <- 1:10
+  check <- x
+  check[c(2, 3, 5)] <- rep(1, 3)
+  x <- nf(x)
+  expect_equal(x, check)
+
+  nf <- nFunction(
+    fun = function(x = 'numericVector') {
+      w <- c(2, 3, 5)
+      x[w + 1] <- rep(1,3)
+      return(x)
+      returnType('numericVector')
+    }
+  )
+  cnf <- nCompile(nf)
+  x <- 1:10
+  check <- x
+  check[c(2, 3, 5) + 1] <- rep(1, 3)
+  x <- nf(x)
+  expect_equal(x, check)
+
+})
+
 ## THESE TESTS WON'T PASS UNTIL SOME NEW ERROR-TRAPPING
 ## IS IMPLEMENTED.
 ## test_that("compilation of [ throws errors as expected ", {
