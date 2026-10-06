@@ -1859,10 +1859,12 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Diag <- function(code, symTab, auxEnv, handlingInfo) {
-
     # recurse arguments
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
+    if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+      stop("Diagonal of a Cholesky factor is not supported")
+      
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
     if(length(code$args) == 1) {
       if(code$args[[1]]$type$nDim == 2) {
