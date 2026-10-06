@@ -5,6 +5,7 @@
 #include <memory>
 #include <type_traits>
 #include <string>
+#include <string_view>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
 #include <nCompiler/ET_ext/RuntimeFlatView.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
@@ -12,6 +13,11 @@
 
 template<typename Scalar>
 class ETaccessorTyped;
+
+// The default for copy is given here (not in the definition below) because
+// ETaccessorBase::ETaccessorTyped_tensorPtr uses ETaccessor before it is defined.
+template<typename ERROR, bool copy = false>
+class ETaccessor;
 
 template<typename inDimsT, typename outDimsT>
 void set_output_dims(const inDimsT &inDim, outDimsT &outDim,
@@ -48,9 +54,43 @@ template<typename TargetScalar, typename ViewType> class RHSCastProxy;
 template<typename TargetScalar, typename ViewType> class CastingProxy;
 template<typename TargetScalar, typename Scalar> class CastingScalarProxy;
 
+// Names of scalar types used to downcast an ETaccessorBase without relying on
+// RTTI matching across DLLs (see typed_cast below, and nc_cast in
+// generic_class_interface.h for the same issue with nClasses). An ETaccessor may be
+// created by one DLL (e.g. by access() of an object compiled there) and used by
+// another. Scalar types without a name here fall back to dynamic_cast.
+template<typename Scalar> struct ETscalar_key { static constexpr const char* value = nullptr; };
+template<> struct ETscalar_key<double> { static constexpr const char* value = "double"; };
+template<> struct ETscalar_key<int> { static constexpr const char* value = "int"; };
+template<> struct ETscalar_key<bool> { static constexpr const char* value = "bool"; };
+template<> struct ETscalar_key<std::string> { static constexpr const char* value = "std::string"; };
+
 // Virtual nDim-general methods (e.g. resize, conversions to and from SEXP).
 class ETaccessorBase {
   public:
+  // We need to support the purpose of dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc)
+  // where acc is an ETaccessorBase and we need to downcast to ETaccessorTyped<TargetScalar>*.
+  // If TargetScalar is not the right scalar type, we will return nullptr.
+  //
+  // The reason to do this here is to ensure RTTI (run-time type information) is used in the
+  // DLL where the ETaccessor was created, and virtual methods always dispatch to code in 
+  // the DLL where the object was created. 
+  //
+  // To avoid having templated virtual methods (not allowed), we use a string key for the scalar type.
+
+  // Return this as ETaccessorTyped<Scalar>* for the Scalar named by scalar_key (or as
+  // ETaccessor<Eigen::Tensor<Scalar, nDim> >* for tensor_cast), or nullptr if it is not
+  // of that type. Because these are virtual, the check is done by code in the DLL that
+  // created the accessor. Use ETaccessorTyped_ptr() or ETaccessorTyped_tensorPtr() rather than calling them directly.
+  virtual void* typed_cast(std::string_view scalar_key) {return nullptr;}
+  virtual void* tensor_cast(std::string_view scalar_key, int nDim) {return nullptr;}
+
+  template<typename Scalar>
+  ETaccessorTyped<Scalar>* ETaccessorTyped_ptr();
+
+  template<int nDim, typename Scalar>
+  ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorTyped_tensorPtr();
+
 //  virtual void resize(Eigen::Tensor<double, 1> &t)=0;
   // To iron out: set, get, generic ref access.
   virtual void set(SEXP Sinput)=0;
@@ -89,7 +129,7 @@ class ETaccessorBase {
 
   template<typename Scalar = double>
   ETaccessorTyped<Scalar> &S() {
-    auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+    auto castptr = ETaccessorTyped_ptr<Scalar>();
     if(castptr == nullptr) Rcpp::stop("Problem with some form of access()\n.");
     return *castptr;
   }
@@ -120,6 +160,14 @@ class ETaccessorTyped : public ETaccessorBase {
   public:
 
   virtual Scalar *data()=0;
+
+  void* typed_cast(std::string_view scalar_key) override {
+    if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+      if(scalar_key == ETscalar_key<Scalar>::value)
+        return static_cast<void*>(this);
+    }
+    return nullptr;
+  }
 
   template<int nDim>
   using ETM = Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> >;
@@ -238,30 +286,41 @@ class ETaccessorTyped : public ETaccessorBase {
   }
 };
 
+// Downcast to ETaccessorTyped<Scalar> without relying on RTTI matching across DLLs
+// (see typed_cast). Falls back to dynamic_cast for Scalar types without an ETscalar_key.
+template<typename Scalar>
+ETaccessorTyped<Scalar>* ETaccessorBase::ETaccessorTyped_ptr() {
+  if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+    return static_cast<ETaccessorTyped<Scalar>*>(typed_cast(ETscalar_key<Scalar>::value));
+  } else {
+    return dynamic_cast<ETaccessorTyped<Scalar>*>(this);
+  }
+}
+
 template<int nDim, typename Scalar>
 Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::map() {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating a map() from some form of access().\n");
   return castptr->template mapTyped<nDim>();
 }
 
 template<int nDim, typename Scalar>
 Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::STmap() {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating an STmap() from some form of access().\n");
   return castptr->template STmapTyped<nDim>();
 }
 
 template<typename Scalar>
 Scalar& ETaccessorBase::scalar() {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem using scalar() from some form of access().\n");
   return castptr->scalarTyped();
 }
 
 template<typename Scalar>
 RuntimeFlatView<Scalar> ETaccessorBase::flatten(const std::vector<b__> &ss) {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating a flatten() view from some form of access().\n");
   return castptr->flattenTyped(ss);
 }
@@ -270,7 +329,7 @@ RuntimeFlatView<Scalar> ETaccessorBase::flatten(const std::vector<b__> &ss) {
 // then specialize to allow valid types (Eigen::Tensor's or true scalars)
 // These are supported as run-time errors because the genericInterfaceC
 // will access them by a name.
-template<typename ERROR, bool copy=false>
+template<typename ERROR, bool copy>
 class ETaccessor : public ETaccessorTyped<double> {
   public:
   // Assignment operators are never inherited: the compiler's implicit
@@ -324,6 +383,15 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Sca
   typedef typename ET::Dimensions Dimensions;
   ETaccessor(ET &obj_) : obj(obj_) {};
   ~ETaccessor() {};
+  // See typed_cast in ETaccessorBase. The copy = true version derives from this
+  // (copy = false) class and uses this, which is the type that ETaccessorTyped_tensorPtr() returns.
+  void* tensor_cast(std::string_view scalar_key, int nDim_) override {
+    if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+      if(nDim_ == nDim && scalar_key == ETscalar_key<Scalar>::value)
+        return static_cast<void*>(this);
+    }
+    return nullptr;
+  }
   Scalar *data() override {return obj.data();}
   // Sized lazily here rather than in the constructor: a no-op (no
   // reallocation) on every call after the first, but avoids the allocation
@@ -439,9 +507,20 @@ class ETaccessor<std::string, copy> : public ETaccessorScalar<std::string, copy>
   ~ETaccessor() {};
 };
 
+// Downcast to ETaccessor<Eigen::Tensor<Scalar, nDim> > without relying on RTTI matching
+// across DLLs (see tensor_cast). Falls back to dynamic_cast for Scalar types without an ETscalar_key.
+template<int nDim, typename Scalar>
+ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorBase::ETaccessorTyped_tensorPtr() {
+  if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+    return static_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >*>(tensor_cast(ETscalar_key<Scalar>::value, nDim));
+  } else {
+    return dynamic_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >*>(this);
+  }
+}
+
 template<int nDim, typename Scalar>
 Eigen::Tensor<Scalar, nDim> &ETaccessorBase::ref() {
-  auto castptr = dynamic_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >* >(this);
+  auto castptr = ETaccessorTyped_tensorPtr<nDim, Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating a ref() from some form of access().\n");
   return castptr->innerRef();
 }

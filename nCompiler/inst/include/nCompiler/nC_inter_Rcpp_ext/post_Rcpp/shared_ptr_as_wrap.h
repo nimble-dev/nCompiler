@@ -45,7 +45,9 @@ namespace Rcpp {
         std::shared_ptr<genericInterfaceBaseC> spbase = 
           static_cast<shared_ptr_holder_base*>(R_ExternalPtrAddr(Sextptr))->get_interfaceBase_shared_ptr();
         if constexpr (T_is_polymorphic) {
-          spnew_ = std::dynamic_pointer_cast<T>(spbase);
+          // The object may have been created by a different DLL, so use nc_shared_ptr_cast
+          // rather than dynamic_pointer_cast (see generic_class_interface.h).
+          spnew_ = nc_shared_ptr_cast<T>(spbase);
           if(!spnew_) {
             stop("Invalid nClass assignment: check that the assigned object is of the expected class (or derived from it).");
           }

@@ -122,7 +122,7 @@ public:
 
 // RuntimeCastingProxy<TargetScalar, nDim>
 //
-// Runtime-source proxy (ETaccessorBase). At construction, dynamic_cast tests
+// Runtime-source proxy (ETaccessorBase). At construction, ETaccessorTyped_ptr() tests
 // whether the source scalar matches TargetScalar:
 //   - Same type: data_ptr_ points directly into source data (no copy).
 //   - Different type: allocates copy_, cast-copies from source;
@@ -175,7 +175,8 @@ public:
   explicit RuntimeCastingProxy(ETaccessorBase& acc, bool is_lhs = false)
     : source_(acc), is_lhs_(is_lhs), copy_made_(false)
   {
-    auto* typed = dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc);
+    // equivalent to dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc); done via virtual method to ensure cast is done in the object's original DLL, in case it was passed through another DLL
+    auto* typed = acc.template ETaccessorTyped_ptr<TargetScalar>();
     if(typed) {
       // Same scalar type: view directly, no copy.
       data_ptr_ = &acc.scalar<TargetScalar>();
@@ -249,7 +250,8 @@ public:
     : source_(acc), is_lhs_(is_lhs)
   {
     dims_ = computeDims(acc.intDims());
-    auto* typed = dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc);
+    // Equivalent to dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc); done via virtual method to ensure cast is done in the object's original DLL, in case it was passed through another DLL
+    auto* typed = acc.template ETaccessorTyped_ptr<TargetScalar>(); 
     if(typed) {
       // Same scalar type: view directly, no copy.
       auto tm = typed->template mapTyped<nDim>();

@@ -2,11 +2,17 @@
 #define NCOMPILER_NLIST__H_
 
 inline std::shared_ptr<nListBase_nClass> interface_ptr_2_nList_ptr(std::shared_ptr<genericInterfaceBaseC> interface_ptr) {
-  std::shared_ptr<nListBase_nClass> ans = std::dynamic_pointer_cast<nListBase_nClass>(interface_ptr);
+  // interface_ptr may refer to an object created by a different DLL (see nc_shared_ptr_cast).
+  std::shared_ptr<nListBase_nClass> ans = nc_shared_ptr_cast<nListBase_nClass>(interface_ptr);
   if(!ans) Rcpp::stop("interface_ptr_2_nList_ptr: interface_ptr is not a nListBase_nClass.");
   return ans;
 }
 
+// nList_<Element> is a hand-coded intermediate layer between the predefined nListBase_nClass
+// and a generated nList class. It is never the target of a cast from genericInterfaceBaseC,
+// so it needs no nc_class_key (see nc_shared_ptr_cast in generic_class_interface.h).
+// Code that needs the contents of an nList that may come from another DLL uses the virtual
+// methods of nListBase_nClass instead (see set_all_values_).
 template<class Element>
 class nList_ : public nListBase_nClass {
 public:
@@ -385,9 +391,11 @@ public:
             static_cast<genericInterfaceBaseC*>(
               static_cast<shared_ptr_holder_base*>(
                 R_ExternalPtrAddr(Sextptr))->get_ptr());
-          nList_<Element>* src = dynamic_cast<nList_<Element>*>(src_base);
+          // The source may have been created by a different DLL, so we cast only to the
+          // predefined base class (see nc_raw_ptr_cast) and copy through its virtual methods.
+          nListBase_nClass* src = nc_raw_ptr_cast<nListBase_nClass>(src_base);
           if(src) {
-            contents_ = src->contents_;
+            copy_from_nList(src);
             return;
           }
           Rcpp::stop(
@@ -413,11 +421,48 @@ public:
     }
 
     // Populate contents_ positionally from an R list.
+    // 
+    // The reason for doing it as follows is to use only an nListBase_nClass pointer to the source.
+    // At one point we did a dynamic pointer cast to nList_<Element> and copied contents_ directly, 
+    // but is not safe if the source was created by a different DLL.
+    // By using only virtual methods and the nc_shared_ptr_cast, we ensure that the source's own DLL is used to access its elements.
+    //
     // Each element is converted to Element:
     //   - shared_ptr<T>: tries the compiled extptr path first; falls back to
     //     default-constructing a T and calling set_all_values() on it
     //     (handles uncompiled objects, plain R lists, and nested nLists).
     //   - primitive / Eigen tensor: Rcpp::as<Element>().
+    // Copy the contents of another compiled nList, which may have been created by a
+    // different DLL. Only virtual methods of nListBase_nClass are used on src, so that work
+    // is done by src's own DLL, and each element is converted with a DLL-safe cast:
+    //   - nClass elements: nc_shared_ptr_cast, so the elements are shared, as a direct copy
+    //     of contents_ would do, and an element of a different class is rejected.
+    //   - Eigen::Tensor and scalar elements: values are copied via access_at's ETaccessor.
+    // This is slower than copying contents_ directly, but it is only used when copying
+    // from an object passed in from R.
+    void copy_from_nList(nListBase_nClass* src) {
+      int n = src->getLength();
+      std::vector<Element> new_contents(n);
+      for(int i = 0; i < n; ++i) {
+        if constexpr(is_shared_ptr<Element>::value) {
+          std::shared_ptr<genericInterfaceBaseC> elem = src->get_interface_ptr_at(i);
+          if(elem) { // a null element stays null
+            new_contents[i] = nc_shared_ptr_cast<typename Element::element_type>(elem);
+            if(!new_contents[i])
+              Rcpp::stop("set_all_values on nList: an element of the source nList is not of this nList's element type.");
+          }
+        } else if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+          new_contents[i] = src->access_at(i)->template ref<static_cast<int>(Element::NumIndices),
+                                                            typename Element::Scalar>();
+        } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+          new_contents[i] = src->access_at(i)->template scalar<Element>();
+        } else {
+          Rcpp::stop("set_all_values on nList: copying from a compiled nList is not supported for this element type.");
+        }
+      }
+      contents_ = std::move(new_contents); // only after all elements succeeded
+    }
+
     void set_from_list(const Rcpp::List& Robj) {
       int n = Robj.length();
       contents_.resize(n);

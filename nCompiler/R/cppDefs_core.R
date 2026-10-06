@@ -281,27 +281,6 @@ build_get_nClass_env_impl <- function(self) {
   invisible(NULL)
 }
 
-# make_loadedObjectEnv_cppDef <- function() {
-#   LOEfunDef <-
-#     cppMacroCallClass$new(
-#       cppContent = paste0("#ifndef _ONTHEFLY_LOADEDOBJECTENV\n",
-#                           "#define _ONTHEFLY_LOADEDOBJECTENV\n",
-#                           "SEXP loadedObjectEnv(SEXP Xptr) {\n",
-#                           "Rcpp::Environment nc(\"package:nCompiler\");\n",
-#                           "Rcpp::Function newLOE = nc[\"new.loadedObjectEnv\"];\n",
-#                           "return newLOE(Xptr);\n",
-#                           "}\n",
-#                           "#endif\n"),
-#       name = "loadedObjectEnv"
-#     )
-#   LOEfunDef
-# }
-
-# addLoadedObjectEnv_impl <- function(self) {
-#   LOEfunDef <- make_loadedObjectEnv_cppDef()
-#   self$neededCppDefs[["loadedObjectEnv"]] <- LOEfunDef
-# }
-
 add_obj_hooks_impl <- function(self) {
   name <- self$name
   self$addInheritance(paste0("public loadedObjectHookC<",
@@ -327,6 +306,14 @@ addGenericInterface_impl <- function(self) {
   self$CPPpreamble <- c(self$CPPpreamble,
                         "#define NCOMPILER_USES_NCLASS_INTERFACE",
                         "#define USES_NCOMPILER")
+  # The key used by nc_cast (see generic_class_interface.h). It is in the declaration
+  # so that code compiled in another DLL, having only this class's header, uses the same key.
+  nc_class_key <- if(!is.null(self$Compiler$NCgenerator))
+                    NCinternals(self$Compiler$NCgenerator)$nc_class_key
+                  else NULL
+  if(!is.null(nc_class_key))
+    self$declarationLines <- unique(c(self$declarationLines,
+                                      paste0('static const char* nc_class_key() {return "', nc_class_key, '";}')))
 
   cppArgInfos <- character()
   outputMethodClassNames <- character()
@@ -503,6 +490,7 @@ cppClassClass <- R6::R6Class(
     ## ancestors = 'list',             ## classes inherited by inherited classes, needed to make all cast pointers
     ##extPtrTypes = 'ANY',
     ##private = 'list',     # 'list'. This field is a placeholder for future functionality.  Currently everything is generated as public
+    declarationLines = character(), # extra lines of code placed (as public) at the start of the class declaration
     useGenerator = TRUE,    # toggles whether to include a SEXPgeneratorFun.
     # SEXPgeneratorDef = NULL, # put this in internalCppDefs
     # set_nClass_envDef = NULL, # ditto
@@ -590,6 +578,7 @@ cppClassClass <- R6::R6Class(
         }
         output <- c(generateClassHeader(name, inheritance, nClass_inheritance),
                     list('public:'), ## In the future we can separate public and private
+                    as.list(paste0('  ', declarationLines)),
                     generateAll(memberCppDefs, declaration = TRUE),
                     # it is important to declare methods before variables
                     # because nDerivsMgrClass variables are templated using a macro

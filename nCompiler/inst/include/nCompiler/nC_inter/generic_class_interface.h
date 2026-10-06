@@ -8,6 +8,8 @@
 #include<Rinternals.h>
 #include<iostream>
 #include<memory>
+#include<string_view>
+#include<type_traits>
 #ifdef NCOMPILER_USES_CEREAL
 #include<nCompiler/nC_cereal/archives.h>
 #endif
@@ -107,6 +109,20 @@ class genericInterfaceBaseC {
     return R_NilValue;
   }
 
+  // See explanation at nc_shared_ptr_cast below.
+  // This is the base class virtual method.
+  virtual void* nc_cast(std::string_view key) {
+    return nullptr;
+  }
+  // The nc_class_key() of this object's (most derived) class, or nullptr if that class
+  // has none.
+  // This is useful because if nc_cast returns nullptr, we need to see if the 
+  // object's class has a key at all. If it does, then an nc_cast returned nullptr
+  // definitively means there is no match.
+  virtual const char* nc_object_class_key() {
+    return nullptr;
+  }
+
 #ifdef NCOMPILER_USES_CEREAL
   template<class Archive>
     void _SERIALIZE_(Archive &archive) {}
@@ -144,6 +160,15 @@ template<class T> class genericInterfaceC;
 template<typename T> struct class_from_interface { using type = void; };
 template<typename T> struct class_from_interface<genericInterfaceC<T>> { using type = T; };
 
+// Detects whether class T has a static nc_class_key(), which is generated in the
+// declaration of every nClass with a generic interface. C++ code generated before
+// nc_class_key existed (e.g. saved code for predefined nClasses) lacks it; then
+// nc_cast does not recognize that class and casting falls back to dynamic_cast.
+template<typename T, typename = void>
+struct has_nc_class_key : std::false_type {};
+template<typename T>
+struct has_nc_class_key<T, std::void_t<decltype(T::nc_class_key())> > : std::true_type {};
+
 // FirstDerived and interface_resolver<> designed with help from Google Gemini
 // Helper template to find the first type that inherits from Base
 template <typename T, typename... Rest>
@@ -179,9 +204,36 @@ private:
   using FirstFound = typename FirstGenericDerived<Bases...>::type;
   using OwnedType  = typename class_from_interface<FirstFound>::type;
 
+  // A qualified (non-virtual) call to a base class's nc_cast, which runs the
+  // interface_resolver override at that level of the hierarchy (with this adjusted
+  // to that base). Bases that are not nClasses (no genericInterfaceBaseC) are skipped.
+  // For genericInterfaceC<...> this reaches genericInterfaceBaseC::nc_cast (nullptr).
+  template<typename B>
+  void* nc_cast_base(std::string_view key) {
+    if constexpr (std::is_base_of_v<genericInterfaceBaseC, B>)
+      return this->B::nc_cast(key);
+    else
+      return nullptr;
+  }
+
 public:
   std::shared_ptr<OwnedType> nC_shared_from_this() {
     return std::static_pointer_cast<OwnedType>(this->shared_from_this());
+  }
+  void* nc_cast(std::string_view key) override {
+    if constexpr (has_nc_class_key<OwnedType>::value) {
+      if(key == OwnedType::nc_class_key())
+        return static_cast<void*>(static_cast<OwnedType*>(this));
+    }
+    void* ans = nullptr;
+    ((ans = ans ? ans : nc_cast_base<Bases>(key)), ...); // stop at the first base that matches
+    return ans;
+  }
+  const char* nc_object_class_key() override {
+    if constexpr (has_nc_class_key<OwnedType>::value)
+      return OwnedType::nc_class_key();
+    else
+      return nullptr;
   }
   const name2access_type& get_name2access() const override {
       return FirstFound::get_name2access();
@@ -229,6 +281,19 @@ private:
 public:
   std::shared_ptr<OwnedType> nC_shared_from_this() {
     return std::enable_shared_from_this<OwnedType>::shared_from_this();
+  }
+  void* nc_cast(std::string_view key) override {
+    if constexpr (has_nc_class_key<OwnedType>::value) {
+      if(key == OwnedType::nc_class_key())
+        return static_cast<void*>(static_cast<OwnedType*>(this));
+    }
+    return nullptr; // a root nClass has no nClass base to check
+  }
+  const char* nc_object_class_key() override {
+    if constexpr (has_nc_class_key<OwnedType>::value)
+      return OwnedType::nc_class_key();
+    else
+      return nullptr;
   }
   const name2access_type& get_name2access() const override {
       return FirstFound::get_name2access();
@@ -339,5 +404,65 @@ class method_base {
 
 template<class T>
 class genericInterfaceC;
+
+// nc_shared_ptr_cast is used by the Exporter (Rcpp as<> implementation when passing arguments)
+// for nClass objects (passed as std::shared_ptr<class>).
+//
+// This fills the role of std::dynamic_pointer_cast<T>(input), which does a dynamic shared_ptr cast.
+//
+// The reason to set up our own system is that potentially an object made in one DLL
+// can be passed to another DLL that has seen the relevant class declaration. However,
+// the use of RTTI (run-time type information) should only be done in the DLL that
+// created the object. Otherwise RTTI could be shared across DLLs and not work.
+//
+// The way to get execution back to the creating DLL is to call a virtual function.
+// That will always go through the vtable of the object, which is in the DLL that created it.
+//
+// Hence the system looks like this:
+// - Call nc_shared_ptr_cast.
+// - That calls virtual method nc_cast.
+// - nc_cast is resolved by interface_resolver.
+// - The code in interface_resolver works up the hierarchy until
+//.  the key of the object matches the key of the target type.
+//
+// Several tricks to note:
+// - The key is a string returned by a static method, nc_class_key().
+// - Remember that one object might be used as different class pointers depending on
+//.  the argument type of a function. We can't assume we always want the most derived type.
+// - The type is a template parameter, but we need to use a virtual method, but
+//.  virtual methods can't be templates. The scheme works around this in two ways:
+//.  (1) Use of string keys.
+//.  (2) returning a void* from the virtual method, then casting it to the desired type.
+//
+// shared_ptr version. The result shares ownership (the control block) with sp,
+// as dynamic_pointer_cast would, so nC_shared_from_this() remains consistent.
+template<typename T>
+std::shared_ptr<T> nc_shared_ptr_cast(const std::shared_ptr<genericInterfaceBaseC> &sp) {
+  if(!sp) return nullptr;
+  // In case T does not have an nc_class_key(), we will fall through to a regular dynamic_pointer_cast.
+  // This should not be needed in normal operation with generated nClasses, but it is needed
+  // for nList_<Element> with an element type that has no key, and could be useful in other customized cases.
+  if constexpr (has_nc_class_key<T>::value) {
+    void* p = sp->nc_cast(T::nc_class_key());
+    // This shared_ptr constructor uses the same control block as sp, but with a different pointer (p) to the same object.
+    if(p) return std::shared_ptr<T>(sp, static_cast<T*>(p));
+    // At this point, sp could not be cast to T using nc_cast.
+    // Hence, if the object's class has a key, we can conclude the cast is not valid and return nullptr.
+    if(sp->nc_object_class_key() != nullptr) return nullptr;
+  }
+  return std::dynamic_pointer_cast<T>(sp);
+}
+
+// raw pointer version.
+template<typename T>
+T* nc_raw_ptr_cast(genericInterfaceBaseC* ptr) {
+  if(!ptr) return nullptr;
+  if constexpr (has_nc_class_key<T>::value) {
+    void* p = ptr->nc_cast(T::nc_class_key());
+    if(p) return static_cast<T*>(p);
+    if(ptr->nc_object_class_key() != nullptr) return nullptr; // see nc_shared_ptr_cast
+  }
+  return dynamic_cast<T*>(ptr);
+}
 
 #endif
