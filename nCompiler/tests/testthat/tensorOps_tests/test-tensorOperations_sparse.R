@@ -16,8 +16,8 @@
 library(Matrix)
 
 #
-# test error trapping and generated C++ code that implements nCompiler's support 
-# for evaluating binary operations and conversion between between sparse and 
+# test error trapping and generated C++ code that implements nCompiler's support
+# for evaluating binary operations and conversion between between sparse and
 # dense matrices and vectors.
 #
 
@@ -57,27 +57,27 @@ Munpruned <- Matrix::sparseMatrix(
 # basic R functions
 #
 
-add2_force_sparse <- function(x, y) { 
+add2_force_sparse <- function(x, y) {
   ans <- asSparse(x + y)
   return(ans)
 }
 
-add2_force_dense <- function(x, y) { 
+add2_force_dense <- function(x, y) {
   ans <- asDense(x + y)
   return(ans)
 }
 
-add2 <- function(x, y) { 
+add2 <- function(x, y) {
   ans <- x + y
   return(ans)
 }
 
-add3 <- function(x, y, z) { 
+add3 <- function(x, y, z) {
   ans <- x + y + z
   return(ans)
 }
 
-prune <- function(x, prune) { 
+prune <- function(x, prune) {
   ans <- asSparse(x, prune = prune)
   return(ans)
 }
@@ -90,8 +90,8 @@ asDense1arg <- function(x) {
   return(asDense(x))
 }
 
-# 
-# supporting nFunctions.  different combinations of argTypes are used for each 
+#
+# supporting nFunctions.  different combinations of argTypes are used for each
 # basic function so we can test automatic conversion and error trapping between
 # sparse and dense representations
 #
@@ -107,47 +107,47 @@ nAdd2_promote <- nFunction(
 
 # demonstrate how asSparse conversion works
 nAdd2_force <- nFunction(
-  fun = add2_force_sparse, 
+  fun = add2_force_sparse,
   argTypes = list(
     x = 'nMatrix', y = 'nMatrix'
-  ), 
+  ),
   returnType = 'nSparseMatrix'
 )
 
 # demonstrate how asDense conversion works
 nAdd2_force_dense <- nFunction(
-  fun = add2_force_dense, 
+  fun = add2_force_dense,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nSparseMatrix'
-  ), 
+  ),
   returnType = 'nMatrix'
 )
 
 # demonstrate how asDense conversion works
 # (asDense will be removed from AST during compilation)
 nAdd2_force_dense_unnecessary <- nFunction(
-  fun = add2_force_dense, 
+  fun = add2_force_dense,
   argTypes = list(
     x = 'nMatrix', y = 'nMatrix'
-  ), 
+  ),
   returnType = 'nMatrix'
 )
 
 # demonstrate how returnType must match the return type from argument fun
 nAdd2_force_bad_return <- nFunction(
-  fun = add2_force_sparse, 
+  fun = add2_force_sparse,
   argTypes = list(
     x = 'nMatrix', y = 'nMatrix'
-  ), 
+  ),
   returnType = 'nMatrix'
 )
 
 # demonstrate how returnType must match the return type from argument fun
 nAdd2_force_dense_bad_return <- nFunction(
-  fun = add2_force_dense, 
+  fun = add2_force_dense,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nSparseMatrix'
-  ), 
+  ),
   returnType = 'nSparseMatrix'
 )
 
@@ -156,7 +156,7 @@ nAdd2_force_mixed <- nFunction(
   fun = add2_force_sparse,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nMatrix'
-  ), 
+  ),
   returnType = 'nSparseMatrix'
 )
 
@@ -165,7 +165,7 @@ nAdd2_force_dense_mixed <- nFunction(
   fun = add2_force_dense,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nMatrix'
-  ), 
+  ),
   returnType = 'nMatrix'
 )
 
@@ -174,13 +174,13 @@ nAdd2_sparse <- nFunction(
   fun = add2,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nSparseMatrix'
-  ), 
+  ),
   returnType = 'nSparseMatrix'
 )
 
 # demonstrate C++ works for nested statements (i.e., SparseMatrix + TensorExpr)
 nAdd3 <- nFunction(
-  fun = add3, 
+  fun = add3,
   argTypes = list(
     x = 'nSparseMatrix', y = 'nMatrix', z = 'nMatrix'
   ),
@@ -189,7 +189,7 @@ nAdd3 <- nFunction(
 
 # demonstrate pruning extra 0's from sparse matrix objects
 nPrune <- nFunction(
-  fun = prune, 
+  fun = prune,
   argTypes = list(x = 'nSparseMatrix', prune = 'logical'),
   returnType = 'nSparseMatrix'
 )
@@ -207,13 +207,13 @@ nAsDense <- nFunction(
   argTypes = list(x = 'nSparseMatrix'),
   returnType = 'nMatrix'
 )
-  
+
 # verify asSparse and asDense work from R
 expect_equal(nAdd2_force(x = M, y = M2), M_sparse + M2_sparse)
 expect_equal(
-  { z = nAdd2_force_dense(x = M_sparse, y = M2_sparse); 
-    attr(z, 'dimnames') = NULL; 
-    z }, 
+  { z = nAdd2_force_dense(x = M_sparse, y = M2_sparse);
+    attr(z, 'dimnames') = NULL;
+    z },
   M + M2
 )
 
@@ -239,8 +239,8 @@ cAsSparse <- nCompile(nAsSparse)
 cAsDense <- nCompile(nAsDense)
 
 
-# nFunction will not compile if return statement cannot be converted to an 
-# object of class returnType in C++; we should also get a type warning that 
+# nFunction will not compile if return statement cannot be converted to an
+# object of class returnType in C++; we should also get a type warning that
 # helps point us to the cause of the error
 expect_warning(
   expect_error(

@@ -183,14 +183,23 @@ test_that("nList uncompiled: [<- with nList value", {
   src[[1]] <- 200.0
   src[[2]] <- 400.0
 
-  dst <- rNL$new()
-  length(dst) <- 4
-  for(i in 1:4) dst[[i]] <- 0.0
+  Csrc <- cNL$new()
+  Csrc$setLength(2L)
+  Csrc[[1]] <- 300.0
+  Csrc[[2]] <- 500.0
+
+  dst <- make_uncompiled()
+  dst[c(1L, 3L)] <- Csrc
+  expect_equal(dst[[1]], 300.0)
+  expect_equal(dst[[2]], 20.0)
+  expect_equal(dst[[3]], 500.0)
+  expect_equal(dst[[4]], 40.0)
+
   dst[c(1L, 3L)] <- src   # src IS an nList -> singleBracket_set_nList path
   expect_equal(dst[[1]], 200.0)
   expect_equal(dst[[3]], 400.0)
-  expect_equal(dst[[2]], 0.0)
-  expect_equal(dst[[4]], 0.0)
+  expect_equal(dst[[2]], 20.0)
+  expect_equal(dst[[4]], 40.0)
   rm(src, dst); gc()
 })
 
@@ -379,7 +388,18 @@ test_that("nList compiled obj used from R: [<- with same-type nList", {
   src[[1]] <- 200.0
   src[[2]] <- 400.0
 
+  Usrc <- rNL$new()
+  Usrc$setLength(2L)
+  Usrc[[1]] <- 300.0
+  Usrc[[2]] <- 500.0
+
   dst <- make_compiled()
+  dst[c(1L, 3L)] <- Usrc
+  expect_equal(dst[[1]], 300.0)
+  expect_equal(dst[[2]], 20.0)
+  expect_equal(dst[[3]], 500.0)
+  expect_equal(dst[[4]], 40.0)
+
   dst[c(1L, 3L)] <- src
   expect_equal(dst[[1]], 200.0)
   expect_equal(dst[[2]], 20.0)
@@ -1248,6 +1268,15 @@ test_that("nList ETaccess at C++ level works", {
             return(ans)
           }
         )
+      ),
+      check5 = nFunction(
+        function(i = 'integerScalar') {
+          # HAZARD: We can use access_at in the DSL but we can't get the -1 subtracted yet
+          # (due to limitation on providing custom opDef for a method)
+          ans <- as(NLvec$access_at(i-1), 'numericVector')
+          return(ans)
+          returnType('numericVector')
+        }
       )
     )
   )
@@ -1260,6 +1289,8 @@ test_that("nList ETaccess at C++ level works", {
   obj$NLinner[[2]]$x <- 3
   expect_equal(obj$check3(), 3)
   expect_error(obj$check4())
+  expect_equal(obj$check5(2), 1:3)
+  rm(obj); gc()
 })
 
 test_that("nList new operation works inline", {

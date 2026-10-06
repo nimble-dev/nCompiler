@@ -383,30 +383,82 @@ test_that("matchDef of another nFunction is used", {
   expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
 })
 
-## ## The following DOES NOT WORK:
-## ## named arguments of a method of another class are not successfully reordered.
+test_that("custom_call picks up types correctly", {
+  on.exit(deregisterOpDef("foo"))
+  use_foo <- nFunction(
+    function() {
+      ans <- foo()
+    }
+  )
+  # 1. returnType given by string
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = "integerScalar"))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "integer")
+  expect_equal(foo_type$nDim, 0)
+
+  # 2. returnType given by a symbol object
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = type2symbol("logicalVector")))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "logical")
+  expect_equal(foo_type$nDim, 1)
+
+  # 3. returnType given by a type captured from nType
+  nc_hw <- nClass(classname = "nc_hw_class", Cpublic = list(x = 'numericScalar'))
+  my_type <- nType(nc_hw())
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = my_type))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "nc_hw_class")
+  expect_true(inherits(foo_type, "symbolNC"))
+})
+
+message("See work in progress on matching and ordering arguments for obj$method")
+
 ## test_that("matchDef of method or user-defined op in an nClass is used", {
 ##   nc <- nClass(
 ##     classname = "nc",
 ##     Cpublic = list(
-##       bar = nFunction(function(A = "numericScalar", B = "numericScalar") {
-##         return(A * 10 + B) # check which is A and which is B
-##         returnType(double())
-##       })
+##       bar = nFunction(function(A = "numericScalar", B = "numericScalar") {})
 ##     )
 ##   )
 ##   foo <- nFunction(
 ##     fun = function() {
 ##       obj <- nc$new()
-##       return(obj$bar(B = 2, A = 1)) # See if this gets reordered
-##       returnType(double())
+##       obj$bar(B = 2, A = 1) # See if this gets reordered
 ##     }
 ##   )
 
+## #  debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
+## #  debug(nCompiler:::labelAbstractTypesEnv$ChainedCall)
 ##   test <- nCompile(foo)
-##   expect_equal(test(), 21)
+##   obj <- test()
 
 ##   # Args can't be re-ordered here because normalizeCalls does not see type of obj.
-##   #test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
-##   #test <- nCompile(foo)
+##   test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+
+##   #nOptions(pause_after_writing_files = TRUE)
+##   test <- nCompile(foo)
 ## })

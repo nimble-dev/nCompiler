@@ -37,8 +37,10 @@ value <- function(obj, name) {
   if(inherits(obj, "nClass"))
     if(obj$isCompiled())
       obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
-    else 
-      stop("value() can only be used on compiled nClass objects.")
+    else {
+      return(obj[[name]])
+      # stop("value() can only be used on compiled nClass objects.")
+    }
   DLLenv <- get_DLLenv(obj)
   extptr <- getExtptr(obj)
   DLLenv$get_value(extptr, name)
@@ -59,13 +61,19 @@ interface_names <- function(obj, what = c("members", "methods")) {
 
 #' @export
 `value<-` <- function(obj, name = NULL, value) {
+   # we make work_obj separate so we can return obj
    if(inherits(obj, "nClass")) {
-    if(obj$isCompiled())
+    if(obj$isCompiled()) {
       work_obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
-    else 
-      stop("value<-() can only be used on compiled nClass objects.")
-   } else 
-     work_obj <- obj # should be a loadedObjectEnv (we lack error-trapping to confirm this.)
+    } else {
+      return(obj[[name]] <- value)
+      #stop("value<-() can only be used on compiled nClass objects.")
+    }
+   } else {
+     work_obj <- obj
+     if(!is.loadedObjectEnv(work_obj))
+       stop("value<-() can only be used on compiled nClass objects or loadedObjectEnv objects.")
+   }
   DLLenv <- get_DLLenv(work_obj)
   extptr <- getExtptr(work_obj)
   DLLenv$set_value(extptr, name, value)

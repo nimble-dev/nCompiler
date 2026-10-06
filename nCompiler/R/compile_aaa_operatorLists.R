@@ -10,7 +10,11 @@ returnTypeCodes <- list(
   logical = 4L,
   promote = 5L,
   promoteToDoubleOrAD = 6L,
-  promoteNoLogical = 7L)
+  promoteNoLogical = 7L,
+  character = 8L,
+  characterOrPromote = 9L,
+  characterOrPromoteToDoubleOrAD = 10L,
+  characterOrPromoteNoLogical = 11L)
 
 returnTypeString2Code <- function(returnTypeString) {
   if(is.character(returnTypeString))
@@ -175,6 +179,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'DEBUG_LAT',
+  list(
+    labelAbstractTypes = list(
+      handler = 'DEBUG'
+    )
+  )
+)
+
+assignOperatorDef(
   c('dim'),
   list(
     labelAbstractTypes = list(
@@ -193,7 +206,9 @@ assignOperatorDef( # c()
       handler = 'nC',
       return_nDim = 1,
       returnTypeCode = returnTypeCodes$promote),
-    eigenImpl = list()
+    eigenImpl = list(
+      handler = 'nC'
+    )
   )
 )
 
@@ -206,17 +221,39 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
+  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nCharacter'),
   list(
+    matchDef = function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {},
     labelAbstractTypes = list(
-      handler = 'InitData'),
+      handler = 'InitData',
+      return_nDim = 1),
     eigenImpl = list(
       handler = 'TensorCreation')
   )
 )
-updateOperatorDef(
-  c('nAD','nNumeric', 'nInteger', 'nLogical'),
-  'labelAbstractTypes', 'return_nDim', 1
+assignOperatorDef(
+  c('nMatrix'),
+  list(
+    matchDef = function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {},
+    compileArgs = c("type"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
+)
+assignOperatorDef(
+  c('nArray'),
+  list(
+    matchDef = function(value = 0, dim, init = TRUE, fillZeros = TRUE, recycle = TRUE, nDim, type = 'double'){},
+    compileArgs = c("type", "nDim"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
 )
 updateOperatorDef(
   'nAD',
@@ -235,10 +272,9 @@ updateOperatorDef(
   'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
 )
 updateOperatorDef(
-  c('nMatrix', 'nArray'),
-  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
+  'nCharacter',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$character
 )
-
 assignOperatorDef(
   'type_is',
   list(
@@ -332,7 +368,7 @@ assignOperatorDef(
     matchDef = function(x, times, length.out, each){},
     labelAbstractTypes = list(
       handler = 'VectorReturnType',
-      returnTypeCode = returnTypeCodes$promote),
+      returnTypeCode = returnTypeCodes$characterOrPromote),
     eigenImpl = list(
       handler = 'Rep')
   )
@@ -1183,13 +1219,42 @@ assignOperatorDef(
     isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'LengthAssign'
+    )
+    # LAT step turns this into setSize(), so its handlers take over.
+    # ,
+    # eigenImpl = list(
+    #   handler = 'LengthAssign',
+    #   methodName = 'resize'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
+    # cppOutput = list(
+    #   #handler = 'OpAssign'
+    #   #cppString = 'setLength'
+    # )
+  )
+)
+
+assignOperatorDef(
+  'setSize',
+  list(
+    # fill is an alternative name for fillZeros, which was in nimble.
+    # nimble's "numObj" argument is renamed "obj" here, but in case of legacy code with named "numObj", 
+    #.  that is supported at the end of the argument list.
+    # value is a new optional argument for initialization values.
+    # if value is provided, then fill is set to TRUE
+    # if fill is set, it over-rides fillZeros.
+    # The ... argument supports either a single vector of sizes
+    # or one-by-one sizes.
+    # A key difference from native R `length<-` is that fill values are 0, FALSE, or "", never NA.
+    # Note that Rcpp's string support is limited for NA.
+    matchDef = function(obj, ..., copy = TRUE, fillZeros = TRUE,
+                        fill, value, numObj) {},
+    simpleTransformations = list(
+      handler = 'SetSize'
     ),
-    eigenImpl = list(
-      handler = 'LengthAssign',
-      methodName = 'resize'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
+    labelAbstractTypes = list(
+      handler = 'SetSize'
+    ),
     cppOutput = list(
-      #handler = 'OpAssign'
-      #cppString = 'setLength'
+      cppString = 'setSize_'
     )
   )
 )

@@ -187,7 +187,7 @@ symbolBasicString <- R6::R6Class(
   portable = TRUE,
   public = list(
     initialize = function(...) {
-      super$initialize(..., type = "string")
+      super$initialize(..., type = "character")
     },
     shortPrint = function() {
       super$shortPrint(prefix = 'S')

@@ -67,13 +67,26 @@ new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = 
 }
 
 #' @export
+isCompiled <- function(obj) {
+  if(inherits(obj, "nClass"))
+    isTRUE(obj$isCompiled())
+  else 
+   is.loadedObjectEnv(obj)
+}
+
+#' @export
 is.loadedObjectEnv <- function(env) {
   ## The checks here may be over-kill.
   ## We may be able to rely solely on the class label.
-  if(!is.environment(env)) return(FALSE)
-  if(!exists("extptr", where = env)) return(FALSE)
-  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
-  TRUE
+#
+#  if(!is.environment(env)) return(FALSE)
+#  if(!exists("extptr", where = env)) return(FALSE)
+#  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
+#.  else TRUE
+  if(inherits(env, "loadedObjectEnv"))
+    TRUE
+  else
+    FALSE
 }
 
 #' @export

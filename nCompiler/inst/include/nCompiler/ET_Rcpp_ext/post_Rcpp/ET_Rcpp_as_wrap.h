@@ -139,6 +139,23 @@ namespace Rcpp {
     UNPROTECT(1);
     return(Sans);
   };
+
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<std::string, nDim> &x ) {
+    const typename Eigen::Tensor<std::string, nDim>::Dimensions &xDims = x.dimensions();
+    Rcpp::CharacterVector ans(x.size());
+    for(typename Eigen::Tensor<std::string, nDim>::Index i = 0; i < x.size(); i++) {
+      ans[i] = x(i); // x(i) is a flat index even for nDim > 1.
+    }
+    if(nDim > 1) {
+      Rcpp::IntegerVector dims(nDim);
+      for(unsigned int i = 0; i < nDim; i++) {
+        dims[i] = xDims[i];
+      }
+      ans.attr("dim") = dims;
+    }
+    return ans;
+  };
 } // end namespace Rcpp
 
 #endif // TENSOR_RCPP_AS_WRAP_H_

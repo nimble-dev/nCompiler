@@ -13,42 +13,42 @@ using namespace Rcpp;
 // [[Rcpp::depends(nCompiler)]]
 // [[Rcpp::depends(Rcereal)]]
 
-    bool  nListBase_nClass::ping (  ) {
+    bool  nListBase_nClass::ping (  )  {
 RESET_EIGEN_ERRORS
 return(true);
 }
-    int  nListBase_nClass::setLength ( int length ) {
+    int  nListBase_nClass::setLength ( int length )  {
 RESET_EIGEN_ERRORS
 std::cout<<"Compiled base class setLength should not be called."<<std::endl;;
 return(0.0);
 }
-    int  nListBase_nClass::getLength (  ) {
+    int  nListBase_nClass::getLength (  )  {
 RESET_EIGEN_ERRORS
 std::cout<<"Compiled base class getLength should not be called."<<std::endl;;
 return(0.0);
 }
-    std::shared_ptr<genericInterfaceBaseC>  nListBase_nClass::get_interface_ptr_at ( int i ) {
+    std::shared_ptr<genericInterfaceBaseC>  nListBase_nClass::get_interface_ptr_at ( int i )  {
 RESET_EIGEN_ERRORS
-Rcpp::stop("nListBase_nClass::get_interface_ptr_at should be called.");
+Rcpp::stop("nListBase_nClass::get_interface_ptr_at should not be called (only derived class method should be called).");
 return(nullptr);
 }
-    std::unique_ptr<ETaccessorBase>  nListBase_nClass::access_at ( int i ) {
+    std::unique_ptr<ETaccessorBase>  nListBase_nClass::access_at ( int i )  {
 RESET_EIGEN_ERRORS
-Rcpp::stop("nListBase_nClass::access_at should be called.");
+Rcpp::stop("nListBase_nClass::access_at should not be called (only derived class method should be called).");
 return(nullptr);
 }
-      nListBase_nClass::nListBase_nClass (  ) {
+      nListBase_nClass::nListBase_nClass (  )  {
 RESET_EIGEN_ERRORS
 }
 
 // [[Rcpp::export(name = "set_CnClass_env_nListBase_nClass_new")]]
-    void  set_CnClass_env_nListBase_nClass ( SEXP env ) {
+    void  set_CnClass_env_nListBase_nClass ( SEXP env )  {
 RESET_EIGEN_ERRORS
 SET_CNCLASS_ENV(nListBase_nClass, env);;
 }
 
 // [[Rcpp::export(name = "get_CnClass_env_nListBase_nClass_new")]]
-    Rcpp::Environment  get_CnClass_env_nListBase_nClass (  ) {
+    Rcpp::Environment  get_CnClass_env_nListBase_nClass (  )  {
 RESET_EIGEN_ERRORS
 return GET_CNCLASS_ENV(nListBase_nClass);;
 }

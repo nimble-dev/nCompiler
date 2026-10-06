@@ -32,9 +32,13 @@
 
 #define NCOMPILER_INTERFACE(name, fields, methods)\
   template <>\
-  int genericInterfaceC<name>::name_count = 0;	\
+  int genericInterfaceC<name>::name_count_fields = 0;	\
+  template <>\
+  int genericInterfaceC<name>::name_count_methods = 0;	\
   template<>\
-  genericInterfaceC<name>::name2index_type genericInterfaceC<name>::name2index {};\
+  genericInterfaceC<name>::name2index_type genericInterfaceC<name>::name2index_fields {};\
+  template<>\
+  genericInterfaceC<name>::name2index_type genericInterfaceC<name>::name2index_methods {};\
   template<>\
   genericInterfaceC<name>::name2access_type genericInterfaceC<name>::name2access \
   fields\

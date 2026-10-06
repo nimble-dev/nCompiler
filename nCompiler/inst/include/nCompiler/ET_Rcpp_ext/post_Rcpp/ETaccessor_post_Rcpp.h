@@ -4,6 +4,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <memory>
 #include <type_traits>
+#include <string>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
 #include <nCompiler/ET_ext/RuntimeFlatView.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
@@ -55,6 +56,7 @@ class ETaccessorBase {
   virtual void set(SEXP Sinput)=0;
   virtual SEXP get()=0;
   virtual SEXP operator=(SEXP RHS) {set(RHS); return RHS;}
+  operator SEXP() {return get();}
 
   virtual std::vector<int> &intDims()=0;
 
@@ -131,30 +133,27 @@ class ETaccessorTyped : public ETaccessorBase {
     return *data();
   }
 
-  // Cast/writeback implementations (element-wise, supports all 3 scalar types).
+  // Cast/writeback implementations (element-wise, supports all 3 numeric scalar types).
+  // These are virtual, so they are instantiated for every Scalar, including std::string.
+  // Casting between character and numeric types is not supported, so for those
+  // combinations castCopy compiles to a run-time error instead of an invalid static_cast.
   void castCopyToDouble(double* dest, size_t n) override {
-    Scalar* src = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<double>(src[i]);
+    castCopy(data(), dest, n, "castCopyToDouble");
   }
   void castCopyToInt(int* dest, size_t n) override {
-    Scalar* src = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<int>(src[i]);
+    castCopy(data(), dest, n, "castCopyToInt");
   }
   void castCopyToBool(bool* dest, size_t n) override {
-    Scalar* src = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<bool>(src[i]);
+    castCopy(data(), dest, n, "castCopyToBool");
   }
   void writeBackFromDouble(const double* src, size_t n) override {
-    Scalar* dest = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+    castCopy(src, data(), n, "writeBackFromDouble");
   }
   void writeBackFromInt(const int* src, size_t n) override {
-    Scalar* dest = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+    castCopy(src, data(), n, "writeBackFromInt");
   }
   void writeBackFromBool(const bool* src, size_t n) override {
-    Scalar* dest = data();
-    for(size_t i = 0; i < n; ++i) dest[i] = static_cast<Scalar>(src[i]);
+    castCopy(src, data(), n, "writeBackFromBool");
   }
 
   template<int output_nDim>
@@ -227,6 +226,16 @@ class ETaccessorTyped : public ETaccessorBase {
   }
 
   ~ETaccessorTyped(){};
+
+  private:
+  template<typename From, typename To>
+  static void castCopy(const From* src, To* dest, size_t n, const char* caller) {
+    if constexpr (std::is_arithmetic_v<From> && std::is_arithmetic_v<To>) {
+      for(size_t i = 0; i < n; ++i) dest[i] = static_cast<To>(src[i]);
+    } else {
+      Rcpp::stop(std::string(caller) + " not supported: casting to or from character is not supported for this ETaccessor type.");
+    }
+  }
 };
 
 template<int nDim, typename Scalar>
@@ -341,6 +350,7 @@ template<typename ET>
 struct ETaccessorCopyHolder {
   ET obj_copy;
   ETaccessorCopyHolder(const ET &src) : obj_copy(src) {}
+  ETaccessorCopyHolder(ET &&src) : obj_copy(std::move(src)) {}
 };
 
 template<typename Scalar, int nDim>
@@ -353,6 +363,7 @@ public:
   using ET = Eigen::Tensor<Scalar, nDim>;
   using Holder = ETaccessorCopyHolder<ET>;
   ETaccessor(const ET &obj_) : Holder(obj_), ETaccessor<ET, false>(Holder::obj_copy) {};
+  ETaccessor(ET &&obj_) : Holder(std::move(obj_)), ETaccessor<ET, false>(Holder::obj_copy) {};
   ~ETaccessor() {};
 };
 
@@ -415,6 +426,16 @@ class ETaccessor<bool, copy> : public ETaccessorScalar<bool, copy> {
   // See note in the ETaccessor<ERROR, copy> primary template above.
   using ETaccessorBase::operator=;
   ETaccessor(Ref obj_) : ETaccessorScalar<bool, copy>(obj_) {};
+  ~ETaccessor() {};
+};
+
+template<bool copy>
+class ETaccessor<std::string, copy> : public ETaccessorScalar<std::string, copy> {
+  using Ref = std::conditional_t<copy, const std::string&, std::string&>;
+  public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  ETaccessor(Ref obj_) : ETaccessorScalar<std::string, copy>(obj_) {};
   ~ETaccessor() {};
 };
 

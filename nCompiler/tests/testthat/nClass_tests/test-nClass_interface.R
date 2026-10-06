@@ -8,7 +8,12 @@ test_that("member-specific control over full vs generic return works", {
           return(x+1)
         },
         argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        returnType = 'numericScalar'),
+      ## Add another method to check that order from
+      ## interface_names matches order listed here.
+      AAA = nFunction(
+        fun = function() {}
+      )
     ),
     compileInfo = list(interface = "generic")
   )
@@ -39,24 +44,25 @@ test_that("member-specific control over full vs generic return works", {
 
   nc2 <- nClass(
     Cpublic = list(
+      # test ordering of interface_names by putting x8 first.
+      x8 = "nClass(nc1b(), interface = 'generic')",
       x1 = "nc1()",
       x2 = "nClass(nc1())",
       x3 = "nClass(nc1(), interface = 'full')",
       x4 = "nClass(nc1(), interface = 'generic')",
       x5 = "nClass(nc1a(), interface = 'full')",
       x6 = "nClass(nc1a(), interface = 'generic')",
-      x7 = "nClass(nc1b(), interface = 'full')",
-      x8 = "nClass(nc1b(), interface = 'generic')"
+      x7 = "nClass(nc1b(), interface = 'full')"
     )
   )
 
   comp <- nCompile(nc2, nc1, nc1a, nc1b)
   obj2 <- comp$nc2$new()
-  expect_equal(interface_names(obj2), paste0("x", 1:8))
+  expect_equal(interface_names(obj2), paste0("x", c(8, 1:7)))
   expect_equal(interface_names(obj2, "methods"), character())
   obj1 <- comp$nc1()
   expect_equal(interface_names(obj1), character())
-  expect_equal(interface_names(obj1, "methods"), "Cfoo")
+  expect_equal(interface_names(obj1, "methods"), c("Cfoo", "AAA"))
   obj1a <- comp$nc1a$new()
   obj1b <- comp$nc1b$new()
 
@@ -117,7 +123,7 @@ test_that(
 
     ans <- nCompile(nc1, interfaces = "generic")
     obj <- ans()
-    expect_equal(interface_names(obj), sort(c("Ca", "Cv")))
+    expect_equal(interface_names(obj), c("Cv", "Ca"))
     expect_equal(interface_names(obj, "methods"), "Cfoo")
     value(obj, 'Cv') <- 2.3
     check <- value(obj, 'Cv')
@@ -142,6 +148,7 @@ test_that(
     expect_equal(check, 8.8, info = "full interface R method")
     check <- test$Cfoo(8.9)
     expect_equal(check, 9.9, info = "full interface R method")
+    rm(obj, test); gc()
   })
 
 test_that(
@@ -168,7 +175,7 @@ test_that(
     expect_true(isCompiledNCgenerator(ans))
     obj <- ans$new()
 
-    expect_equal(interface_names(obj), sort(c("Ca", "Cv")))
+    expect_equal(interface_names(obj), c("Cv", "Ca"))
     expect_equal(interface_names(obj, "methods"), "Cfoo")
 
     expect_true(inherits(obj, "nClass"))
@@ -182,6 +189,7 @@ test_that(
 
     check <- obj$Cfoo(3.4)
     expect_equal(check, 4.4, info = "method from a full interface")
+    rm(obj); gc()
   })
 
 test_that("getting an interface base class pointer within C++ works", {
@@ -265,4 +273,5 @@ test_that("getting an interface base class pointer within C++ works", {
   obj$check3()
   expect_equal(obj$nc2obj$nc1obj |> as.list() |> length(), 2)
   expect_equal(obj$nc2obj$nc1obj[[1]], 1L:3L)
+  rm(obj); gc()
 })

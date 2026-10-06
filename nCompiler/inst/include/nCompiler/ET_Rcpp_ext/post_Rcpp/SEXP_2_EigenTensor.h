@@ -2,6 +2,7 @@
 #define SEXP_2_TENSOR_H_
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <string>
 
 // Copy from SEXP to Eigen Tensor when scalar types are the same
 template<class fromT, class toT, int nDim>
@@ -67,6 +68,31 @@ struct SEXP_2_EigenTensor {
       std::cout<<"  [Warning]: Invalid R object was provided where a numeric, integer or logical object was expected.\n"<<std::endl;
     }
     return xCopy; // compiler should use copy elision
+  }
+};
+
+// Character input requires element-wise conversion rather than casting,
+// so it is handled by a separate specialization.
+template<int nInd>
+struct SEXP_2_EigenTensor<std::string, nInd> {
+  template<typename EigenTensorType, typename IndexArray>
+  static EigenTensorType copy(SEXP &Sinput,
+                              const IndexArray &indexArray) {
+    EigenTensorType xCopy;
+    if(Sinput==R_NilValue) {
+      std::cout<<"  [Warning]: NULL was provided where a character object was expected.\n"<<std::endl;
+      return xCopy;
+    }
+    if(TYPEOF(Sinput) != STRSXP) {
+      std::cout<<"  [Warning]: Invalid R object was provided where a character object was expected.\n"<<std::endl;
+      return xCopy;
+    }
+    xCopy.resize(indexArray);
+    Rcpp::CharacterVector SinputVec(Sinput);
+    for(typename EigenTensorType::Index i=0; i < xCopy.size(); i++) {
+      xCopy(i) = Rcpp::as<std::string>(SinputVec[i]);
+    }
+    return xCopy;
   }
 };
 

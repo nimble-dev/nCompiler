@@ -33,22 +33,28 @@ struct nC_impl<CAST_TYPE> {
  */
 template<typename CAST_TYPE, typename T1>
 struct nC_impl<CAST_TYPE, T1> {
-  //typedef Eigen::Tensor<CAST_TYPE, 1> ReturnType;
-  static auto run(const T1 & t1) {
+  static Eigen::Tensor<CAST_TYPE, 1> run(const T1 & t1) {
     return flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t1));
   }
 };
 
 /**
  * Partial specialization implementing final concatenate operation recursion
+ *
+ * The result is materialized into a concrete tensor here rather than returned
+ * as a lazy expression (e.g. via .eval(), which gives a TensorForcedEvalOp).
+ * This matters because flex_cast<CAST_TYPE, true> may return concrete temporary
+ * tensors, which the concatenation expression holds by reference and which
+ * only live until the end of this statement. It also avoids Eigen's forced-eval
+ * temporary buffers, which skip destructors of non-arithmetic scalars (std::string).
  */
 template<typename CAST_TYPE, typename T1, typename T2>
 struct nC_impl<CAST_TYPE, T1, T2> {
-  //typedef Eigen::Tensor<CAST_TYPE, 1> ReturnType;
-  static auto run(const T1 & t1, const T2 & t2) {
+  static Eigen::Tensor<CAST_TYPE, 1> run(const T1 & t1, const T2 & t2) {
     // Rcpp::Rcout<<"going through two-argument implementation"<<std::endl;
-//    return flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t1)).eval().concatenate(flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t2)).eval(), 0).eval();
-    return flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t1)).concatenate(flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t2)), 0).eval();
+    Eigen::Tensor<CAST_TYPE, 1> ans =
+      flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t1)).concatenate(flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t2)), 0);
+    return ans;
   }
 };
 
@@ -57,24 +63,12 @@ struct nC_impl<CAST_TYPE, T1, T2> {
  * Partial specialization implementing concatenate operation recursion
  */
 template<typename CAST_TYPE, typename T1, typename T2, typename... TT>
-struct nC_impl<CAST_TYPE, T1, T2, TT...> {  
-/**
-   * only used to make decltype well defined.  struct nC_impl is not intended 
-   * to be instantiated
-   */
-  const T1 & m_t1;
-  const T2 & m_t2;
-  /**
-   * Determine return type here to simplify recursive variadic template coding 
-   * patterns with auto return types
-   */
-  typedef decltype(
-    flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(m_t1)).concatenate(flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(m_t2)), 0).eval()
-  ) IntermediateConcat;
+struct nC_impl<CAST_TYPE, T1, T2, TT...> {
+  typedef Eigen::Tensor<CAST_TYPE, 1> IntermediateConcat;
 
-  static auto run(const T1 & t1, const T2 & t2, const TT&... tt) {
+  static Eigen::Tensor<CAST_TYPE, 1> run(const T1 & t1, const T2 & t2, const TT&... tt) {
     return nC_impl<CAST_TYPE, IntermediateConcat, TT...>::run(
-      flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t1)).concatenate(flex_cast<CAST_TYPE, true>(Eigen::as_1D_tensor(t2)), 0).eval(),
+      nC_impl<CAST_TYPE, T1, T2>::run(t1, t2),
       tt...
     );
   }
