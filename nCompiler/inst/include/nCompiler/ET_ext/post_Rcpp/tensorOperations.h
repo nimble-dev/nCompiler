@@ -1366,6 +1366,57 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(
 
 
 /**
+ *
+ * Element-wise multiplication (and division) with sparse matrices is a bit
+ * complicated, because `*` when using Eigen sparse matrices is matrix multiplication
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> elementProduct(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(xmap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = xmap.cwiseProduct(ymap);
+    return res;
+}
+
+// Only for sparse divided by dense given zeros in sparse.
+// We don't check for that with `enable_if` as we error out
+// in eigen handler.
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> elementQuotient(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(ymap.rows(), ymap.cols());
+    // map and operate. Apparently `cwiseQuotient` only works for sparse/sparse.
+    matmap(res) = x.cwiseProduct(ymap.cwiseInverse());
+    return res;
+}
+
+/**
  * Matrix multiplication x %*% y when both inputs are matrix-like objects, i.e.,
  * rank 2 Eigen::Tensor objects, or Tensor expressions
  *

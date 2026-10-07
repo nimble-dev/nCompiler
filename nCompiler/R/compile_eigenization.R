@@ -540,6 +540,8 @@ inEigenizeEnv(
     d2 <- code$args[[2]]$type$nDim
     if(d1 > 0 && d2 > 0) {
       if(d1 != d2) {
+        if(inherits(code$args[[1]]$type, 'symbolSparse') || inherits(code$args[[2]]$type, 'symbolSparse'))
+          stop("element-wise operations on sparse matrix and vector not supported")
         # perform operation with reshaping, i.e., for matrix-vector operations
         replacementName <- handlingInfo$replacements[[code$name]]
         if(!is.null(replacementName)) {
@@ -685,6 +687,20 @@ inEigenizeEnv(
             code$name <- replacementName$RHS
           }
         }
+      }
+    }
+    if(inherits(code$args[[1]]$type, 'symbolSparse') && inherits(code$args[[2]]$type, 'symbolSparse')) {
+      if(d1 != d2)
+        stop("element-wise operations on sparse matrix and vector not supported")
+      code$name <- if(code$name == "*") quote(cwiseProduct) else stop("element-wise division by sparse matrix not supported")
+      maybe_convertToMethod(code, handlingInfo, force=TRUE)
+    } else {
+      if(inherits(code$args[[1]]$type, 'symbolSparse') || inherits(code$args[[2]]$type, 'symbolSparse')) {
+        if(d1 != d2)
+          stop("element-wise operations on sparse matrix and vector not supported")
+        if(code$name == "/" && inherits(code$args[[2]]$type, 'symbolSparse'))
+          stop("element-wise division by sparse matrix not supported")
+        code$name <- if(code$name == "*") quote(elementProduct) else quote(elementQuotient)
       }
     }
     invisible(NULL)
