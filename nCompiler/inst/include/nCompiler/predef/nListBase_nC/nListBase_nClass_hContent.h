@@ -10,6 +10,7 @@
 
 class nListBase_nClass : public interface_resolver< genericInterfaceC<nListBase_nClass> >, public loadedObjectHookC<nListBase_nClass> {
 public:
+  static const char* nc_class_key() {return "nListBase_nClass";}
    virtual  bool  ping (  )  ;
    virtual  int  setLength ( int length )  ;
    virtual  int  getLength (  )  ;

@@ -1,8 +1,14 @@
-# Tests of nc_cast (see generic_class_interface.h), which casts between nClass types
-# without relying on RTTI (dynamic_cast) matching across DLLs, and of the corresponding
-# typed_cast/tensor_cast for ETaccessor objects (see ETaccessor_post_Rcpp.h).
-# Each call to nCompile creates a separate DLL, so objects created by one nCompile
-# call and used by code from another exercise the cross-DLL case.
+# Tests of nc_cast (see generic_class_interface.h), which casts through an nClass
+# hierarchy in C++. The reason we have our own layer for this is to ensure that
+# dynamic casts are done in the DLL where an object was created, in case
+# it was passed into a function from another DLL that saw the same header.
+# Dynamic casts use run-time type information (RTTI), and the way to ensure
+# this is used correctly is to be sure it is done in code compiled in the
+# original DLL. They way to get there is through a virtual method call.
+#
+# Particular challenges involve nLists and ETaccessors, so those are tested below.
+#
+# Hence the tests below use multiple DLLs.
 
 #library(nCompiler); library(testthat)
 
