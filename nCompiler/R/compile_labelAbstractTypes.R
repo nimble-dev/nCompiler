@@ -573,17 +573,16 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(inherits(argType, 'symbolSparse')) {
-        code$type <- symbolNC$new(
-          name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+      code$type <- symbolNC$new(
+        name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
       )
+      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, sparseCholFactor) # To handle cases like nSolve(Cholesky(X),y).
     } else { 
         code$type <- symbolNC$new(
           name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
       )
+      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, denseCholFactor) # To handle cases like nSolve(Cholesky(X),y).
     }
-    # CHECK: presumably we don't need to update `auxEnv$needed_nClasses`
-    # (see `nEigen` for example, as unlike with `nEigen(x)$values`,
-    # we don't expect user to use `Cholesky(X)$llt` directly in R.
     invisible(inserts)
   }
 )
