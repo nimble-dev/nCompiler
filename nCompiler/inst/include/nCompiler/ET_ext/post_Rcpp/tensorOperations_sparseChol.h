@@ -32,7 +32,7 @@ template<typename Scalar>
 Eigen::Tensor<Scalar, 1> initSolveX(
     Eigen::Tensor<Scalar, 1> const & b
 ) {
-    auto bdim = b.dimensions();
+    auto bdim = nDimTraits2_dimensions(b);
     return Eigen::Tensor<Scalar, 1>(bdim[0]);
 }
 
@@ -40,7 +40,7 @@ template<typename Scalar>
 Eigen::Tensor<Scalar, 2> initSolveX(
     Eigen::Tensor<Scalar, 2> const & b
 ) {
-    auto bdim = b.dimensions();
+    auto bdim = nDimTraits2_dimensions(b);
     return Eigen::Tensor<Scalar, 2>(bdim[0], bdim[1]);
 }
 
@@ -52,8 +52,6 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nSolve(std::shared_ptr<s
     typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
     // evaluate arguments, if necessary
     const auto & b_eval = eval(b);
-    // initialize storage for solution, given problem dimensions
-    auto bdim = b.dimensions();
     // Not sure why this didn't work (CP) to return 1-col matrix: 
     // bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
     bTensor res = initSolveX(b_eval);
@@ -73,8 +71,6 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(std::shared_p
     typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
     // evaluate arguments, if necessary
     const auto & b_eval = eval(b);
-    // initialize storage for solution, given problem dimensions
-    auto bdim = b.dimensions();
     // bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
     bTensor res = initSolveX(b_eval);
     // map tensor objects to Eigen::Matrix types

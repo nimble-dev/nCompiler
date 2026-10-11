@@ -1211,15 +1211,15 @@ auto nDiag(xType && x) -> decltype(
  */
  template<typename TensorExpr>
  auto t(const TensorExpr &x) -> decltype(
-     x.shuffle(x.dimensions()) // correct return type, but incorrect output
+     x.shuffle(nDimTraits2_dimensions(x)) // correct return type, but incorrect output
  ){
-    typename TensorExpr::Index i = TensorExpr::NumDimensions;
-    typename TensorExpr::Dimensions o;
-    auto end = o.end();
-    for(auto it = o.begin(); it != end; ++it) {
-        *it = --i;
-    }
-    return x.shuffle(o);
+     // Modified with help from Claude to deal with compositions such as t(X+Y).
+     auto o = nDimTraits2_dimensions(x);   // auto drops the const, giving DSizes<long, N>
+     const int n = static_cast<int>(o.size());
+     for (int k = 0; k < n; ++k) {
+         o[k] = n - 1 - k;                 // reverse the dimension order
+     }
+     return x.shuffle(o);
  }
 
 /* TODO: This handles the scalar corner case for a basic t(x), but we should check
