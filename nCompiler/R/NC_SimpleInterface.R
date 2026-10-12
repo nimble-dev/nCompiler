@@ -66,7 +66,12 @@ interface_names <- function(obj, what = c("members", "methods")) {
     if(obj$isCompiled()) {
       work_obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
     } else {
-      return(obj[[name]] <- value)
+      obj[[name]] <- value
+      return(obj)
+      # This uncompiled behavior is not perfect because, if obj[[name]] should get an nClass (including nList) object
+      # and value is a list or environment, the compiled handling would assign from list or environment variables
+      # to the correct object type, but uncompiled handling will just assign the list or environment to obj[[name]].
+      # 
       #stop("value<-() can only be used on compiled nClass objects.")
     }
    } else {

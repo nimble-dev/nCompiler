@@ -636,7 +636,12 @@ cppClassClass <- R6::R6Class(
         self$externalCppDefs[["R_generic_interface_calls"]]  <- get_R_interface_cppDef()
     },
     buildDefaultConstructor = function() {
-      if(is.null(self$memberCppDefs[[name]])) {
+      # A no-argument constructor can have any R name (it is renamed to the class name),
+      # so look for one by its compileInfo, not only by name.
+      has_noArg_ctor <- any(vapply(self$memberCppDefs, \(x) {
+        isTRUE(x$compileInfo$constructor) && !is.null(x$args) && x$args$getLength() == 0
+      }, logical(1)))
+      if(is.null(self$memberCppDefs[[name]]) && !has_noArg_ctor) {
         constructor <- cppFunctionClass$new(name = name,
                                             args = symbolTableClass$new(),
                                             code = cppCodeBlockClass$new(
