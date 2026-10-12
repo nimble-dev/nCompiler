@@ -338,6 +338,7 @@ addADclassContent_impl <- function(cppDef) {
     }
     ADconstructorInits <- derivsContent$ADconstructorInits
     if(!is.null(ADconstructorInits)) {
+      # FIXME: The constructor is allowed to have a different name than then class, so the next line is not fully general.
       constructorDef <- cppDef$memberCppDefs[[ cppDef$name ]]
       if(is.null(constructorDef))
         warning("Could not find class constructor for ", cppDef$name, " when setting up AD tape managers.")

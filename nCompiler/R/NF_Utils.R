@@ -42,7 +42,18 @@ isConstructor <- function(NF) {
 ## if inherits = FALSE there would be no need to call nGet
 ## (simply `get` would work).
 ## If the name is not found, NULL is returned.
+##
+## Lexical scope is checked before project_env$known_nClasses.
+## known_nClasses is keyed by classID (cpp_classname), not by R name,
+## so checking it first could capture a different class that happens
+## to have a cpp_classname equal to `name`, or find a class that is not
+## in scope only because something else in the project registered it.
+## The registry is used only as a fallback when scope does not give
+## an nClass generator or nClassBuilder.
 nGet <- function(name, where, project_env = NULL) {
+  scoped <- nGet_scoped(name, where)
+  if(isNCgenerator(scoped) || inherits(scoped, "nClassBuilder"))
+    return(scoped)
   if(!is.null(project_env)) {
     obj <- project_env$known_nClasses[[name]]
     if(!is.null(obj)) {
@@ -51,6 +62,10 @@ nGet <- function(name, where, project_env = NULL) {
         return(obj)
     }
   }
+  scoped
+}
+
+nGet_scoped <- function(name, where) {
   if(inherits(where, "R6ClassGenerator")) {
     if(exists(name, envir = where, inherits = FALSE))
       return(get(name, envir = where, inherits = FALSE))
@@ -59,10 +74,6 @@ nGet <- function(name, where, project_env = NULL) {
     where <- where$parent_env
   }
   get0(name, envir = where)
-  # if(exists(name, envir = where, inherits = TRUE))
-  #   get(name, envir = where, inherits = TRUE)
-  # else
-  #   NULL
 }
 
 NF_types_match <- function(f1, f2) {
