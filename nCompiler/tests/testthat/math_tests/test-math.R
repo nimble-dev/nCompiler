@@ -17,6 +17,7 @@ utils <- system.file(
     c('testing_utils.R', 'testing_operatorLists.R',
       if(respect_known_failures) 'known_failures.R' else character(),
       'math_utils.R')
+
   ),
   package = 'nCompiler'
 )

@@ -34,13 +34,9 @@
 #define __DISTS
 
 #include "Utils.h"
+#include <nCompiler/dists/dists_utils.h>
 
 using std::max;
-
-bool R_IsNA_ANY(double*, int);
-bool R_IsNaN_ANY(double*, int);
-bool ISNAN_ANY(double*, int);
-bool R_FINITE_ANY(double*, int);
 
 extern "C" {
 // BLAS/LAPACK routines
@@ -91,20 +87,20 @@ extern "C" {
 // core scalar d/r functions provided by NIMBLE to extend R
 double dcat(double, double*, int, int);
 double rcat(double*, int);
-double dmulti(double*, double, double*, int, int);
-void rmulti(int*, double, double*, int);
-double ddirch(double*, double*, int, int);
-void rdirch(double*, double*, int);
+#include <nCompiler/dists/dmulti.h>
+#include <nCompiler/dists/rmulti.h>
+#include <nCompiler/dists/ddirch.h>
+#include <nCompiler/dists/rdirch.h>
 
-double dmnorm_chol(double*, double*, double*, int, double, int, int);
-void rmnorm_chol(double *, double*, double*, int, double);
+#include <nCompiler/dists/dmnorm_chol.h>
+#include <nCompiler/dists/rmnorm_chol.h>
 void PDinverse_logdet_internal(double *matPtr, double *ans, int n);
 double dmnorm_inv_ld(double*, double*, double*, double*, int, int, int, int);
 void rmnorm_inv_ld(double*, double*, double*, double*, int, int);
-double dmvt_chol(double*, double*, double*, double, int, double, int, int);
-void rmvt_chol(double *, double*, double*, double, int, double);
-double dwish_chol(double*, double*, double, int, double, int, int);
-void rwish_chol(double*, double*, double, int, double, int);
+#include <nCompiler/dists/dmvt_chol.h>
+#include <nCompiler/dists/rmvt_chol.h>
+#include <nCompiler/dists/dwish_chol.h>
+#include <nCompiler/dists/rwish_chol.h>
 double dinvwish_chol(double*, double*, double, int, double, int, int);
 void rinvwish_chol(double*, double*, double, int, double, int);
 double dlkj_corr_cholesky(double*, double, int, int);
