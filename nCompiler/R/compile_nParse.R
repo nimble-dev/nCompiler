@@ -95,9 +95,21 @@ nParse <- function(code,
   ## call
   if(is.call(code)) {
     if(is.call(code[[1]])) {
-      ## This is a chained call like a(b)(c) or a[[b]](c).
-      ## We wrap these as chainedCall(a(b), c) or chainedCall(a[[b]], c)
-      code <- as.call(c(list(as.name('chainedCall')), as.list(code))) 
+      if(identical(code[[1]][[1]], as.name('$'))) {
+        ## This is a method call like A$foo(x, y).
+        ## We convert it to MethodCall(A, foo(x, y)) so that foo(x, y)
+        ## is a standard call that can later be processed using the
+        ## opDef (including matchDef) found in the nClass of A.
+        methodName <- code[[1]][[3]]
+        if(is.character(methodName)) methodName <- as.name(methodName)
+        methodCall <- as.call(c(list(methodName), as.list(code)[-1]))
+        code <- as.call(list(as.name('MethodCall'), code[[1]][[2]], methodCall))
+      } else {
+        ## This is a chained call like a(b)(c) or a[[b]](c).
+        ## We wrap these as chainedCall(a(b), c) or chainedCall(a[[b]], c)
+        ## This may be largely defunct because the primary case of a method call is handled above.
+        code <- as.call(c(list(as.name('chainedCall')), as.list(code)))
+      }
     }
     name <- as.character(code[[1]])
       # processedCompileArgs <- list()
@@ -217,7 +229,7 @@ rm(binaryMidDoubleOperators,
 ## assignmentOperators should be kept
 
 midOperatorsForDeparse <- c(midOperatorsForDeparse,
-                            list('$' = '$', '%*%' = ' %*% ', ':' = ':', '%o%' = '%o%'))
+                            list('$' = '$', 'MethodCall' = '$', '%*%' = ' %*% ', ':' = ':', '%o%' = '%o%'))
 
 brackOperatorsForDeparse <- list('[' = c('[',']'),
                                  '[[' = c('[[',']]'))

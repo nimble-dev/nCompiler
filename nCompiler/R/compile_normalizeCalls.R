@@ -34,6 +34,10 @@ compile_normalizeCalls <- function(code,
       }
       return(NULL)
     }
+    if(code$name == 'MethodCall') {
+      normalizeCallsEnv$MethodCall(code, symTab, auxEnv)
+      return(NULL)
+    }
     # If we are in an nClass:
     #  look for opDef in the nFunction method;
     #  next look for an opDef in the nClass, which might not even correspond to a method.
@@ -88,14 +92,7 @@ compile_normalizeCalls <- function(code,
       return(NULL)
     }
 
-    opDef <- cachedOpInfo$opDef
-    matchDef <- opDef[["matchDef"]]
-    if(is.null(matchDef))
-      matchDef <- cachedOpInfo$obj_internals$default_matchDef
-    if(!is.null(matchDef)) {
-      exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
-      # code <- replaceArgInCaller(code, matched_code)
-    }
+    normalizeCallArgs(code, cachedOpInfo)
     normalizeCallsEnv$recurse_normalizeCalls(code, symTab, auxEnv, handlingInfo)
   }
   nErrorEnv$stateInfo <- character()
@@ -120,6 +117,35 @@ inNormalizeCallsEnv(
     }
 )
 
+# MethodCall(A, foo(x, y)) is from A$foo(x, y).
+# The nClass of A is not known until labelAbstractTypes, so the opDef for foo
+# cannot be found yet. Here we normalize A and the arguments of foo,
+# which are in the calling scope, but not foo itself.
+# normalizeCallArgs is called for foo in labelAbstractTypes.
+inNormalizeCallsEnv(
+  MethodCall <-
+    function(code, symTab, auxEnv) {
+      compile_normalizeCalls(code$args[[1]], symTab, auxEnv)
+      recurse_normalizeCalls(code$args[[2]], symTab, auxEnv, NULL)
+      NULL
+    }
+)
+
+# Put the arguments of a call in order according to the matchDef from its opDef,
+# or the default_matchDef of an nFunction or method, and move any compileArgs
+# into code$aux$compileArgs.
+normalizeCallArgs <- function(code, cachedOpInfo) {
+  opDef <- cachedOpInfo$opDef
+  matchDef <- opDef[["matchDef"]]
+  if(is.null(matchDef))
+    matchDef <- cachedOpInfo$obj_internals$default_matchDef
+  if(!is.null(matchDef)) {
+    exprClass_put_args_in_order(matchDef, code, opDef$compileArgs)
+    # code <- replaceArgInCaller(code, matched_code)
+  }
+  invisible(NULL)
+}
+
 check_cachedOpInfo <- function(code, where=NULL, update=TRUE, allowFail=FALSE) {
   cachedOpInfo <- code$aux$cachedOpInfo
   up_to_date <- !is.null(cachedOpInfo) && cachedOpInfo$name == code$name
@@ -140,6 +166,13 @@ check_cachedOpInfo <- function(code, where=NULL, update=TRUE, allowFail=FALSE) {
 update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
   opDef <- NULL
   cachedOpInfo <- list(name = code$name)
+  # If code is the method call inside MethodCall(A, foo(x)), i.e. A$foo(x),
+  # then code$aux$myNCgen is the nClass generator of A. In that case we look up
+  # only in that nClass (methods and nClass-level opDefs),
+  # not via lexical scoping or global opDefs.
+  myNCgen <- code$aux$myNCgen
+  methodOnly <- !is.null(myNCgen)
+  if(methodOnly) where <- myNCgen
     ## Note that if we are in a method, auxEnv$where will be the
     ## generator, which is an environment.
   is_NCgenerator <- isNCgenerator(where)
@@ -163,7 +196,7 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
         }
       }
     }
-    if(is.null(obj)) {
+    if(is.null(obj) && !methodOnly) {
       # Next look for an nFunction (that is not a method)
       # 
       # N.B. nGet follows lexical scoping from either an nFunction or nClass
@@ -215,7 +248,7 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
       }
     }
   }
-  if(is.null(opDef)) {
+  if(is.null(opDef) && !methodOnly) {
     # We haven't found any form of nFunction or custom nClass keyword,
     # so look for globally defined operators (e.g. "+" and all the basic DSL keywords)
     opDef <- getOperatorDef(code$name)
@@ -224,6 +257,11 @@ update_cachedOpInfo <- function(code, where, allowFail=FALSE) {
     }
   }
   if(is.null(opDef)) {
+    if(methodOnly && !allowFail)
+      stop(exprClassProcessingErrorMsg(
+        code,
+        paste0(code$name, ' is not a method of nClass ', myNCgen$classname, '.')),
+        call. = FALSE)
     if(!allowFail)
       stop(exprClassProcessingErrorMsg(
         code,

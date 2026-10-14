@@ -36,7 +36,7 @@ getHandlerEnv <- function(stage) {
          simpleTransformations = simpleTransformationsEnv,
          processAD = processADenv,
          labelAbstractTypes = labelAbstractTypesEnv,
-         normalizeCalls = normalizeCallsEnv,
+         normalizeCalls = normalizeCallsEnv, # not really a handler environment
          generateCpp = genCppEnv,
          finalTransformations = finalTransformationsEnv,
          eigenImpl = eigenizeEnv,
@@ -159,8 +159,8 @@ assignOperatorDef(
   list(
     labelAbstractTypes = list(
       handler = 'nFunction_or_method_call'),
-   normalizeCalls = list(
-      handler = 'nFunction_or_method_call'),
+#   normalizeCalls = list(
+#      handler = 'nFunction_or_method_call'),
     cppOutput = list(
       handler = 'Generic_nFunction')
   )
@@ -557,6 +557,17 @@ assignOperatorDef(
     isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DollarSign')
+  )
+)
+
+assignOperatorDef(
+  'MethodCall',
+  list(
+    help = 'MethodCall(A, foo(x)) is the parsed representation of A$foo(x), for internal use only.',
+    labelAbstractTypes = list(
+      handler = 'MethodCall'),
+    cppOutput = list(
+      handler = 'MethodCall')
   )
 )
 
