@@ -188,6 +188,19 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'DEBUG_EIGEN',
+  list(
+    labelAbstractTypes = list(
+      handler = 'SKIP'
+    ),
+    eigenImpl = list(
+      beforeHandler = 'DEBUG_START',
+      handler = 'DEBUG_END'
+    )
+  )
+)
+
+assignOperatorDef(
   c('dim'),
   list(
     labelAbstractTypes = list(

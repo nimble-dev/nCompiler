@@ -2110,7 +2110,8 @@ inLabelAbstractTypesEnv(
   DEBUG <- function(code, symTab, auxEnv, handlingInfo) {
     message('Entering into size processing debugging. Do debug(nCompiler:::compile_labelAbstractTypes) if you want to follow every step.\n',
     'If execution ends with error, you may need to reset debugging by set_nOption("compilerOptions", FALSE, "debug_labelAbstractTypes")\n',
-    'Use browser() commands proceed (e.g. "c <enter>" to continue).')
+    'Use browser() commands to proceed (e.g. "c <enter>" to continue).\n',
+    'If you continue, you will land in a browser() inside any handlers.')
     browser()
     origValue <- get_nOption('compilerOptions')$debug_labelAbstractTypes
     set_nOption('debug_labelAbstractTypes', TRUE, 'compilerOptions')
@@ -2118,6 +2119,14 @@ inLabelAbstractTypesEnv(
     removeExprClassLayer(code, 1)
     set_nOption('debug_labelAbstractTypes', origValue, 'compilerOptions')
     if(is.null(inserts)) return(NULL) else return(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  SKIP <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    code$type <- code$args[[1]]$type
+    invisible(inserts)
   }
 )
 
