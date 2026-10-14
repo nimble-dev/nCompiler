@@ -249,11 +249,14 @@ inLabelAbstractTypesEnv(
 ## chainedCall
 ## nParse converts something like foo(a)(b) to chainedCall(foo(a), b),
 ##     (although there is no support for a function returning a function.)
-## The relevant case is a$foo(b), which becomes chainedCall( a$foo, b).
+## Formerly the relevant case was a$foo(b), but that now becomes MethodCall(a, foo(b)).
 ## chainedCall handler:
-## Recurse on first argument.
-## Convert to nFunction( [result of recursion], b).  Will that work?
+## Recurse on first argument, which must have type symbolNF.
 ##
+## This is effectively deprecated, as we now parse to
+## MethodCall for A$foo(x), giving MethodCall(A, foo(x)).
+## We are leaving this in place for a while to see if it is
+## needed.
 inLabelAbstractTypesEnv(
   ChainedCall <-
     function(code, symTab, auxEnv, handlingInfo) {
@@ -265,6 +268,67 @@ inLabelAbstractTypesEnv(
           'trying to make a function call from something that is not an nFunction.'
         ), call. = FALSE)
       code$type <- code$args[[1]]$type$returnSym$clone(deep = TRUE)
+      if(length(inserts) == 0) NULL else inserts
+    }
+)
+
+## MethodCall
+## nParse converts A$foo(x, y) to MethodCall(A, foo(x, y)).
+## MethodCall handler:
+## Recurse on A only. Expect nClass object (or generator for $new).
+## Then set aux$myNCgen to A's NCgenerator.
+## Then look up the opDef for foo in that nClass, 
+##.   normalize its arguments, and label it.
+## The C++ name of the method is stored in aux$cpp_method_name.
+inLabelAbstractTypesEnv(
+  MethodCall <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
+                                            handlingInfo,
+                                            useArgs = c(TRUE, FALSE))
+      objType <- code$args[[1]]$type
+      methodCode <- code$args[[2]]
+      if(inherits(objType, "symbolNCgenerator")) {
+        ## Gen$new(args) becomes construct_new_nClass(args)
+        if(methodCode$name != "new")
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'the only method that can be called from an nClass generator is `new`.'
+          ), call. = FALSE)
+        NCgen <- objType$NCgenerator
+        NC_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
+        returnSym <- symbolNC$new(name = '',
+                                  type = objType$name,
+                                  isArg = FALSE,
+                                  overloadDefs = NC_info$inheritInfo$overloadDefs,
+                                  NCgenerator = NCgen)
+        newArgs <- methodCode$args
+        code$name <- 'construct_new_nClass'
+        code$args <- list()
+        for(i in seq_along(newArgs))
+          insertArg(code, i, newArgs[[i]], name = names(newArgs)[i])
+        code$aux$cpp_classname <- NCinternals(NCgen)$cpp_classname
+        inserts <- c(inserts,
+                     recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo))
+        code$type <- returnSym
+        return(if(length(inserts) == 0) NULL else inserts)
+      }
+      if(!inherits(objType, "symbolNC"))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'left-hand-side of `$` is not an nClass object.'
+        ), call. = FALSE)
+      NCgen <- objType$NCgenerator
+      nClass_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
+      methodCode$aux$myNCgen <- NCgen
+      cachedOpInfo <- update_cachedOpInfo(methodCode, auxEnv$where)
+      normalizeCallArgs(methodCode, cachedOpInfo)
+      ## This will be NULL for an nClass-level opDef that has no corresponding method.
+      methodCode$aux$cpp_method_name <-
+        nClass_info$inheritInfo$all_methodName_to_cpp_code_name[[methodCode$name]]
+      inserts <- c(inserts,
+                   compile_labelAbstractTypes(methodCode, symTab, auxEnv))
+      code$type <- methodCode$type
       if(length(inserts) == 0) NULL else inserts
     }
 )
@@ -341,38 +405,22 @@ nCompiler:::inLabelAbstractTypesEnv(
 
 ## DollarSign
 ## Recurse on LHS.  Expect nClass.
-## Look-up RHS. Expect a member or method.
-## Convert to nClass_member(LHS, RHS).
+## Look-up RHS. Expect a field (member variable).
+## Convert to ->member(LHS, RHS).
+## Method calls A$foo(x) and A$new(x) are parsed to MethodCall
+## and handled there, not here.
 inLabelAbstractTypesEnv(
   DollarSign <-
     function(code, symTab, auxEnv, handlingInfo) {
       ## TO-DO: Check for exactly 2 arguments
-      # Special handling for "new"
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
                                             handlingInfo,
                                             useArgs = c(TRUE, FALSE))
-      ## TO-DO: Check that LHS type is symbolNC or symbolNCgenerator
-      ## TO-DO: Improve these error messages
-      if(inherits(code$args[[1]]$type, "symbolNCgenerator")) {
-        if(code$args[[2]]$name != "new")
-          stop(exprClassProcessingErrorMsg(
-            code,
-            'left-hand-side of `$new( )` is not an nClass generator (i.e. returned by a call to nClass).'
-          ), call. = FALSE)
-        NCgen <- code$args[[1]]$type$NCgenerator
-        NC_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
-        returnSym <- symbolNC$new(name = '',
-                                  type = code$args[[1]]$type$name,
-                                  isArg = FALSE,
-                                  overloadDefs = NC_info$inheritInfo$overloadDefs,
-                                  NCgenerator = NCgen)
-        newSym <- symbolNF$new(name = NCinternals(NCgen)$cpp_classname,
-                               returnSym = returnSym)
-        code$name <- 'construct_new_nClass'
-        code$type <- newSym
-        return(if(length(inserts) == 0) NULL else inserts)
-      }
-
+      if(inherits(code$args[[1]]$type, "symbolNCgenerator"))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'the only use of `$` on an nClass generator is to call `$new( )`.'
+        ), call. = FALSE)
       if(!inherits(code$args[[1]]$type, 'symbolNC'))
         stop(exprClassProcessingErrorMsg(
           code,
@@ -384,39 +432,23 @@ inLabelAbstractTypesEnv(
           'right-hand-side of `$` is not a name.'
         ), call. = FALSE)
 
-      ## 1. Check if RHS is a method
-      ## 2. Check if RHS is a field
       innerName <- code$args[[2]]$name
-      method <- NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)
+      if(!is.null(NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste0('method ', innerName, ' is used without being called. ',
+                 'Using a method of another object as a value is not supported.')
+        ), call. = FALSE)
       nClass_info <- register_known_nClass(code$args[[1]]$type$NCgenerator, project_env = auxEnv$project_env)
-      if(!is.null(method)) { ## Is RHS a method?
-        obj_internals <- NFinternals(method)
-        returnSym <- symbolNF$new(
-          name = '',
-          returnSym = obj_internals$returnSym$clone(deep = TRUE)
-        )
-        code$type <- returnSym
-        ## Logically it might seem this should become ->method.
-        ## However it appears in chainedCall(->member(A, foo), x) for A->foo(x).
-        ## In stage generateCpp, the chainedCall packs the arguments after A->foo,
-        ## so we mark that here as a member.
-        code$name <- '->member'
-        code$args[[2]]$aux$obj_internals <- obj_internals
-        code$args[[2]]$aux$nFunctionName <- innerName
-        code$args[[2]]$name <- nClass_info$inheritInfo$all_methodName_to_cpp_code_name[[innerName]]
-
-        obj_internals <- NULL
-      } else {  ## Is RHS a field?
-        obj_symbolTable <- nClass_info$symbolTable
-        symbol <- obj_symbolTable$getSymbol(innerName, inherits=TRUE)
-        if(is.null(symbol))
-          stop(exprClassProcessingErrorMsg(
-            code,
-            'right-hand-side of `$` could not be found.'
-          ), call. = FALSE)
-        code$type <- symbol$clone(deep = TRUE)
-        code$name <- '->member'
-      }
+      obj_symbolTable <- nClass_info$symbolTable
+      symbol <- obj_symbolTable$getSymbol(innerName, inherits=TRUE)
+      if(is.null(symbol))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'right-hand-side of `$` could not be found.'
+        ), call. = FALSE)
+      code$type <- symbol$clone(deep = TRUE)
+      code$name <- '->member'
       if(length(inserts) == 0) NULL else inserts
     }
 )

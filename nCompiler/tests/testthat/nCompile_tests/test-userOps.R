@@ -437,28 +437,89 @@ test_that("custom_call picks up types correctly", {
 
 message("See work in progress on matching and ordering arguments for obj$method")
 
-## test_that("matchDef of method or user-defined op in an nClass is used", {
-##   nc <- nClass(
-##     classname = "nc",
-##     Cpublic = list(
-##       bar = nFunction(function(A = "numericScalar", B = "numericScalar") {})
-##     )
-##   )
-##   foo <- nFunction(
-##     fun = function() {
-##       obj <- nc$new()
-##       obj$bar(B = 2, A = 1) # See if this gets reordered
-##     }
-##   )
+test_that("matchDef of method or user-defined op in an nClass is used", {
+  bar2_opDef = list(
+    labelAbstractTypes = list(
+      handler = function(code, ...) {
+        code$name <- "bar" # allows handling to continue 
+        code$aux$cpp_method_name <- "bar" # cheap trick and only works since we use "name = 'bar'" below
+        code$type <- type2symbol("numericScalar()")
+        NULL
+      }
+    )
+  )
+  
+  nc <- nClass(
+    classname = "nc",
+    Cpublic = list(
+      bar = nFunction(
+        name = "bar",
+        function(A = "numericScalar", B = "numericScalar") {
+          return(10*A + B)
+          returnType(double(0))
+        }),
+      bar2 = nFunction(function(C = "numericScalar", D = "numericScalar") {
+        return(100*C + 10*D) # This is never used because we'll make the opDef swap to bar 
+        returnType(double(0))
+      },
+      # bar2 has custom opDef at the nFunction level
+      compileInfo = list(
+        opDef = bar2_opDef
+      )),
+      # bar3 relies on custom opDef at the nClass level
+      bar3 = nFunction(function(C = "numericScalar", D = "numericScalar") {
+        return(100*C + 10*D) # This is never used because we'll make the opDef swap to bar
+        returnType(double(0))
+      }
+    )),
+    compileInfo = list(
+      opDefs = list(
+        bar3 = bar2_opDef,
+        bar4 = bar2_opDef # no actual method!
+      )
+    )
+  )
+  foo <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar(B = 2, A = 1) # See if this gets reordered
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo2 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar2(D = 3, C = 5)
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo3 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar3(D = 4, C = 6)
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo4 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar4(D = 7, C = 9) # these will not get re-ordered because there is no matchDef
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  #undebug(labelAbstractTypesEnv$MethodCall)
+  comp <- nCompile(foo, foo2, foo3, foo4)
+  obj <- comp$foo()
+  expect_equal(obj, 12)
+  obj <- comp$foo2()
+  expect_equal(obj, 53) # 53 proves it went to bar. 530 would be from bar2, which would show failure.
+  obj <- comp$foo3()
+  expect_equal(obj, 64) # 64 vs 640 proves it went through bar
+  obj <- comp$foo4()
+  expect_equal(obj, 79) # 79 vs 790 or 97 or 970. The 7 and 9 were not reordered because bar4 is a pure class keyword
+})
 
-## #  debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
-## #  debug(nCompiler:::labelAbstractTypesEnv$ChainedCall)
-##   test <- nCompile(foo)
-##   obj <- test()
-
-##   # Args can't be re-ordered here because normalizeCalls does not see type of obj.
-##   test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
-
-##   #nOptions(pause_after_writing_files = TRUE)
-##   test <- nCompile(foo)
-## })
