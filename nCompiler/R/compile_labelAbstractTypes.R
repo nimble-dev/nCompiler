@@ -1463,14 +1463,14 @@ inLabelAbstractTypesEnv(
       # that inherits from symbolNC
       if(inherits(auxEnv$returnSymbol, "symbolNC")) {
         if(!inherits(code$type, class(auxEnv$returnSymbol)[1]))
-         warning(exprClassProcessingErrorMsg(
+         stop(exprClassProcessingErrorMsg(
            code,
            "Object nClass type for return() does not match the nFunction's return type."
          ),
          call. = FALSE)
       } else {
         if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
-          warning(exprClassProcessingErrorMsg(
+          stop(exprClassProcessingErrorMsg(
             code,
             "Object type for return() does not match the nFunction's return type."
           ),
@@ -1480,7 +1480,7 @@ inLabelAbstractTypesEnv(
       if(inherits(auxEnv$returnSymbol, "symbolBasic")) {
         # problem if number of dimensions differs
         if(auxEnv$returnSymbol$nDim != code$type$nDim) {
-          warning(exprClassProcessingErrorMsg(
+          stop(exprClassProcessingErrorMsg(
             code,
             paste0(
               "Dimension (", code$type$nDim, ") for return() does not match ",
@@ -1501,10 +1501,14 @@ inLabelAbstractTypesEnv(
             type_mismatch <- FALSE
             if(auxEnv$returnSymbol$type == "integer" && code$type$type == "double")
               if(code$args[[1]]$name != round(code$args[[1]]$name))
-                warning(paste0(
-                  "It looks like you are returning a non-integer literal in a function with integer return type.",
-                  sep = ''
-                ))
+                stop(exprClassProcessingErrorMsg(
+                  code,
+                  paste0(
+                    "It looks like you are returning a non-integer literal in a function with integer return type.",
+                    sep = ''
+                  )
+                ),
+                call. = FALSE)
           } else {
             # if the return type is not a literal, check if the returnType has richer information (e.g. double > integer)
             type_mismatch <- type_mismatch ||
@@ -1512,7 +1516,7 @@ inLabelAbstractTypesEnv(
           }
         }
         if(type_mismatch) {
-          warning(exprClassProcessingErrorMsg(
+          stop(exprClassProcessingErrorMsg(
             code,
             paste0(
               "Scalar type (", code$type$type, ") for return() does not perfectly match ",
