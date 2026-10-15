@@ -573,7 +573,10 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(code$args[[1]]$type$nDim != 2)
-      stop("Cholesky decomposition of a vector is not possible")
+      stop(exprClassProcessingErrorMsg(
+        code,
+           "Cholesky decomposition of a vector is not possible"
+      ), call. = FALSE)
     if(inherits(argType, 'symbolSparse')) {
       code$type <- symbolNC$new(
         name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
@@ -595,7 +598,10 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[[1]]$type
     if(code$args[[1]]$type$nDim != 2)
-      stop("Cholesky decomposition of a vector is not possible")
+      stop(exprClassProcessingErrorMsg(
+        code,
+           "Cholesky decomposition of a vector is not possible"
+      ), call. = FALSE)
     if(inherits(argType, 'symbolSparse')) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -912,7 +918,7 @@ inLabelAbstractTypesEnv(
       stop(
         exprClassProcessingErrorMsg(
           code, paste(
-            "In sizeCgetolonOperator: Problem determining ",
+            "In sizeCgetColonOperator: Problem determining ",
             "size for ':' without two arguments."
           )
         ), call. = FALSE
@@ -1060,7 +1066,10 @@ inLabelAbstractTypesEnv(
       argType <- arg$type
 
       if(argType$type %in% c('denseCholFactor', 'sparseCholFactor'))
-        stop("Most mathematical operations with the result of `Cholesky` are not supported")
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'Most mathematical operations with the result of `Cholesky` are not supported'
+        ), call. = FALSE)
       resultScalarType <- arithmeticOutputType(
         argType$type, returnTypeCode = handlingInfo$returnTypeCode
       )
@@ -1096,7 +1105,10 @@ inLabelAbstractTypesEnv(
 
       if(a1Type$type %in% c('denseCholFactor', 'sparseCholFactor') ||
          a2Type$type %in% c('denseCholFactor', 'sparseCholFactor'))
-        stop("Most mathematical operations with the result of `Cholesky` are not supported")
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'Most mathematical operations with the result of `Cholesky` are not supported'
+          ), call. = FALSE)
 
       nDim <- max(a1Type$nDim, a2Type$nDim)
 
@@ -1605,10 +1617,15 @@ inLabelAbstractTypesEnv(
     }
     if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor') && 
          inherits(code$args[[2]]$type, 'symbolSparse'))
-      stop("Matrix multiplication of a `Cholesky` factor and a sparse matrix is not supported")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Matrix multiplication of a `Cholesky` factor and a sparse matrix is not supported'
+      ), call. = FALSE)
     if(code$args[[2]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
-      stop("Matrix multiplication by a `Cholesky` factor is not supported")
-    
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Matrix multiplication by a `Cholesky` factor is not supported'
+      ), call. = FALSE)
     invisible(inserts)
   }
 )
@@ -1640,12 +1657,21 @@ inLabelAbstractTypesEnv(
     inserts <- ArgReturnType(code, symTab, auxEnv, handlingInfo)
     if(code$args[[2]]$type$type %in% c('sparseCholFactor','denseCholFactor') || 
          inherits(code$args[[2]]$type, 'symbolSparse'))
-      stop("Using solve/backsolve with a `Cholesky` factor or sparse matrix as the second argument is not supported")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Using solve/backsolve with a `Cholesky` factor or sparse matrix as the second argument is not supported'
+      ), call. = FALSE)
     if(inherits(code$args[[1]]$type, 'symbolSparse')) 
-      stop("To solve systems of equations with sparse matrices, first use `Cholesky`")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'To solve systems of equations with sparse matrices, first use `Cholesky`'
+      ), call. = FALSE)
     if(code$name == 'nForwardsolve' &&
          code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
-       stop("nForwardsolve using result of `Cholesky` is not supported. Expected use of `Cholesky` is for `nSolve` and `nBacksolve`. Contact the NIMBLE development team to discuss your use case.")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'nForwardsolve using result of `Cholesky` is not supported. Expected use of `Cholesky` is for `nSolve` and `nBacksolve`. Contact the NIMBLE development team to discuss your use case.'
+      ), call. = FALSE)
     invisible(inserts)
   }
 )
@@ -1731,7 +1757,10 @@ inLabelAbstractTypesEnv(
     # extract the return type
     code$type <- code$args[[1]]$type
     if(code$type$type %in% c('denseCholFactor','sparseCholFactor'))
-      stop("transpose of a `Cholesky` factor is not supported")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'transpose of a `Cholesky` factor is not supported'
+      ), call. = FALSE)
     # validate input of transpose function
     if(code$type$nDim > 2) {
       stop(exprClassProcessingErrorMsg(
@@ -1845,7 +1874,10 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
     if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
-      stop("Diagonal of a `Cholesky` factor is not supported")
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'Diagonal of a `Cholesky` factor is not supported'
+      ), call. = FALSE)
       
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
     if(length(code$args) == 1) {
