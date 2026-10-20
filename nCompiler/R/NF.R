@@ -96,7 +96,13 @@ nFunction <- function(fun,
   # virtual (FALSE)
   # abstract (FALSE)
   # const (FALSE)
-  # depends (list()) : Values for Rcpp::depends, to use another package
+  # depends (list()) : Package names for Rcpp::depends, to use another package's
+  #   inst/include. Also added to LinkingTo when writing a package.
+  # Hincludes, CPPincludes : character vectors of #include targets, with
+  #   their delimiters, e.g. "<pkg/file.h>" or '"file.h"'.
+  # HpostCode, CPPpostCode : character vectors of verbatim code placed after
+  #   the main code of the .h or .cpp file (e.g. an #include that must come after
+  #   a declaration). Unlike preambles, these are not combined across files.
   # See cppDefs_core.R: generateFunctionHeader for more supported entries. These include:
   #   externC, template, static, and manual over-rides for returnType, (prototype, deftype), name,
   #   scopes, args,

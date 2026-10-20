@@ -1094,7 +1094,7 @@ assignOperatorDef(
 assignOperatorDef(
   # Note: besselK is not a distribution, but its usage has nearly identical
   # functional needs as density functions
-  c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm',
+  c('dbeta', 'dbinom', 'dexp', 'dgamma', 'dinvgamma', 'dlnorm',
     'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK',
     'dlogis', 'dpois', 'dchisq'),
   list(
@@ -1118,7 +1118,7 @@ updateOperatorDef(
   'dbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
 )
 updateOperatorDef(
-  'dexp_nCompiler', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+  'dexp', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dpois', 'matchDef', val = function(x, lambda, log = FALSE) {}

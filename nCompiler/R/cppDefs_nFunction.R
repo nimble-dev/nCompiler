@@ -98,13 +98,13 @@ cpp_nFunctionClass <- R6::R6Class(
       super$getExternalDefs()
     },
     getHincludes = function() {
-      c(self$Hincludes,
+      c(super$getHincludes(),
         if(!is.null(self$SEXPwrapper))
           self$SEXPwrapper$getHincludes()
       )
     },
     getCPPincludes = function() {
-      c(self$CPPincludes,
+      c(super$getCPPincludes(),
         unlist(
           lapply(
             self$CPPincludes,
@@ -121,7 +121,7 @@ cpp_nFunctionClass <- R6::R6Class(
       )
     },
     getCPPusings = function() {
-      unique(c(self$CPPusings,
+      unique(c(super$getCPPusings(),
                if(!is.null(self$SEXPwrapper))
                  self$SEXPwrapper$getCPPusings()
                )
