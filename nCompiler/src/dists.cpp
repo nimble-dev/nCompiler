@@ -1591,55 +1591,56 @@ SEXP C_rinterval(SEXP n, SEXP t, SEXP c) {
 
 // we need our own exp implementation because R dexp uses rate and C exp uses scale
 
-double rexp_nimble(double rate)
+double rexp_nComp(double rate_or_scale, int using_rate)
 {
-  return rexp( 1/rate );
+  return Rf_rexp(using_rate ? 1.0/rate_or_scale : rate_or_scale);
 }
 
-double dexp_nimble(double x, double rate, int give_log)
+double dexp_nComp(double x, double rate_or_scale, int give_log, int using_rate)
 {
-  return dexp(x, 1/rate, give_log);
+  return Rf_dexp(x, using_rate ? 1.0/rate_or_scale : rate_or_scale, give_log);
 }
 
-double pexp_nimble(double q, double rate, int lower_tail, int log_p)
+double pexp_nComp(double q, double rate_or_scale, int lower_tail, int log_p, int using_rate)
 {
-  return pexp(q, 1/rate, lower_tail, log_p);
+  return Rf_pexp(q, using_rate ? 1.0/rate_or_scale : rate_or_scale, lower_tail, log_p);
 }
 
-double qexp_nimble(double p, double rate, int lower_tail, int log_p)
+double qexp_nComp(double p, double rate_or_scale, int lower_tail, int log_p, int using_rate)
 {
-  return qexp(p, 1 / rate, lower_tail, log_p);
+  return Rf_qexp(p, using_rate ? 1.0/rate_or_scale : rate_or_scale, lower_tail, log_p);
 }
 
-SEXP C_dexp_nimble(SEXP x, SEXP rate, SEXP return_log) {
-  if(!Rf_isReal(x) || !Rf_isReal(rate) || !Rf_isLogical(return_log))
-    RBREAK("Error (C_dexp_nimble): invalid input type for one of the arguments.");
+SEXP C_dexp_nComp(SEXP x, SEXP rate_or_scale, SEXP return_log, SEXP using_rate) {
+  if(!Rf_isReal(x) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(return_log) || !Rf_isLogical(using_rate))
+    RBREAK("Error (C_dexp_nComp): invalid input type for one of the arguments.");
   int n_x = LENGTH(x);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int give_log = (int) LOGICAL(return_log)[0];
   SEXP ans;
 
   if(n_x == 0) {
     return x;
   }
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
 
-  int n_max = max(n_x, n_rate);
+  int n_max = max(n_x, n_rate_or_scale);
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_x = REAL(x);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1) {
+  if(n_rate_or_scale == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_x; i++)
-      REAL(ans)[i] = dexp_nimble(c_x[i], *c_rate, give_log);
+      REAL(ans)[i] = dexp_nComp(c_x[i], *c_rate_or_scale, give_log, c_using_rate);
   } else {
     int i_x = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = dexp_nimble(c_x[i_x++], c_rate[i_rate++], give_log);
+      REAL(ans)[i] = dexp_nComp(c_x[i_x++], c_rate_or_scale[i_rate_or_scale++], give_log, c_using_rate);
       if(i_x == n_x) i_x = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -1647,12 +1648,13 @@ SEXP C_dexp_nimble(SEXP x, SEXP rate, SEXP return_log) {
   return ans;
 }
 
-SEXP C_rexp_nimble(SEXP n, SEXP rate) {
-  // this will call rexp_nimble for computation on scalars
-  if(!Rf_isInteger(n) || !Rf_isReal(rate) )
-    RBREAK("Error (C_rexp_nimble): invalid input type for one of the arguments.");
-  int n_rate = LENGTH(rate);
+SEXP C_rexp_nComp(SEXP n, SEXP rate_or_scale, SEXP using_rate) {
+  // this will call rexp_nComp for computation on scalars
+  if(!Rf_isInteger(n) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(using_rate))
+    RBREAK("Error (C_rexp_nComp): invalid input type for one of the arguments.");
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int n_values = INTEGER(n)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_values == 0) {
@@ -1662,22 +1664,22 @@ SEXP C_rexp_nimble(SEXP n, SEXP rate) {
   }
   if(n_values < 0)
     // should formalize using R's C error-handling API
-    RBREAK("Error (C_rexp_nimble): n must be non-negative.\n");
+    RBREAK("Error (C_rexp_nComp): n must be non-negative.\n");
 
   GetRNGstate();
 
   PROTECT(ans = Rf_allocVector(REALSXP, n_values));
-  double* c_rate = REAL(rate);
-  if(n_rate == 1) {
+  double* c_rate_or_scale = REAL(rate_or_scale);
+  if(n_rate_or_scale == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_values; i++)
-      REAL(ans)[i] = rexp_nimble(*c_rate);
+      REAL(ans)[i] = rexp_nComp(*c_rate_or_scale, c_using_rate);
   } else {
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_values; i++) {
-      REAL(ans)[i] = rexp_nimble(c_rate[i_rate++]);
+      REAL(ans)[i] = rexp_nComp(c_rate_or_scale[i_rate_or_scale++], c_using_rate);
       // implement recycling:
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -1686,36 +1688,37 @@ SEXP C_rexp_nimble(SEXP n, SEXP rate) {
   return ans;
 }
 
-SEXP C_pexp_nimble(SEXP q, SEXP rate, SEXP lower_tail, SEXP log_p) {
-  if(!Rf_isReal(q) || !Rf_isReal(rate) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p))
-    RBREAK("Error (C_pexp_nimble): invalid input type for one of the arguments.");
+SEXP C_pexp_nComp(SEXP q, SEXP rate_or_scale, SEXP lower_tail, SEXP log_p, SEXP using_rate) {
+  if(!Rf_isReal(q) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p) || !Rf_isLogical(using_rate))
+    RBREAK("Error (C_pexp_nComp): invalid input type for one of the arguments.");
   int n_q = LENGTH(q);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int c_lower_tail = (int) LOGICAL(lower_tail)[0];
   int c_log_p = (int) LOGICAL(log_p)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_q == 0) {
     return q;
   }
 
-  int n_max = max(n_q, n_rate);
+  int n_max = max(n_q, n_rate_or_scale);
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_q = REAL(q);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1) {
+  if(n_rate_or_scale == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_q; i++)
-      REAL(ans)[i] = pexp_nimble(c_q[i], *c_rate, c_lower_tail, c_log_p);
+      REAL(ans)[i] = pexp_nComp(c_q[i], *c_rate_or_scale, c_lower_tail, c_log_p, c_using_rate);
   } else {
     int i_q = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = pexp_nimble(c_q[i_q++], c_rate[i_rate++], c_lower_tail, c_log_p);
+      REAL(ans)[i] = pexp_nComp(c_q[i_q++], c_rate_or_scale[i_rate_or_scale++], c_lower_tail, c_log_p, c_using_rate);
       if(i_q == n_q) i_q = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -1723,36 +1726,37 @@ SEXP C_pexp_nimble(SEXP q, SEXP rate, SEXP lower_tail, SEXP log_p) {
   return ans;
 }
 
-SEXP C_qexp_nimble(SEXP p, SEXP rate, SEXP lower_tail, SEXP log_p) {
-  if(!Rf_isReal(p) || !Rf_isReal(rate) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p))
-    RBREAK("Error (C_qexp_nimble): invalid input type for one of the arguments.");
+SEXP C_qexp_nComp(SEXP p, SEXP rate_or_scale, SEXP lower_tail, SEXP log_p, SEXP using_rate) {
+  if(!Rf_isReal(p) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p) || !Rf_isLogical(using_rate))
+    RBREAK("Error (C_qexp_nComp): invalid input type for one of the arguments.");
   int n_p = LENGTH(p);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int c_lower_tail = (int) LOGICAL(lower_tail)[0];
   int c_log_p = (int) LOGICAL(log_p)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_p == 0) {
     return p;
   }
 
-  int n_max = max(n_p, n_rate);
+  int n_max = max(n_p, n_rate_or_scale);
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_p = REAL(p);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1) {
+  if(n_rate_or_scale == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_p; i++)
-      REAL(ans)[i] = qexp_nimble(c_p[i], *c_rate, c_lower_tail, c_log_p);
+      REAL(ans)[i] = qexp_nComp(c_p[i], *c_rate_or_scale, c_lower_tail, c_log_p, c_using_rate);
   } else {
     int i_p = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = qexp_nimble(c_p[i_p++], c_rate[i_rate++], c_lower_tail, c_log_p);
+      REAL(ans)[i] = qexp_nComp(c_p[i_p++], c_rate_or_scale[i_rate_or_scale++], c_lower_tail, c_log_p, c_using_rate);
       if(i_p == n_p) i_p = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -1999,58 +2003,59 @@ SEXP C_qdexp(SEXP p, SEXP location, SEXP scale, SEXP lower_tail, SEXP log_p) {
 
 
 // used solely in conjugacy for dhalfflat (so dsqrtinvgamma really just a placeholder)
-double dsqrtinvgamma(double x, double shape, double rate, int give_log)
+double dsqrtinvgamma(double x, double shape, double rate_or_scale, int give_log, int using_rate)
 {
 #ifdef IEEE_754
-  if (ISNAN(x) || ISNAN(shape) || ISNAN(rate))
-    return x + shape + rate;
+  if (ISNAN(x) || ISNAN(shape) || ISNAN(rate_or_scale))
+    return x + shape + rate_or_scale;
 #endif
-  double out = dinvgamma(x*x, shape, rate, 1) + log(2*x);
+  double out = dinvgamma(x*x, shape, rate_or_scale, 1, using_rate) + log(2*x);
   if(give_log) return(out);
   else return(exp(out));
 }
 
-double rsqrtinvgamma(double shape, double rate)
+double rsqrtinvgamma(double shape, double rate_or_scale, int using_rate)
 {
-  if (ISNAN(shape) || ISNAN(rate))
+  if (ISNAN(shape) || ISNAN(rate_or_scale))
     ML_ERR_return_NAN;
-  return(pow(rinvgamma(shape, rate), 0.5));
+  return(pow(rinvgamma(shape, rate_or_scale, using_rate), 0.5));
 }
 
-SEXP C_dsqrtinvgamma(SEXP x, SEXP shape, SEXP rate, SEXP return_log) {
-  if(!Rf_isReal(x) || !Rf_isReal(shape) || !Rf_isReal(rate) || !Rf_isLogical(return_log))
+SEXP C_dsqrtinvgamma(SEXP x, SEXP shape, SEXP rate_or_scale, SEXP return_log, SEXP using_rate) {
+  if(!Rf_isReal(x) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(return_log) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_dsqrtinvgamma): invalid input type for one of the arguments.");
   int n_x = LENGTH(x);
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int give_log = (int) LOGICAL(return_log)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_x == 0) {
     return x;
   }
 
-  int n_max = max(n_x, max(n_shape, n_rate));
+  int n_max = max(n_x, max(n_shape, n_rate_or_scale));
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_x = REAL(x);
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_x; i++)
-      REAL(ans)[i] = dsqrtinvgamma(c_x[i], *c_shape, *c_rate, give_log);
+      REAL(ans)[i] = dsqrtinvgamma(c_x[i], *c_shape, *c_rate_or_scale, give_log, c_using_rate);
   } else {
     int i_x = 0;
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = dsqrtinvgamma(c_x[i_x++], c_shape[i_shape++], c_rate[i_rate++], give_log);
+      REAL(ans)[i] = dsqrtinvgamma(c_x[i_x++], c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], give_log, c_using_rate);
       // implement recycling:
       if(i_x == n_x) i_x = 0;
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -2058,12 +2063,13 @@ SEXP C_dsqrtinvgamma(SEXP x, SEXP shape, SEXP rate, SEXP return_log) {
   return ans;
 }
 
-SEXP C_rsqrtinvgamma(SEXP n, SEXP shape, SEXP rate) {
-  if(!Rf_isInteger(n) || !Rf_isReal(shape) || !Rf_isReal(rate))
+SEXP C_rsqrtinvgamma(SEXP n, SEXP shape, SEXP rate_or_scale, SEXP using_rate) {
+  if(!Rf_isInteger(n) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_rsqrtinvgamma): invalid input type for one of the arguments.");
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int n_values = INTEGER(n)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_values == 0) {
@@ -2079,19 +2085,19 @@ SEXP C_rsqrtinvgamma(SEXP n, SEXP shape, SEXP rate) {
 
   PROTECT(ans = Rf_allocVector(REALSXP, n_values));
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  double* c_rate_or_scale = REAL(rate_or_scale);
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_values; i++)
-      REAL(ans)[i] = rsqrtinvgamma(*c_shape, *c_rate);
+      REAL(ans)[i] = rsqrtinvgamma(*c_shape, *c_rate_or_scale, c_using_rate);
   } else {
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_values; i++) {
-      REAL(ans)[i] = rsqrtinvgamma(c_shape[i_shape++], c_rate[i_rate++]);
+      REAL(ans)[i] = rsqrtinvgamma(c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], c_using_rate);
       // implement recycling:
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -2131,84 +2137,88 @@ SEXP C_rsqrtinvgamma(SEXP n, SEXP shape, SEXP rate) {
 //   return R_NaN;
 // }
 
-// NIMBLE's C parameterization of invgamma is (shape,rate) because
-// when passing to R's C gamma, which uses (shape,scale),
-// the gamma scale parameter is the invgamma rate parameter
-double dinvgamma(double x, double shape, double rate, int give_log)
+// R's C gamma uses (shape,scale), and the gamma scale parameter
+// is the invgamma rate parameter, so a scale is converted to a rate here.
+double dinvgamma(double x, double shape, double rate_or_scale, int give_log, int using_rate)
 // scalar function that can be called directly by NIMBLE with same name as in R
 {
 #ifdef IEEE_754
-  if (ISNAN(x) || ISNAN(shape) || ISNAN(rate))
-    return x + shape + rate;
+  if (ISNAN(x) || ISNAN(shape) || ISNAN(rate_or_scale))
+    return x + shape + rate_or_scale;
 #endif
+  double rate = using_rate ? rate_or_scale : 1.0/rate_or_scale;
   double xinv = 1/x;
-  if(give_log) return(dgamma(xinv, shape, rate, give_log) - 2*log(x));
-  else return(dgamma(xinv, shape, rate, give_log) * xinv * xinv);
+  if(give_log) return(Rf_dgamma(xinv, shape, rate, give_log) - 2*log(x));
+  else return(Rf_dgamma(xinv, shape, rate, give_log) * xinv * xinv);
 }
 
-double rinvgamma(double shape, double rate)
+double rinvgamma(double shape, double rate_or_scale, int using_rate)
 // scalar function that can be called directly by NIMBLE with same name as in R
 {
-  if (ISNAN(shape) || ISNAN(rate))
+  if (ISNAN(shape) || ISNAN(rate_or_scale))
     ML_ERR_return_NAN;
+  double rate = using_rate ? rate_or_scale : 1.0/rate_or_scale;
   return(1 / rgamma(shape, rate));
 }
 
-double pinvgamma(double q, double shape, double rate, int lower_tail, int log_p)
+double pinvgamma(double q, double shape, double rate_or_scale, int lower_tail, int log_p, int using_rate)
 // scalar function that can be called directly by NIMBLE with same name as in R
 {
 #ifdef IEEE_754
-  if(ISNAN(q) || ISNAN(shape) || ISNAN(rate))
-    return q + shape + rate;
+  if(ISNAN(q) || ISNAN(shape) || ISNAN(rate_or_scale))
+    return q + shape + rate_or_scale;
 #endif
+  double rate = using_rate ? rate_or_scale : 1.0/rate_or_scale;
   return(pgamma(1/q, shape, rate, !lower_tail, log_p));
 }
 
-double qinvgamma(double p, double shape, double rate, int lower_tail, int log_p)
+double qinvgamma(double p, double shape, double rate_or_scale, int lower_tail, int log_p, int using_rate)
 // scalar function that can be called directly by NIMBLE with same name as in R
 {
 #ifdef IEEE_754
-  if (ISNAN(p) || ISNAN(shape) || ISNAN(rate))
-    return p + shape + rate;
+  if (ISNAN(p) || ISNAN(shape) || ISNAN(rate_or_scale))
+    return p + shape + rate_or_scale;
 #endif
+  double rate = using_rate ? rate_or_scale : 1.0/rate_or_scale;
   return(1 / qgamma(p, shape, rate, !lower_tail, log_p));
 }
 
 
-SEXP C_dinvgamma(SEXP x, SEXP shape, SEXP rate, SEXP return_log) {
-  if(!Rf_isReal(x) || !Rf_isReal(shape) || !Rf_isReal(rate) || !Rf_isLogical(return_log))
+SEXP C_dinvgamma(SEXP x, SEXP shape, SEXP rate_or_scale, SEXP return_log, SEXP using_rate) {
+  if(!Rf_isReal(x) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(return_log) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_dinvgamma): invalid input type for one of the arguments.");
   int n_x = LENGTH(x);
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int give_log = (int) LOGICAL(return_log)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_x == 0) {
     return x;
   }
 
-  int n_max = max(n_x, max(n_shape, n_rate));
+  int n_max = max(n_x, max(n_shape, n_rate_or_scale));
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_x = REAL(x);
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_x; i++)
-      REAL(ans)[i] = dinvgamma(c_x[i], *c_shape, *c_rate, give_log);
+      REAL(ans)[i] = dinvgamma(c_x[i], *c_shape, *c_rate_or_scale, give_log, c_using_rate);
   } else {
     int i_x = 0;
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = dinvgamma(c_x[i_x++], c_shape[i_shape++], c_rate[i_rate++], give_log);
+      REAL(ans)[i] = dinvgamma(c_x[i_x++], c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], give_log, c_using_rate);
       // implement recycling:
       if(i_x == n_x) i_x = 0;
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -2216,12 +2226,13 @@ SEXP C_dinvgamma(SEXP x, SEXP shape, SEXP rate, SEXP return_log) {
   return ans;
 }
 
-SEXP C_rinvgamma(SEXP n, SEXP shape, SEXP rate) {
-  if(!Rf_isInteger(n) || !Rf_isReal(shape) || !Rf_isReal(rate))
+SEXP C_rinvgamma(SEXP n, SEXP shape, SEXP rate_or_scale, SEXP using_rate) {
+  if(!Rf_isInteger(n) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_rinvgamma): invalid input type for one of the arguments.");
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int n_values = INTEGER(n)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_values == 0) {
@@ -2237,19 +2248,19 @@ SEXP C_rinvgamma(SEXP n, SEXP shape, SEXP rate) {
 
   PROTECT(ans = Rf_allocVector(REALSXP, n_values));
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  double* c_rate_or_scale = REAL(rate_or_scale);
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_values; i++)
-      REAL(ans)[i] = rinvgamma(*c_shape, *c_rate);
+      REAL(ans)[i] = rinvgamma(*c_shape, *c_rate_or_scale, c_using_rate);
   } else {
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_values; i++) {
-      REAL(ans)[i] = rinvgamma(c_shape[i_shape++], c_rate[i_rate++]);
+      REAL(ans)[i] = rinvgamma(c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], c_using_rate);
       // implement recycling:
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -2258,41 +2269,42 @@ SEXP C_rinvgamma(SEXP n, SEXP shape, SEXP rate) {
   return ans;
 }
 
-SEXP C_pinvgamma(SEXP q, SEXP shape, SEXP rate, SEXP lower_tail, SEXP log_p) {
-  if(!Rf_isReal(q) || !Rf_isReal(shape) || !Rf_isReal(rate) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p))
+SEXP C_pinvgamma(SEXP q, SEXP shape, SEXP rate_or_scale, SEXP lower_tail, SEXP log_p, SEXP using_rate) {
+  if(!Rf_isReal(q) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_pinvgamma): invalid input type for one of the arguments.");
   int n_q = LENGTH(q);
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int c_lower_tail = (int) LOGICAL(lower_tail)[0];
   int c_log_p = (int) LOGICAL(log_p)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_q == 0) {
     return q;
   }
 
-  int n_max = max(n_q, max(n_shape, n_rate));
+  int n_max = max(n_q, max(n_shape, n_rate_or_scale));
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_q = REAL(q);
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_q; i++)
-      REAL(ans)[i] = pinvgamma(c_q[i], *c_shape, *c_rate, c_lower_tail, c_log_p);
+      REAL(ans)[i] = pinvgamma(c_q[i], *c_shape, *c_rate_or_scale, c_lower_tail, c_log_p, c_using_rate);
   } else {
     int i_q = 0;
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = pinvgamma(c_q[i_q++], c_shape[i_shape++], c_rate[i_rate++], c_lower_tail, c_log_p);
+      REAL(ans)[i] = pinvgamma(c_q[i_q++], c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], c_lower_tail, c_log_p, c_using_rate);
       // implement recycling:
       if(i_q == n_q) i_q = 0;
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 
@@ -2300,41 +2312,42 @@ SEXP C_pinvgamma(SEXP q, SEXP shape, SEXP rate, SEXP lower_tail, SEXP log_p) {
   return ans;
 }
 
-SEXP C_qinvgamma(SEXP p, SEXP shape, SEXP rate, SEXP lower_tail, SEXP log_p) {
-  if(!Rf_isReal(p) || !Rf_isReal(shape) || !Rf_isReal(rate) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p))
+SEXP C_qinvgamma(SEXP p, SEXP shape, SEXP rate_or_scale, SEXP lower_tail, SEXP log_p, SEXP using_rate) {
+  if(!Rf_isReal(p) || !Rf_isReal(shape) || !Rf_isReal(rate_or_scale) || !Rf_isLogical(lower_tail) || !Rf_isLogical(log_p) || !Rf_isLogical(using_rate))
     RBREAK("Error (C_qinvgamma): invalid input type for one of the arguments.");
   int n_p = LENGTH(p);
   int n_shape = LENGTH(shape);
-  int n_rate = LENGTH(rate);
+  int n_rate_or_scale = LENGTH(rate_or_scale);
   int c_lower_tail = (int) LOGICAL(lower_tail)[0];
   int c_log_p = (int) LOGICAL(log_p)[0];
+  int c_using_rate = (int) LOGICAL(using_rate)[0];
   SEXP ans;
 
   if(n_p == 0) {
     return p;
   }
 
-  int n_max = max(n_p, max(n_shape, n_rate));
+  int n_max = max(n_p, max(n_shape, n_rate_or_scale));
   PROTECT(ans = Rf_allocVector(REALSXP, n_max));
   double* c_p = REAL(p);
   double* c_shape = REAL(shape);
-  double* c_rate = REAL(rate);
+  double* c_rate_or_scale = REAL(rate_or_scale);
 
   // FIXME: abstract the recycling as a function
-  if(n_rate == 1 && n_shape == 1 && n_rate == 1) {
+  if(n_rate_or_scale == 1 && n_shape == 1) {
     // if no parameter vectors, more efficient not to deal with multiple indices
     for(int i = 0; i < n_p; i++)
-      REAL(ans)[i] = qinvgamma(c_p[i], *c_shape, *c_rate, c_lower_tail, c_log_p);
+      REAL(ans)[i] = qinvgamma(c_p[i], *c_shape, *c_rate_or_scale, c_lower_tail, c_log_p, c_using_rate);
   } else {
     int i_p = 0;
     int i_shape = 0;
-    int i_rate = 0;
+    int i_rate_or_scale = 0;
     for(int i = 0; i < n_max; i++) {
-      REAL(ans)[i] = qinvgamma(c_p[i_p++], c_shape[i_shape++], c_rate[i_rate++], c_lower_tail, c_log_p);
+      REAL(ans)[i] = qinvgamma(c_p[i_p++], c_shape[i_shape++], c_rate_or_scale[i_rate_or_scale++], c_lower_tail, c_log_p, c_using_rate);
       // implement recycling:
       if(i_p == n_p) i_p = 0;
       if(i_shape == n_shape) i_shape = 0;
-      if(i_rate == n_rate) i_rate = 0;
+      if(i_rate_or_scale == n_rate_or_scale) i_rate_or_scale = 0;
     }
   }
 

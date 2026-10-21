@@ -784,7 +784,7 @@ rconstraint <- function(n = 1, cond) {
     return(as.integer(cond))
 }
 
-# exp_nimble extends R to allow rate or scale and provide common interface via 'rate' to C functions
+# exp_nComp extends R to allow rate or scale
 
 #' The Exponential Distribution
 #'
@@ -804,65 +804,69 @@ rconstraint <- function(n = 1, cond) {
 #' @param log.p logical; if TRUE, probabilities p are given by user as log(p).
 #' @param lower.tail logical; if TRUE (default) probabilities are \eqn{P[X \le x]}; otherwise, \eqn{P[X > x]}.
 #' @author Christopher Paciorek
-#' @details NIMBLE's exponential distribution functions use Rmath's functions
-#' under the hood, but are parameterized to take both rate and scale and to
-#' use 'rate' as the core parameterization in C, unlike Rmath, which uses 'scale'.
-#' See Gelman et al., Appendix A or
-#' the BUGS manual for mathematical details.
-#' @return \code{dexp_nimble} gives the density, \code{pexp_nimble} gives the distribution
-#' function, \code{qexp_nimble} gives the quantile function, and \code{rexp_nimble}
+#' @details nCompiler provides this extension to R's exponential distribution that supports
+#' both rate and scale parameterizations (similar to R's gamma distribution).
+#' Calls to code{dexp} in `nFunction` code will be replaced with code{dexp_nComp}.
+#' @return \code{dexp_nComp} gives the density, \code{pexp_nComp} gives the distribution
+#' function, \code{qexp_nComp} gives the quantile function, and \code{rexp_nComp}
 #' generates random deviates.
-#' @references Gelman, A., Carlin, J.B., Stern, H.S., and Rubin, D.B. (2004) \emph{Bayesian Data Analysis}, 2nd ed. Chapman and Hall/CRC.
-#' @seealso \link{Distributions} for other standard distributions
 #'
 #' @examples
-#' x <- rexp_nimble(50, scale = 3)
-#' dexp_nimble(x, scale = 3)
+#' x <- rexp_nComp(50, scale = 3)
+#' dexp_nComp(x, scale = 3)
 NULL
 
 
 #' @rdname Exponential
 #' @export
-dexp_nimble <- function(x, rate = 1/scale, scale = 1, log = FALSE) {
+dexp_nComp <- function(x, rate = 1, scale = 1, log = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_dexp_nimble, as.double(x), as.double(rate), as.logical(log))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_dexp_nComp, as.double(x), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
-rexp_nimble <- function(n = 1, rate = 1/scale, scale = 1) {
+rexp_nComp <- function(n = 1, rate = 1, scale = 1) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_rexp_nimble, as.integer(n), as.double(rate))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_rexp_nComp, as.integer(n), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
-pexp_nimble <- function(q, rate = 1/scale, scale = 1, lower.tail = TRUE, log.p = FALSE) {
+pexp_nComp <- function(q, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-  .Call(C_pexp_nimble, as.double(q), as.double(rate), as.logical(lower.tail), as.logical(log.p))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_pexp_nComp, as.double(q), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
-qexp_nimble <- function(p, rate = 1/scale, scale = 1, lower.tail = TRUE, log.p = FALSE) {
+qexp_nComp <- function(p, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-  .Call(C_qexp_nimble, as.double(p), as.double(rate), as.logical(lower.tail), as.logical(log.p))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_qexp_nComp, as.double(p), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' The Inverse Gamma Distribution
@@ -915,68 +919,80 @@ NULL
 
 #' @rdname Inverse-Gamma
 #' @export
-dinvgamma <- function(x, shape, scale = 1, rate = 1/scale, log = FALSE) {
+dinvgamma <- function(x, shape, scale = 1, rate = 1, log = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_dinvgamma, as.double(x), as.double(shape), as.double(rate), as.logical(log))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_dinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Inverse-Gamma
 #' @export
-rinvgamma <- function(n = 1, shape, scale = 1, rate = 1/scale) {
+rinvgamma <- function(n = 1, shape, scale = 1, rate = 1) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_rinvgamma, as.integer(n), as.double(shape), as.double(rate))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_rinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 
 #' @rdname Inverse-Gamma
 #' @export
-pinvgamma <- function(q, shape, scale = 1, rate = 1/scale, lower.tail = TRUE, log.p = FALSE) {
+pinvgamma <- function(q, shape, scale = 1, rate = 1, lower.tail = TRUE, log.p = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-  .Call(C_pinvgamma, as.double(q), as.double(shape), as.double(rate), as.logical(lower.tail), as.logical(log.p))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_pinvgamma, as.double(q), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Inverse-Gamma
 #' @export
-qinvgamma <- function(p, shape, scale = 1, rate = 1/scale, lower.tail = TRUE, log.p = FALSE) {
+qinvgamma <- function(p, shape, scale = 1, rate = 1, lower.tail = TRUE, log.p = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-  .Call(C_qinvgamma, as.double(p), as.double(shape), as.double(rate), as.logical(lower.tail), as.logical(log.p))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_qinvgamma, as.double(p), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 # sqrtinvgamma is intended solely for use in conjugacy with dhalfflat
 #' @export
-dsqrtinvgamma <- function(x, shape, scale = 1, rate = 1/scale, log = FALSE) {
+dsqrtinvgamma <- function(x, shape, scale = 1, rate = 1, log = FALSE) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_dsqrtinvgamma, as.double(x), as.double(shape), as.double(rate), as.logical(log))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_dsqrtinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @export
-rsqrtinvgamma <- function(n = 1, shape, scale = 1, rate = 1/scale) {
+rsqrtinvgamma <- function(n = 1, shape, scale = 1, rate = 1) {
+    missing_scale <- missing(scale)
     if (!missing(rate) && !missing(scale)) {
         if (abs(rate * scale - 1) < 1e-15)
             warning("specify 'rate' or 'scale' but not both")
         else stop("specify 'rate' or 'scale' but not both")
     }
-    .Call(C_rsqrtinvgamma, as.integer(n), as.double(shape), as.double(rate))
+    rate_or_scale <- if(missing_scale) rate else scale
+    .Call(C_rsqrtinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 #' The CAR-Normal Distribution

@@ -53,6 +53,31 @@ inSimpleTransformationsEnv <- function(expr) {
   eval(expr, envir = simpleTransformationsEnv)
 }
 
+inSimpleTransformationsEnv(
+  RateScaleDist <-
+    function(code, symTab, auxEnv, info) {
+      rate_missing <- isTRUE("rate" %in% code$aux$provided_as_missing)
+      scale_missing <- isTRUE("scale" %in% code$aux$provided_as_missing)
+      if(!rate_missing && !scale_missing) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'Distribution must have either rate or scale argument, not both.'
+        ), call. = FALSE)
+      }
+      # If neither is provided, both are 1, so use whichever parameterization
+      # avoids an inversion on the C++ side (given in info$default).
+      if(rate_missing && scale_missing)
+        rate_missing <- !identical(info$default, "rate")
+      if(!rate_missing) {
+        code$name <- paste0(code$name, "_rate")
+        removeArg(code, "scale", allow_missing = TRUE)
+      } else {
+        code$name <- paste0(code$name, "_scale")
+        removeArg(code, "rate", allow_missing = TRUE)
+      }
+    }
+)
+
 ## for min(V), no change.  for min(v1, v2), change to pairmin(v1, v2)
 inSimpleTransformationsEnv(
   minMax <-
