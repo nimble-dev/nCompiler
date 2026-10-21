@@ -523,8 +523,11 @@ cppClassClass <- R6::R6Class(
       cppClassClass_init_impl(self)
       super$initialize(...)
     },
+    ## compileInfo includes go last (so super$getHincludes() is not used).
+    ## They are hand-written and may rely on generated headers, but
+    ## generated headers never rely on them.
     getHincludes = function() {
-      Hinc <- c(super$getHincludes(),
+      Hinc <- c(self$Hincludes,
                 if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                   internalCppDefs[["SEXPgenerator"]]$getHincludes(),
                 if(!is.null(internalCppDefs[["set_nClass_env"]]))
@@ -534,11 +537,13 @@ cppClassClass <- R6::R6Class(
                 unlist(lapply(memberCppDefs,
                               function(x)
                                 x$getHincludes()),
-                       recursive = FALSE))
+                       recursive = FALSE),
+                self$compileInfo$Hincludes)
       Hinc
     },
+    ## compileInfo includes go last, as for getHincludes.
     getCPPincludes = function() {
-      CPPinc <- c(super$getCPPincludes(),
+      CPPinc <- c(self$CPPincludes,
                   if(!is.null(internalCppDefs[["SEXPgenerator"]]))
                     internalCppDefs[["SEXPgenerator"]]$getCPPincludes(),
                   if(!is.null(internalCppDefs[["set_nClass_env"]]))
@@ -548,7 +553,8 @@ cppClassClass <- R6::R6Class(
                   unlist(lapply(memberCppDefs,
                                 function(x)
                                   x$getCPPincludes()),
-                         recursive = FALSE))
+                         recursive = FALSE),
+                  self$compileInfo$CPPincludes)
       CPPinc
     },
     getCPPusings = function() {
