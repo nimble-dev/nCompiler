@@ -344,22 +344,64 @@ nSvd <- function(x, vectors = 'full') {
   return(s)
 }
 
-#' Extract or replace the diagonal of matrix
+#' Extract the diagonal of matrix or create a diagonal matrix
 #'
 #' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
 #'
 #' @details This function is similar to R's \code{\link{diag}} function, but
 #'   can be used in a nFunction and compiled using \code{nCompile}.
+#'   It does not support replacing the diagonal of a matrix.
 #'
-#' @param x a numeric or complex matrix
+#' @param x a numeric matrix (if extracting the diagonal), a vector for creating
+#' a diagonal matrix with those values on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
 #'
 #' @export
 #'
 nDiag <- function(x, ...) {
-  if(inherits(x, 'dCHMsimpl'))
-    stop("`nDiag` not implemented for sparse Cholesky factor input")      
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiag` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
   diag(x, ...)
 }
+
+#' Create a diagonal matrix in sparse format
+#'
+#' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
+#'
+#' @details This function is similar to \code{\link{nDiag}},
+#' but it creates the matrix in sparse format.
+#' It can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a vector for creating a diagonal matrix with those values
+#' on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
+#'
+#' @export
+#'
+nDiagonal <- function(x, ...) {
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiagonal` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
+  if(is.matrix(x))
+    return(diag(x))
+  if(is.numeric(x) && length(x) == 1) 
+    return(sparseMatrix(i = 1:x, j = 1:x, x = 1))
+  args <- list(...)
+  if(length(args) == 0)
+    return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x))
+  if(length(args) == 1)
+    stop("both `nrow` and `ncol` must be provided if one is provided")
+  return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x, dims = c(args[[1]], args[[2]])))
+}
+
+
 
 #' Compute the cholesky decomposition of a matrix
 #'
@@ -373,7 +415,7 @@ nDiag <- function(x, ...) {
 #' @export
 #'
 nChol <- function(x) {
-  if(inherits(r, 'dCHMsimpl'))
+  if(inherits(x, 'dCHMsimpl'))
     stop("`nChol` not meaningful for sparse Cholesky factor input")      
   chol(x)
 }
@@ -410,11 +452,16 @@ sparseCholFactor <- function(x) {
 #' @export
 #'
 nLogdet <- function(x) {
-    if(inherits(x, 'dCHMsimpl'))
-       return(sum(log(diag(expand1(chol, "L")))))
-    ldet <- determinant(x, logarithm = TRUE)
-    ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+  if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
+    result <- Matrix::determinant(x, log = TRUE)$modulus
+    attributes(result) <- NULL
+    if(inherits(x, 'Cholesky'))
+      result <- result/2  # Otherwise is determinant of original matrix.
+    return(result)
   }
+  ldet <- determinant(x, logarithm = TRUE)
+  ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+}
 
 #' Replicate Elements of Vectors and Lists
 #'
@@ -509,13 +556,21 @@ asDense <- function(x) {
 #'
 #' @export
 nMul <- function(x, y) {
+  if(!(is.vector(y) || is.matrix(y)))
+    stop("nMul implemented only for right-hand side vector or matrix")
   if(inherits(x, "dCHMsimpl"))
-    # P^{top} L* x (see ?Matrix:::solve))
-    return(solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  
+    # P^{top} L* y (see ?Matrix:::solve))
+    return(Matrix::solve(x, expand1(x, "L") %*% y, system = "Pt"))
+  if(inherits(x, "Cholesky")) {
+    p <- expand1(x, "P1")@perm
+    return((expand1(x, "L") %*% y)[order(p),])
+  }
   x %*% y
 }
 
 ## This would only work if Matrix is loaded.
+## Also, with keyword replacement in place, we should never have `%*%` in
+## uncompiled nFunction code.
 ## setMethod("%*%", c(x = "dCHMsimpl", y = "ANY"),
 ##          function(x,y)
 ##            solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  # P^{top} L* x (see ?Matrix:::solve))
@@ -524,25 +579,40 @@ nMul <- function(x, y) {
 #'
 #' @export
 nSolve <- function(a, b) {
-  solve(a,b)  # This works fine if `a` is of type `dCHMsimpl`.
+  if(inherits(b, 'sparseCholFactor') || inherits(b, 'denseCholFactor') ||
+       inherits(b, 'Cholesky') || inherits(b, 'dCHMsimpl'))
+    stop("`nSolve` not implemented for right-hand side Cholesky factor")  
+  if(inherits(a, 'sparseCholFactor') || inherits(a, 'denseCholFactor'))
+    stop("`nSolve` not supported for Cholesky factor produced in compiled code")
+  # TODO: we may be able to just call `solve` depending on whether `Matrix` is loaded.
+  if(inherits(a, "dCHMsimpl") || inherits(a, 'Cholesky'))
+    return(Matrix::solve(a, b))
+  solve(a,b)  
 }
 
 #' Wrapper for forwardsolve
 #'
 #' @export
 nForwardsolve <- function(l, x) {
-  ## TODO: add error trap for non-sparse Cholesky factor input
-  if(inherits(r, 'dCHMsimpl'))
+  if(inherits(l, 'dCHMsimpl') || inherits(l, 'Cholesky'))
     stop("`nForwardsolve` not implemented for sparse Cholesky factor input")      
-  forwardsolve(l,x)
+  forwardsolve(l, x)
 }
 
 #' Wrapper for backsolve
 #'
 #' @export
 nBacksolve <- function(r, x) {
-  if(inherits(r, 'dCHMsimpl'))
-    return(solve(r, solve(ch, r, system = "Lt"), system = "Pt"))  # P^{top} U*^{-1} x
+  if(inherits(r, 'dCHMsimpl')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    return(Matrix::solve(r, Matrix::solve(U, x), system = "Pt"))  # P^{top} U*^{-1} x
+  }
+  if(inherits(r, 'Cholesky')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    p <- expand1(r, "P1")@perm
+    if(length(dim(x)) > 1)
+      return(solve(U, x)[order(p),]) else return(solve(U, x)[order(p)])
+  }
   backsolve(r,x)
 }
 

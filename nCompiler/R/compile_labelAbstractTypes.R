@@ -1762,6 +1762,12 @@ inLabelAbstractTypesEnv(
         'transpose of a `Cholesky` factor is not supported'
       ), call. = FALSE)
     # validate input of transpose function
+    if(code$type$nDim < 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'cannot transpose a scalar.'
+      ), call. = FALSE)
+    }
     if(code$type$nDim > 2) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -1878,12 +1884,16 @@ inLabelAbstractTypesEnv(
         code,
         'Diagonal of a `Cholesky` factor is not supported'
       ), call. = FALSE)
+
+      
       
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
     if(length(code$args) == 1) {
       if(code$args[[1]]$type$nDim == 2) {
         returnType <- code$args[[1]]$type$type
         code$type <- symbolBasic$new(nDim = 1, type = returnType)
+        if(code$name == "nDiagonal")
+          code$name <- "nDiag"
         return(invisible(inserts))
       }
     }
