@@ -9,16 +9,6 @@ std::shared_ptr<sparseCholFactor> Cholesky(const Eigen::SparseMatrix<double>& x)
   return ch;
 }
 
-// TODO: remove as redundant
-std::shared_ptr<sparseCholFactor> sparseChol(const Eigen::SparseMatrix<double>& x) {
-  std::shared_ptr<sparseCholFactor> ch = nClass_builder<sparseCholFactor>()();
-  ch->llt.compute(x);
-  if (ch->llt.info() != Eigen::Success)
-    throw std::runtime_error("sparse Cholesky factorization failed");
-  return ch;
-}
-
-
 // This overloads nLogdet, on top of use for standard matrices with calculation
 // done via the SVD.
 double nLogdet(std::shared_ptr<sparseCholFactor> ch) {

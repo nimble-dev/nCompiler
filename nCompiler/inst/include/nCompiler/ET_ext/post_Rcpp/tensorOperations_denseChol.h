@@ -10,19 +10,8 @@ std::shared_ptr<denseCholFactor> Cholesky(const Eigen::Tensor<double, 2> &x) {
   return ch;
 }
 
-// TODO: remove as redundant.
-std::shared_ptr<denseCholFactor> denseChol(const Eigen::Tensor<double, 2> &x) {
-  auto x_map = matmap(x);
-  std::shared_ptr<denseCholFactor> ch = nClass_builder<denseCholFactor>()();
-  ch->llt.compute(x_map);   // ch->llt(x) ?
-  if (ch->llt.info() != Eigen::Success)
-    throw std::runtime_error("dense Cholesky factorization failed");
-  return ch;
-}
-
 // This overloads nLogdet, on top of use for standard matrices with calculation
 // done via the SVD.
-
 double nLogdet(std::shared_ptr<denseCholFactor> ch) {
   return ch->llt.matrixL().nestedExpression().diagonal().array().log().sum();
 }
