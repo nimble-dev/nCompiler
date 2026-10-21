@@ -1,5 +1,5 @@
 nKeyWords <- list(as = 'nAs',
-                  copy = 'nCopy',
+                  # copy = 'nCopy',
                   print = 'nPrint',
                   cat = 'nCat',
                   step = 'nStep',
@@ -24,8 +24,8 @@ nKeyWords <- list(as = 'nAs',
                   '%*%' = 'nMul',
                   svd = 'nSvd',
                   chol = 'nChol',
-                  rexp = 'rexp_nCompiler',
-                  dexp = 'dexp_nCompiler',
+                  # rexp = 'rexp_nCompiler',
+                  # dexp = 'dexp_nCompiler',
                   optim = 'nOptim',
                   optimDefaultControl = 'nOptimDefaultControl',
                   derivs = 'nDerivs',
@@ -37,36 +37,37 @@ nKeyWords <- list(as = 'nAs',
                   sd = 'nSd'
                   )
 
-nf_changeKeywords <- function(code){
-    if(length(code) > 0){
-        for(i in seq_along(code) ) {
-            if(is.call(code) ) {
-                if(!is.null(code[[i]]) ) {
-                    code[[i]] <- nf_changeKeywordsOne(code[[i]])
-                }
-            }
+nf_changeKeywords <- function(code, keywords = character()){
+  # User-provided keywords take precedence over defaults.
+  keywords <- c(keywords, nKeyWords)
+  if(length(code) > 0){
+    for(i in seq_along(code) ) {
+      if(is.call(code) ) {
+        if(!is.null(code[[i]]) ) {
+          code[[i]] <- nf_changeKeywordsOne(code[[i]], keywords = keywords)
         }
+      }
     }
-    return(code)
+  }
+  return(code)
 }
 
-
-nf_changeKeywordsOne <- function(code, first = FALSE){
-    if(length(code) == 1){
-        if(as.character(code) %in% names(nKeyWords)) {
-            if(is.call(code)) {
-                code[[1]] <- as.name( nKeyWords[[as.character(code)]] )
-            } else {
-                if(!is.character(code) & first)
-                    code <- as.name( nKeyWords[[as.character(code)]] )
-            }
-        }
+nf_changeKeywordsOne <- function(code, first = FALSE, keywords){
+  if(length(code) == 1){
+    if(as.character(code) %in% names(keywords)) {
+      if(is.call(code)) {
+        code[[1]] <- as.name( keywords[[as.character(code)]] )
+      } else {
+        if(!is.character(code) & first)
+          code <- as.name( keywords[[as.character(code)]] )
+      }
     }
-    else if(length(code) > 1){
-        for(i in seq_along(code) ) {
-            if(!is.null(code[[i]]) )
-                code[[i]] <- nf_changeKeywordsOne(code[[i]], first = i == 1)
-        }
+  }
+  else if(length(code) > 1){
+    for(i in seq_along(code) ) {
+      if(!is.null(code[[i]]) )
+        code[[i]] <- nf_changeKeywordsOne(code[[i]], first = i == 1, keywords = keywords)
     }
-    return(code)
+  }
+  return(code)
 }

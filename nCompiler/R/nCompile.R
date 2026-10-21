@@ -941,7 +941,11 @@ writePackage <- function(...,
   WP_write_dotOnLoad(units, unitTypes, interfaces, exportNames, returnNames, packageNames,
                       createFromR, Rdir)
   WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, createFromR, returnNames,
-                                 initializePkg, pkgDir, pkgName)
+                                 initializePkg, pkgDir, pkgName,
+                                 depends = RcppPacket_list |>
+                                   lapply(\(x) x$depends) |>
+                                   unlist(use.names = FALSE) |>
+                                   unique())
   ## if (!initializePkg) {
   ##   compiledObjs <- list.files(srcDir, pattern = "o$")
   ##   # message("Deleting ", compiledObjs)
@@ -1441,7 +1445,8 @@ WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, return
 }
 
 WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createFromR, returnNames,
-                                           initializePkg, pkgDir, pkgName) {
+                                           initializePkg, pkgDir, pkgName,
+                                           depends = character()) {
   DESCfile <- file.path(pkgDir, "DESCRIPTION")
   NAMEfile <- file.path(pkgDir, "NAMESPACE")
   if (initializePkg) {
@@ -1473,6 +1478,20 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
                    )
   } else {
     NAMESPACE <- readLines(NAMEfile)
+  }
+  # Packages from Rcpp::depends (e.g. via compileInfo$depends) must be in LinkingTo,
+  # because Rcpp::depends attributes are not used when building a package.
+  if(length(depends)) {
+    DESCRIPTION <- read.dcf(DESCfile)
+    current <- if("LinkingTo" %in% colnames(DESCRIPTION)) DESCRIPTION[1, "LinkingTo"] else NA
+    existing <- if(is.na(current)) character() else trimws(strsplit(current, ",")[[1]])
+    new_depends <- setdiff(depends, existing)
+    if(length(new_depends)) {
+      if(!("LinkingTo" %in% colnames(DESCRIPTION)))
+        DESCRIPTION <- cbind(DESCRIPTION, LinkingTo = NA)
+      DESCRIPTION[1, "LinkingTo"] <- paste(c(existing, new_depends), collapse = ",")
+      write.dcf(DESCRIPTION, DESCfile)
+    }
   }
   need_export <- interfaces %in% c("generic", "full") & createFromR
   if(sum(need_export)) {
