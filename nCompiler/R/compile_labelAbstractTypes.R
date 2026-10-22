@@ -1389,13 +1389,18 @@ inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    # ensure last argument is scalar, defining a constant across recycling
-    lastArg = code$args[[length(code$args)]]
-    if(lastArg$type$nDim > 0) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'final argument to function is not scalar (i.e., log = TRUE).'
-      ), call. = FALSE)
+    # ensure last argument(s) are scalar, defining constants across recycling
+    # (e.g., log for d functions, or lower.tail and log.p for p and q functions)
+    nFinal <- handlingInfo$nFinalScalarArgs
+    if(is.null(nFinal)) nFinal <- 1
+    nArgs <- length(code$args)
+    for(lastArg in code$args[(nArgs - nFinal + 1):nArgs]) {
+      if(lastArg$type$nDim > 0) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'final argument(s) to function must be scalar (e.g., log = TRUE).'
+        ), call. = FALSE)
+      }
     }
     # value type and C++ generation depends on whether all args are scalars
     if(all(sapply(code$args, function(arg) arg$type$nDim) == 0)) {
@@ -2123,6 +2128,16 @@ inLabelAbstractTypesEnv(
     removeExprClassLayer(code, 1)
     set_nOption('debug_labelAbstractTypes', origValue, 'compilerOptions')
     if(is.null(inserts)) return(NULL) else return(inserts)
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ERROR <- function(code, symTab, auxEnv, handlingInfo) {
+    stop(exprClassProcessingErrorMsg(
+      code,
+      'The labelAbstractTypes stage was reached for an operator that should not get there.'
+    ),
+    call. = FALSE)
   }
 )
 

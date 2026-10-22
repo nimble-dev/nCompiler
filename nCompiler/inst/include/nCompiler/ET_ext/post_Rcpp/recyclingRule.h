@@ -1260,7 +1260,6 @@ namespace nCompiler {
 
     R_WRAPPER(dbeta, Rf_dbeta)
     R_WRAPPER(dbinom, Rf_dbinom)
-    R_WRAPPER(dgamma, Rf_dgamma)
     R_WRAPPER(dlnorm, Rf_dlnorm)
     R_WRAPPER(dnbinom, Rf_dnbinom)
     R_WRAPPER(dnorm, Rf_dnorm4)
@@ -1274,19 +1273,27 @@ namespace nCompiler {
     // we need our own exp implementation because R dexp uses rate and C exp 
     // uses scale
     template<int dummy = 0>
-    double rexp_nCompiler(double rate) {
-      return Rf_rexp( 1/rate );
-    }
-    template<int dummy = 0>
-    double dexp_nCompiler(double x, double rate, int give_log) {
+    double dexp_nComp_rate(double x, double rate, int give_log) {
       return Rf_dexp(x, 1/rate, give_log); 
     }
-
+    template<int dummy = 0>
+    double dexp_nComp_scale(double x, double scale, int give_log) {
+      return Rf_dexp(x, scale, give_log); 
+    }
+    // R's C dgamma uses (shape,scale)
+    template<int dummy = 0>
+    double dgamma_rate(double x, double shape, double rate, int give_log) {
+      return Rf_dgamma(x, shape, 1./rate, give_log);
+    }
+    template<int dummy = 0>
+    double dgamma_scale(double x, double shape, double scale, int give_log) {
+      return Rf_dgamma(x, shape, scale, give_log);
+    }
     // NIMBLE's C parameterization of invgamma is (shape,rate) because
     // when passing to R's C gamma, which uses (shape,scale), 
     // the gamma scale parameter is the invgamma rate parameter
     template<int dummy = 0>
-    double dinvgamma(double x, double shape, double rate, int give_log)
+    double dinvgamma_rate(double x, double shape, double rate, int give_log)
     // scalar function that can be called directly by NIMBLE with same name as in R
     {
     #ifdef IEEE_754
@@ -1294,10 +1301,95 @@ namespace nCompiler {
         return x + shape + rate;
     #endif
       double xinv = 1/x;
-      if(give_log) return(dgamma(xinv, shape, rate, give_log) - 2*log(x));
-      else return(dgamma(xinv, shape, rate, give_log) * xinv * xinv);
+      if(give_log) return(Rf_dgamma(xinv, shape, rate, give_log) - 2*log(x));
+      else return(Rf_dgamma(xinv, shape, rate, give_log) * xinv * xinv);
     }
-    
+
+    template<int dummy = 0>
+    double dinvgamma_scale(double x, double shape, double scale, int give_log)
+    // scalar function that can be called directly by NIMBLE with same name as in R
+    {
+    #ifdef IEEE_754
+      if (ISNAN(x) || ISNAN(shape) || ISNAN(scale))
+        return x + shape + scale;
+    #endif
+      double xinv = 1/x;
+      if(give_log) return(Rf_dgamma(xinv, shape, 1./scale, give_log) - 2*log(x));
+      else return(Rf_dgamma(xinv, shape, 1./scale, give_log) * xinv * xinv);
+    }
+
+    // R's C pexp, qexp, pgamma, and qgamma use scale
+    template<int dummy = 0>
+    double pexp_nComp_rate(double q, double rate, int lower_tail, int log_p) {
+      return Rf_pexp(q, 1./rate, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double pexp_nComp_scale(double q, double scale, int lower_tail, int log_p) {
+      return Rf_pexp(q, scale, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double qexp_nComp_rate(double p, double rate, int lower_tail, int log_p) {
+      return Rf_qexp(p, 1./rate, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double qexp_nComp_scale(double p, double scale, int lower_tail, int log_p) {
+      return Rf_qexp(p, scale, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double pgamma_rate(double q, double shape, double rate, int lower_tail, int log_p) {
+      return Rf_pgamma(q, shape, 1./rate, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double pgamma_scale(double q, double shape, double scale, int lower_tail, int log_p) {
+      return Rf_pgamma(q, shape, scale, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double qgamma_rate(double p, double shape, double rate, int lower_tail, int log_p) {
+      return Rf_qgamma(p, shape, 1./rate, lower_tail, log_p);
+    }
+    template<int dummy = 0>
+    double qgamma_scale(double p, double shape, double scale, int lower_tail, int log_p) {
+      return Rf_qgamma(p, shape, scale, lower_tail, log_p);
+    }
+
+    // As for dinvgamma, the gamma scale parameter is the invgamma rate parameter
+    template<int dummy = 0>
+    double pinvgamma_rate(double q, double shape, double rate, int lower_tail, int log_p)
+    {
+    #ifdef IEEE_754
+      if(ISNAN(q) || ISNAN(shape) || ISNAN(rate))
+        return q + shape + rate;
+    #endif
+      return(Rf_pgamma(1/q, shape, rate, !lower_tail, log_p));
+    }
+    template<int dummy = 0>
+    double pinvgamma_scale(double q, double shape, double scale, int lower_tail, int log_p)
+    {
+    #ifdef IEEE_754
+      if(ISNAN(q) || ISNAN(shape) || ISNAN(scale))
+        return q + shape + scale;
+    #endif
+      return(Rf_pgamma(1/q, shape, 1./scale, !lower_tail, log_p));
+    }
+    template<int dummy = 0>
+    double qinvgamma_rate(double p, double shape, double rate, int lower_tail, int log_p)
+    {
+    #ifdef IEEE_754
+      if (ISNAN(p) || ISNAN(shape) || ISNAN(rate))
+        return p + shape + rate;
+    #endif
+      return(1 / Rf_qgamma(p, shape, rate, !lower_tail, log_p));
+    }
+    template<int dummy = 0>
+    double qinvgamma_scale(double p, double shape, double scale, int lower_tail, int log_p)
+    {
+    #ifdef IEEE_754
+      if (ISNAN(p) || ISNAN(shape) || ISNAN(scale))
+        return p + shape + scale;
+    #endif
+      return(1 / Rf_qgamma(p, shape, 1./scale, !lower_tail, log_p));
+    }
+
     // match R's usage of internal besselK function
     // use template to satisfy C++ one definition rule
     template<int shift = 1> 
@@ -1307,7 +1399,6 @@ namespace nCompiler {
     
     R_WRAPPER(rbeta, Rf_rbeta)
     R_WRAPPER(rbinom, Rf_rbinom)
-    R_WRAPPER(rgamma, Rf_rgamma)
     R_WRAPPER(rlnorm, Rf_rlnorm)
     R_WRAPPER(rnbinom, Rf_rnbinom)
     R_WRAPPER(rnorm, Rf_rnorm)
@@ -1318,18 +1409,46 @@ namespace nCompiler {
     R_WRAPPER(rpois, Rf_rpois)
     R_WRAPPER(rchisq, Rf_rnchisq)
 
-    // NIMBLE's C parameterization of invgamma is (shape,rate) because
-    // when passing to R's C gamma, which uses (shape,scale), 
+    // R's C rexp uses scale
+    template<int dummy = 0>
+    double rexp_nComp_rate(double rate) {
+      return Rf_rexp(1./rate);
+    }
+    template<int dummy = 0>
+    double rexp_nComp_scale(double scale) {
+      return Rf_rexp(scale);
+    }
+
+    // R's C rgamma uses (shape,scale)
+    template<int dummy = 0>
+    double rgamma_rate(double shape, double rate) {
+      return Rf_rgamma(shape, 1./rate);
+    }
+    template<int dummy = 0>
+    double rgamma_scale(double shape, double scale) {
+      return Rf_rgamma(shape, scale);
+    }
+
+    // When passing to R's C gamma, which uses (shape,scale),
     // the gamma scale parameter is the invgamma rate parameter
     template<int dummy = 0>
-    double rinvgamma(double shape, double rate)
+    double rinvgamma_rate(double shape, double rate)
     // scalar function that can be called directly by NIMBLE with same name as in R
     {
       if (ISNAN(shape) || ISNAN(rate)) {
         throw std::domain_error("rinvgamma - Shape or rate are NAN.\n");
         return R_NaN;
       }
-      return(1 / rgamma(shape, rate));
+      return(1 / Rf_rgamma(shape, rate));
+    }
+    template<int dummy = 0>
+    double rinvgamma_scale(double shape, double scale)
+    {
+      if (ISNAN(shape) || ISNAN(scale)) {
+        throw std::domain_error("rinvgamma - Shape or scale are NAN.\n");
+        return R_NaN;
+      }
+      return(1 / Rf_rgamma(shape, 1./scale));
     }
     
   };
@@ -1344,6 +1463,16 @@ namespace nCompiler {
     template <typename... XprTypes>
     using distn_d4i = Eigen::TensorCwiseRecyclingFunctorOp<
       double(double, double, double, double, int), XprTypes...
+    >;
+
+    template <typename... XprTypes>
+    using distn_d3ii = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, double, int, int), XprTypes...
+    >;
+
+    template <typename... XprTypes>
+    using distn_d2ii = Eigen::TensorCwiseRecyclingFunctorOp<
+      double(double, double, int, int), XprTypes...
     >;
 
     template <typename... XprTypes>
@@ -1374,8 +1503,13 @@ namespace nCompiler {
     }
 
     template<typename... XprTypes>
-    distn_d2i<XprTypes...> dexp(const XprTypes&... args) {
-      return distn_d2i<XprTypes...>(scalarArgDist::dexp_nCompiler, args...);
+    distn_d2i<XprTypes...> dexp_nComp_rate(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(scalarArgDist::dexp_nComp_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2i<XprTypes...> dexp_nComp_scale(const XprTypes&... args) {
+      return distn_d2i<XprTypes...>(scalarArgDist::dexp_nComp_scale, args...);
     }
 
     template<typename... XprTypes>
@@ -1389,13 +1523,83 @@ namespace nCompiler {
     }
 
     template<typename... XprTypes>
-    distn_d3i<XprTypes...> dgamma(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(scalarArgDist::dgamma, args...);
+    distn_d3i<XprTypes...> dgamma_rate(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dgamma_rate, args...);
     }
 
     template<typename... XprTypes>
-    distn_d3i<XprTypes...> dinvgamma(const XprTypes&... args) {
-      return distn_d3i<XprTypes...>(scalarArgDist::dinvgamma, args...);
+    distn_d3i<XprTypes...> dgamma_scale(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dgamma_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dinvgamma_rate(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dinvgamma_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3i<XprTypes...> dinvgamma_scale(const XprTypes&... args) {
+      return distn_d3i<XprTypes...>(scalarArgDist::dinvgamma_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2ii<XprTypes...> pexp_nComp_rate(const XprTypes&... args) {
+      return distn_d2ii<XprTypes...>(scalarArgDist::pexp_nComp_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2ii<XprTypes...> pexp_nComp_scale(const XprTypes&... args) {
+      return distn_d2ii<XprTypes...>(scalarArgDist::pexp_nComp_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2ii<XprTypes...> qexp_nComp_rate(const XprTypes&... args) {
+      return distn_d2ii<XprTypes...>(scalarArgDist::qexp_nComp_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d2ii<XprTypes...> qexp_nComp_scale(const XprTypes&... args) {
+      return distn_d2ii<XprTypes...>(scalarArgDist::qexp_nComp_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> pgamma_rate(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::pgamma_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> pgamma_scale(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::pgamma_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> qgamma_rate(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::qgamma_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> qgamma_scale(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::qgamma_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> pinvgamma_rate(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::pinvgamma_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> pinvgamma_scale(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::pinvgamma_scale, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> qinvgamma_rate(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::qinvgamma_rate, args...);
+    }
+
+    template<typename... XprTypes>
+    distn_d3ii<XprTypes...> qinvgamma_scale(const XprTypes&... args) {
+      return distn_d3ii<XprTypes...>(scalarArgDist::qinvgamma_scale, args...);
     }
 
     template<typename... XprTypes>
@@ -1463,11 +1667,14 @@ namespace nCompiler {
 
     RANDOM_GENERATOR(rbeta, double(double, double))
     RANDOM_GENERATOR(rbinom, double(double, double))
-    RANDOM_GENERATOR(rexp_nCompiler, double(double))
+    RANDOM_GENERATOR(rexp_nComp_rate, double(double))
+    RANDOM_GENERATOR(rexp_nComp_scale, double(double))
     RANDOM_GENERATOR(rpois, double(double))
     RANDOM_GENERATOR(rchisq, double(double, double))
-    RANDOM_GENERATOR(rgamma, double(double, double))
-    RANDOM_GENERATOR(rinvgamma, double(double, double))
+    RANDOM_GENERATOR(rgamma_rate, double(double, double))
+    RANDOM_GENERATOR(rgamma_scale, double(double, double))
+    RANDOM_GENERATOR(rinvgamma_rate, double(double, double))
+    RANDOM_GENERATOR(rinvgamma_scale, double(double, double))
     RANDOM_GENERATOR(rlnorm, double(double, double))
     RANDOM_GENERATOR(rnbinom, double(double, double))
     RANDOM_GENERATOR(rnorm, double(double, double))

@@ -832,7 +832,10 @@ inEigenizeEnv(
       stop(exprClassProcessingErrorMsg(
         code, 'In PromoteAllButLastArg: expected at least one arg, but code has none.'
       ), call. = FALSE)
-    promoteTypes(code, 1:(length(code$args) - 1))
+    # handlingInfo$nFinalScalarArgs allows more than one final arg to be left alone
+    nFinal <- handlingInfo$nFinalScalarArgs
+    if(is.null(nFinal)) nFinal <- 1
+    promoteTypes(code, 1:(length(code$args) - nFinal))
     invisible(NULL)
   }
 )

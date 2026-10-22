@@ -1094,7 +1094,8 @@ assignOperatorDef(
 assignOperatorDef(
   # Note: besselK is not a distribution, but its usage has nearly identical
   # functional needs as density functions
-  c('dbeta', 'dbinom', 'dexp', 'dgamma', 'dinvgamma', 'dlnorm',
+  c('dbeta', 'dbinom', 'dlnorm', 'dexp_nComp_rate', 'dexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'dgamma_rate', 'dgamma_scale', 'dinvgamma_rate', 'dinvgamma_scale',
     'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK',
     'dlogis', 'dpois', 'dchisq'),
   list(
@@ -1111,6 +1112,63 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dexp_nComp', 'dgamma', 'dinvgamma'),
+  list(
+    matchDef  = function(x, shape, rate = 1, scale = 1, log = FALSE) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef('dinvgamma', 'simpleTransformations', 'default', 'rate')
+
+assignOperatorDef(
+  c('pexp_nComp_rate', 'pexp_nComp_scale', 'qexp_nComp_rate', 'qexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'pgamma_rate', 'pgamma_scale', 'qgamma_rate', 'qgamma_scale',
+    'pinvgamma_rate', 'pinvgamma_scale', 'qinvgamma_rate', 'qinvgamma_scale'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Distribution',
+      returnTypeCode = returnTypeCodes$double,
+      nFinalScalarArgs = 2 # lower.tail and log.p
+    ),
+    eigenImpl = list(
+      handler = 'PromoteAllButLastArg',
+      nFinalScalarArgs = 2
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('pexp_nComp', 'qexp_nComp', 'pgamma', 'qgamma', 'pinvgamma', 'qinvgamma'),
+  list(
+    matchDef  = function(q, shape, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+updateOperatorDef(
+  'pexp_nComp', 'matchDef', val = function(q, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+updateOperatorDef(
+  'qexp_nComp', 'matchDef', val = function(p, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+updateOperatorDef(
+  c('qgamma', 'qinvgamma'), 'matchDef', val = function(p, shape, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef(c('pinvgamma', 'qinvgamma'), 'simpleTransformations', 'default', 'rate')
+
 updateOperatorDef(
   'dbeta', 'matchDef', val = function(x, shape1, shape2, log = FALSE) {}
 )
@@ -1118,19 +1176,13 @@ updateOperatorDef(
   'dbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
 )
 updateOperatorDef(
-  'dexp', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+  'dexp_nComp', 'matchDef', val = function(x, rate = 1, scale = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dpois', 'matchDef', val = function(x, lambda, log = FALSE) {}
 )
 updateOperatorDef(
   'dchisq', 'matchDef', val = function(x, df, ncp = 0, log = FALSE) {}
-)
-updateOperatorDef(
-  'dgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
-)
-updateOperatorDef(
-  'dinvgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dlnorm', 'matchDef', val = function(x, meanlog = 0, sdlog = 1, log = FALSE) {}
@@ -1163,7 +1215,9 @@ updateOperatorDef(
 )
 
 assignOperatorDef(
-  c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm',
+  c('rbeta', 'rbinom', 'rlnorm',
+    'rexp_nComp_rate', 'rexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'rgamma_rate', 'rgamma_scale', 'rinvgamma_rate', 'rinvgamma_scale',
     'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis',
     'rpois', 'rchisq'),
   list(
@@ -1182,11 +1236,8 @@ assignOperatorDef(
 
 updateOperatorDef('rbeta', 'matchDef', val = function(n, shape1, shape2) {})
 updateOperatorDef('rbinom', 'matchDef', val = function(n, size, prob) {})
-updateOperatorDef('rexp_nCompiler', 'matchDef', val = function(n, rate = 1) {})
 updateOperatorDef('rpois', 'matchDef', val = function(n, lambda) {})
 updateOperatorDef('rchisq', 'matchDef', val = function(n, df, ncp = 0) {})
-updateOperatorDef('rgamma', 'matchDef', val = function(n, shape, scale = 1) {})
-updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {})
 updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
 updateOperatorDef('rnbinom', 'matchDef', val = function(n, size, prob) {})
 updateOperatorDef('rnorm', 'matchDef', val = function(n, mean = 0, sd = 1) {})
@@ -1195,6 +1246,21 @@ updateOperatorDef('rt', 'matchDef', val = function(n, df) {})
 updateOperatorDef('rt_nonstandard', 'matchDef', val = function(n, df = 1, mu = 0, sigma = 1) {})
 updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
 updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
+
+assignOperatorDef(
+  c('rexp_nComp', 'rgamma', 'rinvgamma'),
+  list(
+    matchDef  = function(n, shape, rate = 1, scale = 1) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+updateOperatorDef('rexp_nComp', 'matchDef', val = function(n, rate = 1, scale = 1) {})
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef('rinvgamma', 'simpleTransformations', 'default', 'rate')
 
 assignOperatorDef(
   c("dmnorm_chol"),

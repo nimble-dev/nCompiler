@@ -242,15 +242,11 @@ cAsDense <- nCompile(nAsDense)
 # nFunction will not compile if return statement cannot be converted to an
 # object of class returnType in C++; we should also get a type warning that
 # helps point us to the cause of the error
-expect_warning(
-  expect_error(
-    cAdd2_force_bad_return <- nCompile(nAdd2_force_bad_return)
-  )
+expect_error(
+  cAdd2_force_bad_return <- nCompile(nAdd2_force_bad_return)
 )
-expect_warning(
-  expect_error(
-    cAdd2_force_dense_bad_return <- nCompile(nAdd2_force_dense_bad_return)
-  )
+expect_error(
+  cAdd2_force_dense_bad_return <- nCompile(nAdd2_force_dense_bad_return)
 )
 
 

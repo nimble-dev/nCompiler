@@ -154,33 +154,24 @@ NC_InternalsClass <- R6::R6Class(
         else paste0(self$cpp_classname, "_", basename(tempdir()), "_", nClassIDMaker())
     },
     process_inherit = function(inheritInfo, symbolTable, project_env) {
-      # These are steps that need to be done after connect_inherit
-      # and require recursion up the inheritance tree, using flags.
+      # This method is intended to be the one place where we walk the inheritance
+      # stack (only single inheritance, so not really a "tree") and collect any 
+      # information needed for any later compilation step. This suppports consolidation
+      # of similar logic and simplifies other code (which wouldn't necessarily have
+      # easy access to the inheritance stack).
+      #
       # TO-DO: Error trap in methods of same name but different argument signatures.
       if(isTRUE(inheritInfo$process_inherit_done)) return()
       # allFieldInfo carries everything addGenericInterface_impl (cppDefs_core.R)
-      # needs to emit a field(...) line for each field, flattened across the whole
-      # inheritance chain: which C++ class it belongs to, its cpp-mangled name, its
-      # final generic-interface inclusion decision, and its (symbol-owned, already
-      # C++-ready) interfaceAux text. Building it here -- rather than in
-      # addGenericInterface_impl, which would otherwise have to walk ancestors via
-      # raw/unresolved NCinternals -- means callers get one complete, already-merged,
-      # already-deduplicated (self's own field wins on a name collision, mirroring
-      # allMethodNames/all_methodName_to_cpp_code_name below) map, and
-      # addGenericInterface_impl never needs to know how a field's inclusion was
-      # decided or what kind of aux content a symbol contributes.
+      # needs to emit a field(...) line for each field: which C++ class it belongs to, its cpp-mangled name, its
+      # inclusion in the generic interface, and its interfaceAux text. 
       #
-      # The inclusion decision folds in both the field's own (already TBD-resolved,
-      # via the symbolTable passed in here) interface flag and this class's
-      # interfaceInclude/interfaceExclude override -- previously computed in
-      # addGenericInterface_impl per ancestor level, now computed here per class
-      # since self$compileInfo is exactly the level whose override should govern
-      # its own fields, same as before.
-      # self$compileInfo's interfaceInclude/interfaceExclude governs both fields and
-      # methods identically, so both inclusion decisions below fold in the same
-      # useIM/use_include/interfaceInclude/interfaceExclude.
+      # The interface inclusion decision uses the field's own interface flag and the class's
+      # interfaceInclude/interfaceExclude override.
       interfaceInclude <- self$compileInfo$interfaceInclude
       interfaceExclude <- self$compileInfo$interfaceExclude
+      # useIM (an old name): think of IM like "interface management". If true, we need
+      #.  to merge decisions using interfaceInclude OR interfaceExclude (both are not allowed).
       useIM <- !is.null(interfaceInclude) || !is.null(interfaceExclude)
       if(useIM && !is.null(interfaceInclude) && !is.null(interfaceExclude)) {
         stop("interfaceExclude and interfaceInclude cannot both be non-null.  Something is wrong.")

@@ -63,20 +63,20 @@ extern "C" {
   SEXP C_rdirch(SEXP);
   SEXP C_dinterval(SEXP, SEXP, SEXP, SEXP);
   SEXP C_rinterval(SEXP, SEXP, SEXP);
-  SEXP C_dexp_nimble(SEXP, SEXP, SEXP);
-  SEXP C_rexp_nimble(SEXP, SEXP);
-  SEXP C_pexp_nimble(SEXP, SEXP, SEXP, SEXP);
-  SEXP C_qexp_nimble(SEXP, SEXP, SEXP, SEXP);
+  SEXP C_dexp_nComp(SEXP, SEXP, SEXP, SEXP);
+  SEXP C_rexp_nComp(SEXP, SEXP, SEXP);
+  SEXP C_pexp_nComp(SEXP, SEXP, SEXP, SEXP, SEXP);
+  SEXP C_qexp_nComp(SEXP, SEXP, SEXP, SEXP, SEXP);
   SEXP C_ddexp(SEXP, SEXP, SEXP, SEXP);
   SEXP C_rdexp(SEXP, SEXP, SEXP);
   SEXP C_pdexp(SEXP, SEXP, SEXP, SEXP, SEXP);
   SEXP C_qdexp(SEXP, SEXP, SEXP, SEXP, SEXP);
-  SEXP C_dinvgamma(SEXP, SEXP, SEXP, SEXP);
-  SEXP C_rinvgamma(SEXP, SEXP, SEXP);
-  SEXP C_pinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP);
-  SEXP C_qinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP);
-  SEXP C_dsqrtinvgamma(SEXP, SEXP, SEXP, SEXP);
-  SEXP C_rsqrtinvgamma(SEXP, SEXP, SEXP);
+  SEXP C_dinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP);
+  SEXP C_rinvgamma(SEXP, SEXP, SEXP, SEXP);
+  SEXP C_pinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+  SEXP C_qinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+  SEXP C_dsqrtinvgamma(SEXP, SEXP, SEXP, SEXP, SEXP);
+  SEXP C_rsqrtinvgamma(SEXP, SEXP, SEXP, SEXP);
   SEXP C_dcar_normal(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
   SEXP C_dcar_proper(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
   SEXP C_rcar_proper(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -130,23 +130,23 @@ double qt_nonstandard(double, double, double, double, int, int);
 double dconstraint(double, double, int);
 double rconstraint(double);
 
-double rexp_nimble(double);
-double dexp_nimble(double, double, int);
-double pexp_nimble(double, double, int, int);
-double qexp_nimble(double, double, int, int);
+double rexp_nComp(double, int);
+double dexp_nComp(double, double, int, int);
+double pexp_nComp(double, double, int, int, int);
+double qexp_nComp(double, double, int, int, int);
 
 double rdexp(double, double);
 double ddexp(double, double, double, int);
 double pdexp(double, double, double, int, int);
 double qdexp(double, double, double, int, int);
 
-double rinvgamma(double, double);
-double dinvgamma(double, double, double, int);
-double pinvgamma(double, double, double, int, int);
-double qinvgamma(double, double, double, int, int);
+double rinvgamma(double, double, int);
+double dinvgamma(double, double, double, int, int);
+double pinvgamma(double, double, double, int, int, int);
+double qinvgamma(double, double, double, int, int, int);
 
-double rsqrtinvgamma(double, double);
-double dsqrtinvgamma(double, double, double, int);
+double rsqrtinvgamma(double, double, int);
+double dsqrtinvgamma(double, double, double, int, int);
 
 double rflat();
 double dflat(double, int);
