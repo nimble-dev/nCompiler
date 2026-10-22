@@ -21,12 +21,12 @@ test_that("dense forwardsolve/backsolve work in mvn example", {
   mu <- rnorm(n = n)
 
   # draw from the distribution
-  x <- nimble::rmnorm_chol(
+  x <- rmnorm_chol(
     n = 1, cholesky = Sigma.chol, prec_param = FALSE, mean = mu
   )
 
   # evaluate log-likelihood of sample
-  ll.ref <- nimble::dmnorm_chol(
+  ll.ref <- dmnorm_chol(
     x = x, mean = mu, cholesky = Sigma.chol, prec_param = FALSE, log = TRUE
   )
 
@@ -338,57 +338,57 @@ test_that("matrix mult works", {
 })
 
 test_that("log determinants work (dense matrices)", {
-  
+
   ldet_direct = nFunction(
     fun = function(x) return(logdet(x)),
-    argTypes = list(x = 'numericMatrix()'), 
+    argTypes = list(x = 'numericMatrix()'),
     returnType = 'numericScalar()'
   )
-  
+
   ldet_tensor_op = nFunction(
     fun = function(x, y) return(logdet(x + y)),
-    argTypes = list(x = 'numericMatrix()', y = 'numericMatrix()'), 
+    argTypes = list(x = 'numericMatrix()', y = 'numericMatrix()'),
     returnType = 'numericScalar()'
   )
-  
+
   ldet_direct_cpp = nCompile(ldet_direct)
   ldet_tensor_op_cpp = nCompile(ldet_tensor_op)
-  
+
   n = 9
-  
+
   set.seed(2025)
-  
+
   x = matrix(rnorm(n = n^2), nrow = n)
   x = t(x) %*% x
-  
+
   y = matrix(rnorm(n = n^2), nrow = n)
   y = t(y) %*% y
-  
+
   #
   # uncompiled execution
   #
-  
+
   # det > 0
   expect_equal(ldet_direct(x = x), log(det(x)))
   # det < 0
   expect_identical(ldet_direct(x = -x), NaN)
   # det = 0
   expect_identical(ldet_direct(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
-  
+
   #
   # compiled execution
   #
-  
+
   # det > 0
   expect_equal(ldet_direct_cpp(x = x), log(det(x)))
   # det < 0
   expect_identical(ldet_direct_cpp(x = -x), NaN)
   # det = 0
   expect_identical(ldet_direct_cpp(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
-  
+
   # tensor expressions
   expect_equal(ldet_tensor_op_cpp(x,y), log(det(x+y)))
-  
+
 })
 
 test_that("various uses of nEigen", {
@@ -448,7 +448,7 @@ test_that("various uses of nEigen", {
         returnType = 'numericMatrix'
     )
     cEigs <- nCompile(eigs)
-    
+
     result <- eigen(xsymm, symmetric = TRUE)$vectors
     vec <- eig(xsymm)
     cvec <- cEig(xsymm)
@@ -456,7 +456,7 @@ test_that("various uses of nEigen", {
     ## Eigenvectors can be in different order.
     expect_equal(result[, order(result[1,])], cvec[, order(cvec[1,])])
 
-    ## If matrix is not actually symmetric, result should be same as symmetric counterpart. 
+    ## If matrix is not actually symmetric, result should be same as symmetric counterpart.
     result2 <- eigen(xsymm, symmetric = TRUE)$vectors
     vec <- eigs(xnsymm)
     cvec <- cEigs(xnsymm)
@@ -465,7 +465,7 @@ test_that("various uses of nEigen", {
     cvec[,2] <- -cvec[,2]
     cvec[,3] <- -cvec[,3]
     expect_equal(result2, cvec)
-   
+
 
     ## Check case with EigenDecomp not as return type to make sure
     ## predefined code is included with nCompiler_generated code.
@@ -485,7 +485,7 @@ test_that("various uses of nEigen", {
     cvec[,1] <- -cvec[,1]
     cvec[,2] <- -cvec[,2]
     expect_equal(result, cvec)
-    
+
     eig = nFunction(
         fun = function(x = 'numericMatrix') {
             y <- eigen(x, valuesOnly = TRUE)$values
@@ -528,7 +528,7 @@ test_that("various uses of nEigen", {
         returnType = 'EigenDecomp'
     )
     cEig <- nCompile(eig)
-    
+
     result <- eigen(xnsymm)
     e <- eig(xnsymm, FALSE)
     ce <- cEig(xnsymm, FALSE)
@@ -544,7 +544,7 @@ test_that("various uses of nEigen", {
     expect_equal(ce$values, result$values)
     expect_length(e$vectors, 0)
     expect_length(ce$vectors, 0)
-    
+
 })
 
 
@@ -564,7 +564,7 @@ test_that("various uses of nSvd", {
     result <- svd(x)$u
     u <- mysvd(x)
     cu <- cSvd(x)
-    
+
     expect_identical(result, u)
     ## Equal up to swapping of sign.
     cu[,2:3] <- -cu[,2:3]
@@ -604,7 +604,7 @@ test_that("various uses of nSvd", {
     expect_identical(result, u)
     cu[,2:3] <- -cu[,2:3]
     expect_equal(result, cu)
-    
+
     ## Inline as part of larger calculation.
     fun = nFunction(
         fun = function(x = 'numericMatrix', z = 'numericMatrix') {
@@ -631,7 +631,7 @@ test_that("various uses of nSvd", {
         returnType = 'SVDDecomp'
     )
     csvd <- nCompile(mysvd)
-    
+
     result <- svd(x)
     out <- mysvd(x)
     cout <- csvd(x)
@@ -642,7 +642,7 @@ test_that("various uses of nSvd", {
     expect_equal(cout$u, result$u)
 
     ## Different arguments, including using non-integer values.
-    
+
     mysvd = nFunction(
         fun = function(x = 'numericMatrix') {
             y <- svd(x, 0.0)
@@ -681,5 +681,5 @@ test_that("various uses of nSvd", {
     expect_identical(result$u, out$u)
     cout$u[,2:3] <- -cout$u[,2:3]
     expect_equal(result$u, cout$u)
-    
+
 })
