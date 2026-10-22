@@ -185,8 +185,8 @@ class sparseCholFactor;
 
 class denseCholFactor;
 
-// TODO: Not sure if IsSparseCholFactor stuff should be here or in tensorOperations_chol.h.
-// I think we need to use `IsSparseCholFactor` in `IsEvaluatedType`.
+// TODO: discuss placement of {sparse,dense}Chol-related stuff here.
+// If not placed here, it is not found in tensorOperations_{sparse,dense}Chol.h.
 
 /**
  * Template meta programming check to see if Class is an Eigen::SparseCholFactor
@@ -398,6 +398,10 @@ std::conditional<
     std::false_type
 >::type { };
 
+// TODO: do we need to add `IsSparseCholFactor<Class>::value` and
+// similarly for denseCholFactor? We had the former but not the latter,
+// before CP removed it to test if it was necessary, and because
+// it wasn't clear that it fits with the others checked here.
 /**
  * Template meta programming check to see if Class is an Eigen object for which
  * coefficients are immediately accessible, unlike unevaluated Tensor
@@ -408,7 +412,7 @@ std::conditional<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseType<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholFactor<Class>::value || std::is_arithmetic<Class>::value ||
+    std::is_arithmetic<Class>::value ||
     IsMap<Class>::value || IsTranspose<Class>::value,
     std::true_type,
     std::false_type

@@ -556,8 +556,8 @@ asDense <- function(x) {
 #'
 #' @export
 nMul <- function(x, y) {
-  if(!(is.vector(y) || is.matrix(y)))
-    stop("nMul implemented only for right-hand side vector or matrix")
+  if(inherits(y, "dCHMsimpl") || inherits(y, "Cholesky"))
+    stop("matrix multiplication implemented only for right-hand side vector or matrix")
   if(inherits(x, "dCHMsimpl"))
     # P^{top} L* y (see ?Matrix:::solve))
     return(Matrix::solve(x, expand1(x, "L") %*% y, system = "Pt"))

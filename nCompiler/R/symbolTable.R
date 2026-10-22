@@ -863,6 +863,7 @@ symbolCppVar <- R6::R6Class(
   )
 )
 
+# This does not seem to be used any longer given switch to `Cholesky`.
 symbolSimplicialLLT <- R6::R6Class(
   classname = "symbolSimplicialLLT",
   inherit = symbolBase,
@@ -885,6 +886,7 @@ symbolSimplicialLLT <- R6::R6Class(
   )
 )
 
+# This does not seem to be used any longer given switch to `Cholesky`.
 symbolLLT <- R6::R6Class(
   classname = "symbolLLT",
   inherit = symbolBase,
