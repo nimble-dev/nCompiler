@@ -1288,6 +1288,9 @@ assignOperatorDef(
     ),
     eigenImpl = list(
       handler = 'Transpose'
+    ),
+    cppOutput = list(
+      cppString = "t__"
     )
   )
 )

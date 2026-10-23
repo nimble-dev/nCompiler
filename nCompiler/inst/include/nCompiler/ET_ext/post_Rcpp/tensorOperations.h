@@ -1214,7 +1214,7 @@ auto nDiag(xType && x) -> decltype(
  * @tparam TensorExpr type for a tensor or an unevaluated tensor expression
  */
  template<typename TensorExpr>
- auto t(const TensorExpr &x) -> decltype(
+ auto t__(const TensorExpr &x) -> decltype(
      x.shuffle(nDimTraits2_dimensions(x)) // correct return type, but incorrect output
  ){
      // Modified with help from Claude to deal with compositions such as t(X+Y).
@@ -1226,11 +1226,14 @@ auto nDiag(xType && x) -> decltype(
      return x.shuffle(o);
  }
 
-/* TODO: This handles the scalar corner case for a basic t(x), but we should check
-   whether we'd want to promote the result to a 1x1 matrix to handle real use cases (if they exist). */
-double t(const double &x) {
-  return(x);
-}
+// To-do decide whether to allow t(x) for a scalar x. I'm commenting this out since that is 
+// current trapped as an error in labelAbstractTypes.
+//
+// /* TODO: This handles the scalar corner case for a basic t(x), but we should check
+//    whether we'd want to promote the result to a 1x1 matrix to handle real use cases (if they exist). */
+// inline double t__(const double &x) {
+//   return(x);
+// }
 
 
 
@@ -1683,7 +1686,7 @@ Scalar nLogdet(const Xpr & x) {
     return qrdecomp.logDeterminant();
 }
 
-double nLogdet(const Eigen::SparseMatrix<double>& x) { 
+inline double nLogdet(const Eigen::SparseMatrix<double>& x) { 
   Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt;
   llt.compute(x);
   if (llt.info() != Eigen::Success)
