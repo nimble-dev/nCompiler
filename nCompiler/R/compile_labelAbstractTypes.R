@@ -1068,7 +1068,8 @@ inLabelAbstractTypesEnv(
       if(argType$type %in% c('denseCholFactor', 'sparseCholFactor'))
         stop(exprClassProcessingErrorMsg(
           code,
-          'Most mathematical operations with the result of `Cholesky` are not supported'
+          paste0('Most mathematical operations with the result of `Cholesky` (which gives the Cholesky decomposition as an internal object) are not supported.\n',
+          'For a dense matrix X, you can use chol(X) to get the Cholesky decomposition as a dense matrix and do math with that.')
         ), call. = FALSE)
       resultScalarType <- arithmeticOutputType(
         argType$type, returnTypeCode = handlingInfo$returnTypeCode

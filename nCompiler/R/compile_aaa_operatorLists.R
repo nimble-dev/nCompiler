@@ -1250,6 +1250,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nLogdet'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'nLogdet'
     )

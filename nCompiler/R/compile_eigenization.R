@@ -677,6 +677,8 @@ inEigenizeEnv(
     promoteTypes(code)
     d1 <- code$args[[1]]$type$nDim
     d2 <- code$args[[2]]$type$nDim
+    arg1_isSparse <- inherits(code$args[[1]]$type, 'symbolSparse')
+    arg2_isSparse <- inherits(code$args[[2]]$type, 'symbolSparse')
     if(d1 > 0 && d2 > 0) {
       if(d1 != d2) {
         # perform operation with reshaping, i.e., for matrix-vector operations
@@ -692,7 +694,7 @@ inEigenizeEnv(
         }
       }
     }
-    if(inherits(code$args[[1]]$type, 'symbolSparse') && inherits(code$args[[2]]$type, 'symbolSparse')) {
+    if(arg1_isSparse && arg2_isSparse) {
       if(d1 != d2)
         stop(exprClassProcessingErrorMsg(
           code,
@@ -707,13 +709,13 @@ inEigenizeEnv(
           ), call. = FALSE)
       maybe_convertToMethod(code, handlingInfo, force=TRUE)
     } else {
-      if(inherits(code$args[[1]]$type, 'symbolSparse') || inherits(code$args[[2]]$type, 'symbolSparse')) {
+      if(arg1_isSparse || arg2_isSparse) {
         if(d1 != d2)
           stop(exprClassProcessingErrorMsg(
             code,
             'element-wise operations on sparse matrix and vector not supported'
           ), call. = FALSE)
-        if(code$name == "/" && inherits(code$args[[2]]$type, 'symbolSparse'))
+        if(code$name == "/" && arg2_isSparse)
           stop(exprClassProcessingErrorMsg(
             code,
             'element-wise division by sparse matrix not supported'
