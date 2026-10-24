@@ -1085,11 +1085,13 @@ assignOperatorDef(
 assignOperatorDef(
   c('nMul'),
   list(
+    matchDef = function(x, y) {},
     labelAbstractTypes = list(
       handler = 'nMul'
     )
   )
 )
+
 
 assignOperatorDef(
   # Note: besselK is not a distribution, but its usage has nearly identical
@@ -1457,6 +1459,7 @@ assignOperatorDef(
 assignOperatorDef(
   'asSparse',
   list(
+    matchDef = function(x, prune = TRUE) {},
     labelAbstractTypes = list(
       handler = 'asSparse'
     ),
@@ -1469,6 +1472,7 @@ assignOperatorDef(
 assignOperatorDef(
   'asDense',
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'asDense'
     ),
@@ -1491,6 +1495,7 @@ assignOperatorDef(
 assignOperatorDef(
   'Cholesky',
   list(
+    matchDef = function(A) {},
     labelAbstractTypes = list(
       handler = 'Cholesky'
     )
@@ -1500,6 +1505,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nChol'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
@@ -1533,6 +1539,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
+    ## TODO: figure out matchDef given different arg names (issue #233).
     labelAbstractTypes = list(
       handler = 'Solve',
       argTypeInd = 2
@@ -1543,6 +1550,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('t'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'Transpose'
     ),

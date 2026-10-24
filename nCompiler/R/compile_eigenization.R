@@ -733,7 +733,7 @@ inEigenizeEnv(
           'element-wise operations on sparse matrix and vector not supported'
         ), call. = FALSE)
       if(code$name == "*") {
-        code$name <- quote(cwiseProduct)
+        code$name <- "cwiseProduct"
       } else
           stop(exprClassProcessingErrorMsg(
             code,
@@ -752,7 +752,7 @@ inEigenizeEnv(
             code,
             'element-wise division by sparse matrix not supported'
           ), call. = FALSE)
-        code$name <- if(code$name == "*") quote(elementProduct) else quote(elementQuotient)
+        code$name <- if(code$name == "*") "elementProduct" else "elementQuotient"
       }
     }
     invisible(NULL)
