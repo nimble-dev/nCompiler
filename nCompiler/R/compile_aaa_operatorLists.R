@@ -1459,7 +1459,7 @@ assignOperatorDef(
 assignOperatorDef(
   'asSparse',
   list(
-    matchDef = function(x, prune = TRUE) {},
+    matchDef = function(x, prune = FALSE) {},
     labelAbstractTypes = list(
       handler = 'asSparse'
     ),

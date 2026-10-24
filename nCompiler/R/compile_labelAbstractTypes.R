@@ -1920,6 +1920,8 @@ inLabelAbstractTypesEnv(
         'unable to determine sparse type for input'
       ), call. = FALSE)
     }
+    if(!code$args[['prune']]$Rexpr) # Arg is exprClass, not FALSE.
+      removeArg(code, 'prune')      # Overloaded C++ function has only one arg.
     invisible(NULL)
   }
 )
