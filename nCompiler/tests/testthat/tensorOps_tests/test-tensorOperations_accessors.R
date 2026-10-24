@@ -311,7 +311,7 @@ cSpDiagXCv <- nCompile(nSpDiagXCv)
 cSpDiagXC <- nCompile(nSpDiagXC)
 cSpDiagRC <- nCompile(nSpDiagRC)
 cat ("SOME tensorOps_accessors TESTS ARE COMMEND OUT FOR FIXING.\n")
-# cSpDiagXv <- nCompile(nSpDiagXv)
+cSpDiagXv <- nCompile(nSpDiagXv)
 cSpDiagX <- nCompile(nSpDiagX)
 cSpDiagR <- nCompile(nSpDiagR)
 
@@ -333,8 +333,8 @@ expect_identical(cSpDiagXC(x = 3, ncol = nc),
                  as(diag(x = 3, ncol = nc), 'dgCMatrix'))
 expect_identical(cSpDiagRC(nrow = nr, ncol = nc),
                  as(diag(nrow = nr, ncol = nc), 'dgCMatrix'))
-## expect_identical(cSpDiagXv(x = xv),
-##                  as(diag(x = xv), 'dgCMatrix'))
+expect_identical(cSpDiagXv(x = xv),
+                  as(diag(x = xv), 'dgCMatrix'))
 expect_identical(cSpDiagX(x = 3),
                  as(diag(x = 3), 'dgCMatrix'))
 expect_identical(cSpDiagR(nrow = nr),

@@ -862,3 +862,49 @@ symbolCppVar <- R6::R6Class(
     }
   )
 )
+
+# This does not seem to be used any longer given switch to `Cholesky`.
+symbolSimplicialLLT <- R6::R6Class(
+  classname = "symbolSimplicialLLT",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    interface = FALSE,  
+    initialize = function(...) {
+      super$initialize(..., interface = self$interface)
+      self$type <- "simplicialLLT"
+      self  
+    },
+    print = function() {
+      writeLines(paste0(self$name, ': symbolSimplicialLLT'))
+    },
+    genCppVar = function() {
+      cppVarFullClass$new(name = self$name,
+                          baseType = "Eigen::SimplicialLLT", 
+                          templateArgs = list("Eigen::SparseMatrix<double>"))
+    }
+  )
+)
+
+# This does not seem to be used any longer given switch to `Cholesky`.
+symbolLLT <- R6::R6Class(
+  classname = "symbolLLT",
+  inherit = symbolBase,
+  portable = TRUE,
+  public = list(
+    interface = FALSE,  
+    initialize = function(...) {
+      super$initialize(..., interface = self$interface)
+      self$type <- "LLT"
+      self  
+    },
+    print = function() {
+      writeLines(paste0(self$name, ': symbolLLT'))
+    },
+    genCppVar = function() {
+      cppVarFullClass$new(name = self$name,
+                          baseType = "Eigen::LLT", 
+                          templateArgs = list("Eigen::MatrixXd"))  # Eigen::Matrix<double>?
+    }
+  )
+)

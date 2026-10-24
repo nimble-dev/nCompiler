@@ -448,6 +448,16 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  Transpose <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    if(inherits(code$args[[1]]$type, "symbolSparse")) {
+      code$name <- as.name('transpose')
+      maybe_convertToMethod(code, handlingInfo, force = TRUE)
+    }
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   ## could be combined with cWiseBinary and Reduction?
   cWiseUnary <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     if(code$args[[1]]$type$nDim == 0) {
@@ -562,6 +572,11 @@ inEigenizeEnv(
     d2 <- code$args[[2]]$type$nDim
     if(d1 > 0 && d2 > 0) {
       if(d1 != d2) {
+        if(inherits(code$args[[1]]$type, 'symbolSparse') || inherits(code$args[[2]]$type, 'symbolSparse'))
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'element-wise operations on sparse matrix and vector not supported'
+          ), call. = FALSE)
         # perform operation with reshaping, i.e., for matrix-vector operations
         replacementName <- handlingInfo$replacements[[code$name]]
         if(!is.null(replacementName)) {
@@ -694,6 +709,8 @@ inEigenizeEnv(
     promoteTypes(code)
     d1 <- code$args[[1]]$type$nDim
     d2 <- code$args[[2]]$type$nDim
+    arg1_isSparse <- inherits(code$args[[1]]$type, 'symbolSparse')
+    arg2_isSparse <- inherits(code$args[[2]]$type, 'symbolSparse')
     if(d1 > 0 && d2 > 0) {
       if(d1 != d2) {
         # perform operation with reshaping, i.e., for matrix-vector operations
@@ -707,6 +724,35 @@ inEigenizeEnv(
             code$name <- replacementName$RHS
           }
         }
+      }
+    }
+    if(arg1_isSparse && arg2_isSparse) {
+      if(d1 != d2)
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'element-wise operations on sparse matrix and vector not supported'
+        ), call. = FALSE)
+      if(code$name == "*") {
+        code$name <- quote(cwiseProduct)
+      } else
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'element-wise division by sparse matrix not supported'
+          ), call. = FALSE)
+      maybe_convertToMethod(code, handlingInfo, force=TRUE)
+    } else {
+      if(arg1_isSparse || arg2_isSparse) {
+        if(d1 != d2)
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'element-wise operations on sparse matrix and vector not supported'
+          ), call. = FALSE)
+        if(code$name == "/" && arg2_isSparse)
+          stop(exprClassProcessingErrorMsg(
+            code,
+            'element-wise division by sparse matrix not supported'
+          ), call. = FALSE)
+        code$name <- if(code$name == "*") quote(elementProduct) else quote(elementQuotient)
       }
     }
     invisible(NULL)
@@ -1397,7 +1443,6 @@ inEigenizeEnv(
 inEigenizeEnv(
 
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-
     # handle "diag(x)" when x is a matrix and goal is to set or extract diagonal
     if(length(code$args) == 1) {
       if(code$args[[1]]$type$nDim == 2) {

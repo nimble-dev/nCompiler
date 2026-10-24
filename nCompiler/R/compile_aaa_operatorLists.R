@@ -1489,6 +1489,15 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'Cholesky',
+  list(
+    labelAbstractTypes = list(
+      handler = 'Cholesky'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nChol'),
   list(
     labelAbstractTypes = list(
@@ -1501,8 +1510,9 @@ assignOperatorDef(
 assignOperatorDef(
   c('nLogdet'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
-      handler = 'UnaryReduction'
+      handler = 'nLogdet'
     )
   )
 )
@@ -1524,7 +1534,7 @@ assignOperatorDef(
   c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
+      handler = 'Solve',
       argTypeInd = 2
     )
   )
@@ -1534,8 +1544,13 @@ assignOperatorDef(
   c('t'),
   list(
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
-      argTypeInd = 1
+      handler = 'Transpose'
+    ),
+    eigenImpl = list(
+      handler = 'Transpose'
+    ),
+    cppOutput = list(
+      cppString = "t__"
     )
   )
 )

@@ -378,6 +378,8 @@ setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
 #' @export
 #'
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nEigen` not implemented for sparse Cholesky factor input")      
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
   ans$values <- res$values
@@ -438,7 +440,9 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      returnType(double(1))
 #'      return(singularValues)
 #'  })
-nSvd <- function(x, vectors = 'thin') {
+nSvd <- function(x, vectors = 'full') {
+  if(inherits(r, 'dCHMsimpl'))
+    stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
   p <- ncol(x)
   if(vectors %in% c(2, 'full')) {
@@ -457,20 +461,64 @@ nSvd <- function(x, vectors = 'thin') {
   return(s)
 }
 
-#' Extract or replace the diagonal of matrix
+#' Extract the diagonal of matrix or create a diagonal matrix
 #'
 #' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
 #'
 #' @details This function is similar to R's \code{\link{diag}} function, but
 #'   can be used in a nFunction and compiled using \code{nCompile}.
+#'   It does not support replacing the diagonal of a matrix.
 #'
-#' @param x a numeric or complex matrix
+#' @param x a numeric matrix (if extracting the diagonal), a vector for creating
+#' a diagonal matrix with those values on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
 #'
 #' @export
 #'
 nDiag <- function(x, ...) {
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiag` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
   diag(x, ...)
 }
+
+#' Create a diagonal matrix in sparse format
+#'
+#' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
+#'
+#' @details This function is similar to \code{\link{nDiag}},
+#' but it creates the matrix in sparse format.
+#' It can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a vector for creating a diagonal matrix with those values
+#' on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
+#'
+#' @export
+#'
+nDiagonal <- function(x, ...) {
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiagonal` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
+  if(is.matrix(x))
+    return(diag(x))
+  if(is.numeric(x) && length(x) == 1) 
+    return(sparseMatrix(i = 1:x, j = 1:x, x = 1))
+  args <- list(...)
+  if(length(args) == 0)
+    return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x))
+  if(length(args) == 1)
+    stop("both `nrow` and `ncol` must be provided if one is provided")
+  return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x, dims = c(args[[1]], args[[2]])))
+}
+
+
 
 #' Compute the cholesky decomposition of a matrix
 #'
@@ -484,7 +532,29 @@ nDiag <- function(x, ...) {
 #' @export
 #'
 nChol <- function(x) {
+  if(inherits(x, 'dCHMsimpl'))
+    stop("`nChol` not meaningful for sparse Cholesky factor input")      
   chol(x)
+}
+
+#' Compute the sparse Cholesky decomposition of a matrix for further operations
+#' 
+#' @details This function finds a sparse Cholesky factor using a fill-reducing
+#' `P` (AMD reordering by default), so the factorization is actually:
+# \eqn{P A P^\top = L L^\top}.
+#' 
+#' @param x a positive definite matrix
+#'
+#' @author nCompiler development team
+#'
+#' @export
+#'
+#' @details
+#'
+#' @examples TODO
+#' 
+sparseCholFactor <- function(x) {
+  Matrix::Cholesky(x, LDL = FALSE)  
 }
 
 #' Compute the log-determinant of a matrix
@@ -494,14 +564,21 @@ nChol <- function(x) {
 #' @details This function is similar to R's \code{\link{diag}} function, but
 #'   can be used in a nFunction and compiled using \code{nCompile}.
 #'
-#' @param x a square matrix
+#' @param x a square matrix or a sparse Cholesky factor
 #'
 #' @export
 #'
 nLogdet <- function(x) {
-    ldet <- determinant(x, logarithm = TRUE)
-    ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+  if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
+    result <- Matrix::determinant(x, log = TRUE)$modulus
+    attributes(result) <- NULL
+    if(inherits(x, 'Cholesky'))
+      result <- result/2  # Otherwise is determinant of original matrix.
+    return(result)
   }
+  ldet <- determinant(x, logarithm = TRUE)
+  ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+}
 
 #' Replicate Elements of Vectors and Lists
 #'
@@ -596,27 +673,63 @@ asDense <- function(x) {
 #'
 #' @export
 nMul <- function(x, y) {
+  if(inherits(y, "dCHMsimpl") || inherits(y, "Cholesky"))
+    stop("matrix multiplication implemented only for right-hand side vector or matrix")
+  if(inherits(x, "dCHMsimpl"))
+    # P^{top} L* y (see ?Matrix:::solve))
+    return(Matrix::solve(x, expand1(x, "L") %*% y, system = "Pt"))
+  if(inherits(x, "Cholesky")) {
+    p <- expand1(x, "P1")@perm
+    return((expand1(x, "L") %*% y)[order(p),])
+  }
   x %*% y
 }
+
+## This would only work if Matrix is loaded.
+## Also, with keyword replacement in place, we should never have `%*%` in
+## uncompiled nFunction code.
+## setMethod("%*%", c(x = "dCHMsimpl", y = "ANY"),
+##          function(x,y)
+##            solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  # P^{top} L* x (see ?Matrix:::solve))
 
 #' Wrapper for solve
 #'
 #' @export
 nSolve <- function(a, b) {
-  solve(a,b)
+  if(inherits(b, 'sparseCholFactor') || inherits(b, 'denseCholFactor') ||
+       inherits(b, 'Cholesky') || inherits(b, 'dCHMsimpl'))
+    stop("`nSolve` not implemented for right-hand side Cholesky factor")  
+  if(inherits(a, 'sparseCholFactor') || inherits(a, 'denseCholFactor'))
+    stop("`nSolve` not supported for Cholesky factor produced in compiled code")
+  # TODO: we may be able to just call `solve` depending on whether `Matrix` is loaded.
+  if(inherits(a, "dCHMsimpl") || inherits(a, 'Cholesky'))
+    return(Matrix::solve(a, b))
+  solve(a,b)  
 }
 
 #' Wrapper for forwardsolve
 #'
 #' @export
 nForwardsolve <- function(l, x) {
-  forwardsolve(l,x)
+  if(inherits(l, 'dCHMsimpl') || inherits(l, 'Cholesky'))
+    stop("`nForwardsolve` not implemented for sparse Cholesky factor input")      
+  forwardsolve(l, x)
 }
 
 #' Wrapper for backsolve
 #'
 #' @export
 nBacksolve <- function(r, x) {
+  if(inherits(r, 'dCHMsimpl')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    return(Matrix::solve(r, Matrix::solve(U, x), system = "Pt"))  # P^{top} U*^{-1} x
+  }
+  if(inherits(r, 'Cholesky')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    p <- expand1(r, "P1")@perm
+    if(length(dim(x)) > 1)
+      return(solve(U, x)[order(p),]) else return(solve(U, x)[order(p)])
+  }
   backsolve(r,x)
 }
 

@@ -545,6 +545,25 @@ test_that("various uses of nEigen", {
     expect_length(e$vectors, 0)
     expect_length(ce$vectors, 0)
 
+    # Error-trapped cases.
+    eig = nFunction(
+        fun = function(Q = 'nSparseMatrix') {
+            y <- eigen(Q)
+            return(y)
+        },
+        returnType = 'EigenDecomp'
+    )
+    cEig <- nCompile(eig)
+   
+    eig = nFunction(
+        fun = function(X = 'numericMatrix') {
+            ch <- Cholesky(X)
+            y <- eigen(ch)
+            return(y)
+        },
+        returnType = 'EigenDecomp'
+    )
+    cEig <- nCompile(eig)
 })
 
 

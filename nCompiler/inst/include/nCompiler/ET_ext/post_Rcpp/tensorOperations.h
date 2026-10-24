@@ -179,19 +179,39 @@ Eigen::Tensor<Scalar, TensorExpr::NumDimensions> binaryOp(
     return binaryOp<OP_, Scalar>(xEval, y);
 }
 
-// forward declaration of nCompiler struct to store Sparse Chol. decompositions
-class SparseCholesky;
+// forward declaration of class to store sparse Cholesky decompositions
+// class SparseCholesky;
+class sparseCholFactor;
+
+class denseCholFactor;
+
+// TODO: discuss placement of {sparse,dense}Chol-related stuff here.
+// If not placed here, it is not found in tensorOperations_{sparse,dense}Chol.h.
 
 /**
- * Template meta programming check to see if Class is an Eigen::SparseCholesky
+ * Template meta programming check to see if Class is an Eigen::SparseCholFactor
  *
  * @tparam Class type to inspect
  */
 template<typename Class>
-struct IsSparseCholesky : std::is_base_of<
-    SparseCholesky,
+struct IsSparseCholFactor : std::is_base_of<
+    std::shared_ptr<sparseCholFactor>,
     Class
 > { };
+  
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to std::shared_ptr<sparseCholFactor> by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+template<typename Class, int N>
+constexpr typename std::enable_if<IsSparseCholFactor<Class>::value, bool>::type
+  HasNumDimensionsN() {
+    return N == 2;  // matrices are inherently 2-dimensional
+  }
 
 /**
  * Template meta programming check to see if Class is an Eigen::SparseMatrix
@@ -240,6 +260,32 @@ struct IsSparseType : std::conditional<
     std::true_type,
     std::false_type
 >::type { };
+
+/**
+ * Template meta programming check to see if Class is an Eigen::DenseCholFactor
+ *
+ * @tparam Class type to inspect
+ */
+template<typename Class>
+struct IsDenseCholFactor : std::is_base_of<
+    std::shared_ptr<denseCholFactor>,
+    Class
+> { };
+  
+/**
+  * Returns true if template Class has N dimensions
+  *
+  * Intended to be used as a template metaprogramming aid.
+  *
+  * @tparam Class Type to inspect, restricted to std::shared_ptr<denseCholFactor> by SFINAE
+  * @tparam N Number of dimensions to test for
+  */
+template<typename Class, int N>
+constexpr typename std::enable_if<IsDenseCholFactor<Class>::value, bool>::type
+  HasNumDimensionsN() {
+    return N == 2;  // matrices are inherently 2-dimensional
+  }
+
 
 /**
  * Template meta programming check to see if Class is an Eigen::Tensor type.
@@ -352,6 +398,10 @@ std::conditional<
     std::false_type
 >::type { };
 
+// TODO: do we need to add `IsSparseCholFactor<Class>::value` and
+// similarly for denseCholFactor? We had the former but not the latter,
+// before CP removed it to test if it was necessary, and because
+// it wasn't clear that it fits with the others checked here.
 /**
  * Template meta programming check to see if Class is an Eigen object for which
  * coefficients are immediately accessible, unlike unevaluated Tensor
@@ -362,7 +412,7 @@ std::conditional<
 template<typename Class>
 struct IsEvaluatedType : std::conditional<
     IsSparseType<Class>::value || IsTensor<Class>::value ||
-    IsSparseCholesky<Class>::value || std::is_arithmetic<Class>::value ||
+    std::is_arithmetic<Class>::value ||
     IsMap<Class>::value || IsTranspose<Class>::value,
     std::true_type,
     std::false_type
@@ -478,6 +528,7 @@ TENSOR_SPMAT_OP(!=, nCompiler::logical_neq)
      return N == 1;  // vectors are inherently 1-dimensional
    }
 
+ 
 /**
  * Implicitly convert a Tensor expression input to an Eigen::Tensor object
  *
@@ -715,6 +766,7 @@ Eigen::Tensor<Scalar, 2> asDense(SpMatExpr &x) {
     return res;
 }
 
+/*
 template<typename SparseCholType = SparseCholesky, typename Scalar>
 SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
     Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(x);
@@ -726,6 +778,7 @@ SparseCholType nChol(const Eigen::SparseMatrix<Scalar> &x) {
     res.P = P;
     return res;
 }
+*/
 
 /**
  * Compute the Cholesky decomposition for a symmetric matrix stored as an
@@ -881,6 +934,7 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
     return res;
  }
 
+ 
  /**
  * Generate a Sparse matrix with non-constant diagonal
  *
@@ -904,18 +958,26 @@ Eigen::Tensor<Scalar, 2> nDiag(Xpr x, Index nrow, Index ncol) {
 >
 Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
     // evaluate input if needed
+    Eigen::Index nrow_, ncol_;
+    Eigen::Index size_x = nDimTraits2_size(x);
+    if constexpr (std::is_same<Index, MakeSquareDiag__>::value) {
+        nrow_ = ncol_ = size_x;
+    } else {
+        nrow_ = nrow;
+        ncol_ = ncol;
+    }
     auto xEval = eval(x);
     // initialize output
-    Eigen::SparseMatrix<Scalar> res(nrow, ncol);
+    Eigen::SparseMatrix<Scalar> res(nrow_, ncol_);
     // figure out how large the main diagonal is
-    Index nEntries = std::min(nrow, ncol);
-    if(x.size() != nEntries) {
+    Eigen::Index nEntries = std::min(nrow_, ncol_);
+    if(size_x != nEntries) {
         throw std::range_error(
-            "nCompiler::nDiag - Diagonal entry vector length does not match matrix size"
+            "nCompiler::nDiagonal - Diagonal entry vector length does not match matrix size"
         );
     }
     // populate diagonal and return
-    for(Index i = 0; i < nEntries; ++i) {
+    for(Eigen::Index i = 0; i < nEntries; ++i) {
         res.coeffRef(i,i) = xEval(i);
     }
     return res;
@@ -933,7 +995,7 @@ Eigen::SparseMatrix<Scalar> nDiagonal(Xpr x, Index nrow, Index ncol) {
   * DiagIO class that uses conversion operators and overloaded
   * assignment operators to provide additional functionality (i.e., assignment
   * and extraction of diagonal entries) in a way that is compatible with
-  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler would
+  * nCompiler/R-like syntax.  Without the added flexibility, nCompiler wonuld
   * need to perform additional, possibly complex, modification of an nFunction's
   * AST in order to change R-like syntax into Eigen-like syntax.
   *
@@ -1108,7 +1170,7 @@ template<typename xType>
         * explicit conversion to extract diagonal from an Eigen::SparseMatrix
         */
         explicit operator Eigen::Tensor<Scalar, 1> ()  {
-         Eigen::Tensor<Scalar, 1> res(x.rows());
+         Eigen::Tensor<Scalar, 1> res(std::min(x.rows(), x.cols()));
          auto diagmap = matmap(res);
          diagmap = x.diagonal();
          return(res);
@@ -1152,17 +1214,28 @@ auto nDiag(xType && x) -> decltype(
  * @tparam TensorExpr type for a tensor or an unevaluated tensor expression
  */
  template<typename TensorExpr>
- auto t(const TensorExpr &x) -> decltype(
-     x.shuffle(x.dimensions()) // correct return type, but incorrect output
+ auto t__(const TensorExpr &x) -> decltype(
+     x.shuffle(nDimTraits2_dimensions(x)) // correct return type, but incorrect output
  ){
-    typename TensorExpr::Index i = TensorExpr::NumDimensions;
-    typename TensorExpr::Dimensions o;
-    auto end = o.end();
-    for(auto it = o.begin(); it != end; ++it) {
-        *it = --i;
-    }
-    return x.shuffle(o);
+     // Modified with help from Claude to deal with compositions such as t(X+Y).
+     auto o = nDimTraits2_dimensions(x);   // auto drops the const, giving DSizes<long, N>
+     const int n = static_cast<int>(o.size());
+     for (int k = 0; k < n; ++k) {
+         o[k] = n - 1 - k;                 // reverse the dimension order
+     }
+     return x.shuffle(o);
  }
+
+// To-do decide whether to allow t(x) for a scalar x. I'm commenting this out since that is 
+// current trapped as an error in labelAbstractTypes.
+//
+// /* TODO: This handles the scalar corner case for a basic t(x), but we should check
+//    whether we'd want to promote the result to a 1x1 matrix to handle real use cases (if they exist). */
+// inline double t__(const double &x) {
+//   return(x);
+// }
+
+
 
 /**
  * Initialize an Eigen::Tensor object to store the unknown x in the linear
@@ -1296,6 +1369,58 @@ Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(
     const RHS & b
 ) {
     return triangularsolve<Eigen::Upper>(U, b);
+}
+
+
+/**
+ *
+ * Element-wise multiplication (and division) with sparse matrices is a bit
+ * complicated, because `*` when using Eigen sparse matrices is matrix multiplication
+ *
+ * @tparam Xpr
+ * @tparam Ypr
+ */
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> elementProduct(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & xeval = eval(x);
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto xmap = matmap(xeval);
+    auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(xmap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = xmap.cwiseProduct(ymap);
+    return res;
+}
+
+// Only for sparse divided by dense given zeros in sparse.
+// We don't check for that with `enable_if` as we error out
+// in eigen handler.
+template<
+    typename Xpr,
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Xpr, 2>() && HasNumDimensionsN<Ypr, 2>(),
+        Xpr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Xpr::Scalar, 2> elementQuotient(const Xpr & x, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Xpr::Scalar, 2> res(ymap.rows(), ymap.cols());
+    // map and operate. Apparently `cwiseQuotient` only works for sparse/sparse.
+    matmap(res) = x.cwiseProduct(ymap.cwiseInverse());
+    return res;
 }
 
 /**
@@ -1539,7 +1664,7 @@ template<
     typename Xpr,
     typename Scalar = typename Xpr::Scalar,
     typename std::enable_if<
-        HasNumDimensionsN<Xpr, 2>(),
+        HasNumDimensionsN<Xpr, 2>() && !IsSparseMatrix<Xpr>::value,
         Xpr
     >::type* = nullptr
 >
@@ -1560,6 +1685,16 @@ Scalar nLogdet(const Xpr & x) {
     nColPivHouseholderQR<MatrixType> qrdecomp(xmap);
     return qrdecomp.logDeterminant();
 }
+
+inline double nLogdet(const Eigen::SparseMatrix<double>& x) { 
+  Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt;
+  llt.compute(x);
+  if (llt.info() != Eigen::Success)
+    throw std::runtime_error("sparse Cholesky factorization failed");
+  Eigen::SparseMatrix<double> L = llt.matrixL();
+  return 2*L.diagonal().array().log().sum();
+}
+
 
 // This is drafted but not yet used.
 template<typename Scalar >

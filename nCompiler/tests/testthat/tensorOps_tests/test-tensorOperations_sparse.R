@@ -1,17 +1,5 @@
 # tensorOperations: interoperability with sparse matrices/vectors
 #
-# There are just two cases below that do not compile.
-#
-# What I noticed studying them is the following.
-# If we have sparse = sparse + sparse,
-# the C++ compiler says that choosing the right overloaded function is ambiguous
-# because it can use the OP or reverseOP versions.
-# What I further noticed is that either of these forces evaluation into a dense tensor
-# even before assigning the result to a sparse matrix. At least, that's how it looks.
-# So I think some care is needed, and possibly std::enable_if and/or static_assert
-# will provide pathways to disable some overloads when better ones are availabe.
-# I am not currently clear why the OP system for sparse matrices return instantiated
-# tensors instead of Eigen ops. (For dense matrices, we return Eigen ops).
 
 library(Matrix)
 
@@ -266,3 +254,4 @@ expect_equal(cAdd2_force_dense_mixed(x = M_sparse, y = M2), M + M2)
 expect_equal(cAsSparse(x = M), M_sparse)
 expect_equal(cAsDense(x = M_sparse), M)
 expect_equal(cAdd2_force_dense_unnecessary(x = M, y = M2), M + M2)
+
