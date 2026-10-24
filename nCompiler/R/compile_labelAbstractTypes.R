@@ -668,6 +668,8 @@ inLabelAbstractTypesEnv(
       )
       auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, denseCholFactor) # To handle cases like nSolve(Cholesky(X),y).
     }
+    invisible(inserts)
+  }
 )
 
 inLabelAbstractTypesEnv(
