@@ -343,10 +343,10 @@ test_that("nClass returned from nFunction connects to correct C++ object when in
   expect_equal(user_obj$Ra, 7)
   
   Cnc <- nCompile(nc, nf)
-  # Normal user-facing construction: Ra_init is used, Ca should be default (0)
+  # Normal user-facing construction: Ra_init is used, no expectation for Ca since C++ scalars are not initialized.
   user_obj <- Cnc$nc$new(Ra_init = 7)
   expect_equal(user_obj$Ra, 7)
-  expect_equal(user_obj$Ca, 0)
+  # expect_equal(user_obj$Ca, 0) # This worked on Mac, but failed on linux, and actually it is not guaranteed.
 
   # Object returned from compiled nFunction: must be connected to the C++ object
   # that had Ca set to 42, NOT a freshly default-initialized one.

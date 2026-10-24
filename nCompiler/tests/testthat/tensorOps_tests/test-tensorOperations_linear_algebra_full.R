@@ -1230,7 +1230,7 @@ nf <- nFunction(
     return(result)
   }, returnType = 'numericMatrix'
 )
-expect_error(cnf <- nCompile(nf), "cannot tranpose")
+expect_error(cnf <- nCompile(nf), "cannot transpose")
 expect_identical(nf(3), matrix(3))
 
 
