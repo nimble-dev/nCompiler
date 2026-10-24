@@ -26,6 +26,8 @@ mat2 <- matrix(rnorm(16), 4,4)
 mat3 <- matrix(rnorm(4*100000), 4,100000)
 vec <- rnorm(4)
 
+mat4 <- matrix(rnorm(16), 4,4)
+
 matpd <- crossprod(mat1)
 
 
@@ -1363,6 +1365,159 @@ nf <- nFunction(
   }, returnType = 'numericMatrix')
 cnf <- nCompile(nf)  
 expect_equal(cnf(matpd,mat1,mat2), mat2 + backsolve(chol(matpd+diag(4)), matpd%*%mat1))
+
+})
+
+test_that("systematic testing of compositions of operators", {
+  
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+        result <- nMul(X+Y, Z)
+        return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- (mat1+mat2)%*%mat4
+expect_identical(nf(mat1,mat2,mat4), result)
+expect_equal(cnf(mat1,mat2,mat4), result)
+
+
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+        result <- nMul(nMul(X, Y), Z)
+        return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- (mat1 %*% mat2) %*% mat4
+expect_identical(nf(mat1,mat2,mat4), result)
+expect_equal(cnf(mat1,mat2,mat4), result)
+
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix') {
+        result <- chol(X+Y)
+        return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+matpd2 <- crossprod(mat2)
+result <- chol(matpd + matpd2)
+expect_identical(nf(matpd, matpd2), result)
+expect_equal(cnf(matpd, matpd2), result)
+
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix') {
+        result <- chol(X) %*% Y
+        return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- chol(matpd) %*% mat2
+expect_identical(nf(matpd, mat2), result)
+expect_equal(cnf(matpd, mat2), result)
+
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+      ch <- Cholesky(X+Y)
+      result <- nSolve(ch, Z)
+      return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- solve(Cholesky(matpd+matpd2), mat4)
+expect_identical(nf(matpd, matpd2, mat4), result)
+expect_equal(cnf(matpd, matpd2, mat4), as.matrix(result))
+
+nf <- nFunction(
+    fun = function(X = 'nSparseMatrix', Y = 'nSparseMatrix', Z = 'numericMatrix') {
+      ch <- Cholesky(X+Y)
+      result <- nSolve(ch, Z)
+      return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- solve(Cholesky(spmatGpd+spmatGpd), mat4)
+expect_identical(nf(spmatGpd, spmatGpd, mat4), result)
+expect_equal(cnf(spmatGpd, spmatGpd, mat4), as.matrix(result))
+
+nf <- nFunction(
+    fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+      result <- nSolve(X+Y, X+Z) %*% Z
+      return(result)
+    }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result <- as.matrix(solve(matpd + matpd2, matpd+mat4) %*% mat4)
+expect_identical(nf(matpd, matpd2, mat4), result)
+expect_equal(cnf(matpd, matpd2, mat4), result)
+
+nf <- nFunction(
+  fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+    result <- nBacksolve(t(X), Y) %*% Z
+    return(result)
+  }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+U <- chol(matpd+matpd2)
+truth <- backsolve(U, mat2) %*% mat4
+expect_identical(nf(t(U), mat2, mat4), truth)
+expect_equal(cnf(t(U), mat2, mat4), truth)
+
+nf <- nFunction(
+  fun = function(X = 'numericMatrix', Y = 'numericMatrix') {
+    result <- nBacksolve(Cholesky(X), Y) + Y
+    return(result)
+  }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result1 <- backsolve(chol(matpd), mat3) + mat3
+result3 <- cnf(matpd, mat3)  # Uncompiled comparison is complicated by difference of deviates.
+
+nf <- nFunction(
+  fun = function(Q = 'nSparseMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+    result <- nBacksolve(Cholesky(Q), Y) + Z
+    return(result)
+  }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+result1 <- backsolve(chol(as.matrix(spmatGpd)), mat3)
+result3 <- cnf(spmatGpd, mat3, matrix(0,nrow(mat3),ncol(mat3)))
+expect_equal(cov(t(result1)), cov(t(result3)), tolerance=1e-2)
+
+nf <- nFunction(
+  fun = function(X = 'numericMatrix', Y = 'numericMatrix', Z = 'numericMatrix') {
+    result <- nForwardsolve(t(X), Y) %*% Z
+    return(result)
+  }, returnType = 'numericMatrix')
+cnf <- nCompile(nf)
+
+U <- chol(matpd)
+truth <- forwardsolve(t(U), mat2) %*% mat4
+expect_equal(cnf(U, mat2, mat4), truth)
+
+nf <- nFunction(
+  fun = function(X = 'numericMatrix', Y = 'numericMatrix') {
+    result <- nLogdet(X+Y)
+    return(result)
+  }, returnType = 'numericScalar')
+cnf <- nCompile(nf)
+
+truth <- 2*sum(log(diag(chol(matpd+matpd2))))
+expect_equal(cnf(matpd, matpd2), truth)
+
+
+nf <- nFunction(
+  fun = function(Q = 'nSparseMatrix', P = 'nSparseMatrix') {
+    result <- nLogdet(Q+P)
+    return(result)
+  }, returnType = 'numericScalar')
+cnf <- nCompile(nf)
+
+truth <- 2*sum(log(diag(chol(as.matrix(spmatGpd+spmatGpd)))))
+expect_equal(cnf(spmatGpd, spmatGpd), truth)
+
+# chol + logdet cases
+
 
 })
 
