@@ -554,7 +554,7 @@ test_that("list arguments handled correctly",
 
 test_that("symbolTBD works",
 {
-  nCompiler:::resetLabelFunctionCreators()
+  ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
   )
@@ -563,9 +563,9 @@ test_that("symbolTBD works",
   symTab$addSymbol(sym_nc1)
   nCompiler:::resolveTBDsymbols(symTab)
   expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
-               "std::shared_ptr<nClass_1> nc1obj")
+               paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj"))
 
-  nCompiler:::resetLabelFunctionCreators()
+  ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   nc1 <- nClass(
       Cpublic = list(a = 'numericScalar')
   )
@@ -576,11 +576,11 @@ test_that("symbolTBD works",
   project_env$known_nClasses <- new.env()
   nCompiler:::resolveTBDsymbols(symTab, project_env = project_env)
   expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
-               "std::shared_ptr<nClass_1> nc1obj")
+               paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj"))
 })
 
 test_that("symbolTBD works with a function from a call", {
-  nCompiler:::resetLabelFunctionCreators()
+  ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   myenv <- new.env()
   myenv$nc1 <- nClass(
     Cpublic = list(a = 'numericScalar')
@@ -590,7 +590,7 @@ test_that("symbolTBD works with a function from a call", {
   expect_true(inherits(res, "symbolNC"))
   expect_equal(res$type, myenv$nc1$classname)
 
-  nCompiler:::resetLabelFunctionCreators()
+  ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   myenv <- new.env()
   myenv$nc1 <- nClass(
       Cpublic = list(a = 'numericScalar')

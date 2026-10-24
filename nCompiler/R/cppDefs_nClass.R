@@ -12,11 +12,13 @@ nClassBaseClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
 
   cppDef$Hincludes <- c(cppDef$Hincludes,
@@ -336,6 +338,7 @@ addADclassContent_impl <- function(cppDef) {
     }
     ADconstructorInits <- derivsContent$ADconstructorInits
     if(!is.null(ADconstructorInits)) {
+      # FIXME: The constructor is allowed to have a different name than then class, so the next line is not fully general.
       constructorDef <- cppDef$memberCppDefs[[ cppDef$name ]]
       if(is.null(constructorDef))
         warning("Could not find class constructor for ", cppDef$name, " when setting up AD tape managers.")

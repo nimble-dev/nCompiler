@@ -3,7 +3,7 @@ message("Need to add a test of creating a tensor initialized from a refBlock (St
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
   cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
-  test <- `:::`("nCompiler", "QuietSourceCpp")(cppfile)
+  test <- nCompiler:::QuietSourceCpp(cppfile)
   expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
   expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
   expect_equal(tensorCreation3(1:12), array(1:12, c(2, 3, 2)))
@@ -90,60 +90,65 @@ test_that("data initialization working: nMatrix", {
   expect_equivalent(nc_obj$nf1(), Robj$nf1())
   expect_equivalent(nc_obj$nf2(), Robj$nf2())
   expect_equivalent(nc_obj$nf3(1:14), Robj$nf3(1:14))
+  rm(nc_obj); gc()
 })
 
-cat("A SET OF FAILING tensorCreation TESTS IS COMMENTED OUT.")
-
-## test_that("data initialization working: nArray", {
-##   nc <- nClass(
-##     Cpublic = list(
-##       nf1 = nFunction(
-##         function() {
-##           ans <- nArray()
-##           return(ans)
-##           returnType(numericArray(nDim = 2))
-##         }
-##       ),
-##       nf2 = nFunction(
-##         function() {
-##           ans <- nArray(type = 'logical', dim = c(2, 4, 3)) +
-##             nArray(type = 'double', dim = c(2, 4, 3)) -
-##             exp(nArray(type = 'integer', dim = c(2, 4, 3)))
-##           return(ans)
-##           returnType(numericArray(nDim = 3))
-##         }
-##       ),
-##       nf3 = nFunction(
-##         function(x = integerVector) {
-##           ans <- nArray(type = 'integer', dim = x, nDim = 4)
-##           return(ans)
-##           returnType(integerArray(nDim = 4))
-##         }
-##       ),
-##       nf4 = nFunction(
-##         function(x = integerVector) {
-##           ans <- nArray(type = 'integer', value = x, dim = c(3, 2, 5))
-##           return(ans)
-##           returnType(integerArray(nDim = 3))
-##         }
-##       ),
-##       nf5 = nFunction(
-##         function(x = integerVector, y = integerVector) {
-##           ans <- nArray(type = 'integer', value = x, dim = y, nDim = 4)
-##           return(ans)
-##           returnType(integerArray(nDim = 4))
-##         }
-##       )
-##     )
-##   )
-##   ncc <- nCompile(nc)
-##   nc_obj <- ncc$new()
-##   expect_equivalent(nc_obj$nf1(), nc$public_methods$nf1())
-##   expect_equivalent(nc_obj$nf2(), nc$public_methods$nf2())
-##   expect_equivalent(nc_obj$nf3(1:4), nc$public_methods$nf3(1:4))
-##   expect_equivalent(nc_obj$nf4(1:30), nc$public_methods$nf4(1:30))
-##   expect_equivalent(
-##     nc_obj$nf5(1:168, c(2,4,3,7)),
-##     nc$public_methods$nf5(1:168, c(2,4,3,7))
-##   )
-## })
+test_that("data initialization working: nArray", {
+  nc <- nClass(
+    Cpublic = list(
+      nf1 = nFunction(
+        function() {
+          ans <- nArray()
+          return(ans)
+          returnType(numericArray(nDim = 2))
+        }
+      )
+      ,
+      nf2 = nFunction(
+        function() {
+          ans <- nArray(type = 'logical', dim = c(2, 4, 3)) +
+            nArray(type = 'double', dim = c(2, 4, 3)) -
+            exp(nArray(type = 'integer', dim = c(2, 4, 3)))
+          return(ans)
+          returnType(numericArray(nDim = 3))
+        }
+      )
+      ,
+      nf3 = nFunction(
+        function(x = integerVector) {
+          ans <- nArray(type = 'integer', dim = x, nDim = 4)
+          return(ans)
+          returnType(integerArray(nDim = 4))
+        }
+      )
+      ,
+      nf4 = nFunction(
+        function(x = integerVector()) {
+          ans <- nArray(type = 'integer', value = x, dim = c(3, 2L, 5)) # challenge by mixing scalar types in dim
+          return(ans)
+          returnType(integerArray(nDim = 3))
+        }
+      )
+      ,
+      nf5 = nFunction(
+        function(x = integerVector, y = integerVector) {
+          ans <- nArray(type = 'integer', value = x, dim = y, nDim = 4)
+          return(ans)
+          returnType(integerArray(nDim = 4))
+        }
+      )
+    )
+  )
+  ncc <- nCompile(nc)
+  nc_obj <- ncc$new()
+  Robj <- nc$new()
+  expect_equivalent(nc_obj$nf1(), Robj$nf1())
+  expect_equivalent(nc_obj$nf2(), Robj$nf2())
+  expect_equivalent(nc_obj$nf3(1:4), Robj$nf3(1:4))
+  expect_equivalent(nc_obj$nf4(1:30), Robj$nf4(1:30))
+  expect_equivalent(
+    nc_obj$nf5(1:168, c(2,4,3,7)),
+    Robj$nf5(1:168, c(2,4,3,7))
+  )
+  rm(nc_obj, Robj); gc()
+})

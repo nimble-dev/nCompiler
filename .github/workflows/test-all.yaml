@@ -39,6 +39,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
+      - name: Make apt patient with slow mirrors
+        # r2u installs R packages via apt; r2u.stat.illinois.edu sometimes times out
+        run: |
+          cat > /etc/apt/apt.conf.d/80-patient <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::https::Timeout "60";
+          Acquire::ftp::Timeout "60";
+          EOF
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
@@ -64,6 +73,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
+      - name: Make apt patient with slow mirrors
+        # r2u installs R packages via apt; r2u.stat.illinois.edu sometimes times out
+        run: |
+          cat > /etc/apt/apt.conf.d/80-patient <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::https::Timeout "60";
+          Acquire::ftp::Timeout "60";
+          EOF
       - name: Package Dependencies
         run: R -q -e 'remotes::install_deps("nCompiler", dependencies=TRUE)'
       - name: Install inline
@@ -88,6 +106,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
+      - name: Make apt patient with slow mirrors
+        # r2u installs R packages via apt; r2u.stat.illinois.edu sometimes times out
+        run: |
+          cat > /etc/apt/apt.conf.d/80-patient <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::https::Timeout "60";
+          Acquire::ftp::Timeout "60";
+          EOF
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
@@ -116,6 +143,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
+      - name: Make apt patient with slow mirrors
+        # r2u installs R packages via apt; r2u.stat.illinois.edu sometimes times out
+        run: |
+          cat > /etc/apt/apt.conf.d/80-patient <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::https::Timeout "60";
+          Acquire::ftp::Timeout "60";
+          EOF
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git
@@ -142,6 +178,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: SessionInfo
         run: R -q -e 'sessionInfo()'
+      - name: Make apt patient with slow mirrors
+        # r2u installs R packages via apt; r2u.stat.illinois.edu sometimes times out
+        run: |
+          cat > /etc/apt/apt.conf.d/80-patient <<'EOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::https::Timeout "60";
+          Acquire::ftp::Timeout "60";
+          EOF
       #- name: System Dependencies
       #  # can be used to install e.g. cmake or other build dependencies
       #  run: apt update -qq && apt install --yes --no-install-recommends cmake git

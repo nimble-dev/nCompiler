@@ -151,6 +151,14 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
     makeReturnVector(fillValue, length, recycle)
 }
 
+#' @rdname nCharacter
+#' @export
+nCharacter <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
+    fillValue <- makeFillValue(value, 'character', init)
+    makeReturnVector(fillValue, length, recycle)
+}
+
+
 #' Creates matrix or array objects for use in nFunctions
 #'
 #' In a \code{nFunction}, \code{matrix} and \code{array} are identical to \code{nMatrix} and \code{nArray}, respectively
@@ -177,50 +185,55 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
 #' @author Daniel Turek and Perry de Valpine
 #' @seealso \code{\link{nNumeric}} \code{\link{nInteger}} \code{\link{nLogical}}
 #' @export
-nMatrix <- function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {
-    ## the -1's are used because nCompiler does not allow both missingness and default value
-    ## but R's matrix function relies on both possibilities
-    fillValue <- makeFillValue(value, type, init)
-    mnrow <- missing(nrow) || is.na(nrow)
-    mncol <- missing(ncol) || is.na(ncol)
-    if(mnrow)
-        if(mncol) {
-            base::matrix(fillValue)
-        } else {
-            nrow <- ceiling( length(fillValue) / ncol )
-            fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
-            base::matrix(fillValue, ncol = ncol, nrow = nrow)
-        }
-    else
-        if(mncol) {
-            ncol <- ceiling( length(fillValue) / nrow )
-            fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
-            base::matrix(fillValue, nrow = nrow, ncol = ncol)
-        } else {
-            fillValue <- makeReturnVector(fillValue, ncol*nrow, recycle)
-            base::matrix(fillValue, nrow = nrow, ncol = ncol)
-        }
+nMatrix <- function(value = if(type=="character") "" else 0, nrow = NA, ncol = NA, 
+                    init = TRUE, fillZeros = TRUE, recycle = TRUE, 
+                    type = "double") {
+  ## the -1's are used because nCompiler does not allow both missingness and default value
+  ## but R's matrix function relies on both possibilities
+  fillValue <- makeFillValue(value, type, init)
+  mnrow <- missing(nrow) || is.na(nrow)
+  mncol <- missing(ncol) || is.na(ncol)
+  if(mnrow)
+    if(mncol) {
+      base::matrix(fillValue)
+    } else {
+      nrow <- ceiling( length(fillValue) / ncol )
+      fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
+      base::matrix(fillValue, ncol = ncol, nrow = nrow)
+    }
+  else
+    if(mncol) {
+      ncol <- ceiling( length(fillValue) / nrow )
+      fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
+      base::matrix(fillValue, nrow = nrow, ncol = ncol)
+    } else {
+      fillValue <- makeReturnVector(fillValue, ncol*nrow, recycle)
+      base::matrix(fillValue, nrow = nrow, ncol = ncol)
+    }
 }
 
 
 #' @rdname nMatrix
 #' @export
-nArray <- function(value = 0, dim = c(1, 1), init = TRUE, fillZeros = TRUE, recycle = TRUE, nDim, type = 'double') {
-    if(!missing(nDim)) dim <- dim[1:nDim]
-    fillValue <- makeFillValue(value, type, init)
-    fillValue <- makeReturnVector(fillValue, prod(dim), recycle)
-    if(length(dim) == 1) fillValue
-    else base::array(fillValue, dim)
+nArray <- function(value = if(type=="character") "" else 0, dim = c(1, 1), 
+                   init = TRUE, fillZeros = TRUE, recycle = TRUE,
+                   nDim, type = 'double') {
+  if(!missing(nDim)) dim <- dim[1:nDim]
+  fillValue <- makeFillValue(value, type, init)
+  fillValue <- makeReturnVector(fillValue, prod(dim), recycle)
+  if(length(dim) == 1) fillValue
+  else base::array(fillValue, dim)
 }
 
 makeFillValue <- function(value, type, init) {
-    fillValue <- if(init) value else 0
-    fillValueTyped <- switch(type,
-                             double = as.numeric(fillValue),
-                             integer = as.integer(fillValue),
-                             logical = as.logical(fillValue),
-                             stop('unknown type argument'))
-    return(fillValueTyped)
+  fillValue <- if(init) value else 0
+  fillValueTyped <- switch(type,
+                            double = as.numeric(fillValue),
+                            integer = as.integer(fillValue),
+                            logical = as.logical(fillValue),
+                            character = as.character(fillValue),
+                            stop('unknown type argument')) 
+  return(fillValueTyped)
 }
 
 makeReturnVector <- function(fillValue, length, recycle) {
@@ -246,6 +259,110 @@ makeReturnVector <- function(fillValue, length, recycle) {
             fillValue
         }
     }
+}
+
+#' set the size of a numeric variable in NIMBLE
+#'
+#' set the size of a numeric variable in NIMBLE.  This works in R and NIMBLE, but in R it usually has no effect.
+#'
+#' @param obj    This is the object to be resized
+#' @param ...       sizes, provided as scalars, in order, or as a single vector
+#' @param copy      logical indicating whether values should be preserved (in column-major order)
+#' @param fillZeros logical indicating whether newly allocated space should be initialized with zeros (in compiled code)
+#'  This is provided for backward compatibility with NIMBLE and is superceded by the \code{fill} argument.
+#' @param fill      logical indicating whether newly allocated space should be initialized with zeros (in compiled code). 
+#'  If provided, this over-rides \code{fillZeros}.
+#' @param value     value for initializing new elements, if not copied or extended.
+#' @param numObj. Alternative argument for providing the object to be resized.
+#'   This is provided for backward compatibility with NIMBLE and is superceded by the \code{obj} argument.
+#' 
+#' @author NIMBLE development team
+#' @export
+#' @details
+#' Note that assigning the result of \code{numeric}, \code{integer}, \code{logical}, \code{matrix}, or \code{array} is often as good or better than using \code{setSize}.  For example, `x <- matrix(nrow = 5, ncol = 5)` is equivalent to `setSize(x, 5, 5)` but the former allows more control over initialization.
+#' 
+#' This function is part of the NIMBLE language.  Its purpose is to explicitly resize a multivariate object (vector, matrix or array), currently up to 4 dimensions.  Explicit resizing is not needed when an entire object is assigned to.  For example, in \code{Y <- A \%*\% B}, where A and B are matrices, \code{Y} will be resized automatically.  Explicit resizing is necessary when assignment will be by indexed elements or blocks, if the object is not already an appropriate size for the assignment.  E.g. prior to \code{Y[5:10] <- A \%*\% B}, one can use setSize to ensure that \code{Y} has a size (length) of at least 10.
+#'
+#' This does work in uncompiled (R) and well as compiled execution, but in some cases it is only necessary for compiled execution. During uncompiled execution, it may not catch bugs due to resizing because some R objects will be dynamically resized during assignments anyway.
+#'
+#' If preserving values in the resized object and/or initializing new values with 0 is not necessary, then setting these arguments to FALSE will yield slightly more efficient compiled code.
+#' 
+setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
+                    fill, value, numObj) {
+    thisCall <- as.list(match.call()[-1])
+    if(length(thisCall) < 2) stop("No information provided to setSize")
+    objArgName <- "obj"
+    if(!missing(numObj)) {
+      objArgName <- "numObj"
+      obj <- numObj
+    }
+    if(!missing(fill)) fillZeros <- fill
+    if(!missing(value)) fillZeros <- TRUE
+    newDimsList <- list(...)
+    if(is.numeric(obj) || is.logical(obj) || is.character(obj)) {
+        targetVar <- deparse(thisCall[[objArgName]])
+        if(!exists(targetVar, envir = parent.frame()))
+            stop(paste0("Variable ", targetVar, " does not exist."))
+        targetIsLocal <- exists(targetVar, envir = parent.frame(), inherits = FALSE)
+        oldType <- typeof(obj)
+        oldClass <- class(obj)
+        if(missing(value)) {
+          fillValue <- switch(oldType,
+                              double = 0,
+                              integer = 0L,
+                              logical = FALSE,
+                              character = "",
+                              stop("setSize does not know how to fill objects of class ", 
+                                paste(oldClass, collapse = ", "),
+                                " with type ", oldType, "."))
+        } else {
+          fillValue <- as(value, oldType)
+        }
+        oldDims <- dimOrLength(obj)
+        if(length(oldDims) != length(newDimsList)) {
+            ## newDims could have been provided as a vector
+            if(length(newDimsList) > 1)
+                stop("Number of dimensions provided does not match object to change in setSize")
+            newDims <- newDimsList[[1]]
+        } else {
+            newDims <- unlist(newDimsList)
+        }
+        if(any(is.na(newDims))) warning("Not sure what to do with NA dims in setSize")
+        if(length(newDims) != length(oldDims))
+            if(length(newDims) < length(oldDims))
+                stop("Number of dimensions provided does not match object to change in setSize")
+            else
+                warning("Number of dimensions provided to setSize does not match object to change in setSize.  Sizes will be truncated.")
+        newDims <- newDims[1:length(oldDims)]
+
+        if(length(oldDims) == 1) {
+            if(oldDims[1] < newDims[1]) {
+                newObj <- as(rep(fillValue, newDims[1]), oldType)
+                if(copy) newObj[seq_len(oldDims[1])] <- obj
+            } else {
+                if(copy) newObj <- obj[seq_len(newDims[1])]
+                else newObj <- as(rep(fillValue, newDims[1]), oldType)
+            }
+        } else {
+            newObj <- array(as(fillValue, oldType), newDims)
+            if(copy) {
+                if(length(obj) < length(newObj))
+                    newObj[seq_len(length(obj))] <- obj
+                else
+                    newObj[seq_len(length(newObj))] <- obj[seq_len(length(newObj))]
+            }
+        }
+        assign("_SETSIZE_TEMP_VAL", newObj, parent.frame())
+        if(targetIsLocal)
+            assignCall <- substitute(A <- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+        else
+            assignCall <- substitute(A <<- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+        eval(assignCall, envir = parent.frame())
+        rm("_SETSIZE_TEMP_VAL", envir = parent.frame())
+        # Return the new size(s), like R's `length<-`, allowing chained calls.
+        return(invisible(newDims))
+    }
+  stop(paste0("setSize only works for numeric, integer, logical, or character objects. An object of type ", class(obj)[1], " was provided."))
 }
 
 #' Spectral Decomposition of a Matrix

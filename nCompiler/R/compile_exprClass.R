@@ -114,7 +114,7 @@ exprClass_print <- function(AST,
     }
   }
   ## close brackets
-  if(AST$name=='{')
+  if(isTRUE(AST$name=='{')) # if AST$name is NA, this returns NA, so we must check isTRUE
     writeLines(paste0(indent,'}'))
 }
 
@@ -442,6 +442,16 @@ literalLogicalExpr <- function(value = TRUE) {
   type <- symbolBasic$new(name = 'NONAME',
                           type = 'logical',
                           nDim = 0)
+  exprClass$new(isName = FALSE,
+                isCall = FALSE,
+                isLiteral = TRUE,
+                name = value,
+                type = type)
+}
+
+literalCharacterExpr <- function(value = '') {
+  type <- symbolBasicString$new(name = 'NONAME',
+                                nDim = 0)
   exprClass$new(isName = FALSE,
                 isCall = FALSE,
                 isLiteral = TRUE,

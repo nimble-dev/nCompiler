@@ -31,6 +31,8 @@ NC_InternalsClass <- R6::R6Class(
     virtualMethodNames = character(), # this class's own virtual methods, not including inherited ones; will be used when checking inherited method validity
     #check_inherit_done = FALSE,
     classID = NULL,
+    # nc_class_key identifies the C++ class for nc_cast (see generic_class_interface.h),
+    nc_class_key = NULL,
     #Cpub_class_code = NULL,
     #main_class_code = NULL,
     RpublicNames = character(),
@@ -94,17 +96,9 @@ NC_InternalsClass <- R6::R6Class(
         #self$allFieldNames <- fieldNames
         self$orig_methodName_to_cpp_code_name <- structure(vector("list", length=length(methodNames)),
                                                        names = methodNames)
-        # orig_methodInfo carries the raw, per-own-method ingredients
-        # addGenericInterface_impl (cppDefs_core.R) needs to emit a method(...) line --
-        # owning C++ class, argument names/passing-mode flags, and the destructor/
-        # constructor/callFromR flags -- as plain data, not assembled C++ text and not
-        # yet folded with interfaceInclude/interfaceExclude (that decision needs
-        # self$compileInfo, but is deferred to process_inherit, which computes it in
-        # one place shared with fields). Built here, not in process_inherit, only
-        # because it needs the actual method objects (Cpublic), which process_inherit
-        # doesn't receive -- only initialize does. The actual C++ identifier for a method
-        # (needed for override/virtual-dispatch consistency with the base class) comes
-        # from all_methodName_to_cpp_code_name, not from anything stored here.
+        # orig_methodInfo carries the original ingredients that
+        # addGenericInterface_impl (cppDefs_core.R) needs to emit a method(...) line
+        # Later processed through process_inherit.
         self$orig_methodInfo <- structure(vector("list", length=length(methodNames)),
                                           names = methodNames)
         for(mN in methodNames) {
@@ -153,55 +147,31 @@ NC_InternalsClass <- R6::R6Class(
 
       self$predefined <- predefined
       self$enableSaving <- enableSaving
+      # The tempdir name makes the key unique across R sessions (e.g. for nClasses compiled
+      # into a package in another session) without using R's random number generator.
+      self$nc_class_key <-
+        if(!isFALSE(predefined)) self$cpp_classname
+        else paste0(self$cpp_classname, "_", basename(tempdir()), "_", nClassIDMaker())
     },
-    # connect_inherit = function(inheritInfo, symbolTable, project_env) {
-    #   # These are steps that need to be done after all classes are defined
-    #   # and do not require recursion up the inheritance tree.
-    #   if(!is.null(self$inheritQ)) {
-    #     inherit_obj <- eval(self$inheritQ, envir = self$env) #inheritQ can be an expression but it must always return the same generator object
-    #     if(!isNCgenerator(inherit_obj))
-    #       stop("An inherit argument that was provided to nClass does not evaluate to an nClass generator.")
-    #     # self$inheritNCinternals <- NCinternals(inherit_obj)
-    #     parent_nClass_Info <- register_known_nClass(inherit_obj, project_env)
-    #     symbolTable$setParentST(parent_nClass_Info$symbolTable)
-    #     inheritInfo$inheritNCinternals <- NCinternals(inherit_obj)
-    #     inheritInfo$nClass_inherit <- self$compileInfo$nClass_inherit
-    #     if(!self$inherit_base_provided) {
-    #       #self$compileInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname # don't paste "public" because it will go in interface_resolver<
-    #       inheritInfo$nClass_inherit$base <- self$inheritNCinternals$cpp_classname
-    #     }
-    #   }
-    #   inheritInfo$process_inherit_done <- FALSE
-    #   inheritInfo$check_inherit_done <- FALSE
-    # },
     process_inherit = function(inheritInfo, symbolTable, project_env) {
-      # These are steps that need to be done after connect_inherit
-      # and require recursion up the inheritance tree, using flags.
+      # This method is intended to be the one place where we walk the inheritance
+      # stack (only single inheritance, so not really a "tree") and collect any 
+      # information needed for any later compilation step. This suppports consolidation
+      # of similar logic and simplifies other code (which wouldn't necessarily have
+      # easy access to the inheritance stack).
+      #
       # TO-DO: Error trap in methods of same name but different argument signatures.
       if(isTRUE(inheritInfo$process_inherit_done)) return()
       # allFieldInfo carries everything addGenericInterface_impl (cppDefs_core.R)
-      # needs to emit a field(...) line for each field, flattened across the whole
-      # inheritance chain: which C++ class it belongs to, its cpp-mangled name, its
-      # final generic-interface inclusion decision, and its (symbol-owned, already
-      # C++-ready) interfaceAux text. Building it here -- rather than in
-      # addGenericInterface_impl, which would otherwise have to walk ancestors via
-      # raw/unresolved NCinternals -- means callers get one complete, already-merged,
-      # already-deduplicated (self's own field wins on a name collision, mirroring
-      # allMethodNames/all_methodName_to_cpp_code_name below) map, and
-      # addGenericInterface_impl never needs to know how a field's inclusion was
-      # decided or what kind of aux content a symbol contributes.
+      # needs to emit a field(...) line for each field: which C++ class it belongs to, its cpp-mangled name, its
+      # inclusion in the generic interface, and its interfaceAux text. 
       #
-      # The inclusion decision folds in both the field's own (already TBD-resolved,
-      # via the symbolTable passed in here) interface flag and this class's
-      # interfaceInclude/interfaceExclude override -- previously computed in
-      # addGenericInterface_impl per ancestor level, now computed here per class
-      # since self$compileInfo is exactly the level whose override should govern
-      # its own fields, same as before.
-      # self$compileInfo's interfaceInclude/interfaceExclude governs both fields and
-      # methods identically, so both inclusion decisions below fold in the same
-      # useIM/use_include/interfaceInclude/interfaceExclude.
+      # The interface inclusion decision uses the field's own interface flag and the class's
+      # interfaceInclude/interfaceExclude override.
       interfaceInclude <- self$compileInfo$interfaceInclude
       interfaceExclude <- self$compileInfo$interfaceExclude
+      # useIM (an old name): think of IM like "interface management". If true, we need
+      #.  to merge decisions using interfaceInclude OR interfaceExclude (both are not allowed).
       useIM <- !is.null(interfaceInclude) || !is.null(interfaceExclude)
       if(useIM && !is.null(interfaceInclude) && !is.null(interfaceExclude)) {
         stop("interfaceExclude and interfaceInclude cannot both be non-null.  Something is wrong.")
@@ -276,12 +246,9 @@ NC_InternalsClass <- R6::R6Class(
         # allMethodInfo/allFieldInfo are the opposite precedence from
         # all_methodName_to_cpp_code_name above: self's own record wins on a name
         # collision (ownerClassName/argNames/refArgs/blockRefArgs/cppName/interfaceAux
-        # come from wherever the name is most-derived), matching the old per-level walk
-        # in addGenericInterface_impl, which started at the derived class and skipped a
-        # name only once already output -- i.e. the derived declaration's own info was
-        # captured first. Only all_methodName_to_cpp_code_name is intentionally
+        # come from wherever the name is most-derived). Only all_methodName_to_cpp_code_name is intentionally
         # base-wins, since virtual dispatch requires the override to share the base's
-        # C++ identifier; that's unrelated to which class's info populates these maps.
+        # C++ identifier.
         inheritInfo$allMethodInfo <- c(self_methodInfo_all,
                                        parent_nClass_Info$inheritInfo$allMethodInfo[
                                          setdiff(names(parent_nClass_Info$inheritInfo$allMethodInfo), self$methodNames)])

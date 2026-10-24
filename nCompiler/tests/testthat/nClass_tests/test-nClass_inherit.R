@@ -731,8 +731,8 @@ test_that("manual access to derived interfaced members works", {
   comp <- nCompile(ncBase, ncDer, foo, foo2)
   obj <- comp$ncDer$new()
   obj$x <- 1:3
-  comp$foo(obj)
-  comp$foo2(obj)
+  expect_equal(comp$foo(obj), 1:3)
+  expect_equal(comp$foo2(obj), 1:3)
   rm(obj); gc()
 })
 

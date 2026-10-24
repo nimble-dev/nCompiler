@@ -53,6 +53,31 @@ inSimpleTransformationsEnv <- function(expr) {
   eval(expr, envir = simpleTransformationsEnv)
 }
 
+inSimpleTransformationsEnv(
+  RateScaleDist <-
+    function(code, symTab, auxEnv, info) {
+      rate_missing <- isTRUE("rate" %in% code$aux$provided_as_missing)
+      scale_missing <- isTRUE("scale" %in% code$aux$provided_as_missing)
+      if(!rate_missing && !scale_missing) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'Distribution must have either rate or scale argument, not both.'
+        ), call. = FALSE)
+      }
+      # If neither is provided, both are 1, so use whichever parameterization
+      # avoids an inversion on the C++ side (given in info$default).
+      if(rate_missing && scale_missing)
+        rate_missing <- !identical(info$default, "rate")
+      if(!rate_missing) {
+        code$name <- paste0(code$name, "_rate")
+        removeArg(code, "scale", allow_missing = TRUE)
+      } else {
+        code$name <- paste0(code$name, "_scale")
+        removeArg(code, "rate", allow_missing = TRUE)
+      }
+    }
+)
+
 ## for min(V), no change.  for min(v1, v2), change to pairmin(v1, v2)
 inSimpleTransformationsEnv(
   minMax <-
@@ -163,5 +188,61 @@ inSimpleTransformationsEnv(
       evaled_arg <- eval(code$aux$compileArgs[[argname]], envir = auxEnv$where)
       code$aux$compileArgs[[argname]] <- evaled_arg
     }
+  }
+)
+
+inSimpleTransformationsEnv(
+  SetSize <- function(code, symTab, auxEnv, handlingInfo) {
+    iDotsArgs <- which(names(code$args) == "")
+    if(length(iDotsArgs) == 0) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        'setSize is missing size argument(s), which should be provided in "...".'
+      ), call. = FALSE)
+    }
+    if(length(iDotsArgs) == 1) {
+      names(code$args)[iDotsArgs] <- "size"
+    }
+    else if(length(iDotsArgs) > 1) {
+      newExpr <- nParse(quote(nC()))
+      for(i in seq_along(iDotsArgs)) {
+        insertArg(newExpr, ID = i, value = code$args[[iDotsArgs[i]]])
+      }
+      setArg(code, ID = iDotsArgs[1], value = newExpr)
+      names(code$args)[iDotsArgs[1]] <- "size"
+      for(i in length(iDotsArgs):2) {
+        removeArg(code, ID = iDotsArgs[i])
+      }
+    }
+    # fill over-rides fillZeros (which is for backward compatibility)
+    # if fill is missing, replace it will fillZeros (which has a default).
+    if(isTRUE("fill" %in% code$aux$provided_as_missing)) {
+      setArg(code, "fill", code$args$fillZeros, add = TRUE)
+    }
+    removeArg(code, "fillZeros", allow_missing = TRUE)
+    # obj over-rides numObj (which is for backward compatibility)
+    # if obj is missing, replace it will numObj.
+    if(isTRUE("obj" %in% code$aux$provided_as_missing)) {
+      if(isTRUE("numObj" %in% code$aux$provided_as_missing)) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'setSize is missing required obj argument'
+        ), call. = FALSE)
+      }
+      setArg(code, "obj", code$args$numObj, add = TRUE)
+    }
+    removeArg(code, "numObj", allow_missing = TRUE)
+    # presence of value sets fill to TRUE.
+    if(!isTRUE("value" %in% code$aux$provided_as_missing)) {
+      code$args$fill <- literalLogicalExpr(TRUE)
+    }
+    # If this final processed order is ever changed,
+    # it needs to be changed in the LengthAssign handler
+    # for labelAbstractTypes too.
+    exprClass_put_args_in_order(
+      function(obj, size, copy, fill, value) {},
+      code,
+      insertDefaults = FALSE
+    )
   }
 )

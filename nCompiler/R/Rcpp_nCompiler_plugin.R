@@ -45,7 +45,8 @@ make_nCompiler_plugin <- function(nCompiler_pluginEnv) {
                                  else
                                    "")
     result$env$PKG_CXXFLAGS <- "-std=c++17"
-    result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
+    result$env$PKG_LIBS <- paste(get_nCompLocal_PKG_LIBS_entry(),
+                                "$(LAPACK_LIBS) $(BLAS_LIBS)")
     if(isTRUE(nCompiler_pluginEnv$uses_TBB))
       result$env <- setEnvTBB(result$env)
     ## Makevars doesn't work for sourceCpp plugins
@@ -73,7 +74,8 @@ make_nCompiler_Eigen_plugin <- function(nCompiler_pluginEnv) {
                                      else
                                        "")
     result$env$PKG_CXXFLAGS <- "-std=c++17"
-    result$env$PKG_LIBS <- get_nCompLocal_PKG_LIBS_entry()
+    result$env$PKG_LIBS <- paste(get_nCompLocal_PKG_LIBS_entry(),
+                                "$(LAPACK_LIBS) $(BLAS_LIBS)")
     if(isTRUE(get_nOption('compilerOptions')$throwEigenErrors)) {
       # replace include directives to enable Eigen errors
       #preamble = system.file(file.path('include', 'nCompiler',

@@ -159,6 +159,13 @@ nTypeList <- function(..., .list = NULL, .where = parent.frame()) {
 #' @export
 nTypeBasic <- function(scalarType, nDim, isRef = FALSE, isBlockRef = FALSE,
                   interface = TRUE, ...) {
+  if(scalarType == "character") {
+    symbolBasicString$new(nDim = nDim,
+                          isRef = isRef,
+                          isBlockRef = isBlockRef,
+                          interface = interface,
+                          ...)
+  } else
   symbolBasic$new(type = scalarType,
                   nDim = nDim,
                   isRef = isRef,
@@ -258,6 +265,23 @@ typeDeclarationEnv <- list2env(list(
                      ...) {
     nTypeBasic("AD", nDim, ...)
   },
+  # character types
+  characterScalar = function(value, ...) {
+    nTypeBasic("character", 0, ...)
+  },
+  characterVector = function(length = NA,
+                              ...) {
+    nTypeBasic("character", 1, size = length,...)
+  },
+  characterMatrix = function(value,
+                              ...) {
+    nTypeBasic("character", 2, ...)
+  },
+  characterArray = function(value,
+                            nDim = 1,
+                            ...) {
+    nTypeBasic("character", nDim, ...)
+  },
   ## versions with type as a declared argument
   nScalar = function(...,
                      type = "double") {
@@ -276,9 +300,20 @@ typeDeclarationEnv <- list2env(list(
   },
   nArray = function(value,
                     dim,
+                    nDim,
                     ...,
                     type = "double") {
-    nTypeBasic(type, length(dim), ...)
+    if(missing(nDim)) {
+      if(missing(dim))
+        stop("nArray must have either dim or nDim specified.")
+      nDim <- length(dim)
+    } else {
+      if(!missing(dim)) {
+        if(length(dim) != nDim)
+          stop("nArray has both dim and nDim specified, but they are inconsistent.")
+      }
+    }
+    nTypeBasic(type, nDim, ...)
   },
   ## vector versions with type embedded in keyword
   nInteger = function(length = NA,
@@ -308,6 +343,10 @@ typeDeclarationEnv <- list2env(list(
   },
   void = function(...) {
     symbolVoid$new(...)
+  },
+  character = function(nDim = 0,
+                       ...) {
+    symbolBasicString$new(nDim = nDim, ...)
   },
   string = function(...) {
     symbolBasicString$new(nDim = 0, ...)

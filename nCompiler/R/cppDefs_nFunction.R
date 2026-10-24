@@ -9,16 +9,21 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
                         "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
   ## handler nCppVec in labelAbstractTypes does record in auxEnv if an
   ## explicit call to nCppVec() was uses. That is the beginning of a smarter
   ## system for determining what #include (via #define) components are
   ## really needed. But I punted on further extension for now and
   ## simply tacked NCPPVEC onto the universal set of includes for now.
+  ## NCOMPILER_USES_MVDISTS (multivariate distributions, e.g. dmnorm_chol)
+  ## is likewise just tacked on universally for now; a future pass could
+  ## set it only when generated code actually calls one.
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
                           "#define NCOMPILER_USES_NCPPVEC",
+                          "#define NCOMPILER_USES_MVDISTS",
                           "#define USES_NCOMPILER")
   cppDef$Hincludes <- c(cppDef$Hincludes)#,
   ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
@@ -93,13 +98,13 @@ cpp_nFunctionClass <- R6::R6Class(
       super$getExternalDefs()
     },
     getHincludes = function() {
-      c(self$Hincludes,
+      c(super$getHincludes(),
         if(!is.null(self$SEXPwrapper))
           self$SEXPwrapper$getHincludes()
       )
     },
     getCPPincludes = function() {
-      c(self$CPPincludes,
+      c(super$getCPPincludes(),
         unlist(
           lapply(
             self$CPPincludes,
@@ -116,7 +121,7 @@ cpp_nFunctionClass <- R6::R6Class(
       )
     },
     getCPPusings = function() {
-      unique(c(self$CPPusings,
+      unique(c(super$getCPPusings(),
                if(!is.null(self$SEXPwrapper))
                  self$SEXPwrapper$getCPPusings()
                )

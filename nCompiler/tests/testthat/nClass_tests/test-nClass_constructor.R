@@ -334,6 +334,14 @@ test_that("nClass returned from nFunction connects to correct C++ object when in
     returnType = 'nc'
   )
 
+  # check uncompiled
+  user_obj <- nc$new(Ra_init = 7)
+  expect_equal(user_obj$Ra, 7)
+  
+  # former bug:
+  user_obj <- nc$new(Ra_init = 7, junk = 0) # extra arg for ... previously threw an error
+  expect_equal(user_obj$Ra, 7)
+  
   Cnc <- nCompile(nc, nf)
   # Normal user-facing construction: Ra_init is used, Ca should be default (0)
   user_obj <- Cnc$nc$new(Ra_init = 7)

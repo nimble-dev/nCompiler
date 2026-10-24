@@ -93,11 +93,15 @@ compile_eigenize <- function(code,
     #   handlingInfo <- opInfo[["eigenImpl"]]
     if(!is.null(handlingInfo)) {
       beforeHandler <- handlingInfo[['beforeHandler']]
+
       if(!is.null(beforeHandler)) {
-        if(is.function(beforeHandler))
+        debug_handlers <- isTRUE(get_nOption('compilerOptions')$debug_eigenImpl)
+        if(is.function(beforeHandler)) {
+          if(debug_handlers) debugonce(beforeHandler)
           setupExprs <- c(setupExprs,
                           beforeHandler(code, symTab, auxEnv, workEnv, handlingInfo))
-        else
+        } else {
+          if(debug_handlers) debugonce(get(beforeHandler, envir = eigenizeEnv, inherit = FALSE))
           setupExprs <- c(setupExprs,
                           eval(call(beforeHandler,
                                     code,
@@ -106,14 +110,14 @@ compile_eigenize <- function(code,
                                     workEnv,
                                     handlingInfo),
                               envir = eigenizeEnv))
-        # return(if(length(setupExprs) == 0) NULL else setupExprs)
+        }
       }
     }
     # }
 
     iArgs <- seq_along(code$args)
     useArgs <- eigenizeUseArgs[[code$name]]
-    if(!is.null(useArgs)) iArgs <- iArgs[-which(!useArgs)] ## this allows iArgs to be longer than useArgs.  if equal length, iArgs[useArgs] would work 
+    if(!is.null(useArgs)) iArgs <- iArgs[-which(!useArgs)] ## this allows iArgs to be longer than useArgs.  if equal length, iArgs[useArgs] would work
 
     for(i in iArgs) {
       if(inherits(code$args[[i]], 'exprClass')) {
@@ -126,12 +130,15 @@ compile_eigenize <- function(code,
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["eigenImpl"]]
     if(!is.null(handlingInfo)) {
-      handler <- handlingInfo[['handler']]       
+      handler <- handlingInfo[['handler']]
       if(!is.null(handler)) {
-        if(is.function(handler))
+        debug_handlers <- isTRUE(get_nOption('compilerOptions')$debug_eigenImpl)
+        if(is.function(handler)) {
+          if(debug_handlers) debugonce(handler)
           setupExprs <- c(setupExprs,
                           handler(code, symTab, auxEnv, workEnv, handlingInfo))
-        else
+        } else {
+          if(debug_handlers) debugonce(get(handler, envir = eigenizeEnv, inherit = FALSE))
           setupExprs <- c(setupExprs,
                           eval(call(handler,
                                     code,
@@ -140,6 +147,7 @@ compile_eigenize <- function(code,
                                     workEnv,
                                     handlingInfo),
                               envir = eigenizeEnv))
+        }
       }
     }
     # }
@@ -152,6 +160,7 @@ inEigenizeEnv(
   # to match type of foo(a, b).  promoting means casting from logical -> integer -> double.
   promoteTypes <- function(code, which_args = seq_along(code$args)) {
     resultType <- code$type$type
+    if(resultType == "character") return(NULL)
     for(i in which_args) {
       if(inherits(code$args[[i]], 'exprClass')) {
         if(code$args[[i]]$type$type != resultType) {
@@ -204,7 +213,7 @@ inEigenizeEnv(
       if(a2type == 'logical') {argID <- 1; newType <- 'logical'}
       if(a1type == 'logical') {argID <- 2; newType <- 'logical'}
     }
-    if(argID != 0) 
+    if(argID != 0)
       eigenCast(code, argID, newType) # becomes static_cast<>() for scalars at generateCpp stage
     invisible(NULL)
   }
@@ -317,6 +326,28 @@ inEigenizeEnv(
 ## )
 
 inEigenizeEnv(
+  DEBUG_START <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    message('Entering into eigen implementation debugging. Do debug(nCompiler:::compile_eigenize) if you want to follow every step.\n',
+    'If execution ends with error, you may need to reset debugging by set_nOption("compilerOptions", FALSE, "debug_eigenImpl")\n',
+    'Use browser() commands to proceed (e.g. "c <enter>" to continue).\n',
+    'If you continue, you will land in a browser() inside any handlers.')
+    browser()
+    set_nOption('debug_eigenImpl', TRUE, 'compilerOptions')
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
+  DEBUG_END <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    removeExprClassLayer(code, 1)
+    set_nOption('debug_eigenImpl', FALSE, 'compilerOptions')
+    invisible(NULL)
+  }
+)
+
+# length<- for vectors is now done by setSize.
+# but this is still used for nLists
+inEigenizeEnv(
   LengthAssign <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # length(x) <- value becomes .method(x, "setLength", value)
     scalarCast(code, 2, 'integer')
@@ -343,7 +374,7 @@ inEigenizeEnv(
     ##
     ## We have a template nEval_ needed when the LHS is the entire object.
     ## See note in C++ code for nEval_.
-    #if(LHS$name != "[") 
+    #if(LHS$name != "[")
     workEnv$need_nEval <- TRUE
     ##    if(!isTRUE(LHSvarInfo[[2]])) workEnv$need_nEval <- TRUE
     invisible(NULL)
@@ -403,7 +434,7 @@ inEigenizeEnv(
       methodName <- code$name
       if(!is.null(handlingInfo$methodName))
         methodName <- handlingInfo$methodName
-      if(isTRUE(ptr) || isTRUE(handlingInfo$ptr)) code$name <- '->method' 
+      if(isTRUE(ptr) || isTRUE(handlingInfo$ptr)) code$name <- '->method'
       else code$name <- '.method'
       if(length(code$args) > 1) {
         for(i in length(code$args):2) {
@@ -442,7 +473,7 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   scalarTypeToCppType <- function(typeString) {
-    if (!typeString %in% c('double', 'integer', 'logical'))
+    if (!typeString %in% c('double', 'integer', 'logical', 'character'))
       stop(
         paste0("Don't know the correct C++ fundamental type keyword for ",
                typeString, "."), call. = FALSE
@@ -451,7 +482,8 @@ inEigenizeEnv(
       typeString,
       double = 'double',
       integer = 'int',
-      logical = 'bool'
+      logical = 'bool',
+      character = 'std::string'
     )
   }
 )
@@ -491,10 +523,10 @@ inEigenizeEnv(
 inEigenizeEnv(
   cWiseUnary_external <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     ## replace the operator name with the equivalent C++ method name if needed
-    replaceCodeName(code, handlingInfo)    
+    replaceCodeName(code, handlingInfo)
     ## All other steps are only needed for non-scalars
     if(code$args[[1]]$type$nDim == 0) return(invisible(NULL))
-    
+
     promoteTypes(code)
     ## Get C++ type strings, e.g. int for integer
     inputType <- scalarTypeToCppType(code$args[[1]]$type$type)
@@ -514,16 +546,16 @@ inEigenizeEnv(
     lambdaContent$args[[1]]$type <- code$args[[1]]$type$clone(deep=TRUE)
     lambdaContent$args[[1]]$type$nDim <- 0
     lambdaContent$type <- lambdaContent$args[[1]]$type
-    
+
     returnExpr <- nParse(quote(return(dummy)))
     setArg(returnExpr, 1, lambdaContent)
-    
+
     lambdaDecl <- nParse(as.name(paste0('[](', inputType, ' x__)->', returnType)))
     newExpr <- nParse(quote(LambdaFun_(decl, def)))
     setArg(newExpr, 1, lambdaDecl)
     setArg(newExpr, 2, returnExpr)
-    
-    ## Convert foo(x) to x.foo(), i.e. .method(x, foo) 
+
+    ## Convert foo(x) to x.foo(), i.e. .method(x, foo)
     maybe_convertToMethod(code, handlingInfo)
     code$args[[2]]$name <- 'unaryExpr'
     setArg(code, 3, newExpr)
@@ -739,7 +771,7 @@ inEigenizeEnv(
       lambdaContent$args[[1]]$type <- code$args[[1]]$type$clone(deep=TRUE)
       lambdaContent$args[[1]]$type$nDim <- 0
       lambdaContent$type <- lambdaContent$args[[1]]$type
-      
+
       eigenCast(lambdaContent, 2, input2RawType)
 
       returnExpr <- nParse(quote(return(dummy)))
@@ -846,7 +878,10 @@ inEigenizeEnv(
       stop(exprClassProcessingErrorMsg(
         code, 'In PromoteAllButLastArg: expected at least one arg, but code has none.'
       ), call. = FALSE)
-    promoteTypes(code, 1:(length(code$args) - 1))
+    # handlingInfo$nFinalScalarArgs allows more than one final arg to be left alone
+    nFinal <- handlingInfo$nFinalScalarArgs
+    if(is.null(nFinal)) nFinal <- 1
+    promoteTypes(code, 1:(length(code$args) - nFinal))
     invisible(NULL)
   }
 )
@@ -1010,7 +1045,7 @@ nCompiler:::inEigenizeEnv(
     # drop <- code$args$drop$name
     if(!is.logical(drop))
       warning("Problem determining whether to drop dimensions.")
-    
+
     if(isTRUE(nOptions("nimble") || isTRUE(nOptions("dropSingleSizes")))) {
       ## Here we imitate nimble's blockIndexInfo to determine
       ## scalar indices from ":" or c() (or possibly other?) cases
@@ -1121,10 +1156,17 @@ nCompiler:::inEigenizeEnv(
 )
 
 inEigenizeEnv(
+  nC <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    promoteTypes(code)
+    invisible(NULL)
+  }
+)
+
+inEigenizeEnv(
   TensorCreation <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     code_args <- code$args
     code$args <- NULL
-    value_provided <- 'value' %in% names(code_args)
+    value_provided <- !('value' %in% code$aux$provided_as_missing)
     if (value_provided)
       setArg(code, 1, code_args[['value']])
     else {
@@ -1132,12 +1174,13 @@ inEigenizeEnv(
         code$type$type,
         double = literalDoubleExpr(0),
         integer = literalIntegerExpr(0),
-        logical = literalLogicalExpr(FALSE)
+        logical = literalLogicalExpr(FALSE),
+        character = literalCharacterExpr('')
       )
       setArg(code, 1, value_expr)
     }
-    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical')) {
-      if ('length' %in% names(code_args))
+    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical', 'nCharacter')) {
+      if (!('length' %in% code$aux$provided_as_missing))
         setArg(code, 2, code_args[['length']])
       else {
         if (value_provided && code_args[['value']]$type$nDim != 0)
@@ -1151,8 +1194,8 @@ inEigenizeEnv(
         setArg(code, 2, literalIntegerExpr(0))
       }
     } else if (code$name == 'nMatrix') {
-      nrow_provided <- 'nrow' %in% names(code_args)
-      ncol_provided <- 'ncol' %in% names(code_args)
+      nrow_provided <- !('nrow' %in% code$aux$provided_as_missing)
+      ncol_provided <- !('ncol' %in% code$aux$provided_as_missing)
       ## TODO: calcMissingMatrixSize
       if ((nrow_provided || ncol_provided) &&
             !(nrow_provided && ncol_provided))
@@ -1180,17 +1223,20 @@ inEigenizeEnv(
         setArg(code, 3, code_args[['ncol']])
       }
     } else if (code$name == 'nArray') {
-      if ('dim' %in% names(code_args)) {
+      if (!('dim' %in% code$aux$provided_as_missing)) {
         if (code_args[['dim']]$name == 'nC') {
           ## TODO: this won't be needed when 'nC' is implemented
           nC_arg <- code_args[['dim']]
           promoteTypes(nC_arg)
-          for (i in seq_along(nC_arg$args)) {
-            setArg(code, i + 1, nC_arg$args[[i]])
-          }
+          # for (i in seq_along(nC_arg$args)) {
+          #   setArg(code, i + 1, nC_arg$args[[i]])
+          # }
+          setArg(code, 2, nC_arg)
         } else {
           setArg(code, 2, code_args[['dim']])
         }
+        if(inherits(code$args[[2]], "exprClass"))
+          eigenCast(code, 2, "integer")
       } else {
         if (value_provided && code_args[['value']]$type$nDim != 0)
           stop(
@@ -1367,7 +1413,7 @@ inEigenizeEnv(
     }
     if(length(code$args) == 1) {
       if(inherits(code$args[[1]]$type, 'symbolSparse')) {
-        # argument is already a sparse type, so no work needs to be done; remove 
+        # argument is already a sparse type, so no work needs to be done; remove
         # code expression from AST as we prepare to gnerate C++ code to compile
         removeExprClassLayer(code)
       }
@@ -1385,7 +1431,7 @@ inEigenizeEnv(
     }
     if(length(code$args) == 1) {
       if(!inherits(code$args[[1]]$type, 'symbolSparse')) {
-        # argument is already a dense type, so no work needs to be done; remove 
+        # argument is already a dense type, so no work needs to be done; remove
         # code expression from AST as we prepare to gnerate C++ code to compile
         removeExprClassLayer(code)
       }
@@ -1395,7 +1441,7 @@ inEigenizeEnv(
 )
 
 inEigenizeEnv(
-  
+
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # handle "diag(x)" when x is a matrix and goal is to set or extract diagonal
     if(length(code$args) == 1) {
@@ -1414,50 +1460,50 @@ inEigenizeEnv(
         if(!DiagAsAssign) {
           # StaticCast wraps the original argument, will get c++ type from
           # it's type member during code generation
-          e <- wrapExprClassOperator(code = code, funName = 'StaticCast', 
-                                     isName = FALSE, isCall = TRUE, 
+          e <- wrapExprClassOperator(code = code, funName = 'StaticCast',
+                                     isName = FALSE, isCall = TRUE,
                                      isAssign = FALSE, type = code$type)
         }
-        
+
         return(invisible(NULL)) # no further action necessary for eigenization
       }
     }
-    
+
     #
     # handle "diag()" when used to create dense matrices
     #
-    
+
     # goal: specify all arguments for c++ implementation of the diagonal matrix
     # creation operator "nDiag(x, nrow, ncol)"
-    
+
     # define complete set of function arguments in canonical order
     canonicalArgs <- c('x', 'nrow', 'ncol')
-    
+
     # extract existing argument names
     argNames <- names(code$args)
-    
+
     # check if input is a condition that is not supported by base::diag()
     if(identical(argNames, 'ncol')) {
       stop(exprClassProcessingErrorMsg(
         code, 'Use of nDiag is not supported when ncol is the only argument'
       ))
     }
-    
+
     # make sure all arguments make sense
     if(!all(argNames %in% canonicalArgs)) {
       badArgs <- argNames[!(argNames %in% canonicalArgs)]
       stop(exprClassProcessingErrorMsg(
-        code, 
+        code,
         paste('Unexpected arguments to nDiag:', paste(badArgs, collapse = ', '))
       ))
     }
-    
+
     # handle "nDiag(x)"
     if(identical(argNames, 'x')) {
-      
+
       # extract argument
       xArg <- code$args[[1]]
-      
+
       # scalar input yields identity matrix with dimensions provided by "x"
       if(xArg$type$nDim == 0) {
         removeArg(expr = code, ID = 1)
@@ -1466,7 +1512,7 @@ inEigenizeEnv(
         insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'nrow')
         insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'ncol')
         argNames <- names(code$args)
-      } 
+      }
       # vector input yields arbitrary diagonal matrix
       else if(xArg$type$nDim == 1) {
         nrowValue <- nParse(paste0('cppLiteral("MakeSquareDiag__{}")'))
@@ -1474,33 +1520,33 @@ inEigenizeEnv(
         insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
         insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')
         argNames <- names(code$args)
-      } 
+      }
       else {
         stop(exprClassProcessingErrorMsg(
           code,
           'The argument x in nDiag(x) must be a scalar or vector'
         ))
       }
-      
+
     } # handle "nDiag(x)"
-    
+
     # fill in default arguments if needed: processing order is important!
     if(length(argNames) < 3) {
-      
+
       # default diagonal value is 1 if x is missing
       if(!('x' %in% argNames)) {
         diagValue <- literalDoubleExpr(1.0)
         insertArg(expr = code, ID = 1, value = diagValue, name = 'x')
         argNames <- names(code$args)
       }
-      
+
       # create square matrix for "nDiag(x, nrow)"
       if(!('ncol' %in% argNames)) {
         nrowArg <- code$args[[which(argNames == 'nrow')]]
         insertArg(expr = code, ID = 1, value = nrowArg$clone(), name = 'ncol')
         argNames <- names(code$args)
       }
-      
+
       # create 1-row matrix for "nDiag(x, ncol)"
       if(!('nrow' %in% argNames)) {
         rowValue <- literalIntegerExpr(1) #exprClass$new(isLiteral = TRUE, isName = FALSE,
@@ -1508,20 +1554,25 @@ inEigenizeEnv(
         insertArg(expr = code, ID = 1, value = rowValue, name = 'nrow')
         argNames <- names(code$args)
       }
-      
+
     } # default arguments
-    
+
     # permute arguments so they appear in canonical order for C++ calls
     o = as.numeric(factor(x = argNames, levels = canonicalArgs))
     reorderArgs(expr = code, perm = o)
-    
+
     # recursively eigenize function arguments, for example, to properly eigenize
     # automatically generated "length(x)" default arguments
-    for(i in 1:3) {
-      compile_eigenize(code = code$args[[i]], symTab = symTab, auxEnv = auxEnv,
-                       workEnv = workEnv)
-    }
-    
+    ##
+    ## This caused a problem in a case like diag(dim(x)[1])
+    ## The dim(x)[1] was already eigenized, resulting in code with a static_cast<long>(1)
+    ## This then errored if we tried to re-eigenize it.
+    ##
+    ## for(i in 1:3) {
+    ##   compile_eigenize(code = code$args[[i]], symTab = symTab, auxEnv = auxEnv,
+    ##                    workEnv = workEnv)
+    ## }
+
     invisible(NULL)
   }
 )

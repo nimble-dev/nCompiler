@@ -85,7 +85,7 @@ nListBase_nClass <- NLdevel %||% nClass(
       returnType = 'nCpp("std::shared_ptr<genericInterfaceBaseC>")',
       compileInfo = list(
         C_fun = function(i='integerScalar') {
-          cppLiteral('Rcpp::stop("nListBase_nClass::get_interface_ptr_at should be called.")')
+          cppLiteral('Rcpp::stop("nListBase_nClass::get_interface_ptr_at should not be called (only derived class method should be called).")')
           cppLiteral("return(nullptr)")
         },
       virtual=TRUE)
@@ -95,10 +95,10 @@ nListBase_nClass <- NLdevel %||% nClass(
       function(i) {
         stop("Uncompiled base class access_at should not be called.")
       },
-      returnType = 'nCpp("std::unique_ptr<ETaccessorBase>")',
+      returnType = "ETaccessor()",
       compileInfo = list(
         C_fun = function(i='integerScalar') {
-          cppLiteral('Rcpp::stop("nListBase_nClass::access_at should be called.")')
+          cppLiteral('Rcpp::stop("nListBase_nClass::access_at should not be called (only derived class method should be called).")')
           cppLiteral("return(nullptr)")
         },
       virtual=TRUE)
@@ -114,6 +114,8 @@ nListBase_nClass <- NLdevel %||% nClass(
                    exportName = "nListBase_nClass_new",
                    packageNames = c(uncompiled="nListBase_nClass", compiled="nListBase_nClass_C"),
                    interfaceExclude = c("get_interface_ptr_at", "access_at"),
+                   # FIXME: Add custom opDef support on access_at to insert the -1 to the indexing.
+                   # But this requires opDefs to be found for obj$method() cases.
                    overloadDefs = list(
                     length = list(
                       labelAbstractTypes = list(handler = nList_length_labelAbsTypes),
@@ -449,9 +451,12 @@ length.nList <- function(x) {
 #' @exportS3Method
 #' @method `[<-` nList
 `[<-.nList` <- function(x, inds, value) {
-  if(inherits(value, "nList"))  x$singleBracket_set_nList(inds, value)
-  else if(is.list(value))        x$singleBracket_set(inds, value)
-  else                           x$singleBracket_set_single(inds, value)
+  if(inherits(value, "nList"))  {
+    if(value$isCompiled())  x$singleBracket_set_nList(inds, value)
+    else x$singleBracket_set(inds, as.list(value))
+  } else
+   if(is.list(value))        x$singleBracket_set(inds, value)
+   else                           x$singleBracket_set_single(inds, value)
   x
 }
 

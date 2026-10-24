@@ -5,6 +5,17 @@
 #include <memory>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+// There are three modes of conversion between R and C++ types via Rcpp.
+// 1. Rcpp::as< T >(x) converts SEXP x to type T. This is done via an Exporter class in Rcpp::Traits
+// 2. Rcpp::wrap(x) converts C++ type x to SEXP. This is done via a wrap function in Rcpp.
+// 3. Rcpp::traits::input_parameter< T >::type(x) is used to convert SEXP x to a type that has a conversion operator to type T.
+//.   This allows the converting type (e.g. nCompiler_Eigen_SEXP_converter below) to hold intermediates or be clever,
+//.     and that is how we allow ref args and blockRef args to take action upon destruction to set a variable in R.
+//.   This is used in two cases:
+//.   1. When Rcpp handles a function annotated with "// [[Rcpp::export]]", it uses this method.
+//.   2. We use this method in the set_value pathway of the generic interface.
+//.   Thus scheme is somewhat duplicative of as<>, but we support both.
+
 // The following Exporter implements Rcpp::as< Eigen::Tensor<T, nDim> >
 namespace Rcpp {
   namespace traits {
@@ -31,6 +42,9 @@ namespace Rcpp {
 
   template <int nDim>
   SEXP wrap( const Eigen::Tensor<bool, nDim> &x );
+
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<std::string, nDim> &x );
 } // end namespace Rcpp
 
 template< typename Scalar, int nInd >

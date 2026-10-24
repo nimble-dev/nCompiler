@@ -52,6 +52,14 @@ using namespace Rcpp;
 #include <nCompiler/ET_Rcpp_ext/ET_Rcpp_ext_post_Rcpp.h>
 #endif
 
+// dists (e.g. dmnorm_chol and its Eigen::Tensor wrapper) are template-only,
+// so an unused one costs nothing beyond being parsed. NCOMPILER_USES_MVDISTS
+// is unconditionally defined in cppDefs_nFunction.R/cppDefs_nClass.R for
+// now; a future pass can set it only when generated code actually needs it.
+#ifdef NCOMPILER_USES_MVDISTS
+#include <nCompiler/dists/dists_post_Rcpp.h>
+#endif
+
 
 #ifdef NCOMPILER_USES_TBB
 #include <nCompiler/parallel/nCompiler_TBB.h>

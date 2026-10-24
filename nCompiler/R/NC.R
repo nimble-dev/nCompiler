@@ -99,7 +99,13 @@ nClass <- function(classname,
   #    C/C++ function for a new object. Defaults to paste0("new_", classname)
   # interface ("full"): "full", "generic" or "none". First two: build interface. Fine-grained control possible in future.
   # interfaceInclude(NULL): character vector of which members (variables and methods) to include. Default to all
-  # depends (list()): Values for Cpp::depends.
+  # depends (list()): Package names for Rcpp::depends, to use another package's
+  #   inst/include. Also added to LinkingTo when writing a package.
+  # Hincludes, CPPincludes : character vectors of #include targets, with
+  #   their delimiters, e.g. "<pkg/file.h>" or '"file.h"'.
+  # HpostCode, CPPpostCode : character vectors of verbatim code placed after
+  #   the main code of the .h or .cpp file (e.g. an #include that must come after
+  #   a class declaration). Unlike preambles, these are not combined across files.
   # inherit: list of C++ class inheritances (all public inheritance).
   #   If one is named "base", it will replace the inheritance from
   #   an inherit base nClass. Multiple inheritance among nClasses
@@ -346,7 +352,7 @@ make_nClass_code <- function(internals,
                 list(isCompiled = function() FALSE)),
       private = list(
         Cpublic_obj = NULL,
-        init_Cpublic_obj_code = quote(.Cpub_class$new(...)),
+        init_Cpublic_obj_code = quote(if(isCompiled()).Cpub_class$new(...) else .Cpub_class$new()),
         initialize_Cpublic_obj = function(...) {
           private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
         }
