@@ -441,7 +441,7 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      return(singularValues)
 #'  })
 nSvd <- function(x, vectors = 'full') {
-  if(inherits(r, 'dCHMsimpl'))
+  if(inherits(x, 'dCHMsimpl'))
     stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
   p <- ncol(x)
