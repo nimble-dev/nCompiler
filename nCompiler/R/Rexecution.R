@@ -378,7 +378,7 @@ setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
 #' @export
 #'
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
-  if(inherits(r, 'dCHMsimpl'))
+  if(inherits(x, 'dCHMsimpl'))
     stop("`nEigen` not implemented for sparse Cholesky factor input")      
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
