@@ -1539,13 +1539,16 @@ assignOperatorDef(
 assignOperatorDef(
   c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
-    ## TODO: figure out matchDef given different arg names (issue #233).
     labelAbstractTypes = list(
       handler = 'Solve',
       argTypeInd = 2
     )
   )
 )
+
+updateOperatorDef('nForwardsolve', 'matchDef', val = function(l, x){})
+updateOperatorDef('nBacksolve', 'matchDef', val = function(r, x){})
+updateOperatorDef('nSolve', 'matchDef', val = function(a, b){})
 
 assignOperatorDef(
   c('t'),

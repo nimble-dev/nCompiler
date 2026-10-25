@@ -1414,7 +1414,7 @@ inEigenizeEnv(
     if(length(code$args) == 1) {
       if(inherits(code$args[[1]]$type, 'symbolSparse')) {
         # argument is already a sparse type, so no work needs to be done; remove
-        # code expression from AST as we prepare to gnerate C++ code to compile
+        # code expression from AST as we prepare to generate C++ code to compile
         removeExprClassLayer(code)
       }
     }

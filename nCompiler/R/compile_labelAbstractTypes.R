@@ -226,6 +226,7 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   type_is <- function(code, symTab, auxEnv, handlingInfo) {
+    # update to evalCompileArg()
     type <- eval(code$aux$compileArgs$type, envir = auxEnv$where)
     sym <- type2symbol(type)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
@@ -733,6 +734,7 @@ inLabelAbstractTypesEnv(
     else if (code$name %in% c('nMatrix', 'nArray')) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       if ('type' %in% names(code$aux$compileArgs)) {
+        # update to evalComileArg()
         thisType <- eval(code$aux$compileArgs[['type']], envir = auxEnv$where)
         if(thisType == 'character')
           code$type <- symbolBasicString$new()
@@ -785,6 +787,7 @@ inLabelAbstractTypesEnv(
             }
           }
           if (nDim_provided) {
+            # update to evalCompileArg()
             nDim <- eval(code$aux$compileArgs[['nDim']], envir = auxEnv$where)
             if (!is.numeric(nDim))
               stop(
@@ -1892,6 +1895,12 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  evalCompileArg <- function(argName, code, auxEnv) {
+    eval(code$aux$compileArgs[[argName]], envir = auxEnv$where)
+  }
+)
+
+inLabelAbstractTypesEnv(
   asSparse <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
@@ -1920,8 +1929,9 @@ inLabelAbstractTypesEnv(
         'unable to determine sparse type for input'
       ), call. = FALSE)
     }
-    if(!code$args[['prune']]$Rexpr) # Arg is exprClass, not FALSE.
-      removeArg(code, 'prune')      # Overloaded C++ function has only one arg.
+    if(isTRUE("prune" %in% code$aux$provided_as_missing)) {
+      removeArg(code, "prune")
+    }
     invisible(NULL)
   }
 )
