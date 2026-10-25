@@ -528,7 +528,8 @@ test_that("various uses of nEigen", {
   cnf <- nCompile(nf) 
 
   evec <- eigen(xsymm + xsymm)$vectors
-  expect_equal(cnf(cnf(xsymm, xsymm)), evec)
+  result <- cnf(xsymm, xsymm)
+  expect_equal(result[,order(result[1,])], evec[,order(evec[1,])])
 
     
     ## Passing full decomp back to R and checking run-time use of valuesOnly.
@@ -713,4 +714,17 @@ test_that("various uses of nSvd", {
     cout$u[,2:3] <- -cout$u[,2:3]
     expect_equal(result$u, cout$u)
 
+  nf <- nFunction(
+    fun = function(X = "numericMatrix", Y = "numericMatrix") {
+      result <- nSvd(X+Y)$u 
+      return(result)
+    }, returnType = "numericMatrix"
+  )
+  cnf <- nCompile(nf) 
+
+  u <- svd(xsymm + xsymm)$u
+  result <- cnf(xsymm, xsymm)
+  result[,1:2] <- -result[,1:2]  
+  expect_equal(result, u)
+    
 })
