@@ -519,6 +519,18 @@ test_that("various uses of nEigen", {
     expect_identical(result, out)
     expect_equal(result, cout)
 
+  nf <- nFunction(
+    fun = function(X = "numericMatrix", Y = "numericMatrix") {
+      result <- nEigen(X+Y)$vectors 
+      return(result)
+    }, returnType = "numericMatrix"
+  )
+  cnf <- nCompile(nf) 
+
+  evec <- eigen(xsymm + xsymm)$vectors
+  expect_equal(cnf(cnf(xsymm, xsymm)), evec)
+
+    
     ## Passing full decomp back to R and checking run-time use of valuesOnly.
     eig = nFunction(
         fun = function(x = 'numericMatrix', valsOnly = 'logicalScalar') {
