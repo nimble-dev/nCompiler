@@ -102,13 +102,40 @@ nListBase_nClass <- NLdevel %||% nClass(
           cppLiteral("return(nullptr)")
         },
       virtual=TRUE)
+    ),
+    get_nDim = nFunction(
+      name = "get_nDim",
+      function() {
+        stop("Uncompiled base class get_nDim should not be called.")
+      },
+      returnType = "integerScalar()",
+      compileInfo = list(
+        C_fun = function() {
+          cppLiteral('Rcpp::stop("nListBase_nClass::get_nDim should not be called (only derived class method should be called).")')
+          cppLiteral("return(NA_INTEGER)")
+        },
+      virtual=TRUE)
+    ),
+    get_elementType = nFunction(
+      name = "get_elementType",
+      function() {
+        stop("Uncompiled base class get_elementType should not be called.")
+      },
+      returnType = "characterScalar()",
+      compileInfo = list(
+        C_fun = function() {
+          cppLiteral('Rcpp::stop("nListBase_nClass::get_elementType should not be called (only derived class method should be called).")')
+          cppLiteral('return("UNKNOWN")')
+        },
+      virtual=TRUE)
     )
   ),
   # See comment above about needing to ensure a virtual destructor
   predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |> file.path("nListBase_nC")),
   compileInfo=list(interface="full",
                    createFromR = FALSE,
-                   # Hincludes = paste0("<", file.path("nCompiler", "predef", "nList_", "nList_.h"),  ">"),
+                   # nList_.h defines the nList_<Element> layer, which needs the complete nListBase_nClass declaration.
+                   HpostCode = "#include <nCompiler/predef/nList_/nList_.h>",
                    #needed_units = list("nListBase_nClass"),
                    cpp_classname = "nListBase_nClass",
                    exportName = "nListBase_nClass_new",
@@ -128,10 +155,24 @@ nListBase_nClass <- NLdevel %||% nClass(
                    )
   )
 )
-# Manually add
-# #include <nCompiler/predef/nList_/nList_.h>
-# to the nListBase_nClass header file after the class declaration.
 rm(NLdevel)
+
+# Element nDim and type for an nList generator, from the resolved symbol of its element type.
+# This is used by the uncompiled get_nDim and get_elementType methods.
+# The compiled methods use the C++ Element type (see nList_::get_nDim_ and get_elementType_),
+# and the two should give the same results.
+nList_element_info <- function(NCgen) {
+  sym <- NCinternals(NCgen)$symbolTable$getSymbol("x")
+  sym <- resolveOneTBDsymbol(sym)
+  if(inherits(sym, "symbolScalarOrTensor")) {
+    elementType <- if(sym$type %in% c("double", "integer", "logical", "character")) sym$type else "UNKNOWN"
+    list(nDim = as.integer(sym$nDim), elementType = elementType)
+  } else if(inherits(sym, "symbolNC")) {
+    list(nDim = NA_integer_, elementType = "nClass")
+  } else {
+    list(nDim = NA_integer_, elementType = "UNKNOWN")
+  }
+}
 
 #' @export
 nList_nClass <- function(type, env = parent.frame()) {
@@ -176,6 +217,24 @@ nList_nClass <- function(type, env = parent.frame()) {
       compileInfo=list(
         C_fun = function()
         {cppLiteral('return getLength_()')}
+      )),
+    get_nDim = nFunction(
+      name = "get_nDim",
+      function() {
+        nList_element_info(myclass)$nDim},
+      returnType = 'integerScalar',
+      compileInfo=list(
+        C_fun = function()
+        {cppLiteral('return get_nDim_()')}
+      )),
+    get_elementType = nFunction(
+      name = "get_elementType",
+      function() {
+        nList_element_info(myclass)$elementType},
+      returnType = 'characterScalar',
+      compileInfo=list(
+        C_fun = function()
+        {cppLiteral('return get_elementType_()')}
       )),
     as_list = nFunction(
       name = "as_list",

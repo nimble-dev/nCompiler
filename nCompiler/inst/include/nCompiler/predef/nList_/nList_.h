@@ -8,6 +8,16 @@ inline std::shared_ptr<nListBase_nClass> interface_ptr_2_nList_ptr(std::shared_p
   return ans;
 }
 
+// R type name for a scalar type, used by nList_::get_elementType_.
+template<typename Scalar>
+std::string nList_scalar_type_name() {
+  if constexpr(std::is_same_v<Scalar, double>) return "double";
+  else if constexpr(std::is_same_v<Scalar, int>) return "integer";
+  else if constexpr(std::is_same_v<Scalar, bool>) return "logical";
+  else if constexpr(std::is_same_v<Scalar, std::string>) return "character";
+  else return "UNKNOWN";
+}
+
 // nList_<Element> is a hand-coded intermediate layer between the predefined nListBase_nClass
 // and a generated nList class. It is never the target of a cast from genericInterfaceBaseC,
 // so it needs no nc_class_key (see nc_shared_ptr_cast in generic_class_interface.h).
@@ -48,6 +58,36 @@ public:
     } else {
       Rcpp::stop("nList_::access: Element type is not an Eigen::Tensor or scalar type and has no ETaccessor.");
       return nullptr;
+    }
+  }
+  // Element nDim and type are determined by Element, not by the contents,
+  // so they are available for an empty nList.
+  // nDim is 0 for a true scalar, the number of dimensions for an Eigen::Tensor,
+  // and NA_INTEGER for anything else (e.g. nClass elements).
+  int get_nDim_() const {
+    if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+      return static_cast<int>(Element::NumIndices);
+    } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return 0;
+    } else {
+      return NA_INTEGER;
+    }
+  }
+  // elementType is "double", "integer", "logical" or "character" for scalar or Eigen::Tensor elements,
+  // "nClass" for nClass elements (including nLists), and "UNKNOWN" for anything else.
+  std::string get_elementType_() const {
+    if constexpr(is_shared_ptr<Element>::value) {
+      if constexpr(std::is_base_of_v<genericInterfaceBaseC, typename Element::element_type>) {
+        return "nClass";
+      } else {
+        return "UNKNOWN";
+      }
+    } else if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+      return nList_scalar_type_name<typename Element::Scalar>();
+    } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return nList_scalar_type_name<Element>();
+    } else {
+      return "UNKNOWN";
     }
   }
 

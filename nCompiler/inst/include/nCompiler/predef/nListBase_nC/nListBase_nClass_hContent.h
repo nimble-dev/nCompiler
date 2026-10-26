@@ -16,6 +16,8 @@ public:
    virtual  int  getLength (  )  ;
    virtual  std::shared_ptr<genericInterfaceBaseC>  get_interface_ptr_at ( int i )  ;
    virtual  std::unique_ptr<ETaccessorBase>  access_at ( int i )  ;
+   virtual  int  get_nDim (  )  ;
+   virtual  std::string  get_elementType (  )  ;
       nListBase_nClass (  )  ;
 
 };
@@ -24,6 +26,6 @@ public:
 
     Rcpp::Environment  get_CnClass_env_nListBase_nClass (  )  ;
 
-#include <nCompiler/predef/nList_/nList_.h>
 
+#include <nCompiler/predef/nList_/nList_.h>
 #endif

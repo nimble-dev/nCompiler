@@ -29,8 +29,10 @@ struct trueScalar {};
 struct eigenOp {};
 struct eigenTensor {};
 
-// type_category<SomeType>::type will be either trueScalar (for double, int or bool),
+// type_category<SomeType>::type will be either trueScalar (for double, long, int, bool,
+// std::string, and CppAD::AD<double> in tensorFlex_CppAD.h),
 // eigenTensor (for Eigen::Tensor< > ), or eigenOp (default for anything else).
+// Uses of trueScalar that cast must not cast to or from std::string (see flex_string_cast_v).
   template<typename T>
   struct type_category {
     typedef eigenOp type; // default
@@ -57,11 +59,24 @@ struct eigenTensor {};
   struct type_category<bool> {
     typedef trueScalar type;
   };
-  
+  template<>
+  struct type_category<std::string> {
+    typedef trueScalar type;
+  };
+
 // This was added much later than initial development of this file,
 // so it is has not been propagated into use.
 template <typename T>
 using type_category_t = typename type_category<T>::type;
+
+#define FLEX_STRING_TYPE_ERROR "flex_: a character (std::string) object can only be assigned from a character value. No casting is done to or from character."
+
+// True if a cast between scalar types A and B would have std::string on only one side.
+// Character objects are never cast to or from other scalar types.
+template<typename A, typename B>
+constexpr bool flex_string_cast_v =
+  std::is_same<typename std::remove_cv<A>::type, std::string>::value !=
+  std::is_same<typename std::remove_cv<B>::type, std::string>::value;
 
 // checkDimsAllOne returns true if all dimensions are 1s, false otherwise
 template<int Ndim>
@@ -265,6 +280,11 @@ struct is_zeroDim<bool> {
   typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
   // but nevertheless we need this template to evaluate correctly.
 };
+template<>
+struct is_zeroDim<std::string> {
+  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
+  // but nevertheless we need this template to evaluate correctly.
+};
 
 // smartAssignFixedSize functions handle cases where the sizes
 // of the LHS can't change.  It is tag dispatched on whether
@@ -322,7 +342,10 @@ public:
 };
 
 template<typename ScalarType, typename XprType>
-ScalarType do_scalar_cast(const XprType &x, trueScalar) {return static_cast<ScalarType>(x);}
+ScalarType do_scalar_cast(const XprType &x, trueScalar) {
+  static_assert(!flex_string_cast_v<ScalarType, XprType>, FLEX_STRING_TYPE_ERROR);
+  return static_cast<ScalarType>(x);
+}
 
 template<typename ScalarType, typename XprType>
 ScalarType do_scalar_cast(const XprType &x, eigenTensor) {return static_cast<ScalarType>(x());}
@@ -348,6 +371,7 @@ struct scalar_cast_ {
 template<typename TargetType, typename XprType, bool eval>
 TargetType do_flex_cast(const XprType &x, trueScalar) {
   // Rcpp::Rcout << "Debug flex_cast: casting trueScalar to " << typeid(TargetType).name() << std::endl;
+  static_assert(!flex_string_cast_v<TargetType, XprType>, FLEX_STRING_TYPE_ERROR);
   return static_cast<TargetType>(x);
 }
 
@@ -539,7 +563,7 @@ constexpr bool flex_has_string_scalar_v =
   std::is_same<typename std::remove_const<typename Eigen::internal::traits<XprType>::Scalar>::type,
                std::string>::value;
 
-#define FLEX_STRING_TYPE_ERROR "flex_: a character (std::string) object can only be assigned from a character value. No casting is done to or from character."
+// FLEX_STRING_TYPE_ERROR is defined near type_category above.
 
 // Non-character true scalar (e.g. double). std::string itself and string literals
 // are assigned directly in flex__<std::string> and never reach here.
