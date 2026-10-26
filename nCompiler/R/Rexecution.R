@@ -440,7 +440,7 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      returnType(double(1))
 #'      return(singularValues)
 #'  })
-nSvd <- function(x, vectors = 'full') {
+nSvd <- function(x, vectors = 'thin') {
   if(inherits(x, 'dCHMsimpl'))
     stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
