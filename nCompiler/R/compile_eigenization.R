@@ -1443,9 +1443,12 @@ inEigenizeEnv(
 inEigenizeEnv(
 
   Diag <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    # extract existing argument names
+    argNames <- names(code$args)
+      
     # handle "diag(x)" when x is a matrix and goal is to set or extract diagonal
-    if(length(code$args) == 1) {
-      if(code$args[[1]]$type$nDim == 2) {
+    if('x' %in% argNames) {
+      if(code$args[['x']]$type$nDim == 2) {
         # default assumption is that "diag" is being used to extract diagonal
         DiagAsAssign <- FALSE
         # "diag" is being used as assignment if nDiag is LHS of "<-" caller
@@ -1476,25 +1479,10 @@ inEigenizeEnv(
     # goal: specify all arguments for c++ implementation of the diagonal matrix
     # creation operator "nDiag(x, nrow, ncol)"
 
-    # define complete set of function arguments in canonical order
-    canonicalArgs <- c('x', 'nrow', 'ncol')
-
-    # extract existing argument names
-    argNames <- names(code$args)
-
     # check if input is a condition that is not supported by base::diag()
-    if(identical(argNames, 'ncol')) {
+    if('x' %in% code$aux$provided_as_missing && 'nrow' %in% code$aux$provided_as_missing) {
       stop(exprClassProcessingErrorMsg(
         code, 'Use of nDiag is not supported when ncol is the only argument'
-      ))
-    }
-
-    # make sure all arguments make sense
-    if(!all(argNames %in% canonicalArgs)) {
-      badArgs <- argNames[!(argNames %in% canonicalArgs)]
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('Unexpected arguments to nDiag:', paste(badArgs, collapse = ', '))
       ))
     }
 
@@ -1502,23 +1490,23 @@ inEigenizeEnv(
     if(identical(argNames, 'x')) {
 
       # extract argument
-      xArg <- code$args[[1]]
+      xArg <- code$args[['x']]
 
       # scalar input yields identity matrix with dimensions provided by "x"
       if(xArg$type$nDim == 0) {
         removeArg(expr = code, ID = 1)
         diagValue <- literalDoubleExpr(1.0)
         insertArg(expr = code, ID = 1, value = diagValue, name = 'x')
-        insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'nrow')
-        insertArg(expr = code, ID = 1, value = xArg$clone(), name = 'ncol')
+        insertArg(expr = code, ID = 2, value = xArg$clone(), name = 'nrow')
+        insertArg(expr = code, ID = 3, value = xArg$clone(), name = 'ncol')
         argNames <- names(code$args)
       }
       # vector input yields arbitrary diagonal matrix
       else if(xArg$type$nDim == 1) {
         nrowValue <- nParse(paste0('cppLiteral("MakeSquareDiag__{}")'))
         ncolValue <- nParse(paste0('cppLiteral("MakeSquareDiag__{}")'))
-        insertArg(expr = code, ID = 1, value = nrowValue, name = 'nrow')
-        insertArg(expr = code, ID = 1, value = ncolValue, name = 'ncol')
+        insertArg(expr = code, ID = 2, value = nrowValue, name = 'nrow')
+        insertArg(expr = code, ID = 3, value = ncolValue, name = 'ncol')
         argNames <- names(code$args)
       }
       else {
@@ -1533,33 +1521,21 @@ inEigenizeEnv(
     # fill in default arguments if needed: processing order is important!
     if(length(argNames) < 3) {
 
-      # default diagonal value is 1 if x is missing
-      if(!('x' %in% argNames)) {
-        diagValue <- literalDoubleExpr(1.0)
-        insertArg(expr = code, ID = 1, value = diagValue, name = 'x')
-        argNames <- names(code$args)
-      }
-
       # create square matrix for "nDiag(x, nrow)"
-      if(!('ncol' %in% argNames)) {
-        nrowArg <- code$args[[which(argNames == 'nrow')]]
-        insertArg(expr = code, ID = 1, value = nrowArg$clone(), name = 'ncol')
+      if(!'ncol' %in% argNames) {
+        insertArg(expr = code, ID = 3, value = code$args[['nrow']]$clone(), name = 'ncol')
         argNames <- names(code$args)
       }
 
       # create 1-row matrix for "nDiag(x, ncol)"
-      if(!('nrow' %in% argNames)) {
+      if(!'nrow' %in% argNames) {
         rowValue <- literalIntegerExpr(1) #exprClass$new(isLiteral = TRUE, isName = FALSE,
 #                                  isCall = FALSE, isAssign = FALSE, name = 1)
-        insertArg(expr = code, ID = 1, value = rowValue, name = 'nrow')
+        insertArg(expr = code, ID = 2, value = rowValue, name = 'nrow')
         argNames <- names(code$args)
       }
 
     } # default arguments
-
-    # permute arguments so they appear in canonical order for C++ calls
-    o = as.numeric(factor(x = argNames, levels = canonicalArgs))
-    reorderArgs(expr = code, perm = o)
 
     # recursively eigenize function arguments, for example, to properly eigenize
     # automatically generated "length(x)" default arguments

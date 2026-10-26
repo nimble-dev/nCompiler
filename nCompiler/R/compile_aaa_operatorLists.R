@@ -1526,7 +1526,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nDiag', 'nDiagonal'),
   list(
-    matchDef = function(x, nrow, ncol) {},
+    matchDef = function(x=1, nrow, ncol) {},
     labelAbstractTypes = list(
       handler = 'Diag'
     ),

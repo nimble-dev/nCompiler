@@ -477,7 +477,7 @@ nSvd <- function(x, vectors = 'full') {
 #'
 #' @export
 #'
-nDiag <- function(x, ...) {
+nDiag <- function(x=1, ...) {
   if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
     stop("`nDiag` not implemented for Cholesky factor input")
   if(inherits(x, 'dgCMatrix'))

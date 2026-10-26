@@ -2097,7 +2097,7 @@ inLabelAbstractTypesEnv(
     # recurse arguments
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
-    if(code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    if('x' %in% names(code$args) && code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
       stop(exprClassProcessingErrorMsg(
         code,
         'Diagonal of a `Cholesky` factor is not supported'
@@ -2106,7 +2106,7 @@ inLabelAbstractTypesEnv(
       
       
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
-    if(length(code$args) == 1) {
+    if(length(code$args) == 1 && 'x' %in% names(code$args)) {
       if(code$args[['x']]$type$nDim == 2) {
         returnType <- code$args[['x']]$type$type
         if(isTRUE(returnType == "character"))
