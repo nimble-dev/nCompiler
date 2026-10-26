@@ -37,6 +37,16 @@ RESET_EIGEN_ERRORS
 Rcpp::stop("nListBase_nClass::access_at should not be called (only derived class method should be called).");
 return(nullptr);
 }
+    int  nListBase_nClass::get_nDim (  )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_nDim should not be called (only derived class method should be called).");
+return(NA_INTEGER);
+}
+    std::string  nListBase_nClass::get_elementType (  )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_elementType should not be called (only derived class method should be called).");
+return("UNKNOWN");
+}
       nListBase_nClass::nListBase_nClass (  )  {
 RESET_EIGEN_ERRORS
 }
@@ -59,7 +69,9 @@ NCOMPILER_FIELDS(),
 NCOMPILER_METHODS(
 method("ping", &nListBase_nClass::ping, args({{}})),
 method("setLength", &nListBase_nClass::setLength, args({{arg("length",copy)}})),
-method("getLength", &nListBase_nClass::getLength, args({{}}))
+method("getLength", &nListBase_nClass::getLength, args({{}})),
+method("get_nDim", &nListBase_nClass::get_nDim, args({{}})),
+method("get_elementType", &nListBase_nClass::get_elementType, args({{}}))
 )
 )
 #endif

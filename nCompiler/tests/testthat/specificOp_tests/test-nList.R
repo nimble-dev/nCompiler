@@ -1196,6 +1196,89 @@ test_that("nList compiled: set_all_values from uncompiled nList", {
   rm(src, obj); gc()
 })
 
+test_that("nList compiled: set_all_values copies character scalars from a separately compiled nList", {
+  # Two compilations give two DLLs, so this uses the cross-DLL copy (copy_from_nList).
+  NLchr <- nList("characterScalar")
+  cNLchr1 <- nCompile(NLchr)
+  cNLchr2 <- nCompile(NLchr)
+  src <- cNLchr1$new()
+  src$set_all_values(list("a", "bc"))
+  obj <- cNLchr2$new()
+  obj$set_all_values(src)
+  expect_equal(as.list(obj), list("a", "bc"))
+  rm(src, obj); gc()
+})
+
+# ---------------------------------------------------------------------------
+# get_nDim and get_elementType — element information from the element type
+# ---------------------------------------------------------------------------
+
+test_that("nList get_nDim and get_elementType work uncompiled, compiled, and via base class", {
+  elemInfo_nc <- nClass(
+    classname = "elemInfo_nc_",
+    Cpublic = list(x = 'numericScalar')
+  )
+  inner <- nList("numericVector") # must differ from the other nList types to be a distinct unit
+  NL_num0 <- nList("numericScalar")
+  NL_int1 <- nList("integerVector")
+  NL_lgl2 <- nList("logicalMatrix")
+  NL_chr0 <- nList("characterScalar")
+  NL_chr1 <- nList("characterVector")
+  NL_nc <- nList(elemInfo_nc())
+  NL_nl <- nList(inner())
+  expected <- list(
+    NL_num0 = list(0L, "double"),
+    NL_int1 = list(1L, "integer"),
+    NL_lgl2 = list(2L, "logical"),
+    NL_chr0 = list(0L, "character"),
+    NL_chr1 = list(1L, "character"),
+    NL_nc = list(NA_integer_, "nClass"),
+    NL_nl = list(NA_integer_, "nClass")
+  )
+  # Holder to call the methods through a base class pointer.
+  elemInfo_holder <- nClass(
+    Cpublic = list(
+      nl = "nListBase_nClass()",
+      nDim = nFunction(
+        function() {
+          return(nl$get_nDim())
+          returnType("integerScalar")
+        }
+      ),
+      elementType = nFunction(
+        function() {
+          return(nl$get_elementType())
+          returnType("characterScalar")
+        }
+      )
+    )
+  )
+  # nList units must be named to be returned under these names rather than their classIDs.
+  comp <- nCompile(NL_num0 = NL_num0, NL_int1 = NL_int1, NL_lgl2 = NL_lgl2, NL_chr0 = NL_chr0,
+                   NL_chr1 = NL_chr1, NL_nc = NL_nc, NL_nl = NL_nl,
+                   elemInfo_nc, inner, elemInfo_holder)
+  holder <- comp$elemInfo_holder$new()
+  for(nm in names(expected)) {
+    # Uncompiled. Results do not depend on contents, so the nLists are empty.
+    obj <- get(nm)$new()
+    expect_identical(obj$get_nDim(), expected[[nm]][[1]], info = nm)
+    expect_identical(obj$get_elementType(), expected[[nm]][[2]], info = nm)
+    # Compiled
+    Cobj <- comp[[nm]]$new()
+    expect_identical(Cobj$get_nDim(), expected[[nm]][[1]], info = nm)
+    expect_identical(Cobj$get_elementType(), expected[[nm]][[2]], info = nm)
+    # Compiled, called through a base class pointer
+    holder$nl <- Cobj
+    expect_identical(holder$nDim(), expected[[nm]][[1]], info = nm)
+    expect_identical(holder$elementType(), expected[[nm]][[2]], info = nm)
+  }
+  # An element type that is neither basic nor nClass gives UNKNOWN (uncompiled only).
+  obj <- nList("RcppList")$new()
+  expect_identical(obj$get_nDim(), NA_integer_)
+  expect_identical(obj$get_elementType(), "UNKNOWN")
+  rm(obj, Cobj, holder); gc()
+})
+
 test_that("nList ETaccess at C++ level works", {
   nc_inner <- nClass(
     Cpublic = list(x = "numericScalar")
