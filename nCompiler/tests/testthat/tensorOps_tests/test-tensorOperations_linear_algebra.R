@@ -724,7 +724,7 @@ test_that("various uses of nSvd", {
 
   u <- svd(x + x)$u
   result <- cnf(x, x)
-  result[,c(1,3)] <- -result[,c(1,3)]
+  result[,c(2,3)] <- -result[,c(2,3)]
   expect_equal(result, u)
     
 })
