@@ -440,7 +440,7 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      returnType(double(1))
 #'      return(singularValues)
 #'  })
-nSvd <- function(x, vectors = 'full') {
+nSvd <- function(x, vectors = 'thin') {
   if(inherits(x, 'dCHMsimpl'))
     stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
@@ -477,7 +477,7 @@ nSvd <- function(x, vectors = 'full') {
 #'
 #' @export
 #'
-nDiag <- function(x, ...) {
+nDiag <- function(x=1, ...) {
   if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
     stop("`nDiag` not implemented for Cholesky factor input")
   if(inherits(x, 'dgCMatrix'))
@@ -561,19 +561,18 @@ sparseCholFactor <- function(x) {
 #'
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but
-#'   can be used in a nFunction and compiled using \code{nCompile}.
-#'
 #' @param x a square matrix or a sparse Cholesky factor
+#' 
 #'
 #' @export
 #'
 nLogdet <- function(x) {
   if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
-    result <- Matrix::determinant(x, log = TRUE)$modulus
+    result <- Matrix::determinant(x, log = TRUE,
+                                  sqrt = FALSE)$modulus
+    if(!inherits(x, 'dgCMatrix'))
+      result <- result/2
     attributes(result) <- NULL
-    if(inherits(x, 'Cholesky'))
-      result <- result/2  # Otherwise is determinant of original matrix.
     return(result)
   }
   ldet <- determinant(x, logarithm = TRUE)

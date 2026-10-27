@@ -1654,6 +1654,13 @@ template<typename _MatrixType> class nColPivHouseholderQR
 
 };
 
+// Suggested by Claude to make sure that `nLogdet(Q+P)` does not invoke
+// non-sparse nLogdet.
+template<typename T>
+struct IsSparseXpr
+  : std::is_base_of<Eigen::SparseMatrixBase<typename std::decay<T>::type>,
+                    typename std::decay<T>::type> {};
+
 /**
  * Log-determinant of a square, matrix-like object, i.e., a rank 2 Eigen::Tensor 
  * object or Tensor expression.
@@ -1664,7 +1671,7 @@ template<
     typename Xpr,
     typename Scalar = typename Xpr::Scalar,
     typename std::enable_if<
-        HasNumDimensionsN<Xpr, 2>() && !IsSparseMatrix<Xpr>::value,
+        HasNumDimensionsN<Xpr, 2>() && !IsSparseXpr<Xpr>::value,
         Xpr
     >::type* = nullptr
 >
@@ -1686,6 +1693,8 @@ Scalar nLogdet(const Xpr & x) {
     return qrdecomp.logDeterminant();
 }
 
+// This is not invoked if do `nLogdet(Q+P)`.
+/*
 inline double nLogdet(const Eigen::SparseMatrix<double>& x) { 
   Eigen::SimplicialLLT<Eigen::SparseMatrix<double>> llt;
   llt.compute(x);
@@ -1694,7 +1703,18 @@ inline double nLogdet(const Eigen::SparseMatrix<double>& x) {
   Eigen::SparseMatrix<double> L = llt.matrixL();
   return 2*L.diagonal().array().log().sum();
 }
+*/
 
+// Suggested by Claude.
+template<typename Derived>
+typename Derived::Scalar nLogdet(const Eigen::SparseMatrixBase<Derived>& x) {
+  typedef typename Derived::Scalar Scalar;
+  Eigen::SparseMatrix<Scalar> xe = x;   // Forces evaluation for x provided as expression.
+  Eigen::SimplicialLLT<Eigen::SparseMatrix<Scalar>> llt(xe);
+  if (llt.info() != Eigen::Success)
+    throw std::runtime_error("sparse Cholesky factorization failed");
+  return 2 * llt.matrixL().nestedExpression().diagonal().array().log().sum();
+}
 
 // This is drafted but not yet used.
 template<typename Scalar >

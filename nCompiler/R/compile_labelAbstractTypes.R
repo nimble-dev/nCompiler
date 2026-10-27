@@ -226,6 +226,7 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   type_is <- function(code, symTab, auxEnv, handlingInfo) {
+    # update to evalCompileArg()
     type <- eval(code$aux$compileArgs$type, envir = auxEnv$where)
     sym <- type2symbol(type)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
@@ -651,8 +652,8 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   Cholesky <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    if(code$args[[1]]$type$nDim != 2)
+    argType <- code$args[['A']]$type
+    if(code$args[['A']]$type$nDim != 2)
       stop(exprClassProcessingErrorMsg(
         code,
            "Cholesky decomposition of a vector is not possible"
@@ -690,8 +691,8 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    if(code$args[[1]]$type$nDim != 2)
+    argType <- code$args[['x']]$type
+    if(code$args[['x']]$type$nDim != 2)
       stop(exprClassProcessingErrorMsg(
         code,
            "Cholesky decomposition of a vector is not possible"
@@ -733,6 +734,7 @@ inLabelAbstractTypesEnv(
     else if (code$name %in% c('nMatrix', 'nArray')) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       if ('type' %in% names(code$aux$compileArgs)) {
+        # update to evalComileArg()
         thisType <- eval(code$aux$compileArgs[['type']], envir = auxEnv$where)
         if(thisType == 'character')
           code$type <- symbolBasicString$new()
@@ -785,6 +787,7 @@ inLabelAbstractTypesEnv(
             }
           }
           if (nDim_provided) {
+            # update to evalCompileArg()
             nDim <- eval(code$aux$compileArgs[['nDim']], envir = auxEnv$where)
             if (!is.numeric(nDim))
               stop(
@@ -1819,7 +1822,7 @@ inLabelAbstractTypesEnv(
   ## recurse and set code type via setReturnType()
   nMul <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    returnType <- setReturnType(handlingInfo, code$args[[1]]$type$type)
+    returnType <- setReturnType(handlingInfo, code$args[['x']]$type$type)
     # R's matrix-multiplication promotes all output types to matrices; also
     # important b/c matrix multiplication could be used to implement an outer
     # product between two input vectors, which returns a matrix
@@ -1830,13 +1833,13 @@ inLabelAbstractTypesEnv(
     } else {
       code$type <- symbolBasic$new(nDim = resDim, type = returnType)
     }
-    if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor') && 
-         inherits(code$args[[2]]$type, 'symbolSparse'))
+    if(code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor') && 
+         inherits(code$args[['y']]$type, 'symbolSparse'))
       stop(exprClassProcessingErrorMsg(
         code,
         'Matrix multiplication of a `Cholesky` factor and a sparse matrix is not supported'
       ), call. = FALSE)
-    if(code$args[[2]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    if(code$args[['y']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
       stop(exprClassProcessingErrorMsg(
         code,
         'Matrix multiplication by a `Cholesky` factor is not supported'
@@ -1892,16 +1895,16 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  evalCompileArg <- function(argName, code, auxEnv) {
+    eval(code$aux$compileArgs[[argName]], envir = auxEnv$where)
+  }
+)
+
+inLabelAbstractTypesEnv(
   asSparse <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) > 2) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'trying to make an ambiguous input sparse.'
-      ), call. = FALSE)
-    }
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
+    argType <- code$args[['x']]$type
     if(isTRUE(argType$type == "character")) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -1926,21 +1929,18 @@ inLabelAbstractTypesEnv(
         'unable to determine sparse type for input'
       ), call. = FALSE)
     }
+    if(isTRUE("prune" %in% code$aux$provided_as_missing)) {
+      removeArg(code, "prune")
+    }
     invisible(NULL)
   }
 )
 
 inLabelAbstractTypesEnv(
   asDense <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) > 1) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'trying to make an ambiguous input sparse.'
-      ), call. = FALSE)
-    }
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
+    argType <- code$args[['x']]$type
     if(isTRUE(argType$type == "character")) {
       stop(exprClassProcessingErrorMsg(
         code,
@@ -1972,17 +1972,10 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Transpose <- function(code, symTab, auxEnv, handlingInfo) {
-    # validate usage of transpose function
-    if(length(code$args) > 1) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'trying to take the transpose of an ambiguous input.'
-      ), call. = FALSE)
-    }
     # recurse to determine argument types
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # extract the return type
-    code$type <- code$args[[1]]$type
+    code$type <- code$args[['x']]$type
     if(isTRUE(code$type$type == "character"))
       stop(exprClassProcessingErrorMsg(
         code,
@@ -2027,13 +2020,6 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nLogdet <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) != 1)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'nLogdet called with argument length != 1.'
-        ),
-        call. = FALSE)
-      
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       
       code$type <- symbolBasic$new(nDim = 0,
@@ -2046,30 +2032,22 @@ inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    # extract or construct a sparse type for argument
-    if(!inherits(argType, 'symbolSparse')) {
-      code$type <- symbolNC$new(
-        name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp,
-        isArg = FALSE
-      )
-      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
-    } else if(inherits(argType, 'symbolSparse')) {
+    argType <- code$args[['x']]$type
+    if(inherits(argType, 'symbolSparse')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'eigendecompositions not supported for sparse matrices.'
       ), call. = FALSE)
-    } else if(argType$type %in% c('denseCholFactor','sparseCholFactor')) {
+    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'eigendecompositions not supported for result of `Cholesky`.'
       ), call. = FALSE)
-    } else {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'unable to handle input type.'
-      ), call. = FALSE)
-    }
+    code$type <- symbolNC$new(
+      name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp,
+      isArg = FALSE
+    )
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
     invisible(NULL)
   }
 )
@@ -2078,30 +2056,22 @@ inLabelAbstractTypesEnv(
   nSvd <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[[1]]$type
-    # extract or construct a sparse type for argument
-    if(!inherits(argType, 'symbolSparse')) {
-      code$type <- symbolNC$new(
-        name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp,
-        isArg = FALSE
-      )
-      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
-    } else if(inherits(argType, 'symbolSparse')) {
+    argType <- code$args[['x']]$type
+    if(inherits(argType, 'symbolSparse')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'singular value decompositions not supported for sparse matrices.'
       ), call. = FALSE)
-    } else if(argType$type %in% c('denseCholFactor','sparseCholFactor')) {
+    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'singular value decompositions not supported for result of `Cholesky`.'
       ), call. = FALSE)
-    } else {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'unable to handle input type.'
-      ), call. = FALSE)
-    }
+    code$type <- symbolNC$new(
+      name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp,
+      isArg = FALSE
+    )
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
     invisible(NULL)
   }
 )
@@ -2111,7 +2081,7 @@ inLabelAbstractTypesEnv(
     # recurse arguments
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
-    if(code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    if('x' %in% names(code$args) && code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
       stop(exprClassProcessingErrorMsg(
         code,
         'Diagonal of a `Cholesky` factor is not supported'
@@ -2120,9 +2090,9 @@ inLabelAbstractTypesEnv(
       
       
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
-    if(length(code$args) == 1) {
-      if(code$args[[1]]$type$nDim == 2) {
-        returnType <- code$args[[1]]$type$type
+    if(length(code$args) == 1 && 'x' %in% names(code$args)) {
+      if(code$args[['x']]$type$nDim == 2) {
+        returnType <- code$args[['x']]$type$type
         if(isTRUE(returnType == "character"))
           stop(exprClassProcessingErrorMsg(
             code,

@@ -519,6 +519,19 @@ test_that("various uses of nEigen", {
     expect_identical(result, out)
     expect_equal(result, cout)
 
+  nf <- nFunction(
+    fun = function(X = "numericMatrix", Y = "numericMatrix") {
+      result <- nEigen(X+Y)$vectors 
+      return(result)
+    }, returnType = "numericMatrix"
+  )
+  cnf <- nCompile(nf) 
+
+  evec <- eigen(xsymm + xsymm)$vectors
+  result <- cnf(xsymm, xsymm)
+  expect_equal(result[,order(result[1,])], evec[,order(evec[1,])])
+
+    
     ## Passing full decomp back to R and checking run-time use of valuesOnly.
     eig = nFunction(
         fun = function(x = 'numericMatrix', valsOnly = 'logicalScalar') {
@@ -553,7 +566,7 @@ test_that("various uses of nEigen", {
         },
         returnType = 'EigenDecomp'
     )
-    cEig <- nCompile(eig)
+    expect_error(cEig <- nCompile(eig), "not supported")
    
     eig = nFunction(
         fun = function(X = 'numericMatrix') {
@@ -563,7 +576,7 @@ test_that("various uses of nEigen", {
         },
         returnType = 'EigenDecomp'
     )
-    cEig <- nCompile(eig)
+    expect_error(cEig <- nCompile(eig), "not supported")
 })
 
 
@@ -701,4 +714,17 @@ test_that("various uses of nSvd", {
     cout$u[,2:3] <- -cout$u[,2:3]
     expect_equal(result$u, cout$u)
 
+  nf <- nFunction(
+    fun = function(X = "numericMatrix", Y = "numericMatrix") {
+      result <- nSvd(X+Y)$u 
+      return(result)
+    }, returnType = "numericMatrix"
+  )
+  cnf <- nCompile(nf) 
+
+  u <- svd(x + x)$u
+  result <- cnf(x, x)
+  result[,c(2,3)] <- -result[,c(2,3)]
+  expect_equal(result, u)
+    
 })
