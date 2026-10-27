@@ -722,9 +722,9 @@ test_that("various uses of nSvd", {
   )
   cnf <- nCompile(nf) 
 
-  u <- svd(xsymm + xsymm)$u
-  result <- cnf(xsymm, xsymm)
-  result[,1:2] <- -result[,1:2]  
+  u <- svd(x + x)$u
+  result <- cnf(x, x)
+  result[,c(1,3)] <- -result[,c(1,3)]
   expect_equal(result, u)
     
 })

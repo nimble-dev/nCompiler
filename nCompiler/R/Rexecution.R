@@ -561,19 +561,17 @@ sparseCholFactor <- function(x) {
 #'
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but
-#'   can be used in a nFunction and compiled using \code{nCompile}.
-#'
 #' @param x a square matrix or a sparse Cholesky factor
+#' 
 #'
 #' @export
 #'
 nLogdet <- function(x) {
   if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
-    result <- Matrix::determinant(x, log = TRUE)$modulus
+    # For `dgCMatrix`, `sqrt=TRUE` has no effect.
+    result <- Matrix::determinant(x, log = TRUE,
+                                  sqrt = TRUE)$modulus
     attributes(result) <- NULL
-    if(inherits(x, 'Cholesky'))
-      result <- result/2  # Otherwise is determinant of original matrix.
     return(result)
   }
   ldet <- determinant(x, logarithm = TRUE)
