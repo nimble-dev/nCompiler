@@ -566,7 +566,7 @@ test_that("various uses of nEigen", {
         },
         returnType = 'EigenDecomp'
     )
-    cEig <- nCompile(eig)
+    expect_error(cEig <- nCompile(eig), "not supported")
    
     eig = nFunction(
         fun = function(X = 'numericMatrix') {
@@ -576,7 +576,7 @@ test_that("various uses of nEigen", {
         },
         returnType = 'EigenDecomp'
     )
-    cEig <- nCompile(eig)
+    expect_error(cEig <- nCompile(eig), "not supported")
 })
 
 

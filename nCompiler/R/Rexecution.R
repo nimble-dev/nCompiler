@@ -568,9 +568,10 @@ sparseCholFactor <- function(x) {
 #'
 nLogdet <- function(x) {
   if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
-    # For `dgCMatrix`, `sqrt=TRUE` has no effect.
     result <- Matrix::determinant(x, log = TRUE,
-                                  sqrt = TRUE)$modulus
+                                  sqrt = FALSE)$modulus
+    if(!inherits(x, 'dgCMatrix'))
+      result <- result/2
     attributes(result) <- NULL
     return(result)
   }

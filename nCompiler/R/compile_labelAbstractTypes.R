@@ -2033,29 +2033,21 @@ inLabelAbstractTypesEnv(
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[['x']]$type
-    # extract or construct a sparse type for argument
-    if(!inherits(argType, 'symbolSparse')) {
-      code$type <- symbolNC$new(
-        name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp,
-        isArg = FALSE
-      )
-      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
-    } else if(inherits(argType, 'symbolSparse')) {
+    if(inherits(argType, 'symbolSparse')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'eigendecompositions not supported for sparse matrices.'
       ), call. = FALSE)
-    } else if(argType$type %in% c('denseCholFactor','sparseCholFactor')) {
+    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'eigendecompositions not supported for result of `Cholesky`.'
       ), call. = FALSE)
-    } else {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'unable to handle input type.'
-      ), call. = FALSE)
-    }
+    code$type <- symbolNC$new(
+      name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp,
+      isArg = FALSE
+    )
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
     invisible(NULL)
   }
 )
@@ -2065,29 +2057,21 @@ inLabelAbstractTypesEnv(
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     argType <- code$args[['x']]$type
-    # extract or construct a sparse type for argument
-    if(!inherits(argType, 'symbolSparse')) {
-      code$type <- symbolNC$new(
-        name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp,
-        isArg = FALSE
-      )
-      auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
-    } else if(inherits(argType, 'symbolSparse')) {
+    if(inherits(argType, 'symbolSparse')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'singular value decompositions not supported for sparse matrices.'
       ), call. = FALSE)
-    } else if(argType$type %in% c('denseCholFactor','sparseCholFactor')) {
+    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
       stop(exprClassProcessingErrorMsg(
         code,
         'singular value decompositions not supported for result of `Cholesky`.'
       ), call. = FALSE)
-    } else {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'unable to handle input type.'
-      ), call. = FALSE)
-    }
+    code$type <- symbolNC$new(
+      name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp,
+      isArg = FALSE
+    )
+    auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
     invisible(NULL)
   }
 )
