@@ -47,9 +47,18 @@ test_that("is_na and is_nan work", {
   cnf <- nCompile(nf)
   x <- c(1L, NA, 3L)
   expect_identical(is.na(x), nf(x))
-  expect_error(expect_identical(is.na(x), cnf(x)))
-  # Same error occurs in nimble, presumably because an NA_double is not the same as NA_int.
+  expect_identical(is.na(x), cnf(x))
 
+  nf <- nFunction(
+    fun = function(x = 'logicalVector')  {
+      result <- is_na(x)
+      return(result)
+    }, returnType = 'logicalVector')
+  cnf <- nCompile(nf)
+  x <- c(TRUE, NA, FALSE)
+  expect_identical(is.na(x), nf(x))
+  expect_identical(is.na(x), cnf(x)) # BUG; see PR 236.
+  
 })
 
 
@@ -90,5 +99,22 @@ test_that("any_na and any_nan work", {
   expect_identical(any(is.nan(z)), nf(z))
   expect_identical(any(is.nan(z)), cnf(z))
   
+  nf <- nFunction(
+    fun = function(x = 'integerVector')  {
+      result <- any_na(x)
+      return(result)
+    }, returnType = 'logicalScalar')
+  cnf <- nCompile(nf)
+  x <- c(1L, NA)
+  expect_identical(cnf(x), TRUE)
 
+  nf <- nFunction(
+    fun = function(x = 'logicalVector')  {
+      result <- any_na(x)
+      return(result)
+    }, returnType = 'logicalScalar')
+  cnf <- nCompile(nf)
+  x <- c(TRUE, NA)
+  expect_error(expect_identical(cnf(x), TRUE)) # BUG; see PR 236.
+  
 })
