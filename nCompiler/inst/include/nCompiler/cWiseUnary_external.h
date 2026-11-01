@@ -18,4 +18,7 @@ inline double lfactorial(double x) {return(R::lgammafn(x + 1));}
 inline double nRound(double x) {return(R::fround(x, 0.));}
 inline double nTrunc(double x) {return(R::ftrunc(x));}
 
+inline bool is_na(double x) {return(Rcpp::traits::is_na<REALSXP>(x));}
+inline bool is_nan(double x) {return(Rcpp::traits::is_nan<REALSXP>(x));}
+
 #endif
