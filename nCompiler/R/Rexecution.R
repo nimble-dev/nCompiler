@@ -745,3 +745,30 @@ nVar <- function(x) {
 nSd <- function(x) {
   sd(x)
 }
+
+#' @export
+is_na <- function(x) {
+  is.na(x)
+}
+
+#' @export
+is_nan <- function(x) {
+  is.nan(x)
+}
+
+
+#' Determine if any values in a vector are NA or NaN
+#'
+#' NIMBLE language functions that can be used in either compiled or uncompiled
+#' nimbleFunctions to detect if there are any NA or NaN values in a vector.
+#'
+#' @param x vector of values
+#'
+#' @aliases any_nan
+#' @author NIMBLE Development Team
+#' @export
+any_na <- function(x) any(is.na(x))
+
+#' @rdname any_na
+#' @export
+any_nan <- function(x) any(is.nan(x))
