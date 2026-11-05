@@ -77,3 +77,26 @@ test_that("providing fun as a separate function",
                  "double")
 })
 
+
+test_that("updateArgPassing = FALSE keeps refArgs out of R, for an nFunction and an nClass method",
+{
+    ## refArgs apply only in C++, so R calls can pass any expression by value
+    foo <- nFunction(
+        fun = function(a = numericVector()) {
+            a[1] <- 0
+            return(sum(a))
+        },
+        refArgs = 'a',
+        returnType = "numericScalar()",
+        control = list(updateArgPassing = FALSE)
+    )
+    a <- 1:3
+    expect_equal(foo(a), 5)
+    expect_equal(a, 1:3)
+    expect_equal(foo(c(10, 20)), 20)
+    nc <- nClass(Cpublic = list(foo = foo))
+    obj <- nc$new()
+    expect_equal(obj$foo(a), 5)
+    expect_equal(a, 1:3)
+    expect_equal(obj$foo(c(10, 20)), 20)
+})
