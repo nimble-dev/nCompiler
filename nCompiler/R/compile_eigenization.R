@@ -688,6 +688,20 @@ inEigenizeEnv(
   }
 )
 
+## length(x) is x.size() for a named object, but Eigen tensor expressions (e.g. a slice x[1:3])
+## have no size() method, so for an expression use nDimTraits2_size(x) (see tensorUtils.h),
+## which gets the size from the expression's dimensions without evaluating it.
+inEigenizeEnv(
+  Length <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
+    arg <- code$args[[1]]
+    if(arg$type$nDim == 0 || isTRUE(arg$isName))
+      return(Reduction(code, symTab, typeEnv, workEnv, handlingInfo))
+    code$name <- 'nDimTraits2_size'
+    scalarCast(code$caller, code$callerArgID, code$type$type)
+    invisible(NULL)
+  }
+)
+
 inEigenizeEnv(
   Method <- function(code, symTab, typeEnv, workEnv, handlingInfo) {
     maybe_convertToMethod(code, handlingInfo, force=TRUE) # used for mean(vector) = vector.mean() if method=TRUE

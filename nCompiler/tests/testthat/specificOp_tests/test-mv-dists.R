@@ -178,3 +178,80 @@ test_that("multivariate dists work", {
   rm(obj, Cobj); gc()
 
 })
+
+test_that("dinvwish_chol, rinvwish_chol, dcat and rcat work", {
+  nc <- nClass(
+    Cpublic = list(
+      dinvwishc = nFunction(
+        function(x = double(2), cholesky = double(2), df = integer(),
+                 scale_param = logical(), log = logical()) {
+          ans <- dinvwish_chol(x, cholesky, df, scale_param, log)
+          return(ans); returnType(double())
+        }
+      ),
+      rinvwishc = nFunction(
+        function(cholesky = double(2), df = integer(),
+                 scale_param = logical()) {
+          ans <- rinvwish_chol(n = 1, cholesky, df, scale_param)
+          return(ans); returnType(double(2))
+        }
+      ),
+      dcat_ = nFunction(
+        function(x = double(), prob = double(1), log = logical()) {
+          ans <- dcat(x, prob, log)
+          return(ans); returnType(double())
+        }
+      ),
+      dcat_slice = nFunction(
+        function(x = double(), prob = double(1), log = logical()) {
+          ans <- dcat(x, prob[2:4], log) # prob as an expression
+          return(ans); returnType(double())
+        }
+      ),
+      rcat_ = nFunction(
+        function(prob = double(1)) {
+          ans <- rcat(n = 1, prob)
+          return(ans); returnType(double())
+        }
+      )
+    )
+  )
+  comp <- nCompile(nc)
+  obj <- nc$new()
+  Cobj <- comp$new()
+  S <- matrix(c(1, 0.5, 0.25, 0.5, 1, 0.5, 0.25, 0.5, 1), byrow = TRUE, nrow = 3)
+  chol_S <- chol(S)
+  x <- S * 2
+  # dinvwish
+  for (scale_param in c(TRUE, FALSE)) {
+    for (log in c(TRUE, FALSE)) {
+      expect_equal(Cobj$dinvwishc(x, chol_S, 5, scale_param, log),
+                   obj$dinvwishc(x, chol_S, 5, scale_param, log))
+    }
+  }
+  # Inputs are not modified.
+  x_copy <- x
+  Cobj$dinvwishc(x, chol_S, 5, TRUE, TRUE)
+  expect_identical(x, x_copy)
+  # rinvwish
+  for (scale_param in c(TRUE, FALSE)) {
+    expect_equal(
+      {set.seed(10); obj$rinvwishc(chol_S, 5, scale_param)},
+      {set.seed(10); Cobj$rinvwishc(chol_S, 5, scale_param)})
+  }
+  # dcat
+  prob <- c(0.1, 0.2, 0.3, 0.4)
+  for (k in 1:4) {
+    expect_equal(Cobj$dcat_(k, prob, FALSE), obj$dcat_(k, prob, FALSE))
+    expect_equal(Cobj$dcat_(k, prob, TRUE), log(prob[k]))
+  }
+  expect_equal(Cobj$dcat_(5, prob, FALSE), 0)
+  expect_equal(Cobj$dcat_slice(2, prob, FALSE), 0.3 / 0.9)
+  # rcat
+  for (seed in 1:5) {
+    expect_equal(
+      {set.seed(seed); obj$rcat_(prob)},
+      {set.seed(seed); Cobj$rcat_(prob)})
+  }
+  rm(obj, Cobj); gc()
+})

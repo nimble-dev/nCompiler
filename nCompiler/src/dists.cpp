@@ -114,107 +114,11 @@ SEXP C_rwish_chol(SEXP chol, SEXP df, SEXP scale_param)
 }
 
 
-double dinvwish_chol(double* x, double* chol, double df, int p, double scale_param, int give_log, int overwrite_inputs) {
-  char uplo('U');
-  char sideL('L');
-  char sideR('R');
-  char diag('N');
-  char transT('T');
-  char transN('N');
-  int info(0);
-  double alpha(1.0);
-  double* xChol;
-
-  int i, j;
-
-  if (R_IsNA_ANY(x, p*p) || R_IsNA_ANY(chol, p*p) || R_IsNA(df) || R_IsNA(scale_param))
-    return NA_REAL;
-  if (R_IsNaN_ANY(x, p*p) || R_IsNaN_ANY(chol, p*p) || R_IsNaN(df) || R_IsNaN(scale_param))
-    return R_NaN;
-
-  // also covers df < 0
-  if(df < (double) p) ML_ERR_return_NAN;
-
-  if(!R_FINITE_ANY(x, p*p) || !R_FINITE_ANY(chol, p*p)) return R_D__0;
-
-  double dens = -(df*p/2 * M_LN2 + p*(p-1)*M_LN_SQRT_PI/2);
-  for(i = 0; i < p; i++)
-    dens -= lgammafn((df - i) / 2);
-
-  // determinant of S or R
-  if(scale_param) {
-    for(i = 0; i < p*p; i += p + 1)
-      dens += df * log(chol[i]);
-  } else {
-    for(i = 0; i < p*p; i += p + 1)
-      dens -= df * log(chol[i]);
-  }
-
-  // determinant of x using Cholesky:
-  if(overwrite_inputs)
-    xChol = x;
-  else {
-    xChol = new double[p*p];
-    for(i = 0; i < p*p; i++)
-      xChol[i] = x[i];
-  }
-  F77_CALL(dpotrf)(&uplo, &p, xChol, &p, &info FCONE);
-  for(i = 0; i < p*p; i += p + 1)
-    dens -= (df + p + 1) * log(xChol[i]);
-
-  double tmp_dens = 0.0;
-
-  // do upper-triangular solve for scale parameterization
-  // or upper-triangular multiplies for rate parameterization
-
-  // S %*% inverse(x) = crossprod(chol %*% inverse(chol(x))
-  // inverse(R) %*% inverse(x) = crossproduct(solve(t(chol(x)), inverse(chol)))
-  // dtr{m,s}m is a BLAS level-3 function
-  if(scale_param) {
-    double* cholCopy;
-    if(overwrite_inputs)
-      cholCopy = chol;
-    else {
-      cholCopy = new double[p*p];
-      for(i = 0; i < p*p; i++)
-        cholCopy[i] = chol[i];
-    }
-    // chol %*% inverse(chol(x))
-    F77_CALL(dtrsm)(&sideR, &uplo, &transN, &diag, &p, &p, &alpha,
-           xChol, &p, cholCopy, &p FCONE FCONE FCONE FCONE);
-    // trace of crossproduct is sum of elements squared
-    for(j = 0; j < p; j++) {
-      for(i = 0; i <= j; i++) {
-        tmp_dens += cholCopy[j*p+i] * cholCopy[j*p+i];
-      }
-    }
-    if(!overwrite_inputs)
-      delete [] cholCopy;
-  } else {
-    double* iden = new double[p*p];
-    for(j = 0; j < p; j++)
-      for(i = 0; i < p; i++)
-        if(i == j) iden[j*p+i] = 1.0; else iden[j*p+i] = 0.0;
-    // inverse of chol
-    F77_CALL(dtrsm)(&sideL, &uplo, &transN, &diag, &p, &p, &alpha,
-                    chol, &p, iden, &p FCONE FCONE FCONE FCONE);
-    // solve(t(chol(x)), result)
-    F77_CALL(dtrsm)(&sideL, &uplo, &transT, &diag, &p, &p, &alpha,
-                    xChol, &p, iden, &p FCONE FCONE FCONE FCONE);
-    // trace of crossproduct is sum of elements squared
-    for(j = 0; j < p; j++) {
-      for(i = 0; i < p; i++) {
-        tmp_dens += iden[j*p+i] * iden[j*p+i];
-      }
-    }
-    delete [] iden;
-  }
-  if(!overwrite_inputs)
-    delete [] xChol;
-  dens += -0.5 * tmp_dens;
-  return give_log ? dens : exp(dens);
-}
-
+// dinvwish_chol (raw double* kernel) now comes from
+// nCompiler/dists/dinvwish_chol.h (included via dists.h). The
+// Eigen::Tensor-argument wrapper around it lives in
+// nCompiler/dists/dinvwish_chol_tensor.h, for use from nCompile-generated
+// code; it's not needed here.
 
 SEXP C_dinvwish_chol(SEXP x, SEXP chol, SEXP df, SEXP scale_param, SEXP return_log)
 // calculates Inverse Wishart density given Cholesky of scale or rate matrix
@@ -242,82 +146,11 @@ SEXP C_dinvwish_chol(SEXP x, SEXP chol, SEXP df, SEXP scale_param, SEXP return_l
 }
 
 
-void rinvwish_chol(double *Z, double* chol, double df, int p, double scale_param, int overwrite_inputs) {
-  char uploU('U');
-  char uploL('L');
-  char sideL('L');
-  char diag('N');
-  char transT('T');
-  char transN('N');
-  double alpha(1.0);
-  double beta(0.0);
-
-  // calculations here generate W ~ Wi(S) for scale_param = 1 and W ~ Wi(S^-1) for scale_param = 0,
-  // and then invert the result, giving InvWi(S^-1) for scale_param = 1 and InvWi(S) for scale_param = 0,
-  // because scale for Wishart is inverse of scale for inverse-Wishart
-  // therefore generate under opposite parameterization
-  scale_param = 1 - scale_param;
-
-
-  double* cholCopy;
-  int i, j, uind, lind;
-
-  if (ISNAN_ANY(chol, p*p) || ISNAN(df) || ISNAN(scale_param)) {
-    for(j = 0; j < p*p; j++)
-      Z[j] = R_NaN;
-    return;
-  }
-
-  // also covers df < 0
-  if(df < (double) p) {
-    for(j = 0; j < p*p; j++)
-      Z[j] = R_NaN;
-    return;
-  }
-
-  // fill diags with sqrts of chi-squares and upper triangle (for scale_param) with std normals - crossproduct of result is standardized Wishart; based on rWishart in stats package
-  for(j = 0; j < p; j++) {
-    Z[j*p + j] = sqrt(rchisq(df - (double) j));
-    for(i = 0; i < j; i++) {
-      uind = i + j * p, /* upper triangle index */
-      lind = j + i * p; /* lower triangle index */
-      Z[(scale_param ? uind : lind)] = norm_rand();
-      Z[(scale_param ? lind : uind)] = 0;
-    }
-  }
-
-  if(overwrite_inputs)
-    cholCopy = chol;
-  else {
-    cholCopy = new double[p*p];
-    for(i = 0; i < p*p; i++)
-      cholCopy[i] = chol[i];
-  }
-
-  // with S parameterization: t(chol)%*%t(Z)%*%Z%*%chol is Wishart-distributed, so take inverse based on pieces
-  // with R parameterization: inverse(chol)%*%Z%*%t(Z)%*%inverse(t(chol)) is Wishart-distributed, again inverse of pieces
-  if(scale_param) {
-    // Z %*% chol
-    F77_CALL(dtrmm)(&sideL, &uploU, &transN, &diag, &p, &p, &alpha, Z, &p, cholCopy, &p FCONE FCONE FCONE FCONE);
-    double* iden = new double[p*p];
-    for(j = 0; j < p; j++)
-      for(i = 0; i < p; i++)
-        if(i == j) iden[j*p+i] = 1.0; else iden[j*p+i] = 0.0;
-    // inverse(Z %*% chol)
-    F77_CALL(dtrsm)(&sideL, &uploU, &transN, &diag, &p, &p, &alpha, cholCopy, &p, iden, &p FCONE FCONE FCONE FCONE);
-    // crossproduct of result
-    F77_CALL(dgemm)(&transN, &transT, &p, &p, &p, &alpha, iden, &p, iden, &p, &beta, Z, &p FCONE FCONE);
-    delete [] iden;
-  } else {
-    // solve(Z, chol)
-    F77_CALL(dtrsm)(&sideL, &uploL, &transN, &diag, &p, &p, &alpha, Z, &p, cholCopy, &p FCONE FCONE FCONE FCONE);
-    // crossproduct of result
-    F77_CALL(dgemm)(&transT, &transN, &p, &p, &p, &alpha, cholCopy, &p, cholCopy, &p, &beta, Z, &p FCONE FCONE);
-  }
-
-  if(!overwrite_inputs)
-    delete [] cholCopy;
-}
+// rinvwish_chol (raw double* kernel) now comes from
+// nCompiler/dists/rinvwish_chol.h (included via dists.h). The
+// Eigen::Tensor-argument wrapper around it lives in
+// nCompiler/dists/rinvwish_chol_tensor.h, for use from nCompile-generated
+// code; it's not needed here.
 
 SEXP C_rinvwish_chol(SEXP chol, SEXP df, SEXP scale_param)
 // generates single Inverse Wishart draw given Cholesky of scale or rate matrix
@@ -605,54 +438,10 @@ SEXP C_rmulti(SEXP size, SEXP prob) {
 }
 
 
-double dcat(double x, double* prob, int K, int give_log)
-// scalar function that can be called directly by NIMBLE with same name as in R
-{
-  if (R_IsNA(x) || R_IsNA_ANY(prob, K))
-    return NA_REAL;
-  if (R_IsNaN(x) || R_IsNaN_ANY(prob, K))
-    return R_NaN;
-
-
-  double sumProb(0.0);
-  for(int i = 0; i < K; i++) {
-    if(prob[i] < 0) ML_ERR_return_NAN;
-    sumProb += prob[i];
-  }
-
-  R_D_nonint_check(x);
-  x = R_D_forceint(x);
-
-  if(x > K || x < 1) return R_D__0;
-  return give_log ? log(prob[(int) x - 1]) - log(sumProb) : prob[(int) x - 1]/sumProb;
-}
-
-double rcat(double* prob, int K)
-// scalar function that can be called directly by NIMBLE with same name as in R
-// problem is no apparent way to call this w/o also passing the number of categories
-// relying on sum to 1 risks accessing beyond storage
-// we'll need to figure out how to inject the number of categories w/in NIMBLE
-{
-  double prob_cum = prob[0];
-  int value = 1;
-
-  if (ISNAN_ANY(prob, K) )
-    return R_NaN; // but casting to integer in creates NA
-
-  double sumProb(0.0);
-  for(int i = 0; i < K; i++) {
-    if(prob[i] < 0) return NA_REAL;  // rpois, rbinom give NA with invalid params; rnorm gives NaN
-    sumProb += prob[i];
-  }
-
-  double u = unif_rand() * sumProb;
-  while(u > prob_cum && value < K) {
-    prob_cum += prob[value];
-    value++;
-  }
-
-  return (double) value;
-}
+// dcat and rcat (raw double* kernels) now come from nCompiler/dists/dcat.h
+// and nCompiler/dists/rcat.h (included via dists.h). The Eigen::Tensor-
+// argument wrappers around them live in nCompiler/dists/dcat_tensor.h and
+// rcat_tensor.h, for use from nCompile-generated code.
 
 SEXP C_dcat(SEXP x, SEXP prob, SEXP return_log)
 {

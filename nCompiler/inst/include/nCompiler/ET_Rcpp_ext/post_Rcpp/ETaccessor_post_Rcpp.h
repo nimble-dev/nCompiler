@@ -525,6 +525,29 @@ Eigen::Tensor<Scalar, nDim> &ETaccessorBase::ref() {
   return castptr->innerRef();
 }
 
+// With copy = true, the argument may be an Eigen tensor expression (e.g. a slice like mu[1:3],
+// or a sum) rather than an Eigen::Tensor. ETaccessor is only specialized for Eigen::Tensor and
+// scalar types, so an expression is first evaluated into an Eigen::Tensor of the same scalar
+// type and number of dimensions, which the accessor then owns.
+template<typename T>
+struct ETaccess_is_Tensor_ : std::false_type {};
+template<typename Scalar, int nDim, int Options, typename IndexType>
+struct ETaccess_is_Tensor_<Eigen::Tensor<Scalar, nDim, Options, IndexType>> : std::true_type {};
+
+template<typename T>
+struct ETaccess_is_TensorExpr_ :
+  std::integral_constant<bool,
+    std::is_base_of<Eigen::TensorBase<T, Eigen::ReadOnlyAccessors>, T>::value &&
+    !ETaccess_is_Tensor_<T>::value> {};
+
+template<typename T, bool isExpr = ETaccess_is_TensorExpr_<T>::value>
+struct ETaccess_copy_type { using type = T; };
+template<typename T>
+struct ETaccess_copy_type<T, true> {
+  using type = Eigen::Tensor<std::remove_const_t<typename Eigen::internal::traits<T>::Scalar>,
+                             Eigen::internal::traits<T>::NumDimensions>;
+};
+
 template<bool copy=false, typename T>
 std::enable_if_t<!copy, ETaccessor<T, false>>
 ETaccess(T &x) {
@@ -532,9 +555,15 @@ ETaccess(T &x) {
 }
 
 template<bool copy, typename T>
-std::enable_if_t<copy, ETaccessor<T, true>>
+std::enable_if_t<copy, ETaccessor<typename ETaccess_copy_type<T>::type, true>>
 ETaccess(const T &x) {
-  return ETaccessor<T, true>(x);
+  using CT = typename ETaccess_copy_type<T>::type;
+  if constexpr (ETaccess_is_TensorExpr_<T>::value) {
+    CT evaluated = x;
+    return ETaccessor<CT, true>(evaluated);
+  } else {
+    return ETaccessor<CT, true>(x);
+  }
 }
 
 template<bool copy=false, typename T>
@@ -546,7 +575,13 @@ ETaccessPtr(T &x) {
 template<bool copy, typename T>
 std::enable_if_t<copy, std::unique_ptr<ETaccessorBase>>
 ETaccessPtr(const T &x) {
-  return std::make_unique<ETaccessor<T, true>>(x);
+  using CT = typename ETaccess_copy_type<T>::type;
+  if constexpr (ETaccess_is_TensorExpr_<T>::value) {
+    CT evaluated = x;
+    return std::make_unique<ETaccessor<CT, true>>(evaluated);
+  } else {
+    return std::make_unique<ETaccessor<CT, true>>(x);
+  }
 }
 
 // end ETaccess
