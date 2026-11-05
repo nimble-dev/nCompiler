@@ -168,3 +168,43 @@ test_that("as(obj[[var_name]], type) works", {
     rm(obj); gc()
   }
 })
+
+test_that("ETaccess(expr, copy = TRUE) works for tensor expressions", {
+  # An expression such as a slice or a sum is evaluated into a tensor that the accessor owns.
+  nc <- nClass(
+    Cpublic = list(
+      v = 'numericVector',
+      m = 'numericMatrix',
+      get_slice = nFunction(
+        function() {
+          ans <- ETaccess(v[2:3], copy = TRUE)
+          return(ans)
+          returnType('ETaccessor')
+        }
+      ),
+      get_sum = nFunction(
+        function() {
+          ans <- ETaccess(m + 1, copy = TRUE)
+          return(ans)
+          returnType('ETaccessor')
+        }
+      ),
+      use_slice = nFunction(
+        function() {
+          acc <- get_slice()
+          return(as(acc, "numericVector"))
+          returnType("numericVector")
+        }
+      )
+    ),
+    compileInfo = list(interfaceInclude = c("v", "m", "get_slice", "get_sum", "use_slice"))
+  )
+  cnc <- nCompile(nc)
+  obj <- cnc$new()
+  obj$v <- c(1.5, 2.5, 3.5, 4.5)
+  obj$m <- matrix(1:6, nrow = 2)
+  expect_equal(obj$get_slice(), c(2.5, 3.5))
+  expect_equal(obj$get_sum(), matrix(1:6, nrow = 2) + 1)
+  expect_equal(obj$use_slice(), c(2.5, 3.5))
+  rm(obj); gc()
+})

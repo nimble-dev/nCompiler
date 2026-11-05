@@ -1370,6 +1370,49 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c("dinvwish_chol"),
+  list(
+    matchDef = function(x, cholesky, df, scale_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rinvwish_chol"),
+  list(
+    matchDef = function(n = 1, cholesky, df, scale_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 2
+    )
+  )
+)
+
+# dcat and rcat have a scalar value but a vector parameter, so they use the MVDist handler
+# (scalar double return) and the Eigen::Tensor wrappers in dists/dcat_tensor.h and rcat_tensor.h.
+assignOperatorDef(
+  c("dcat"),
+  list(
+    matchDef = function(x, prob, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rcat"),
+  list(
+    matchDef = function(n = 1, prob) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nSwitch'),
   list(
     matchDef = function(expr, IDs, ...) {},
@@ -1397,7 +1440,7 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$integer
     ),
     eigenImpl = list(
-      handler = 'Reduction',
+      handler = 'Length',
       noPromotion = TRUE,
       replaceForScalar = 1,
       method = TRUE,
