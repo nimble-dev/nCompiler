@@ -37,7 +37,8 @@ nKeyWords <- list(as = 'nAs',
                   logdet = 'nLogdet',
                   var = 'nVar',
                   sd = 'nSd',
-                  warning = 'nWarning'
+                  warning = 'nWarning',
+                  message = 'nMessage'
                   )
 
 nf_changeKeywords <- function(code, keywords = character()){

@@ -735,67 +735,38 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-    nCat <- function(code, symTab) {
-        ## paste0("std::cout << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'))
-        if(is.null(get_nOption('digits'))) {
-            paste0("_nCompiler_global_output << ",
-                   paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-                   '; nCompiler_print_to_R(_nCompiler_global_output)')
-        } else {
-            paste0('_nCompiler_global_output.precision(', get_nOption('digits'), '); _nCompiler_global_output << std::fixed << ',
-                   paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-                   '; nCompiler_print_to_R(_nCompiler_global_output)')
-        }
+  # Output operators (nCat, nimCat, nPrint, nimPrint, nStop, nWarning, nMessage).
+  # The arguments are streamed into a local std::ostringstream, which is passed to a C++
+  # function (see utils.h). A local stream, instead of a global one as in nimble,
+  # needs no clean-up and is thread-safe.
+  # Settings come from the opDef's cppOutput entry:
+  #   cppFun: the C++ function to call.
+  #   sep: separator streamed between arguments (default "").
+  #   newline: whether to stream a final newline.
+  #   useDigits: whether to use nOption 'digits' (if set) for numeric output.
+  #   levelArg: name of an argument that is passed as a second C++ argument instead of streamed.
+  Output <- function(code, symTab) {
+    info <- getOperatorDef(code$name, "cppOutput")
+    args <- code$args
+    extraCppArgs <- ""
+    if(!is.null(info$levelArg)) {
+      iLevel <- which(names(args) == info$levelArg)
+      if(length(iLevel) == 1) {
+        extraCppArgs <- paste0(", ", compile_generateCpp(args[[iLevel]], symTab, asArg = TRUE))
+        args <- args[-iLevel]
+      }
     }
-)
-
-nCompiler:::inGenCppEnv(
-    nMessage <- function(code, symTab) {
-      paste0(
-        "{\n",
-        "std::ostringstream _nCompiler_error_output; \n",
-        "_nCompiler_error_output << ",
-        paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-        "<<\"\\n\";\n",
-        "nMessage_(", compile_generateCpp(code$args[[1]], symTab), ", _nCompiler_error_output);\n",
-        "}\n"
-      )
-#        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args[-1], compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-#               '; nMessage_(', compile_generateCpp(code$args[[1]], symTab), ', _nCompiler_global_output)')
-    }
-)
-
-nCompiler:::inGenCppEnv(
-    nWarning <- function(code, symTab) {
-#        paste0("_nCompiler_global_output << ", paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-#               '; Rwarning(_nCompiler_global_output)')
-      Output(code, symTab, "nWarning_")
-    }
-)
-
-nCompiler:::inGenCppEnv(
-  # We generate a new ostringstream instead of using a global shared one like nimble did.
-  # This avoids needing to clean it up, or generate its string first, and should be thread-safe.
-  # Apparently ostringstream is not thread-safe so shouldn't be shared.
-  nStop <- function(code, symTab) {
-    Output(code, symTab, "nStop_")
-  }
-)
-
-nCompiler:::inGenCppEnv(
-  # We generate a new ostringstream instead of using a global shared one like nimble did.
-  # This avoids needing to clean it up, or generate its string first, and should be thread-safe.
-  # Apparently ostringstream is not thread-safe so shouldn't be shared.
-  Output <- function(code, symTab, output_fun) {
-    paste0(
-      "{\n",
-      "std::ostringstream _nCompiler_error_output; \n",
-      "_nCompiler_error_output << ",
-      paste0(unlist(lapply(code$args, compile_generateCpp, symTab, asArg = TRUE) ), collapse = '<<'),
-      "<<\"\\n\";\n",
-      output_fun, "(_nCompiler_error_output);\n",
-      "}\n"
-    )
+    items <- unlist(lapply(args, compile_generateCpp, symTab, asArg = TRUE))
+    if(isTRUE(info$newline)) items <- c(items, '"\\n"')
+    sep <- if(is.null(info$sep)) "" else info$sep
+    streamed <- if(length(items) == 0) '""'
+                else paste0(items, collapse = if(nzchar(sep)) paste0(' << "', sep, '" << ') else ' << ')
+    setup <- ""
+    if(isTRUE(info$useDigits) && !is.null(get_nOption('digits')))
+      setup <- paste0("nC_output_.precision(", get_nOption('digits'), "); nC_output_ << std::fixed; ")
+    paste0("{std::ostringstream nC_output_; ", setup,
+           "nC_output_ << ", streamed, "; ",
+           info$cppFun, "(nC_output_", extraCppArgs, ");}")
   }
 )
 

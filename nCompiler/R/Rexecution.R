@@ -113,6 +113,18 @@ nC <- c
 #' @export
 nCat <- cat
 #' @export
+nimCat <- function(...) { # As in nimble: arguments are not separated; arrays are printed with print().
+  items <- list(...)
+  for(i in seq_along(items)) {if(is.array(items[[i]])) print(items[[i]]) else cat(items[[i]])}
+}
+#' @export
+nPrint <- function(...) { # As nimble's nimPrint: nimCat followed by a newline.
+  nimCat(...)
+  cat('\n')
+}
+#' @export
+nimPrint <- nPrint
+#' @export
 nStop <- stop
 #' @export
 nWarning <- warning
@@ -754,11 +766,12 @@ nSd <- function(x) {
 }
 
 #' Log/message handling via `logger` package, including within progress bar execution.
-#' 
+#'
+#' Arguments in `...` are combined as by `message()`. `level` must be given by name.
+#'
 #' @export
-nMessage <- function(level, msg, ...) {
-    if(length(list(...)))  # For uncompiled execution.
-        msg <- paste(msg, ..., collapse = ' ')
+nMessage <- function(..., level = INFO) {
+    msg <- .makeMessage(...) # Combine arguments as message() does.
     if(!cli::cli_progress_num()) {  # No active progress bar.
         logger::log_level(logger::as.loglevel(level), msg)
     } else {

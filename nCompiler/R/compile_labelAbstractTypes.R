@@ -2221,6 +2221,29 @@ inLabelAbstractTypesEnv(
     }
 )
 
+inLabelAbstractTypesEnv(
+  # `level` may be a `logger` level name (e.g. `INFO`, the default).
+  # Replace it by its integer value so the C++ does not need level names.
+  nMessage <- function(code, symTab, auxEnv, handlingInfo) {
+    iLevel <- which(names(code$args) == "level")
+    if(length(iLevel) == 1) {
+      levelArg <- code$args[[iLevel]]
+      levels <- logger_levels()
+      if(isTRUE(levelArg$isName) && levelArg$name %in% names(levels)) {
+        setArg(code, iLevel, literalIntegerExpr(levels[[levelArg$name]]))
+      }
+    }
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    invisible(inserts)
+  }
+)
+
+# Integer values of the `logger` levels re-exported by nCompiler (see all_utils.R).
+logger_levels <- function() {
+  levelNames <- c("OFF", "FATAL", "ERROR", "WARN", "SUCCESS", "INFO", "DEBUG", "TRACE")
+  sapply(levelNames, function(nm) as.integer(getExportedValue("logger", nm)), simplify = FALSE)
+}
+
 
 inLabelAbstractTypesEnv(
   DEBUG <- function(code, symTab, auxEnv, handlingInfo) {
