@@ -1567,6 +1567,30 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('nInverse'),
+  list(
+    matchDef = function(x) {},
+    labelAbstractTypes = list(
+      handler = 'nInverse'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nEquals'),
+  list(
+    matchDef = function(x1, x2) {},
+    labelAbstractTypes = list(
+      handler = 'nEquals',
+      returnTypeCode = returnTypeCodes$integer
+    ),
+    cppOutput = list(
+      handler = 'AsIs'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nDiag', 'nDiagonal'),
   list(
     matchDef = function(x=1, nrow, ncol) {},
