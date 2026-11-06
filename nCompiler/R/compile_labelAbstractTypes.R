@@ -2029,6 +2029,43 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nInverse <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      argType <- code$args[[1]]$type
+      if(inherits(argType, 'symbolSparse') ||
+         isTRUE(argType$type %in% c('denseCholFactor', 'sparseCholFactor')))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'inverse is not supported for sparse matrices or the result of `Cholesky`.'
+        ), call. = FALSE)
+      if(!identical(as.integer(argType$nDim), 2L))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'inverse requires a matrix argument.'
+        ), call. = FALSE)
+      code$type <- symbolBasic$new(nDim = 2, type = "double")
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
+  # As in nimble, `equals` (`nEquals`) supports only scalar arguments.
+  nEquals <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      if(any(sapply(code$args, function(arg) arg$type$nDim) != 0))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'equals (nEquals) supports only scalar arguments.'
+        ), call. = FALSE)
+      code$type <- symbolBasic$new(nDim = 0,
+                                   type = setReturnType(handlingInfo, "integer"))
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
