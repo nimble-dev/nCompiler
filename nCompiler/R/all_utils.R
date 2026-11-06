@@ -141,10 +141,10 @@ pasteSemicolon <- function(x, indent = '') {
        call. = FALSE)
 }
 
-#' Write unlisted code generated from.nCompiler cpp definitions.
+#' Write unlisted code generated from nCompiler cpp definitions.
 #'
 #' This is not intended to be called directly but is useful for
-#' debugging.nCompiler's C++ output.
+#' debugging nCompiler's C++ output.
 #'
 #' @param x A (potentially nested) list of C++ code in character
 #'     strings.
@@ -181,7 +181,10 @@ nDim <- function(obj) {
 
 is.blank <- function(arg) {
   if(is.null(arg)) return(FALSE)
-  return(identical(arg, quote(x[])[[3]]))
+  # better approach borrowed from rlang::is_missing
+  return(identical(arg, quote(expr =)))
+  # old approach
+  #return(identical(arg, quote(x[])[[3]]))
 }
 
 
@@ -217,6 +220,29 @@ safeDeparse <- function(..., warn = FALSE) {
   return(out)
 }
 
-#' @name log_threshold
+dimOrLength <- function(obj, scalarize = FALSE) {
+  if(scalarize) if(length(obj) == 1) return(numeric(0))
+  if(is.null(dim(obj))) return(length(obj))
+  return(dim(obj))
+}
+
+# Re-export `logger` functions and log levels for use with `nMessage`.
 #' @importFrom logger log_threshold OFF FATAL ERROR WARN SUCCESS INFO DEBUG TRACE
 #' @export
+logger::log_threshold
+#' @export
+logger::OFF
+#' @export
+logger::FATAL
+#' @export
+logger::ERROR
+#' @export
+logger::WARN
+#' @export
+logger::SUCCESS
+#' @export
+logger::INFO
+#' @export
+logger::DEBUG
+#' @export
+logger::TRACE

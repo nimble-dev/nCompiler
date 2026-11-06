@@ -10,7 +10,11 @@ returnTypeCodes <- list(
   logical = 4L,
   promote = 5L,
   promoteToDoubleOrAD = 6L,
-  promoteNoLogical = 7L)
+  promoteNoLogical = 7L,
+  character = 8L,
+  characterOrPromote = 9L,
+  characterOrPromoteToDoubleOrAD = 10L,
+  characterOrPromoteNoLogical = 11L)
 
 returnTypeString2Code <- function(returnTypeString) {
   if(is.character(returnTypeString))
@@ -32,7 +36,7 @@ getHandlerEnv <- function(stage) {
          simpleTransformations = simpleTransformationsEnv,
          processAD = processADenv,
          labelAbstractTypes = labelAbstractTypesEnv,
-         normalizeCalls = normalizeCallsEnv,
+         normalizeCalls = normalizeCallsEnv, # not really a handler environment
          generateCpp = genCppEnv,
          finalTransformations = finalTransformationsEnv,
          eigenImpl = eigenizeEnv,
@@ -40,6 +44,7 @@ getHandlerEnv <- function(stage) {
          )
 }
 
+#' @export
 registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
   opNames <- names(opDefs)
   if(is.null(opNames))
@@ -74,8 +79,9 @@ registerOpDef <- function(opDefs, modify=TRUE, replaceEnv=TRUE) {
   }
 }
 
+#' @export
 deregisterOpDef <- function(names) {
-  if(!isTRUE(is.character(names))) names <- ls(names) # in case an env or list is passed in as names.
+  if(!isTRUE(is.character(names))) names <- ls(names, all.names = TRUE) # in case an env or list is passed in as names.
   suppressWarnings(rm(list=names, envir=operatorDefUserEnv))
 }
 
@@ -110,15 +116,35 @@ getOperatorDef <- function(op, field = NULL, subfield = NULL) {
 }
 
 assignOperatorDef(
-  'nList',
+  'ETaccess',
+  list(
+    matchDef = function(obj, copy=FALSE) {},
+    compileArgs = "copy",
+    simpleTransformations = list(
+      handler = 'EvalCompileArgs'),
+    labelAbstractTypes = list(
+      handler = 'ETaccess'),
+    cppOutput = list(
+      handler = 'ETaccess')
+  )
+)
+
+assignOperatorDef(
+  'nCppVec',
   list(
     matchDef = function(type, length) {},
     compileArgs = c("type"),
     labelAbstractTypes = list(
-      handler = 'nList'),
+      handler = 'nCppVec'),
     cppOutput = list(
-      handler = 'nList')
+      handler = 'nCppVec')
   )
+)
+
+nCompiler:::assignOperatorDef(
+  # A dummy to have something non-null during update_cachedOpInfo during compile_normalizeCalls
+  'nClassBuilder',
+  list()
 )
 
 assignOperatorDef(
@@ -133,8 +159,8 @@ assignOperatorDef(
   list(
     labelAbstractTypes = list(
       handler = 'nFunction_or_method_call'),
-   normalizeCalls = list(
-      handler = 'nFunction_or_method_call'),
+#   normalizeCalls = list(
+#      handler = 'nFunction_or_method_call'),
     cppOutput = list(
       handler = 'Generic_nFunction')
   )
@@ -152,17 +178,27 @@ assignOperatorDef(
   )
 )
 
-# assignOperatorDef(
-#   'NCMETHOD_', # This is a transient label that only exists within normalizeCalls
-#   list(
-#     ## labelAbstractTypes = list(
-#     ##   handler = 'nFunction_or_method_call'),
-#     normalizeCalls = list(
-#       handler = 'nFunction_or_method_call')#, # becomes NFCALL_
-#     ## cppOutput = list(
-#     ##   handler = 'Generic_nFunction')
-#   )
-# )
+assignOperatorDef(
+  'DEBUG_LAT',
+  list(
+    labelAbstractTypes = list(
+      handler = 'DEBUG'
+    )
+  )
+)
+
+assignOperatorDef(
+  'DEBUG_EIGEN',
+  list(
+    labelAbstractTypes = list(
+      handler = 'SKIP'
+    ),
+    eigenImpl = list(
+      beforeHandler = 'DEBUG_START',
+      handler = 'DEBUG_END'
+    )
+  )
+)
 
 assignOperatorDef(
   c('dim'),
@@ -183,7 +219,9 @@ assignOperatorDef( # c()
       handler = 'nC',
       return_nDim = 1,
       returnTypeCode = returnTypeCodes$promote),
-    eigenImpl = list()
+    eigenImpl = list(
+      handler = 'nC'
+    )
   )
 )
 
@@ -196,17 +234,39 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nMatrix', 'nArray'),
+  c('nAD', 'nNumeric', 'nInteger', 'nLogical', 'nCharacter'),
   list(
+    matchDef = function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {},
     labelAbstractTypes = list(
-      handler = 'InitData'),
+      handler = 'InitData',
+      return_nDim = 1),
     eigenImpl = list(
       handler = 'TensorCreation')
   )
 )
-updateOperatorDef(
-  c('nAD','nNumeric', 'nInteger', 'nLogical'),
-  'labelAbstractTypes', 'return_nDim', 1
+assignOperatorDef(
+  c('nMatrix'),
+  list(
+    matchDef = function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {},
+    compileArgs = c("type"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
+)
+assignOperatorDef(
+  c('nArray'),
+  list(
+    matchDef = function(value = 0, dim, init = TRUE, fillZeros = TRUE, recycle = TRUE, nDim, type = 'double'){},
+    compileArgs = c("type", "nDim"),
+    labelAbstractTypes = list(
+      handler = 'InitData',
+      returnTypeCode = returnTypeCodes$promote),
+    eigenImpl = list(
+      handler = 'TensorCreation')
+  )
 )
 updateOperatorDef(
   'nAD',
@@ -225,10 +285,9 @@ updateOperatorDef(
   'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
 )
 updateOperatorDef(
-  c('nMatrix', 'nArray'),
-  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$promote
+  'nCharacter',
+  'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$character
 )
-
 assignOperatorDef(
   'type_is',
   list(
@@ -237,6 +296,24 @@ assignOperatorDef(
     help = 'type_is("integerVector", foo(x)) declares that foo(x) return an integer vector (or any valid type declaration including e.g. quote(integerVector())).',
     labelAbstractTypes = list(
       handler = 'type_is')
+  )
+)
+
+assignOperatorDef(
+  # Note that nAs<- is supported but does not need
+  # separate assignment op handlers. Hence
+  # we do not have useAssignOp = TRUE.
+  'nAs',
+  list(
+    matchDef = function(object, type) {},
+    compileArgs = c("type"),
+    help = 'as(object, type) (or nAs(object, type)) uses "object" as if it is of type "type", where the type is limited to basic types.',
+    labelAbstractTypes = list(
+      handler = 'As'),
+    eigenImpl = list(
+      handler = 'As'),
+    cppOutput = list(
+      handler = 'As')
   )
 )
 
@@ -304,7 +381,7 @@ assignOperatorDef(
     matchDef = function(x, times, length.out, each){},
     labelAbstractTypes = list(
       handler = 'VectorReturnType',
-      returnTypeCode = returnTypeCodes$promote),
+      returnTypeCode = returnTypeCodes$characterOrPromote),
     eigenImpl = list(
       handler = 'Rep')
   )
@@ -348,6 +425,12 @@ assignOperatorDef(
 assignOperatorDef(
   c('['),
   list(
+    matchDef = function(x, i, j, ..., drop=TRUE) {},
+    useOpAssign = TRUE,
+    compileArgs = c("drop"),
+    isGeneric = TRUE,
+    simpleTransformations = list(
+      handler = 'EvalDrop'),
     labelAbstractTypes = list(
       handler = 'Bracket'),
     eigenImpl = list(
@@ -358,12 +441,56 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('[<-'),
+  list(
+    matchDef = function(x, i, j, ..., drop=TRUE, value) {},
+    compileArgs = c("drop"),
+    isGeneric = TRUE,
+    simpleTransformations = list(
+      handler = 'EvalDrop'),
+    labelAbstractTypes = list(
+      handler = 'Bracket',
+      isAssign = TRUE),
+    eigenImpl = list(
+      handler = 'Bracket',
+      isAssign = TRUE), ## converts `[` to `index[` or `index(`
+    cppOutput = list(
+      handler = 'IndexingBracket') ## needed for generated code such as for AD.
+  )
+)
+
+assignOperatorDef(
   c('[['),
   list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i) {},
+    useOpAssign = TRUE,
+    isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DoubleBracket'),
+    # eigenImpl = list(
+    #   handler = 'Bracket',
+    #   ),
     cppOutput = list(
       handler = 'IndexingBracket') # generates to single bracket for C++
+  )
+)
+
+assignOperatorDef(
+  c('[[<-'),
+  list(
+    # There are not currently uses with multiple indices
+    matchDef = function(x, i, value) {},
+    isGeneric = TRUE,
+    labelAbstractTypes = list(
+      handler = 'DoubleBracket',
+      isAssign = TRUE),
+    eigenImpl = list(
+      handler = 'revert_OpAssign')#,
+#      isAssign = TRUE),
+# cppOutput will go back to `[[` opDef after reverse_OpAssign
+#    cppOutput = list(
+#      handler = 'IndexingBracket') # generates to single bracket for C++
   )
 )
 
@@ -409,13 +536,15 @@ assignmentOperators <- c('<-','<<-','=')
 assignOperatorDef(
   assignmentOperators,
   list(
+    simpleTransformations = list(
+      handler = 'CheckOpAssignment'),
     labelAbstractTypes = list(
       handler = 'Assign'),
     eigenImpl = list(
       beforeHandler = 'Assign_Before',
       handler = 'Assign'),
     cppOutput = list(
-      handler = 'MidOperator',
+      handler = 'Assign',
       cppString = ' = ')
   )
 )
@@ -438,8 +567,20 @@ assignOperatorDef(
 assignOperatorDef(
   '$',
   list(
+    isGeneric = TRUE,
     labelAbstractTypes = list(
       handler = 'DollarSign')
+  )
+)
+
+assignOperatorDef(
+  'MethodCall',
+  list(
+    help = 'MethodCall(A, foo(x)) is the parsed representation of A$foo(x), for internal use only.',
+    labelAbstractTypes = list(
+      handler = 'MethodCall'),
+    cppOutput = list(
+      handler = 'MethodCall')
   )
 )
 
@@ -565,9 +706,10 @@ assignOperatorDef(
 
 
 assignOperatorDef(
-  'scalarcast',
+  'scalarcast', # Ensure that an argument produces a scalar result, even for example from a 0-dimensional tensor. Currently for internal use only.
   list(
     help = 'scalarcast(A, type) is for scalar_cast_<type>::cast(A).',
+    compileArgs = c("type"),
     cppOutput = list(
       handler = 'ScalarCast'
     )
@@ -916,13 +1058,13 @@ assignOperatorDef(
       handler = 'cWiseByScalar', ## Eigen::Tensor requires the rhs of pow to be scalar
       method = TRUE),
     cppOutput = list(
-      cppString = 'pow'
+      # cppString = 'pow' # added to simple name changes below
     )
   )
 )
 
 assignOperatorDef(
-  c('%%'),
+  c('%%', 'nc_mod'),
   list(
     labelAbstractTypes = list(
       handler = 'BinaryCwise',
@@ -934,24 +1076,28 @@ assignOperatorDef(
       allScalar = TRUE
     ),
     cppOutput = list(
-      handler = 'AsIs',
-      cppString = 'nc_mod')
+      handler = 'AsIs'
+      ##cppString = 'nc_mod'
+    )
   )
 )
 
 assignOperatorDef(
   c('nMul'),
   list(
+    matchDef = function(x, y) {},
     labelAbstractTypes = list(
       handler = 'nMul'
     )
   )
 )
 
+
 assignOperatorDef(
   # Note: besselK is not a distribution, but its usage has nearly identical
   # functional needs as density functions
-  c('dbeta', 'dbinom', 'dexp_nCompiler', 'dgamma', 'dinvgamma', 'dlnorm',
+  c('dbeta', 'dbinom', 'dlnorm', 'dexp_nComp_rate', 'dexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'dgamma_rate', 'dgamma_scale', 'dinvgamma_rate', 'dinvgamma_scale',
     'dnbinom', 'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull', 'besselK',
     'dlogis', 'dpois', 'dchisq'),
   list(
@@ -968,6 +1114,63 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  c('dexp_nComp', 'dgamma', 'dinvgamma'),
+  list(
+    matchDef  = function(x, shape, rate = 1, scale = 1, log = FALSE) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef('dinvgamma', 'simpleTransformations', 'default', 'rate')
+
+assignOperatorDef(
+  c('pexp_nComp_rate', 'pexp_nComp_scale', 'qexp_nComp_rate', 'qexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'pgamma_rate', 'pgamma_scale', 'qgamma_rate', 'qgamma_scale',
+    'pinvgamma_rate', 'pinvgamma_scale', 'qinvgamma_rate', 'qinvgamma_scale'),
+  list(
+    labelAbstractTypes = list(
+      handler = 'Distribution',
+      returnTypeCode = returnTypeCodes$double,
+      nFinalScalarArgs = 2 # lower.tail and log.p
+    ),
+    eigenImpl = list(
+      handler = 'PromoteAllButLastArg',
+      nFinalScalarArgs = 2
+    ),
+    cppOutput = list(
+      handler = 'RR_Distribution'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('pexp_nComp', 'qexp_nComp', 'pgamma', 'qgamma', 'pinvgamma', 'qinvgamma'),
+  list(
+    matchDef  = function(q, shape, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+updateOperatorDef(
+  'pexp_nComp', 'matchDef', val = function(q, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+updateOperatorDef(
+  'qexp_nComp', 'matchDef', val = function(p, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+updateOperatorDef(
+  c('qgamma', 'qinvgamma'), 'matchDef', val = function(p, shape, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {}
+)
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef(c('pinvgamma', 'qinvgamma'), 'simpleTransformations', 'default', 'rate')
+
 updateOperatorDef(
   'dbeta', 'matchDef', val = function(x, shape1, shape2, log = FALSE) {}
 )
@@ -975,19 +1178,13 @@ updateOperatorDef(
   'dbinom', 'matchDef', val = function(x, size, prob, log = FALSE) {}
 )
 updateOperatorDef(
-  'dexp_nCompiler', 'matchDef', val = function(x, rate = 1, log = FALSE) {}
+  'dexp_nComp', 'matchDef', val = function(x, rate = 1, scale = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dpois', 'matchDef', val = function(x, lambda, log = FALSE) {}
 )
 updateOperatorDef(
   'dchisq', 'matchDef', val = function(x, df, ncp = 0, log = FALSE) {}
-)
-updateOperatorDef(
-  'dgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
-)
-updateOperatorDef(
-  'dinvgamma', 'matchDef', val = function(x, shape, scale = 1, log = FALSE) {}
 )
 updateOperatorDef(
   'dlnorm', 'matchDef', val = function(x, meanlog = 0, sdlog = 1, log = FALSE) {}
@@ -1020,7 +1217,9 @@ updateOperatorDef(
 )
 
 assignOperatorDef(
-  c('rbeta', 'rbinom', 'rexp_nCompiler', 'rgamma', 'rinvgamma', 'rlnorm',
+  c('rbeta', 'rbinom', 'rlnorm',
+    'rexp_nComp_rate', 'rexp_nComp_scale', # "rate" and "scale" names are created by simpleTransformations -> RateScaleDist.
+    'rgamma_rate', 'rgamma_scale', 'rinvgamma_rate', 'rinvgamma_scale',
     'rnbinom', 'rnorm', 'rt', 'rt_nonstandard', 'runif', 'rweibull', 'rlogis',
     'rpois', 'rchisq'),
   list(
@@ -1039,11 +1238,8 @@ assignOperatorDef(
 
 updateOperatorDef('rbeta', 'matchDef', val = function(n, shape1, shape2) {})
 updateOperatorDef('rbinom', 'matchDef', val = function(n, size, prob) {})
-updateOperatorDef('rexp_nCompiler', 'matchDef', val = function(n, rate = 1) {})
 updateOperatorDef('rpois', 'matchDef', val = function(n, lambda) {})
 updateOperatorDef('rchisq', 'matchDef', val = function(n, df, ncp = 0) {})
-updateOperatorDef('rgamma', 'matchDef', val = function(n, shape, scale = 1) {})
-updateOperatorDef('rinvgamma', 'matchDef', val = function(n, shape, scale = 1) {})
 updateOperatorDef('rlnorm', 'matchDef', val = function(n, meanlog = 0, sdlog = 1) {})
 updateOperatorDef('rnbinom', 'matchDef', val = function(n, size, prob) {})
 updateOperatorDef('rnorm', 'matchDef', val = function(n, mean = 0, sd = 1) {})
@@ -1054,20 +1250,251 @@ updateOperatorDef('runif', 'matchDef', val = function(n, min = 0, max = 1) {})
 updateOperatorDef('rweibull', 'matchDef', val = function(n, shape, scale = 1) {})
 
 assignOperatorDef(
-  c('length'),
+  c('rexp_nComp', 'rgamma', 'rinvgamma'),
   list(
+    matchDef  = function(n, shape, rate = 1, scale = 1) {},
+    simpleTransformations = list(
+      handler = "RateScaleDist",
+      default = "scale"), # used if neither rate nor scale is provided
+    labelAbstractTypes = list(
+      handler = 'ERROR')
+  )
+)
+updateOperatorDef('rexp_nComp', 'matchDef', val = function(n, rate = 1, scale = 1) {})
+# invgamma uses rate on the C++ side without inversion
+updateOperatorDef('rinvgamma', 'simpleTransformations', 'default', 'rate')
+
+assignOperatorDef(
+  c("dmnorm_chol"),
+  list(
+    matchDef = function(x, mean, cholesky, prec_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rmnorm_chol"),
+  list(
+    matchDef = function(n = 1, mean, cholesky, prec_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dmvt_chol"),
+  list(
+    matchDef = function(x, mu, cholesky, df, prec_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rmvt_chol"),
+  list(
+    matchDef = function(n = 1, mu, cholesky, df, prec_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dwish_chol"),
+  list(
+    matchDef = function(x, cholesky, df, scale_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rwish_chol"),
+  list(
+    matchDef = function(n = 1, cholesky, df, scale_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 2
+    )
+  )
+)
+
+assignOperatorDef(
+  c("ddirch"),
+  list(
+    matchDef = function(x, alpha, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rdirch"),
+  list(
+    matchDef = function(n = 1, alpha) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dmulti"),
+  list(
+    matchDef = function(x, size, prob, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rmulti"),
+  list(
+    matchDef = function(n = 1, size, prob) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 1
+    )
+  )
+)
+
+assignOperatorDef(
+  c("dinvwish_chol"),
+  list(
+    matchDef = function(x, cholesky, df, scale_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rinvwish_chol"),
+  list(
+    matchDef = function(n = 1, cholesky, df, scale_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 2
+    )
+  )
+)
+
+# dcat and rcat have a scalar value but a vector parameter, so they use the MVDist handler
+# (scalar double return) and the Eigen::Tensor wrappers in dists/dcat_tensor.h and rcat_tensor.h.
+assignOperatorDef(
+  c("dcat"),
+  list(
+    matchDef = function(x, prob, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rcat"),
+  list(
+    matchDef = function(n = 1, prob) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nSwitch'),
+  list(
+    matchDef = function(expr, IDs, ...) {},
+    compileArgs = c("IDs"),
+    simpleTransformations = list(
+      handler = 'Switch'
+    ),
+    labelAbstractTypes = list(
+      handler = 'Switch'
+    ),
+    cppOutput = list(
+      handler = 'Switch'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('length'), # methods here are for Eigen objects and may be overloaded for user nClasses.
+  list(
+    matchDef <- function(x) {},
+    isGeneric = TRUE,
+    useOpAssign = TRUE,
     labelAbstractTypes = list(
       handler = 'UnaryReduction',
       returnTypeCode = returnTypeCodes$integer
     ),
     eigenImpl = list(
-      handler = 'Reduction',
+      handler = 'Length',
       noPromotion = TRUE,
       replaceForScalar = 1,
-      method = TRUE
+      method = TRUE,
+      methodName = 'size'
     ),
     cppOutput = list(
-      cppString = 'size'
+      # cppString = 'size'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('length<-'),
+  list(
+    matchDef <- function(x, value) {},
+    isGeneric = TRUE,
+    labelAbstractTypes = list(
+      handler = 'LengthAssign'
+    )
+    # LAT step turns this into setSize(), so its handlers take over.
+    # ,
+    # eigenImpl = list(
+    #   handler = 'LengthAssign',
+    #   methodName = 'resize'), # length<-(x, value) will become `.method(x, "setLength", scalarcast(value)))` with the cast type "int"
+    # cppOutput = list(
+    #   #handler = 'OpAssign'
+    #   #cppString = 'setLength'
+    # )
+  )
+)
+
+assignOperatorDef(
+  'setSize',
+  list(
+    # fill is an alternative name for fillZeros, which was in nimble.
+    # nimble's "numObj" argument is renamed "obj" here, but in case of legacy code with named "numObj", 
+    #.  that is supported at the end of the argument list.
+    # value is a new optional argument for initialization values.
+    # if value is provided, then fill is set to TRUE
+    # if fill is set, it over-rides fillZeros.
+    # The ... argument supports either a single vector of sizes
+    # or one-by-one sizes.
+    # A key difference from native R `length<-` is that fill values are 0, FALSE, or "", never NA.
+    # Note that Rcpp's string support is limited for NA.
+    matchDef = function(obj, ..., copy = TRUE, fillZeros = TRUE,
+                        fill, value, numObj) {},
+    simpleTransformations = list(
+      handler = 'SetSize'
+    ),
+    labelAbstractTypes = list(
+      handler = 'SetSize'
+    ),
+    cppOutput = list(
+      cppString = 'setSize_'
     )
   )
 )
@@ -1075,6 +1502,7 @@ assignOperatorDef(
 assignOperatorDef(
   'asSparse',
   list(
+    matchDef = function(x, prune = FALSE) {},
     labelAbstractTypes = list(
       handler = 'asSparse'
     ),
@@ -1087,6 +1515,7 @@ assignOperatorDef(
 assignOperatorDef(
   'asDense',
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'asDense'
     ),
@@ -1107,8 +1536,19 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  'Cholesky',
+  list(
+    matchDef = function(A) {},
+    labelAbstractTypes = list(
+      handler = 'Cholesky'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nChol'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
       handler = 'nChol',
       returnTypeCode = returnTypeCodes$double
@@ -1119,8 +1559,9 @@ assignOperatorDef(
 assignOperatorDef(
   c('nLogdet'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
-      handler = 'UnaryReduction'
+      handler = 'nLogdet'
     )
   )
 )
@@ -1128,7 +1569,7 @@ assignOperatorDef(
 assignOperatorDef(
   c('nDiag', 'nDiagonal'),
   list(
-    matchDef = function(x, nrow, ncol) {},
+    matchDef = function(x=1, nrow, ncol) {},
     labelAbstractTypes = list(
       handler = 'Diag'
     ),
@@ -1142,18 +1583,28 @@ assignOperatorDef(
   c('nForwardsolve', 'nBacksolve', 'nSolve'),
   list(
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
+      handler = 'Solve',
       argTypeInd = 2
     )
   )
 )
 
+updateOperatorDef('nForwardsolve', 'matchDef', val = function(l, x){})
+updateOperatorDef('nBacksolve', 'matchDef', val = function(r, x){})
+updateOperatorDef('nSolve', 'matchDef', val = function(a, b){})
+
 assignOperatorDef(
   c('t'),
   list(
+    matchDef = function(x) {},
     labelAbstractTypes = list(
-      handler = 'ArgReturnType',
-      argTypeInd = 1
+      handler = 'Transpose'
+    ),
+    eigenImpl = list(
+      handler = 'Transpose'
+    ),
+    cppOutput = list(
+      cppString = "t__"
     )
   )
 )
@@ -1161,7 +1612,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nEigen',
   list(
-    matchDef = function(x, symmetric, valuesOnly=FALSE) {},
+    matchDef = function(x, symmetric=FALSE, valuesOnly=FALSE) {},
     labelAbstractTypes = list(
       handler = 'nEigen'
     )
@@ -1171,6 +1622,7 @@ assignOperatorDef(
 assignOperatorDef(
   'nSvd',
   list(
+    matchDef = function(x, vectors=1) {},
     labelAbstractTypes = list(
       handler = 'nSvd'
     )
@@ -1283,8 +1735,8 @@ assignOperatorDef(
 ## )
 
 specificCallReplacements <- list(
-#    '^' = 'pow',
-#    '%%' = 'nimMod',
+    '^' = 'pow', # previously commented and changed instead at cppOutput. Was there a problem?
+    '%%' = 'nc_mod', # ditto
 #    length = 'size',
     is.nan = 'ISNAN',
     is.nan.vec = 'ISNAN',

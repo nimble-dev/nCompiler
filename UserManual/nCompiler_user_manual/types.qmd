@@ -8,7 +8,7 @@ editor: visual
 
 - You need to say what the types of inputs and outputs will be.
 - Usually the types of variables created within functions will be handled automatically.
-- Types include basic types (scalars, vectors, matrices, or arrays of doubles, integers, or logicals), `nClass` types, `nList` types, and `Rcpp` types, among others.
+- Types include basic types (scalars, vectors, matrices, or arrays of doubles, integers, or logicals), `nClass` types, `nCppVec` types, and `Rcpp` types, among others.
 
 ::: {.callout-important collapse="true"}
 ## nCompiler supports true scalars
@@ -142,6 +142,6 @@ Many Rcpp types are supported. Using these requires some of your own C++ coding.
 - `cppVar`
 - `nCpp` (for direct coding of an arbitrary type)
 
-### nClass and nList types
+### nClass and nCppVec types
 
 These will be covered in later sections.

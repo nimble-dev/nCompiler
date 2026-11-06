@@ -1,0 +1,7 @@
+list(saved_at = structure(1780167848.49078, class = c("POSIXct", 
+"POSIXt")), packet_name = "denseCholFactor", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "denseCholFactor_preamble.cpp", cppContent = "denseCholFactor_cppContent.cpp", 
+    hContent = "denseCholFactor_hContent.h", filebase = "denseCholFactor_filebase.txt", 
+    post_cpp_compiler = "denseCholFactor_post_cpp_compiler.txt", 
+    copyFiles = "denseCholFactor_copyFiles.txt"))

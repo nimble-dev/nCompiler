@@ -27,36 +27,66 @@ new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
 #' @export
 to_full_interface <- function(LOE) {
 #  parentEnv <- parent.env(LOE)
+  if(!is.loadedObjectEnv(LOE)) {
+    if(isCNC(obj)) return(LOE)
+    else stop("LOE should be a loadedObjectEnv")
+  }
   CnCenv <- get_CnCenv(LOE)
   if(exists('.R6interface', CnCenv)) {
-    fullAns <- CnCenv$.R6interface$new(LOE)
+    fullAns <- CnCenv$.R6interface$new(CppObj = LOE)
     return(fullAns)
   }
   LOE # default to non-full
 }
 
+#'@export
+to_generic_interface <- function(obj) {
+  if(!isCNC(obj)) {
+    if(is.loadedObjectEnv(obj)) return(obj)
+    else stop("obj should be a compiled nClass object")
+  }
+  obj$private$Cpublic_obj$private$CppObj
+}  
+
 #' @export
-new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL) {
+new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = NULL) {
   # This will be true if called from an nFunction (or nClass method) returning an object
+  # When is_full is NULL, we follow the default for the class (return_mode below)
+  # When is_full is provided, we over-ride the default.
   ans <- new.loadedObjectEnv(extptr, parentEnv)
   if(!is.null(parentEnv)) { # This doesn't really do anything
-    if(exists('.R6interface', parentEnv) &&
-       parentEnv$return_mode == "full") {
-        fullAns <- parentEnv$.R6interface$new(ans)
+    if(exists('.R6interface', parentEnv)) {
+      is_full <- is_full %||% (parentEnv$return_mode == "full")
+      if(is_full) {
+        fullAns <- parentEnv$.R6interface$new(CppObj = ans)
         return(fullAns)
+      }
     }
   }
   ans
 }
 
 #' @export
+isCompiled <- function(obj) {
+  if(inherits(obj, "nClass"))
+    isTRUE(obj$isCompiled())
+  else 
+   is.loadedObjectEnv(obj)
+}
+
+#' @export
 is.loadedObjectEnv <- function(env) {
   ## The checks here may be over-kill.
   ## We may be able to rely solely on the class label.
-  if(!is.environment(env)) return(FALSE)
-  if(!exists("extptr", where = env)) return(FALSE)
-  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
-  TRUE
+#
+#  if(!is.environment(env)) return(FALSE)
+#  if(!exists("extptr", where = env)) return(FALSE)
+#  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
+#.  else TRUE
+  if(inherits(env, "loadedObjectEnv"))
+    TRUE
+  else
+    FALSE
 }
 
 #' @export
@@ -112,7 +142,7 @@ get_CnCenv <- function(obj) {
 setup_nClass_environments <- function(compiledFuns,
                                       newDLLenv,
                                       exportNames = character(),
-                                      R6interfaces,
+                                      NCgenerators,
                                       methodFns,
                                       interfaceTypes,
                                       returnList = FALSE) {
@@ -122,7 +152,7 @@ setup_nClass_environments <- function(compiledFuns,
     compiledFuns <- setup_CnClass_env(compiledFuns,
                                       newDLLenv,
                                       exportNames[i],
-                                      R6interfaces[[i]],
+                                      NCgenerators[[i]],
                                       methodFns[[i]],
                                       interfaceTypes[i])
   }
@@ -135,7 +165,7 @@ setup_nClass_environments <- function(compiledFuns,
 setup_nClass_environments_from_package <- function(nClass_exportNames,
                                                    interfaceTypes,
                                                    createFromR,
-                                                   R6interfaces,
+                                                   CnCgenerators,
                                                    methodFns,
                                                    pkgName) {
                                         # nClass_names will really be exportNames
@@ -148,7 +178,8 @@ setup_nClass_environments_from_package <- function(nClass_exportNames,
     reqdFuns <- c(reqdFuns,
                   "call_method",
                   "get_value",
-                  "set_value")
+                  "set_value",
+                  "get_names")
   for(i in seq_along(interfaceTypes)) {
     if(createFromR[i])
       reqdFuns <- c(reqdFuns, nClass_exportNames[i])
@@ -170,11 +201,11 @@ setup_nClass_environments_from_package <- function(nClass_exportNames,
   }
   for(fn in reqdFuns) get_fn(fn, TRUE)
   for(fn in optFuns) get_fn(fn, FALSE)
-  # TO-DO: Case when R6interfaces are set up
+  # TO-DO: Case when CnCgenerators are set up
   setup_nClass_environments(compiledFuns,
                             DLLenv,
                             exportNames = nClass_exportNames,
-                            R6interfaces,
+                            CnCgenerators,
                             methodFns,
                             interfaceTypes,
                             returnList = TRUE)
@@ -239,7 +270,8 @@ setup_DLLenv <- function(compiledFuns,
                       "new_serialization_mgr",
                       "get_value",
                       "set_value",
-                      "call_method"
+                      "call_method",
+                      "get_names"
                       )
   
   compiledFuns <- move_funs_from_list_to_env(namesForDLLenv,

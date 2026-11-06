@@ -1,0 +1,77 @@
+/* OPENER (Do not edit this comment) */
+#ifndef __nListBase_nClass_CPP
+#define __nListBase_nClass_CPP
+/* BODY (Do not edit this comment) */
+#ifndef R_NO_REMAP
+#define R_NO_REMAP
+#endif
+#include <iostream>
+#include "nListBase_nClass_c_.h"
+using namespace Rcpp;
+// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]
+// [[Rcpp::depends(RcppParallel)]]
+// [[Rcpp::depends(nCompiler)]]
+// [[Rcpp::depends(Rcereal)]]
+
+    bool  nListBase_nClass::ping (  )  {
+RESET_EIGEN_ERRORS
+return(true);
+}
+    int  nListBase_nClass::setLength ( int length )  {
+RESET_EIGEN_ERRORS
+std::cout<<"Compiled base class setLength should not be called."<<std::endl;;
+return(0.0);
+}
+    int  nListBase_nClass::getLength (  )  {
+RESET_EIGEN_ERRORS
+std::cout<<"Compiled base class getLength should not be called."<<std::endl;;
+return(0.0);
+}
+    std::shared_ptr<genericInterfaceBaseC>  nListBase_nClass::get_interface_ptr_at ( int i )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_interface_ptr_at should not be called (only derived class method should be called).");
+return(nullptr);
+}
+    std::unique_ptr<ETaccessorBase>  nListBase_nClass::access_at ( int i )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::access_at should not be called (only derived class method should be called).");
+return(nullptr);
+}
+    int  nListBase_nClass::get_nDim (  )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_nDim should not be called (only derived class method should be called).");
+return(NA_INTEGER);
+}
+    std::string  nListBase_nClass::get_elementType (  )  {
+RESET_EIGEN_ERRORS
+Rcpp::stop("nListBase_nClass::get_elementType should not be called (only derived class method should be called).");
+return("UNKNOWN");
+}
+      nListBase_nClass::nListBase_nClass (  )  {
+RESET_EIGEN_ERRORS
+}
+
+// [[Rcpp::export(name = "set_CnClass_env_nListBase_nClass_new")]]
+    void  set_CnClass_env_nListBase_nClass ( SEXP env )  {
+RESET_EIGEN_ERRORS
+SET_CNCLASS_ENV(nListBase_nClass, env);;
+}
+
+// [[Rcpp::export(name = "get_CnClass_env_nListBase_nClass_new")]]
+    Rcpp::Environment  get_CnClass_env_nListBase_nClass (  )  {
+RESET_EIGEN_ERRORS
+return GET_CNCLASS_ENV(nListBase_nClass);;
+}
+
+NCOMPILER_INTERFACE(
+nListBase_nClass,
+NCOMPILER_FIELDS(),
+NCOMPILER_METHODS(
+method("ping", &nListBase_nClass::ping, args({{}})),
+method("setLength", &nListBase_nClass::setLength, args({{arg("length",copy)}})),
+method("getLength", &nListBase_nClass::getLength, args({{}})),
+method("get_nDim", &nListBase_nClass::get_nDim, args({{}})),
+method("get_elementType", &nListBase_nClass::get_elementType, args({{}}))
+)
+)
+#endif

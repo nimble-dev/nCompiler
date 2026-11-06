@@ -53,7 +53,7 @@ class shared_ptr_holder: public shared_ptr_holder_base {
   ~shared_ptr_holder() {
 #ifdef SHOW_SHARED_PTR_DESTRUCTORS
 //    std::cout<<"Destroying shared_ptr_holder.";
-    if(sp_.unique()) {
+    if(sp_.use_count() == 1) { // sp_.unique() removed in C++20
 //      std::cout<<" This should destroy the underlying nCompiler object."<<std::endl;
     } else {
 //      std::cout<<" This won't yet destroy the underlying nCompiler object. It is not unique."<<std::endl;

@@ -6,13 +6,15 @@
 \usage{
 nFunction(
   fun,
-  name = NA,
+  name,
   argTypes = list(),
-  refArgs = list(),
+  refArgs = character(),
+  blockRefArgs = character(),
   returnType = NULL,
-  enableDerivs = list(),
-  check = get_nOption("check_nFunction"),
-  returnCallable = TRUE,
+  enableDerivs = FALSE,
+  control = list(),
+  compileInfo = list(),
+  predefined = FALSE,
   where = parent.frame(),
   ...
 )
@@ -30,11 +32,11 @@ nFunction(
 
 \item{enableDerivs}{Allows derviatives to be obtained automatically.  Currently disabled.}
 
+\item{where}{Environment to be used as the closure of the returned \code{nFunction}.}
+
 \item{check}{If \code{TRUE}, \code{fun} will be checked for errors (including anything that cannot be compiled.  (This is currently disabled.)}
 
 \item{returnCallable}{If \code{TRUE}, return a \code{nFunction} object that can be used as a funtion (because it is a function).  If \code{FALSE} (only for advanced debugging), return the internal information of the \code{nFunction}.}
-
-\item{where}{Environment to be used as the closure of the returned \code{nFunction}.}
 }
 \value{
 An object of class \code{nFunction}, which inherits from class \code{function}.

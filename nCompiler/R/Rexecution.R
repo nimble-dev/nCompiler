@@ -17,6 +17,71 @@ parallel_reduce <- function(f, x, init, ...) {
   Reduce(f, x, init)
 }
 
+make_nAs_output_dims <- function(input_dims, output_nDim) {
+  input_nDim <- length(input_dims)
+  if(output_nDim >= input_nDim)
+    c(input_dims, rep(1, output_nDim - input_nDim))
+  else {
+    output_dims <- input_dims[input_dims > 1]
+    if(length(output_dims) < output_nDim) output_dims <- c(output_dims, rep(1, output_nDim - length(output_dims)))
+    if(length(output_dims) > output_nDim) stop("input_dims don't have enough singleton dimensions for output_nDim = ", output_nDim)
+    output_dims
+  }
+}
+
+#' @export
+nSwitch <- function(paramID, IDoptions = NULL, ...) {
+  dotsList <- eval(substitute(alist(...)))
+  if(is.null(IDoptions)) IDoptions <- seq_along(dotsList)
+  if(length(IDoptions) != length(dotsList)) stop("length of IDoptions must match number of cases provided in ...")
+  iUse <- which(IDoptions == paramID)
+  if(length(iUse) > 0)  eval(dotsList[[iUse[1] ]], envir = parent.frame())
+  invisible(NULL)
+}
+
+#' @export
+nAs <- function(object, type) {
+  ttype <- nCaptureType(type)
+  sym <- type2symbol(!!ttype)
+  output_nDim <- sym$nDim
+  scalar_type <- sym$type
+  if(storage.mode(object) != scalar_type)
+    storage.mode(object) <- scalar_type
+  input_dims <- dim(object) %||% length(object)
+  output_dims <- make_nAs_output_dims(input_dims, output_nDim)
+  if(output_nDim > 1) {
+    dim(object) <- output_dims
+    object
+  } else
+    as.vector(object)
+}
+
+#' @export
+`nAs<-` <- function(object, type, value) {
+  # Here "input" is object
+  # and "output" is how object is viewed.
+  # "output" is only needed to see if it conforms with value.
+  # If so, the copying can be done with [] on both sides.
+  obj_expr <- substitute(object)
+  value_expr <- substitute(value)
+  ttype <- nCaptureType(type)
+  sym <- type2symbol(!!ttype)
+  output_nDim <- sym$nDim
+  scalar_type <- storage.mode(object)
+  input_dims <- dim(object) %||% length(object)
+  output_dims <- make_nAs_output_dims(input_dims, output_nDim)
+  if(!length(output_dims)) output_dims <- 1
+  value_dims <- dim(value) %||% length(value)
+  if(!all.equal(output_dims, value_dims))
+    stop("value doesn't conform to type in nAs<- assignment")
+  object[] <- value[]
+  if(storage.mode(object) != scalar_type)
+    storage.mode(object) <- scalar_type
+  expr <- substitute(LHS <- OBJ, list(LHS = obj_expr, OBJ = object))
+  res <- eval(expr, envir = parent.frame())
+  res
+}
+
 #' @export
 square <- function(x) x*x
 #' @export
@@ -67,9 +132,9 @@ nWarning <- warning
 #'
 #' @details
 #' These functions are similar to R's \code{\link{numeric}}, \code{\link{integer}}, \code{\link{logical}} functions, but they can be used in a nFunction and then compiled using \code{nCompile}.  Largely for compilation purposes, finer control is provided over initialization behavior.  If \code{init = FALSE}, no initialization will be done, and \code{value}, \code{fillZeros} and \code{recycle} will be ignored.  If \code{init=TRUE} and \code{recycle=TRUE}, then \code{fillZeros} will be ignored, and \code{value} will be repeated (according to R's recycling rule) as much as necessary to fill a vector of length \code{length}.  If \code{init=TRUE} and \code{recycle=FALSE}, then if \code{fillZeros=TRUE}, values of 0 (or FALSE for \code{nLogical}) will be filled in after \code{value} up to length \code{length}.  Compiled code will be more efficient if unnecessary initialization is not done, but this may or may not be noticeable depending on the situation.
-#' 
-#' When used in a \code{nFunction} (in \code{run} or other member function), \code{numeric}, \code{integer} and \code{logical} are immediately converted to \code{nNumeric}, \code{nInteger} and \code{nLogical}, respectively.  
-#' 
+#'
+#' When used in a \code{nFunction} (in \code{run} or other member function), \code{numeric}, \code{integer} and \code{logical} are immediately converted to \code{nNumeric}, \code{nInteger} and \code{nLogical}, respectively.
+#'
 #' @author Daniel Turek, Chris Paciorek, Perry de Valpine
 #' @aliases numeric
 #' @seealso \code{\link{nMatrix}}, \code{\link{nArray}}
@@ -93,8 +158,16 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
     makeReturnVector(fillValue, length, recycle)
 }
 
+#' @rdname nCharacter
+#' @export
+nCharacter <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
+    fillValue <- makeFillValue(value, 'character', init)
+    makeReturnVector(fillValue, length, recycle)
+}
+
+
 #' Creates matrix or array objects for use in nFunctions
-#' 
+#'
 #' In a \code{nFunction}, \code{matrix} and \code{array} are identical to \code{nMatrix} and \code{nArray}, respectively
 #'
 #' @aliases nArray matrix array
@@ -115,54 +188,59 @@ nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recyc
 #' When used in a \code{nFunction} (in \code{run} or other member function), \code{matrix} and \code{array} are immediately converted to \code{nMatrix} and \code{nArray}, respectively.
 #'
 #' The \code{nDim} argument is only necessary for a use like \code{dim <- c(2, 3, 4); A <- nArray(0, dim = dim, nDim = 3)}.  It is necessary because the compiler must determine during compilation that \code{A} will be a 3-dimensional numeric array.  However, the compiler doesn't know for sure what the length of \code{dim} will be at run time, only that it is a vector.  On the other hand,   \code{A <- nArray(0, dim = c(2, 3, 4))} is allowed because the compiler can directly determine that a vector of length three is constructed inline for the \code{dim} argument.
-#' 
+#'
 #' @author Daniel Turek and Perry de Valpine
 #' @seealso \code{\link{nNumeric}} \code{\link{nInteger}} \code{\link{nLogical}}
 #' @export
-nMatrix <- function(value = 0, nrow = NA, ncol = NA, init = TRUE, fillZeros = TRUE, recycle = TRUE, type = 'double') {
-    ## the -1's are used because nCompiler does not allow both missingness and default value
-    ## but R's matrix function relies on both possibilities
-    fillValue <- makeFillValue(value, type, init)
-    mnrow <- missing(nrow) || is.na(nrow)
-    mncol <- missing(ncol) || is.na(ncol)
-    if(mnrow)
-        if(mncol) {
-            base::matrix(fillValue)
-        } else {
-            nrow <- ceiling( length(fillValue) / ncol )
-            fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
-            base::matrix(fillValue, ncol = ncol, nrow = nrow)
-        }
-    else
-        if(mncol) {
-            ncol <- ceiling( length(fillValue) / nrow )
-            fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
-            base::matrix(fillValue, nrow = nrow, ncol = ncol)
-        } else {
-            fillValue <- makeReturnVector(fillValue, ncol*nrow, recycle)
-            base::matrix(fillValue, nrow = nrow, ncol = ncol)
-        }
+nMatrix <- function(value = if(type=="character") "" else 0, nrow = NA, ncol = NA, 
+                    init = TRUE, fillZeros = TRUE, recycle = TRUE, 
+                    type = "double") {
+  ## the -1's are used because nCompiler does not allow both missingness and default value
+  ## but R's matrix function relies on both possibilities
+  fillValue <- makeFillValue(value, type, init)
+  mnrow <- missing(nrow) || is.na(nrow)
+  mncol <- missing(ncol) || is.na(ncol)
+  if(mnrow)
+    if(mncol) {
+      base::matrix(fillValue)
+    } else {
+      nrow <- ceiling( length(fillValue) / ncol )
+      fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
+      base::matrix(fillValue, ncol = ncol, nrow = nrow)
+    }
+  else
+    if(mncol) {
+      ncol <- ceiling( length(fillValue) / nrow )
+      fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
+      base::matrix(fillValue, nrow = nrow, ncol = ncol)
+    } else {
+      fillValue <- makeReturnVector(fillValue, ncol*nrow, recycle)
+      base::matrix(fillValue, nrow = nrow, ncol = ncol)
+    }
 }
 
 
 #' @rdname nMatrix
 #' @export
-nArray <- function(value = 0, dim = c(1, 1), init = TRUE, fillZeros = TRUE, recycle = TRUE, nDim, type = 'double') {
-    if(!missing(nDim)) dim <- dim[1:nDim]
-    fillValue <- makeFillValue(value, type, init)
-    fillValue <- makeReturnVector(fillValue, prod(dim), recycle)
-    if(length(dim) == 1) fillValue
-    else base::array(fillValue, dim)
+nArray <- function(value = if(type=="character") "" else 0, dim = c(1, 1), 
+                   init = TRUE, fillZeros = TRUE, recycle = TRUE,
+                   nDim, type = 'double') {
+  if(!missing(nDim)) dim <- dim[1:nDim]
+  fillValue <- makeFillValue(value, type, init)
+  fillValue <- makeReturnVector(fillValue, prod(dim), recycle)
+  if(length(dim) == 1) fillValue
+  else base::array(fillValue, dim)
 }
 
 makeFillValue <- function(value, type, init) {
-    fillValue <- if(init) value else 0
-    fillValueTyped <- switch(type,
-                             double = as.numeric(fillValue),
-                             integer = as.integer(fillValue),
-                             logical = as.logical(fillValue),
-                             stop('unknown type argument'))
-    return(fillValueTyped)
+  fillValue <- if(init) value else 0
+  fillValueTyped <- switch(type,
+                            double = as.numeric(fillValue),
+                            integer = as.integer(fillValue),
+                            logical = as.logical(fillValue),
+                            character = as.character(fillValue),
+                            stop('unknown type argument')) 
+  return(fillValueTyped)
 }
 
 makeReturnVector <- function(fillValue, length, recycle) {
@@ -175,13 +253,13 @@ makeReturnVector <- function(fillValue, length, recycle) {
     else {
         if(length(fillValue) != length) {
             if(length(fillValue) < length) {
-                ##warning(paste0("Not enough values provided for vector of length ",length, ".")) 
+                ##warning(paste0("Not enough values provided for vector of length ",length, "."))
                 if(recycle)
                     rep(fillValue, length.out = length)
                 else
                     c(fillValue, as(rep(0, length-length(fillValue)), class(fillValue)))
             } else {
-                ##warning(paste0("Too many values provided for vector of length ",length, ".")) 
+                ##warning(paste0("Too many values provided for vector of length ",length, "."))
                 fillValue[1:length]
             }
         } else {
@@ -190,19 +268,125 @@ makeReturnVector <- function(fillValue, length, recycle) {
     }
 }
 
-#' Spectral Decomposition of a Matrix
+#' set the size of a numeric variable in NIMBLE
+#'
+#' set the size of a numeric variable in NIMBLE.  This works in R and NIMBLE, but in R it usually has no effect.
+#'
+#' @param obj    This is the object to be resized
+#' @param ...       sizes, provided as scalars, in order, or as a single vector
+#' @param copy      logical indicating whether values should be preserved (in column-major order)
+#' @param fillZeros logical indicating whether newly allocated space should be initialized with zeros (in compiled code)
+#'  This is provided for backward compatibility with NIMBLE and is superceded by the \code{fill} argument.
+#' @param fill      logical indicating whether newly allocated space should be initialized with zeros (in compiled code). 
+#'  If provided, this over-rides \code{fillZeros}.
+#' @param value     value for initializing new elements, if not copied or extended.
+#' @param numObj. Alternative argument for providing the object to be resized.
+#'   This is provided for backward compatibility with NIMBLE and is superceded by the \code{obj} argument.
 #' 
+#' @author NIMBLE development team
+#' @export
+#' @details
+#' Note that assigning the result of \code{numeric}, \code{integer}, \code{logical}, \code{matrix}, or \code{array} is often as good or better than using \code{setSize}.  For example, `x <- matrix(nrow = 5, ncol = 5)` is equivalent to `setSize(x, 5, 5)` but the former allows more control over initialization.
+#' 
+#' This function is part of the NIMBLE language.  Its purpose is to explicitly resize a multivariate object (vector, matrix or array), currently up to 4 dimensions.  Explicit resizing is not needed when an entire object is assigned to.  For example, in \code{Y <- A \%*\% B}, where A and B are matrices, \code{Y} will be resized automatically.  Explicit resizing is necessary when assignment will be by indexed elements or blocks, if the object is not already an appropriate size for the assignment.  E.g. prior to \code{Y[5:10] <- A \%*\% B}, one can use setSize to ensure that \code{Y} has a size (length) of at least 10.
+#'
+#' This does work in uncompiled (R) and well as compiled execution, but in some cases it is only necessary for compiled execution. During uncompiled execution, it may not catch bugs due to resizing because some R objects will be dynamically resized during assignments anyway.
+#'
+#' If preserving values in the resized object and/or initializing new values with 0 is not necessary, then setting these arguments to FALSE will yield slightly more efficient compiled code.
+#' 
+setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
+                    fill, value, numObj) {
+    thisCall <- as.list(match.call()[-1])
+    if(length(thisCall) < 2) stop("No information provided to setSize")
+    objArgName <- "obj"
+    if(!missing(numObj)) {
+      objArgName <- "numObj"
+      obj <- numObj
+    }
+    if(!missing(fill)) fillZeros <- fill
+    if(!missing(value)) fillZeros <- TRUE
+    newDimsList <- list(...)
+    if(is.numeric(obj) || is.logical(obj) || is.character(obj)) {
+        targetVar <- deparse(thisCall[[objArgName]])
+        if(!exists(targetVar, envir = parent.frame()))
+            stop(paste0("Variable ", targetVar, " does not exist."))
+        targetIsLocal <- exists(targetVar, envir = parent.frame(), inherits = FALSE)
+        oldType <- typeof(obj)
+        oldClass <- class(obj)
+        if(missing(value)) {
+          fillValue <- switch(oldType,
+                              double = 0,
+                              integer = 0L,
+                              logical = FALSE,
+                              character = "",
+                              stop("setSize does not know how to fill objects of class ", 
+                                paste(oldClass, collapse = ", "),
+                                " with type ", oldType, "."))
+        } else {
+          fillValue <- as(value, oldType)
+        }
+        oldDims <- dimOrLength(obj)
+        if(length(oldDims) != length(newDimsList)) {
+            ## newDims could have been provided as a vector
+            if(length(newDimsList) > 1)
+                stop("Number of dimensions provided does not match object to change in setSize")
+            newDims <- newDimsList[[1]]
+        } else {
+            newDims <- unlist(newDimsList)
+        }
+        if(any(is.na(newDims))) warning("Not sure what to do with NA dims in setSize")
+        if(length(newDims) != length(oldDims))
+            if(length(newDims) < length(oldDims))
+                stop("Number of dimensions provided does not match object to change in setSize")
+            else
+                warning("Number of dimensions provided to setSize does not match object to change in setSize.  Sizes will be truncated.")
+        newDims <- newDims[1:length(oldDims)]
+
+        if(length(oldDims) == 1) {
+            if(oldDims[1] < newDims[1]) {
+                newObj <- as(rep(fillValue, newDims[1]), oldType)
+                if(copy) newObj[seq_len(oldDims[1])] <- obj
+            } else {
+                if(copy) newObj <- obj[seq_len(newDims[1])]
+                else newObj <- as(rep(fillValue, newDims[1]), oldType)
+            }
+        } else {
+            newObj <- array(as(fillValue, oldType), newDims)
+            if(copy) {
+                if(length(obj) < length(newObj))
+                    newObj[seq_len(length(obj))] <- obj
+                else
+                    newObj[seq_len(length(newObj))] <- obj[seq_len(length(newObj))]
+            }
+        }
+        assign("_SETSIZE_TEMP_VAL", newObj, parent.frame())
+        if(targetIsLocal)
+            assignCall <- substitute(A <- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+        else
+            assignCall <- substitute(A <<- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+        eval(assignCall, envir = parent.frame())
+        rm("_SETSIZE_TEMP_VAL", envir = parent.frame())
+        # Return the new size(s), like R's `length<-`, allowing chained calls.
+        return(invisible(newDims))
+    }
+  stop(paste0("setSize only works for numeric, integer, logical, or character objects. An object of type ", class(obj)[1], " was provided."))
+}
+
+#' Spectral Decomposition of a Matrix
+#'
 #' In a \code{nFunction}, \code{nEigen} is identical to \code{eigen}
 #'
-#' @details This function is similar to R's \code{\link{eigen}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a numeric or complex matrix whose spectral decomposition is to be 
+#' @details This function is similar to R's \code{\link{eigen}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a numeric or complex matrix whose spectral decomposition is to be
 #'   computed. Logical matrices are coerced to numeric.
 #'
 #' @export
-#' 
+#'
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
+  if(inherits(x, 'dCHMsimpl'))
+    stop("`nEigen` not implemented for sparse Cholesky factor input")      
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
   ans$values <- res$values
@@ -215,10 +399,10 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
   return(ans)
 }
 
-#' Singular Value Decomposition of a Matrix  
+#' Singular Value Decomposition of a Matrix
 #'
 #' Computes singular values and, optionally, left and right singular vectors of a numeric matrix.
-#' 
+#'
 #' @param x a symmetric numeric matrix (double or integer) whose spectral decomposition is to be computed.
 #' @param vectors character that determines whether to calculate left and right singular vectors.  Can take values \code{'none'}, \code{'thin'} or \code{'full'}.  Defaults to \code{'full'}.  See details.
 #'
@@ -229,22 +413,22 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' @export
 #'
 #' @details
-#' Computes the singular value decomposition of a numeric matrix using the Eigen C++ template library.  
-#' 
-#' The \code{vectors} character argument determines whether to compute no left and right singular vectors (\code{'none'}), thinned left and right singular vectors (\code{'thin'}), or full left and right singular vectors (\code{'full'}).  For a
-#' matrix \code{x} with dimensions \code{n} and \code{p}, setting \code{vectors = 'thin'} will does the following (quoted from eigen website): 
-#' In case of a rectangular n-by-p matrix, letting m be the smaller value among n and p, there are only m singular vectors; 
-#' the remaining columns of U and V do not correspond to actual singular vectors. 
-#' Asking for thin U or V means asking for only their m first columns to be formed. 
-#' So U is then a n-by-m matrix, and V is then a p-by-m matrix. 
+#' Computes the singular value decomposition of a numeric matrix using the Eigen C++ template library.
+#'
+#' The \code{vectors} character argument determines whether to compute no left and right singular vectors (\code{0} or (for uncompiled operation) \code{'none'}), thinned left and right singular vectors (\code{1} or (for uncompiled) \code{'thin'}) (the default), or full left and right singular vectors (\code{2} or (for uncompiled) \code{'full'}).  For a
+#' matrix \code{x} with dimensions \code{n} and \code{p}, setting \code{vectors = 'thin'} will does the following (quoted from eigen website):
+#' In case of a rectangular n-by-p matrix, letting m be the smaller value among n and p, there are only m singular vectors;
+#' the remaining columns of U and V do not correspond to actual singular vectors.
+#' Asking for thin U or V means asking for only their m first columns to be formed.
+#' So U is then a n-by-m matrix, and V is then a p-by-m matrix.
 #' Notice that thin U and V are all you need for (least squares) solving.
-#' 
+#'
 #' Setting \code{vectors = 'full'} will compute full matrices for U and V, so that U will be of size n-by-n, and V will be of size p-by-p.
-#' 
-#' In a \code{nFunction}, \code{svd} is identical to \code{nSvd}. 
-#'  
-#'  \code{returnType(svdNimbleList())} can be used within a \link{nFunction} to specify that the function will return a \code{nCompilerList} generated by the \code{nSvd} function.  \code{svdNimbleList()} can also be used to define a nested \code{nimbleList} element.  See the User Manual for usage examples. 
-#' 
+#'
+#' In a \code{nFunction}, \code{svd} is identical to \code{nSvd}.
+#'
+#'  \code{returnType(svdNimbleList())} can be used within a \link{nFunction} to specify that the function will return a \code{nCompilerList} generated by the \code{nSvd} function.  \code{svdNimbleList()} can also be used to define a nested \code{nimbleList} element.  See the User Manual for usage examples.
+#'
 #' @return
 #'  The singular value decomposition of \code{x} is returned as a \code{nCompilerList} with elements:
 #' \itemize{
@@ -252,8 +436,8 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' \item v matrix with columns containing the left singular vectors of \code{x}, or an empty matrix if \code{vectors = 'none'}.
 #' \item u matrix with columns containing the right singular vectors of \code{x}, or an empty matrix if \code{vectors = 'none'}.
 #' }
-#' 
-#' @examples 
+#'
+#' @examples
 #'  singularValuesDemoFunction <- nFunction(
 #'    setup = function(){
 #'      demoMatrix <- diag(4) + 2
@@ -263,96 +447,204 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #'      returnType(double(1))
 #'      return(singularValues)
 #'  })
-nSvd <- function(x, vectors = 'full') {
+nSvd <- function(x, vectors = 'thin') {
+  if(inherits(x, 'dCHMsimpl'))
+    stop("`nSvd` not implemented for sparse Cholesky factor input")      
   n <- nrow(x)
   p <- ncol(x)
-  if(vectors == 'full') { # vectors = 2, when converted to int
+  if(vectors %in% c(2, 'full')) {
     nu <- n
     nv <- p
-  } else if(vectors == 'thin') { # vectors = 1, when converted to int
+  } else if(vectors %in% c(1, 'thin')) {
     nu <- min(n, p)
     nv <- nu
-  } else if(vectors == 'none') { # vectors = 0, when converted to int
+  } else if(vectors %in% c(0, 'none')) {
     nu <- 0
     nv <- 0
   }
   s <- svd(x = x, nu = nu, nv = nv)
+  if(vectors %in% c(0, 'none'))  # For compatibility with compiled output.
+    s$u <- s$v <- matrix(nrow = 0, ncol = 0)
+  return(s)
 }
 
-#' Extract or replace the diagonal of matrix
-#' 
+#' Extract the diagonal of matrix or create a diagonal matrix
+#'
 #' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a numeric or complex matrix
+#' @details This function is similar to R's \code{\link{diag}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'   It does not support replacing the diagonal of a matrix.
+#'
+#' @param x a numeric matrix (if extracting the diagonal), a vector for creating
+#' a diagonal matrix with those values on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
 #'
 #' @export
-#' 
-nDiag <- function(x, ...) {
+#'
+nDiag <- function(x=1, ...) {
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiag` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
   diag(x, ...)
 }
 
+#' Create a diagonal matrix in sparse format
+#'
+#' In a \code{nFunction}, \code{nDiag} is identical to \code{diag}
+#'
+#' @details This function is similar to \code{\link{nDiag}},
+#' but it creates the matrix in sparse format.
+#' It can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a vector for creating a diagonal matrix with those values
+#' on the diagonal, or integer-valued number
+#' for creating a square identity matrix of that size
+#' @param nrow number of rows, if creating a matrix (optional)
+#' @param ncol number of columns, if creating a matrix (optional)
+#'
+#' @export
+#'
+nDiagonal <- function(x, ...) {
+  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+    stop("`nDiagonal` not implemented for Cholesky factor input")
+  if(inherits(x, 'dgCMatrix'))
+    return(Matrix::diag(x))
+  if(is.matrix(x))
+    return(diag(x))
+  if(is.numeric(x) && length(x) == 1) 
+    return(sparseMatrix(i = 1:x, j = 1:x, x = 1))
+  args <- list(...)
+  if(length(args) == 0)
+    return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x))
+  if(length(args) == 1)
+    stop("both `nrow` and `ncol` must be provided if one is provided")
+  return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x, dims = c(args[[1]], args[[2]])))
+}
+
+
+
 #' Compute the cholesky decomposition of a matrix
-#' 
+#'
 #' In a \code{nFunction}, \code{nChol} is identical to \code{chol}
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
+#' @details This function is similar to R's \code{\link{diag}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
 #' @param x a symmetric matrix
 #'
 #' @export
-#' 
+#'
 nChol <- function(x) {
+  if(inherits(x, 'dCHMsimpl'))
+    stop("`nChol` not meaningful for sparse Cholesky factor input")      
   chol(x)
 }
 
-#' Compute the log-determinant of a matrix
+#' Compute the sparse Cholesky decomposition of a matrix for further operations
 #' 
-#' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
+#' @details This function finds a sparse Cholesky factor using a fill-reducing
+#' `P` (AMD reordering by default), so the factorization is actually:
+# \eqn{P A P^\top = L L^\top}.
+#' 
+#' @param x a positive definite matrix
 #'
-#' @details This function is similar to R's \code{\link{diag}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a square matrix
+#' @author nCompiler development team
 #'
 #' @export
+#'
+#' @details
+#'
+#' @examples TODO
 #' 
+sparseCholFactor <- function(x) {
+  Matrix::Cholesky(x, LDL = FALSE)  
+}
+
+#' Compute the log-determinant of a matrix
+#'
+#' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
+#'
+#' @param x a square matrix or a sparse Cholesky factor
+#' 
+#'
+#' @export
+#'
 nLogdet <- function(x) {
-    ldet <- determinant(x, logarithm = TRUE)
-    ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+  if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
+    result <- Matrix::determinant(x, log = TRUE,
+                                  sqrt = FALSE)$modulus
+    if(!inherits(x, 'dgCMatrix'))
+      result <- result/2
+    attributes(result) <- NULL
+    return(result)
   }
+  ldet <- determinant(x, logarithm = TRUE)
+  ifelse(ldet$sign >= 0, ldet$modulus, NaN)
+}
 
 #' Replicate Elements of Vectors and Lists
-#' 
+#'
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}
 #'
-#' @details This function is similar to R's \code{\link{rep}} function, but 
-#'   can be used in a nFunction and compiled using \code{nCompile}.  
-#' 
-#' @param x a vector (of any mode including a list) or a factor or 
-#'   (for rep only) a POSIXct or POSIXlt or Date object; or an S4 object 
+#' @details This function is similar to R's \code{\link{rep}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param x a vector (of any mode including a list) or a factor or
+#'   (for rep only) a POSIXct or POSIXlt or Date object; or an S4 object
 #'   containing such an object.
 #'
 #' @param ... further arguments to be passed to or from other methods.
 #'
 #' @export
-#' 
+#'
 nRep <- function(x, ...) {
   base::rep(x, ...)
 }
 
+#' Sequence Generation
+#'
+#' In a \code{nFunction}, \code{nSeq} is (mostly) equivalent to \code{base::seq}
+#'
+#' @details This function is similar to R's \code{\link{seq}} function, but
+#'   can be used in a nFunction and compiled using \code{nCompile}.
+#'
+#' @param from the starting value of the sequence.
+#'
+#' @param to the ending value of the sequence.
+#'
+#' @param by increment of the sequence
+#'
+#' @param length.out desired length of the sequence
+#'
+#' @details
+#'
+#' \code{nSeq} behaves like R's \code{\link{seq}} function with
+#' support for \code{from}, \code{to}, \code{by}, and \code{length.out}
+#' arguments.  The \code{along.with} argument is not supported.
+#' There are no nCompiler versions of \code{seq.int}, \code{seq_along} or \code{seq_len}.
+
+#' @export
+#'
+nSeq <- function(...) {
+  base::seq(...)
+}
+
+
+
 #' Converts a dense matrix or vector to a sparse matrix or vector
 #'
-#' @importFrom Matrix Matrix as
+#' @importFrom Matrix Matrix drop0
+#' @importFrom methods as
 #' @param x object to convert to sparse representation
-#' @param prune TRUE to remove 0's from an object if it is already stored in a 
+#' @param prune TRUE to remove 0's from an object if it is already stored in a
 #'   sparse format
 #' @export
 asSparse <- function(x, prune = TRUE) {
-  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector', 
+  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector',
                    'lsparseVector', 'zsparseVector'))) {
     if(prune) {
       return(drop0(x))
@@ -369,7 +661,7 @@ asSparse <- function(x, prune = TRUE) {
 }
 
 #' Converts a sparse matrix or vector to a dense sparse matrix or vector
-#' 
+#'
 #' @export
 asDense <- function(x) {
   if(inherits(x, c('matrix', 'numeric', 'integer', 'logical', 'complex'))) {
@@ -384,45 +676,81 @@ asDense <- function(x) {
 }
 
 #' Wrapper for matrix multiplication
-#' 
+#'
 #' @export
 nMul <- function(x, y) {
+  if(inherits(y, "dCHMsimpl") || inherits(y, "Cholesky"))
+    stop("matrix multiplication implemented only for right-hand side vector or matrix")
+  if(inherits(x, "dCHMsimpl"))
+    # P^{top} L* y (see ?Matrix:::solve))
+    return(Matrix::solve(x, expand1(x, "L") %*% y, system = "Pt"))
+  if(inherits(x, "Cholesky")) {
+    p <- expand1(x, "P1")@perm
+    return((expand1(x, "L") %*% y)[order(p),])
+  }
   x %*% y
 }
+
+## This would only work if Matrix is loaded.
+## Also, with keyword replacement in place, we should never have `%*%` in
+## uncompiled nFunction code.
+## setMethod("%*%", c(x = "dCHMsimpl", y = "ANY"),
+##          function(x,y)
+##            solve(ch, expand1(ch, "L") %*% x, system = "Pt"))  # P^{top} L* x (see ?Matrix:::solve))
 
 #' Wrapper for solve
 #'
 #' @export
 nSolve <- function(a, b) {
-  solve(a,b)
+  if(inherits(b, 'sparseCholFactor') || inherits(b, 'denseCholFactor') ||
+       inherits(b, 'Cholesky') || inherits(b, 'dCHMsimpl'))
+    stop("`nSolve` not implemented for right-hand side Cholesky factor")  
+  if(inherits(a, 'sparseCholFactor') || inherits(a, 'denseCholFactor'))
+    stop("`nSolve` not supported for Cholesky factor produced in compiled code")
+  # TODO: we may be able to just call `solve` depending on whether `Matrix` is loaded.
+  if(inherits(a, "dCHMsimpl") || inherits(a, 'Cholesky'))
+    return(Matrix::solve(a, b))
+  solve(a,b)  
 }
 
 #' Wrapper for forwardsolve
 #'
 #' @export
 nForwardsolve <- function(l, x) {
-  forwardsolve(l,x)
+  if(inherits(l, 'dCHMsimpl') || inherits(l, 'Cholesky'))
+    stop("`nForwardsolve` not implemented for sparse Cholesky factor input")      
+  forwardsolve(l, x)
 }
 
 #' Wrapper for backsolve
 #'
 #' @export
 nBacksolve <- function(r, x) {
+  if(inherits(r, 'dCHMsimpl')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    return(Matrix::solve(r, Matrix::solve(U, x), system = "Pt"))  # P^{top} U*^{-1} x
+  }
+  if(inherits(r, 'Cholesky')) {
+    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+    p <- expand1(r, "P1")@perm
+    if(length(dim(x)) > 1)
+      return(solve(U, x)[order(p),]) else return(solve(U, x)[order(p)])
+  }
   backsolve(r,x)
 }
 
 #' Wrapper for var
-#' 
+#'
 #' @export
-nVar <- function(x) { 
-  var(x) 
+nVar <- function(x) {
+  var(x)
 }
 
 #' Wrapper for sd
-#' 
+#'
 #' @export
-nSd <- function(x) { 
-  sd(x) 
+nSd <- function(x) {
+  sd(x)
 }
 
 #' Log/message handling via `logger` package, including within progress bar execution.

@@ -1,0 +1,650 @@
+#ifndef NCOMPILER_NLIST__H_
+#define NCOMPILER_NLIST__H_
+
+inline std::shared_ptr<nListBase_nClass> interface_ptr_2_nList_ptr(std::shared_ptr<genericInterfaceBaseC> interface_ptr) {
+  // interface_ptr may refer to an object created by a different DLL (see nc_shared_ptr_cast).
+  std::shared_ptr<nListBase_nClass> ans = nc_shared_ptr_cast<nListBase_nClass>(interface_ptr);
+  if(!ans) Rcpp::stop("interface_ptr_2_nList_ptr: interface_ptr is not a nListBase_nClass.");
+  return ans;
+}
+
+// R type name for a scalar type, used by nList_::get_elementType_.
+template<typename Scalar>
+std::string nList_scalar_type_name() {
+  if constexpr(std::is_same_v<Scalar, double>) return "double";
+  else if constexpr(std::is_same_v<Scalar, int>) return "integer";
+  else if constexpr(std::is_same_v<Scalar, bool>) return "logical";
+  else if constexpr(std::is_same_v<Scalar, std::string>) return "character";
+  else return "UNKNOWN";
+}
+
+// nList_<Element> is a hand-coded intermediate layer between the predefined nListBase_nClass
+// and a generated nList class. It is never the target of a cast from genericInterfaceBaseC,
+// so it needs no nc_class_key (see nc_shared_ptr_cast in generic_class_interface.h).
+// Code that needs the contents of an nList that may come from another DLL uses the virtual
+// methods of nListBase_nClass instead (see set_all_values_).
+template<class Element>
+class nList_ : public nListBase_nClass {
+public:
+    nList_() {};
+    std::vector<Element> contents_;
+    std::vector<Element> &contents() {return contents_;}
+    const std::vector<Element> &contents() const {return contents_;}
+    virtual int setLength_(int length) {
+        contents_.resize(length); // std::vector::resize() should be data-preserving.
+        return length;
+    }
+    virtual int getLength_() {
+        return static_cast<int>(contents_.size());
+    }
+
+  std::shared_ptr<genericInterfaceBaseC> get_interface_ptr_at(int i) override {
+    if constexpr(is_shared_ptr<Element>::value) {
+      if constexpr(std::is_base_of_v<genericInterfaceBaseC, typename Element::element_type>) {
+        return std::dynamic_pointer_cast<genericInterfaceBaseC>(contents_.at(i));
+      } else {
+        Rcpp::stop("nList_::get_interface_ptr: Element's pointee type does not derive from genericInterfaceBaseC.");
+        return nullptr;
+      }
+    } else {
+      Rcpp::stop("nList_::get_interface_ptr: Element type is not a shared_ptr and has no generic interface.");
+      return nullptr;
+    }
+  }
+  std::unique_ptr<ETaccessorBase> access_at(int i) override {
+    if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor> ||
+                 std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return ETaccessPtr(contents_.at(i));
+    } else {
+      Rcpp::stop("nList_::access: Element type is not an Eigen::Tensor or scalar type and has no ETaccessor.");
+      return nullptr;
+    }
+  }
+  // Element nDim and type are determined by Element, not by the contents,
+  // so they are available for an empty nList.
+  // nDim is 0 for a true scalar, the number of dimensions for an Eigen::Tensor,
+  // and NA_INTEGER for anything else (e.g. nClass elements).
+  int get_nDim_() const {
+    if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+      return static_cast<int>(Element::NumIndices);
+    } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return 0;
+    } else {
+      return NA_INTEGER;
+    }
+  }
+  // elementType is "double", "integer", "logical" or "character" for scalar or Eigen::Tensor elements,
+  // "nClass" for nClass elements (including nLists), and "UNKNOWN" for anything else.
+  std::string get_elementType_() const {
+    if constexpr(is_shared_ptr<Element>::value) {
+      if constexpr(std::is_base_of_v<genericInterfaceBaseC, typename Element::element_type>) {
+        return "nClass";
+      } else {
+        return "UNKNOWN";
+      }
+    } else if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+      return nList_scalar_type_name<typename Element::Scalar>();
+    } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+      return nList_scalar_type_name<Element>();
+    } else {
+      return "UNKNOWN";
+    }
+  }
+
+    size_t doubleBracket_inds_2_size_t(const Rcpp::RObject &inds, bool check_upper = true) {
+      if (Rf_xlength(inds) != 1) {
+        Rcpp::stop("single-bracket getter expects index of length 1");
+      }
+
+      int idx1 = 0; // 1-based index from R
+
+      switch (inds.sexp_type()) {
+        case INTSXP: {
+          Rcpp::IntegerVector v(inds);   // view/wrapper, no coercion copy
+          if (v[0] == NA_INTEGER) Rcpp::stop("index is NA");
+          idx1 = v[0];
+          break;
+        }
+        case REALSXP: {
+          Rcpp::NumericVector v(inds);   // view/wrapper, no coercion copy
+          double d = v[0];
+          if (Rcpp::NumericVector::is_na(d) || !R_finite(d)) {
+            Rcpp::stop("numeric index must be a a number");
+          }
+          idx1 = static_cast<int>(std::floor(d));
+          break;
+        }
+        case LGLSXP: {
+          Rcpp::LogicalVector v(inds);   // view/wrapper
+          if (v[0] == NA_LOGICAL) Rcpp::stop("logical index is NA");
+          if (!v[0]) Rcpp::stop("logical FALSE is invalid for single index");
+          idx1 = 1; // TRUE -> first element
+          break;
+        }
+        default:
+          Rcpp::stop("index type must be integer, double, or logical");
+      }
+
+      if (idx1 < 1 || (check_upper ? static_cast<size_t>(idx1) > contents_.size() : false)) {
+        Rcpp::stop("index out of bounds");
+      }
+      return static_cast<size_t>(idx1 - 1); // convert to 0-based
+    }
+    Element doubleBracket_get_(const Rcpp::RObject &inds) {
+      size_t idx1 = doubleBracket_inds_2_size_t(inds);
+      return contents_[idx1];
+    }
+    Element doubleBracket_set_(const Rcpp::RObject &inds, const Element &value) {
+      size_t idx1 = doubleBracket_inds_2_size_t(inds, false);
+      if(idx1 >= static_cast<int>(contents_.size())) contents_.resize(idx1 + 1);
+      return (contents_[idx1] = value);
+    }
+    Element doubleBracket_get_cpp_(
+            int i) {
+        if(i < 1 || static_cast<size_t>(i) > contents_.size()) {
+            throw std::out_of_range("index out of bounds");
+        }
+        return contents_[i-1];
+    }
+    Element doubleBracket_set_cpp_(
+            int i,
+            const Element& value) {
+        if(i < 1) {
+          throw std::out_of_range("index out of bounds");
+        }
+        if(i > static_cast<int>(contents_.size())) contents_.resize(i);
+        return (contents_[i-1] = value);
+    }
+
+    std::vector<Element> singleBracket_get_(const Rcpp::RObject &inds) {
+      std::vector<Element> res;
+      switch (inds.sexp_type()) {
+        case INTSXP: {
+          // Integer indexing
+          Rcpp::IntegerVector idx = Rcpp::as<Rcpp::IntegerVector>(inds);
+          res.resize(idx.size());
+          for(size_t i = 0; i < idx.size(); ++i) {
+            if(idx[i] == NA_INTEGER) Rcpp::stop("index is NA");
+            if(idx[i] < 1 || static_cast<size_t>(idx[i]) > contents_.size()) {
+              Rcpp::stop("index out of bounds");
+            }
+            res[i] = contents_[static_cast<int>(idx[i]) - 1];
+          }
+          break;
+        }
+        case REALSXP: {
+          // Numeric indexing
+          Rcpp::NumericVector idx = Rcpp::as<Rcpp::NumericVector>(inds);
+          res.resize(idx.size());
+          for(size_t i = 0; i < idx.size(); ++i) {
+            if(Rcpp::NumericVector::is_na(idx[i]) || !R_finite(idx[i])) {
+              Rcpp::stop("numeric index must be a finite number");
+            }
+            size_t int_idx = static_cast<size_t>(std::floor(idx[i]));
+            if(int_idx < 1 || int_idx > contents_.size()) {
+              Rcpp::stop("index out of bounds");
+            }
+            res[i] = contents_[int_idx - 1];
+          }
+          break;
+        }
+        case LGLSXP: {
+          Rcpp::LogicalVector bools = Rcpp::as<Rcpp::LogicalVector>(inds);
+          size_t bools_n = static_cast<size_t>(bools.size());
+          size_t contents_n = contents_.size();
+          // Check for NA in the base logical vector (applies wherever it is recycled)
+          for(size_t i = 0; i < bools_n; ++i) {
+            if(bools[i] == NA_LOGICAL) Rcpp::stop("index is NA");
+          }
+          // Count TRUE positions, recycling bools over contents_n
+          size_t n = 0;
+          for(size_t i = 0; i < contents_n; ++i) {
+            if(bools[i % bools_n]) ++n;
+          }
+          res.resize(n);
+          size_t j = 0;
+          for(size_t i = 0; i < contents_n; ++i) {
+            if(bools[i % bools_n]) res[j++] = contents_[i];
+          }
+          break;
+        }
+        default:
+          Rcpp::stop("index type must be integer, double, or logical");
+      }
+      return res;
+    }
+
+    template<typename VALUES>
+    static Element extract_val_(const VALUES& values, size_t j) {
+        return values[j];
+    }
+    static Element extract_val_(const Rcpp::List& values, size_t j) {
+        return Rcpp::as<Element>(values[j]);
+    }
+
+    template<typename VALUES>
+    void singleBracket_set_(const Rcpp::RObject &inds, const VALUES &values) {
+      size_t n = 0;
+      if(values.size() == 0) Rcpp::stop("nCppVec: replacement has length zero");
+      size_t vals_n = static_cast<size_t>(values.size());
+      switch (inds.sexp_type()) {
+        case INTSXP: {
+          Rcpp::IntegerVector idx = Rcpp::as<Rcpp::IntegerVector>(inds);
+          n = static_cast<size_t>(idx.size());
+          if(n == 0) return;
+          if(n % vals_n != 0) {
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
+          }
+          size_t max_idx = 1;
+          for(size_t i = 0; i < n; ++i) {
+            if(idx[i] == NA_INTEGER) Rcpp::stop("nCppVec: index is NA");
+            if(idx[i] < 1) Rcpp::stop("nCppVec: index out of bounds");
+            max_idx = std::max(max_idx, static_cast<size_t>(idx[i]));
+          }
+          if(max_idx > contents_.size()) contents_.resize(max_idx);
+          size_t j = 0;
+          for(size_t i = 0; i < n; ++i, ++j) {
+            if(j >= vals_n) j = 0; // recycling rule
+            contents_[static_cast<size_t>(idx[i]) - 1] = extract_val_(values, j);
+          }
+          break;
+        }
+        case REALSXP: {
+          Rcpp::NumericVector idx = Rcpp::as<Rcpp::NumericVector>(inds);
+          n = static_cast<size_t>(idx.size());
+          if(n == 0) return;
+          if(n % vals_n != 0) {
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
+          }
+          size_t max_idx = 1;
+          for(size_t i = 0; i < n; ++i) {
+            if(Rcpp::NumericVector::is_na(idx[i]) || !R_finite(idx[i])) {
+              Rcpp::stop("nCppVec: numeric index must be a finite number");
+            }
+            int int_idx = static_cast<int>(std::floor(idx[i]));
+            if(int_idx < 1) Rcpp::stop("nCppVec: index out of bounds");
+            max_idx = std::max(max_idx, static_cast<size_t>(int_idx));
+          }
+          if(max_idx > contents_.size()) contents_.resize(max_idx);
+          size_t j = 0;
+          for(size_t i = 0; i < n; ++i, ++j) {
+            if(j >= vals_n) j = 0; // recycling rule
+            contents_[static_cast<size_t>(std::floor(idx[i])) - 1] = extract_val_(values, j);
+          }
+          break;
+        }
+        case LGLSXP: {
+          Rcpp::LogicalVector bools = Rcpp::as<Rcpp::LogicalVector>(inds);
+          size_t bools_n = static_cast<size_t>(bools.size());
+          // Extend contents_ if bools is longer (R semantics: x[c(T,F,T)] <- ... can extend x)
+          if(bools_n > contents_.size()) contents_.resize(bools_n);
+          size_t contents_n = contents_.size();
+          // Check for NA in the base logical vector (applies wherever it is recycled)
+          for(size_t i = 0; i < bools_n; ++i) {
+            if(bools[i] == NA_LOGICAL) Rcpp::stop("nCppVec: logical index is NA");
+          }
+          // Count TRUE positions, recycling bools over contents_n
+          n = 0;
+          for(size_t i = 0; i < contents_n; ++i) {
+            if(bools[i % bools_n]) ++n;
+          }
+          if(n == 0) return;
+          if(n % vals_n != 0) {
+            Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
+          }
+          // Assign, recycling both bools (over contents_n) and values (over TRUE positions)
+          size_t val_j = 0;
+          for(size_t i = 0; i < contents_n; ++i) {
+            if(bools[i % bools_n]) {
+              contents_[i] = extract_val_(values, val_j % vals_n);
+              ++val_j;
+            }
+          }
+          break;
+        }
+        default:
+          Rcpp::stop("nCppVec: index type must be integer, double, or logical");
+      }
+    }
+    void singleBracket_set_(const Rcpp::RObject &inds, const Rcpp::List &values) {
+      singleBracket_set_<Rcpp::List>(inds, values);
+    }
+    void singleBracket_set_(const Rcpp::RObject &inds, const std::vector<Element> &values) {
+      singleBracket_set_<std::vector<Element>>(inds, values);
+    }
+    void singleBracket_set_single_(const Rcpp::RObject &inds, const Element &value) {
+      singleBracket_set_(inds, std::vector<Element>{value});
+    }
+
+    // C++-side single-bracket setter: accepts any 1-D Eigen tensor or unevaluated
+    // Eigen op for inds, with Scalar == int, double, or bool.
+    // VALUES must support .size() and operator[].
+    // bool  → logical indexing (recycles over contents_, extends if bools longer)
+    // int / double → 1-based positional indexing (doubles are floor()ed, extends contents_)
+    // values are recycled over the selected positions, matching R semantics.
+    template<typename EigenElement, int AccessLevel, typename VALUES>
+    void singleBracket_set_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            const VALUES& values) {
+        using Scalar = typename EigenElement::Scalar;
+        if (values.size() == 0) Rcpp::stop("nCppVec: replacement has length zero");
+        size_t vals_n = static_cast<size_t>(values.size());
+        Eigen::Tensor<Scalar, 1> evaluated = inds;
+        size_t n = static_cast<size_t>(evaluated.size());
+
+        if (std::is_same<Scalar, bool>::value) {
+            // Logical indexing: extend contents_ if bools is longer, recycle over contents_n
+            if (n > contents_.size()) contents_.resize(n);
+            size_t contents_n = contents_.size();
+            size_t count = 0;
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n))) ++count;
+            if (count == 0) return;
+            if (count % vals_n != 0)
+                Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
+            size_t val_j = 0;
+            for (size_t i = 0; i < contents_n; ++i) {
+                if (evaluated(static_cast<Eigen::Index>(i % n))) {
+                    contents_[i] = values[val_j % vals_n];
+                    ++val_j;
+                }
+            }
+        } else {
+            // Positional indexing (int or double), 1-based
+            if (n == 0) return;
+            if (n % vals_n != 0)
+                Rcpp::warning("nCppVec: number of items to replace is not a multiple of replacement length");
+            // Validate and find max index before any assignment
+            size_t max_idx = 1;
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                if (idx1 < 1) Rcpp::stop("nCppVec: index out of bounds");
+                max_idx = std::max(max_idx, idx1);
+            }
+            if (max_idx > contents_.size()) contents_.resize(max_idx);
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                contents_[idx1 - 1] = values[i % vals_n];
+            }
+        }
+    }
+    template<typename EigenElement, int AccessLevel>
+    void singleBracket_set_nList_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            std::shared_ptr<nList_<Element>> values) {
+        singleBracket_set_cpp_(inds, values->contents());
+    }
+    template<typename EigenElement, int AccessLevel>
+    void singleBracket_set_single_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds,
+            const Element& value) {
+        singleBracket_set_cpp_(inds, std::vector<Element>{value});
+    }
+
+    // Superseded by doubleBracket_get_ / doubleBracket_set_:
+    // Element setOne_(size_t i, const Element& v) {
+    //     return (contents_[i-1] = v);
+    // }
+    // Element getOne_(size_t i) {
+    //     return contents_[i-1];
+    // }
+
+    // Superseded by singleBracket_get_:
+    // template<typename INDS>
+    // std::vector<Element> getMany_(const INDS &inds) {
+    //     std::vector<Element> res;
+    //     res.resize(inds.size());
+    //     for(size_t i = 0; i < inds.size(); ++i) {
+    //         res[i] = contents_[inds[i] - 1];
+    //     }
+    //     return res;
+    // }
+    // template<typename INDS>
+    // Rcpp::List getManyToList_(const INDS &inds) {
+    //     Rcpp::List res(inds.size());
+    //     for(size_t i = 0; i < inds.size(); ++i) {
+    //         res[i] = contents_[inds[i] - 1];
+    //     }
+    //     return res;
+    // }
+
+    // CRTP-level implementation called by the generated nList class's
+    // set_all_values Cpublic method (which is the actual virtual override).
+    // Handles all ways an R object may represent a positionally-indexed nList:
+    //   1. plain R list  — compiled or uncompiled elements; handled by set_from_list
+    //   2. compiled nList (LOE/R6 environment with extptr) — copy contents_ directly
+    //   3. uncompiled nList (R6 environment without extptr) — call as_list() then set_from_list
+    void set_all_values_(SEXP Robj) {
+      // Case 1: plain R list — compiled or uncompiled elements positionally
+      if(Rcpp::is<Rcpp::List>(Robj)) {
+        set_from_list(Rcpp::as<Rcpp::List>(Robj));
+        return;
+      }
+      if(Rcpp::is<Rcpp::Environment>(Robj)) {
+        // Case 2: compiled nList — LOE environment containing an extptr
+        Rcpp::RObject Rextptr = get_extptr_from_SEXP(Robj);
+        SEXP Sextptr = Rextptr;
+        if(Sextptr != R_NilValue) {
+          genericInterfaceBaseC* src_base =
+            static_cast<genericInterfaceBaseC*>(
+              static_cast<shared_ptr_holder_base*>(
+                R_ExternalPtrAddr(Sextptr))->get_ptr());
+          // The source may have been created by a different DLL, so we cast only to the
+          // predefined base class (see nc_raw_ptr_cast) and copy through its virtual methods.
+          nListBase_nClass* src = nc_raw_ptr_cast<nListBase_nClass>(src_base);
+          if(src) {
+            copy_from_nList(src);
+            return;
+          }
+          Rcpp::stop(
+            "set_all_values on nList: extptr found but object is not an nList.");
+        }
+        // Case 3: uncompiled nList R6 environment — call as_list() to convert
+        Rcpp::Environment Renv(Robj);
+        if(Renv.exists("as_list")) {
+          Rcpp::Function as_list_fn(Renv["as_list"]);
+          SEXP Slist = as_list_fn();
+          if(Rcpp::is<Rcpp::List>(Slist)) {
+            set_from_list(Rcpp::as<Rcpp::List>(Slist));
+            return;
+          }
+        }
+        Rcpp::stop(
+          "set_all_values on nList: environment is neither a compiled nList "
+          "(no extptr) nor a recognised uncompiled nList (no as_list method).");
+      }
+      Rcpp::stop(
+        "set_all_values on nList requires a list, a compiled nList, "
+        "or an uncompiled nList object.");
+    }
+
+    // Populate contents_ positionally from an R list.
+    // 
+    // The reason for doing it as follows is to use only an nListBase_nClass pointer to the source.
+    // At one point we did a dynamic pointer cast to nList_<Element> and copied contents_ directly, 
+    // but is not safe if the source was created by a different DLL.
+    // By using only virtual methods and the nc_shared_ptr_cast, we ensure that the source's own DLL is used to access its elements.
+    //
+    // Each element is converted to Element:
+    //   - shared_ptr<T>: tries the compiled extptr path first; falls back to
+    //     default-constructing a T and calling set_all_values() on it
+    //     (handles uncompiled objects, plain R lists, and nested nLists).
+    //   - primitive / Eigen tensor: Rcpp::as<Element>().
+    // Copy the contents of another compiled nList, which may have been created by a
+    // different DLL. Only virtual methods of nListBase_nClass are used on src, so that work
+    // is done by src's own DLL, and each element is converted with a DLL-safe cast:
+    //   - nClass elements: nc_shared_ptr_cast, so the elements are shared, as a direct copy
+    //     of contents_ would do, and an element of a different class is rejected.
+    //   - Eigen::Tensor and scalar elements: values are copied via access_at's ETaccessor.
+    // This is slower than copying contents_ directly, but it is only used when copying
+    // from an object passed in from R.
+    void copy_from_nList(nListBase_nClass* src) {
+      int n = src->getLength();
+      std::vector<Element> new_contents(n);
+      for(int i = 0; i < n; ++i) {
+        if constexpr(is_shared_ptr<Element>::value) {
+          std::shared_ptr<genericInterfaceBaseC> elem = src->get_interface_ptr_at(i);
+          if(elem) { // a null element stays null
+            new_contents[i] = nc_shared_ptr_cast<typename Element::element_type>(elem);
+            if(!new_contents[i])
+              Rcpp::stop("set_all_values on nList: an element of the source nList is not of this nList's element type.");
+          }
+        } else if constexpr(std::is_same_v<type_category_t<Element>, eigenTensor>) {
+          new_contents[i] = src->access_at(i)->template ref<static_cast<int>(Element::NumIndices),
+                                                            typename Element::Scalar>();
+        } else if constexpr(std::is_same_v<type_category_t<Element>, trueScalar>) {
+          new_contents[i] = src->access_at(i)->template scalar<Element>();
+        } else {
+          Rcpp::stop("set_all_values on nList: copying from a compiled nList is not supported for this element type.");
+        }
+      }
+      contents_ = std::move(new_contents); // only after all elements succeeded
+    }
+
+    void set_from_list(const Rcpp::List& Robj) {
+      int n = Robj.length();
+      contents_.resize(n);
+      for(int i = 0; i < n; ++i) {
+        SEXP Selem = Robj[i];
+        if constexpr(is_shared_ptr<Element>::value) {
+          Rcpp::RObject Rextptr = get_extptr_from_SEXP(Selem);
+          SEXP Sextptr = Rextptr;
+          if(Sextptr != R_NilValue) {
+            // Compiled object: extract via shared_ptr Exporter
+            contents_[i] = Element(
+              typename Rcpp::traits::input_parameter<Element>::type(Sextptr));
+          } else {
+            // Not compiled (plain R list, uncompiled nClass, nested nList):
+            // create element if absent, then populate recursively
+            if(!contents_[i]) {
+              if constexpr(std::is_default_constructible_v<
+                             typename Element::element_type>) {
+                contents_[i] =
+                  std::make_shared<typename Element::element_type>();
+              } else {
+                Rcpp::stop(
+                  "nList set_from_list: element nClass type has no "
+                  "default constructor.");
+              }
+            }
+            contents_[i]->set_all_values(Selem);
+          }
+        } else {
+          contents_[i] = Rcpp::as<Element>(Selem);
+        }
+      }
+    }
+
+    Rcpp::List as_list_() {
+      Rcpp::List res(contents_.size());
+      for(size_t i = 0; i < contents_.size(); ++i) {
+          res[i] = contents_[i];
+      }
+      return res;
+    }
+    // Superseded by singleBracket_get_ (logical case):
+    // template<typename BOOLS>
+    // std::vector<Element> getManyLogical_(const BOOLS &bools) {
+    //     // Eigen::Tensor<bool> lacks begin()/end(), so iterate by index
+    //     size_t n = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) n++;
+    //     std::vector<Element> res(n);
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) res[j++] = contents_[i];
+    //     return res;
+    // }
+    // template<typename BOOLS>
+    // Rcpp::List getManyToListLogical_(const BOOLS &bools) {
+    //     size_t n = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) n++;
+    //     Rcpp::List res(n);
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) res[j++] = contents_[i];
+    //     return res;
+    // }
+
+    // Superseded by singleBracket_set_:
+    // template<typename INDS, typename VALS>
+    // VALS setMany_(const INDS &inds, const VALS &vals) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = vals[i];
+    //     return vals;
+    // }
+    // template<typename INDS>
+    // Element setManySingle_(const INDS &inds, const Element &val) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = val;
+    //     return val;
+    // }
+    // template<typename INDS>
+    // Rcpp::List setManyFromList_(const INDS &inds, const Rcpp::List &vals) {
+    //     for(size_t i = 0; i < inds.size(); ++i) contents_[inds[i] - 1] = vals[i];
+    //     return vals;
+    // }
+    // template<typename BOOLS, typename VALS>
+    // VALS setManyLogical_(const BOOLS &bools, const VALS &vals) {
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = vals[j++];
+    //     return vals;
+    // }
+    // template<typename BOOLS>
+    // Rcpp::List setManyFromListLogical_(const BOOLS &bools, const Rcpp::List &vals) {
+    //     size_t j = 0;
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = vals[j++];
+    //     return vals;
+    // }
+    // template<typename BOOLS>
+    // Element setManyLogicalSingle_(const BOOLS &bools, const Element &val) {
+    //     for(size_t i = 0; i < bools.size(); ++i) if(bools[i]) contents_[i] = val;
+    //     return val;
+    // }
+
+    // C++-side single-bracket getter: accepts any 1-D Eigen tensor or unevaluated
+    // Eigen op with Scalar == int, double, or bool.
+    // bool  → logical indexing (recycles over contents_, matching R semantics)
+    // int / double → 1-based positional indexing (doubles are floor()ed)
+    template<typename EigenElement, int AccessLevel>
+    std::vector<Element> singleBracket_get_cpp_(
+            const Eigen::TensorBase<EigenElement, AccessLevel>& inds) {
+        using Scalar = typename EigenElement::Scalar;
+        Eigen::Tensor<Scalar, 1> evaluated = inds;
+        size_t n = static_cast<size_t>(evaluated.size());
+
+        if (std::is_same<Scalar, bool>::value) {
+            // Logical indexing: recycle bool tensor over contents_
+            size_t contents_n = contents_.size();
+            if (n == 0) return std::vector<Element>{};
+            size_t count = 0;
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n))) ++count;
+            std::vector<Element> res;
+            res.reserve(count);
+            for (size_t i = 0; i < contents_n; ++i)
+                if (evaluated(static_cast<Eigen::Index>(i % n)))
+                    res.push_back(contents_[i]);
+            return res;
+        } else {
+            // Positional indexing (int or double), 1-based
+            std::vector<Element> res;
+            res.resize(n);
+            for (size_t i = 0; i < n; ++i) {
+                size_t idx1 = static_cast<size_t>(
+                    std::floor(static_cast<double>(evaluated(static_cast<Eigen::Index>(i)))));
+                if (idx1 < 1 || idx1 > contents_.size())
+                    Rcpp::stop("nCppVec: index out of bounds");
+                res[i] = contents_[idx1 - 1];
+            }
+            return res;
+        }
+    }
+
+    auto begin() noexcept       { return contents_.begin(); }
+    auto begin() const noexcept { return contents_.begin(); }
+    auto end() noexcept         { return contents_.end(); }
+    auto end() const noexcept   { return contents_.end(); }
+    size_t size() const noexcept { return contents_.size(); }
+    auto& operator[](size_t i) { return contents_[i]; }
+    const auto& operator[](size_t i) const { return contents_[i]; }
+};
+
+#endif // NCOMPILER_NLIST__H_

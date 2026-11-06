@@ -10,9 +10,10 @@ updateDefaults <- function(defaults, control) {
   list(
     enableSaving = TRUE,
     check_nFunction = TRUE,  ## check syntax of nFunction fun
+    NCwarn = TRUE, ## issue warnings from issues when creating an nClass
     showCompilerOutput = FALSE,
     use_nCompLocal = FALSE,
-    debugSizeProcessing = FALSE,
+#    debugTypeProcessing = FALSE,
     serialize = FALSE,           # if TRUE, include serialization code in generated C++
     enableDerivs = FALSE,
     allow_method_overloading = FALSE,
@@ -25,6 +26,8 @@ updateDefaults <- function(defaults, control) {
       rebuildCppDef = FALSE,
       rebuildCpp = FALSE,
       filebase = NULL,
+      debug_labelAbstractTypes = FALSE,
+      debug_eigenImpl = FALSE,
       debug = FALSE,
       debugCpp = FALSE,
       cppStacktrace = FALSE,
@@ -76,7 +79,7 @@ set_nOption <- function(x, value, listName = NULL) {
       .nOptions[[listName]] <- list() # overwrite any existing object
     .nOptions[[listName]][[x]] <- value
   }
-  value
+  invisible(value)
 }
 
 #' Get nCompiler Option
@@ -98,7 +101,7 @@ nOptions <- function(...) {
   invisibleReturn <- FALSE
   args <- list(...)
   if (!length(args)) {
-    # Get all.nCompiler options.
+    # Get all nCompiler options.
     return(as.list(.nOptions))
   }
   if (length(args) == 1 && is.null(names(args)) && is.list(args[[1]])) {
@@ -106,10 +109,10 @@ nOptions <- function(...) {
     args <- args[[1]]
   }
   if (is.null(names(args))) {
-    # Get some.nCompiler options.
+    # Get some nCompiler options.
     args <- unlist(args)
   } else {
-    # Set some.nCompiler options.
+    # Set some nCompiler options.
     for(i in seq_along(args)) {
       set_nOption(names(args)[[i]], args[[i]])
     }

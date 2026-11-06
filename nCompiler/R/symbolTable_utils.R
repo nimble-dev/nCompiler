@@ -34,12 +34,12 @@ symbolTable2cppSymbolTable <- function(symTab,
     if(xor(isArg, args)) next
     if(is.null(sObj$type))
       stop(paste('Error in symbolTable2cppVars for ',
-                 symTab,
+                 s,
                  '. type field is not set.'),
            call. = FALSE)
     if(length(sObj$type == 'Ronly') == 0)
       stop(paste('Error in symbolTable2cppVars for ',
-                 symTab,
+                 s,
                  ',  length(sObj$type == "Ronly") == 0'),
            call. = FALSE)
     if(sObj$type == 'Ronly')

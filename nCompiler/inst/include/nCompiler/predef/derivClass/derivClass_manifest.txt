@@ -1,0 +1,6 @@
+list(saved_at = structure(1778867600.74115, class = c("POSIXct", 
+"POSIXt")), packet_name = "derivClass", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "derivClass_preamble.cpp", cppContent = "derivClass_cppContent.cpp", 
+    hContent = "derivClass_hContent.h", filebase = "derivClass_filebase.txt", 
+    post_cpp_compiler = "derivClass_post_cpp_compiler.txt", copyFiles = "derivClass_copyFiles.txt"))

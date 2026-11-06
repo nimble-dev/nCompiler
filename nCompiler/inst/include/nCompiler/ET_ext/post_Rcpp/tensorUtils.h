@@ -45,6 +45,8 @@ namespace Eigen {
     typedef nDimTraitsInternal2<const XprType, DefaultDevice> Internal;
     typedef typename nDimTraitsInternal2<const XprType, DefaultDevice>::Dimensions Dimensions;
     static const std::size_t NumDimensions = internal::traits<XprType>::NumDimensions;
+    typedef typename Eigen::internal::traits<XprType>::Scalar Scalar;
+
 
     EIGEN_DEVICE_FUNC nDimTraits2(const XprType& xpr) :
       m_Internal(xpr, Eigen::DefaultDevice())
@@ -67,18 +69,22 @@ namespace Eigen {
   template<>
   struct nDimTraits2<double> {
     static const std::size_t NumDimensions = 0;
+    typedef double Scalar;
   };
   template<>
   struct nDimTraits2<long> {
     static const  std::size_t NumDimensions = 0;
+    typedef long Scalar;
   };
   template<>
   struct nDimTraits2<int> {
     static const  std::size_t NumDimensions = 0;
+    typedef int Scalar;
   };
   template<>
   struct nDimTraits2<bool> {
     static const  std::size_t NumDimensions = 0;
+    typedef bool Scalar;
   };
 
 // This is used in one place, generated code for Rep.

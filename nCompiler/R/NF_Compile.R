@@ -26,6 +26,7 @@ nCompile_nFunction <- function(NF,
                                env = parent.frame(),
                                compileInfo = NULL,
                                control = list(),
+                               project_env = new.env(),
                               ## name,
                                ...) {
   ## ... is used for internal arguments that are not necessarily documents or 
@@ -80,7 +81,7 @@ nCompile_nFunction <- function(NF,
        "The name argument to nFunction gives the base for filenames in that directory.")
     regular_filename <-  NFinternals(NF)$cpp_code_name
     if(gather_needed_units) 
-      needed_units <- nCompile_process_manual_needed_units(NFinternals(NF))
+      needed_units <- nCompile_process_manual_needed_units(NFinternals(NF), project_env = project_env)
     allow_write_predefined <- !isTRUE(compileInfo$auto_included)
   }
   if(is_predefined && isFALSE(controlFull$generate_predefined)) {
@@ -91,7 +92,7 @@ nCompile_nFunction <- function(NF,
                                         useUniqueNameInCpp = 
                                          controlFull$useUniqueNameInCode,
                                        compileInfo = compileInfo)
-    NF_Compiler$createCpp(control = controlFull)
+    NF_Compiler$createCpp(control = controlFull, project_env = project_env)
     if(NFcompilerMaybeStopAfter(NF_Compiler$stageCompleted,
                                 controlFull)) {
       if(get_nOption('verbose')) 
@@ -106,7 +107,7 @@ nCompile_nFunction <- function(NF,
       RcppPacket <- cppDefs_2_RcppPacket(NF_Compiler$cppDef)
       saveRcppPacket(RcppPacket, predefined_dir, regular_filename)
     } else {
-      if(gather_needed_units) needed_units <- NF_Compiler$gather_needed_units()
+      if(gather_needed_units) needed_units <- NF_Compiler$gather_needed_units(project_env = project_env)
     }
     stageName <- 'makeRcppPacket'
     if (logging) logBeforeStage(stageName)

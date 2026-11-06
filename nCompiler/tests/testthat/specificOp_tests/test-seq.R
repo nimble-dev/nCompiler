@@ -404,6 +404,126 @@ test_that("Basic seq usage works", {
   ## The two most useful debug spots:
   ## debug(nCompiler:::labelAbstractTypesEnv$Seq)
   ## debug(nCompiler:::eigenizeEnv$Seq)
+
+  nc_obj <- nc$new()
+  expect_equivalent(nc_obj$seq_empty(), 1 + exp(1))
+  expect_equivalent(nc_obj$seq_td(7), 1+exp(seq(to = 2*7)))
+  expect_identical(nc_obj$seq_ti(7), seq(to = 7L))
+  expect_equivalent(nc_obj$seq_fd(5), 1 + exp(1:10))
+  expect_identical(nc_obj$seq_fi(7), seq(from = 7L))
+  expect_equivalent(nc_obj$seq_fd(-5), 1 + exp(seq(from = 2*(-5))))
+
+  expect_equivalent(nc_obj$seq_fdv(5:10), 1 + exp(1:3))
+  expect_identical(nc_obj$seq_fiv(5:10), seq(5L:10L))
+
+  expect_equivalent(nc_obj$seq_fd_td(7, 20), seq(7, 20))
+  expect_equivalent(nc_obj$seq_fd_td(7.1, 20.2), seq(7.1, 20.2))
+  expect_equivalent(nc_obj$seq_fd_td(7.1, 20.2), seq(7.1, 20.2))
+  expect_equivalent(nc_obj$seq_fd_td(-1, -5), seq(-1, -5))
+  expect_equivalent(nc_obj$seq_fd_td(-1, -1), seq(-1, -1))
+
+  expect_identical(nc_obj$seq_fi_td(1, 5.2), seq(from=1L, 5.2))
+  expect_identical(nc_obj$seq_fi_ti(1, 5), seq(from=1L, 5L))
+  expect_identical(nc_obj$seq_fd_ti(1.1, 5), seq(from=1.1, 5L))
+
+  expect_equivalent(nc_obj$seq_ld(4), 1:4)
+  expect_equivalent(nc_obj$seq_ld(4.1), 1:5)
+  expect_equivalent(nc_obj$seq_ld(0), integer())
+  expect_equivalent(nc_obj$seq_ld(.1), 1)
+
+  expect_equivalent(nc_obj$seq_fd_td_bd(0, 1, .1), seq(0, 1, .1))
+  expect_equivalent(nc_obj$seq_fd_td_bd(1, -1, -.1), seq(1, -1, -.1))
+  expect_equivalent(nc_obj$seq_fd_td_bd(1.1, -1.3, -.1), seq(1.1, -1.3, -.1))
+  expect_equivalent(nc_obj$seq_fd_td_bd(1, 10, 1), seq(1, 10, 1))
+  expect_error(nc_obj$seq_fd_td_bd(1, 10, -1)) # Correctly generates error
+  expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, 1), seq(1, 1, 1))
+  expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, .1), seq(1, 1, .1))
+  expect_equivalent(nc_obj$seq_fd_td_bd(1, 1, 0), seq(1, 1, 0))
+
+  expect_identical(nc_obj$seq_fi_ti_bi(1, 10, 2), seq(1, 10, 2))
+
+  expect_equivalent(nc_obj$seq_bd(1), seq(by = 1))
+  expect_equivalent(nc_obj$seq_bd(0), seq(by = 0))
+  expect_equivalent(nc_obj$seq_bd(0.5), seq(by = 0.5))
+  expect_equivalent(nc_obj$seq_bd(-.5), seq(by = -0.5))
+
+  expect_equivalent(nc_obj$seq_fd_bd(1, 1), seq(from = 1, by = 1))
+  expect_equivalent(nc_obj$seq_fd_bd(0, .1), seq(from = 0, by = .1))
+  expect_equivalent(nc_obj$seq_fd_bd(2, -.1), seq(from = 2, by = -.1))
+  expect_error(nc_obj$seq_fd_bd(2, 0)) # Correctly gives error msg
+  expect_equivalent(nc_obj$seq_fd_bd(1.5, -.1), seq(from = 1.5, by = -.1))
+  expect_equivalent(nc_obj$seq_fd_bd(1,0), seq(from = 1, by = 0))
+  expect_equivalent(nc_obj$seq_fd_bd(2, -.4), seq(from = 2, by = -.4))
+  expect_equivalent(nc_obj$seq_fd_bd(2, -4), seq(from = 2, by = -4))
+
+  expect_identical(nc_obj$seq_fi_bi(2, -4), seq(from = 2L, by = -4L))
+  expect_identical(nc_obj$seq_fi_bd(2, -4), seq(from = 2L, by = -4))
+
+  expect_equivalent(nc_obj$seq_fd_ld(1.5, 10), seq(from = 1.5, length.out = 10))
+  expect_equivalent(nc_obj$seq_fd_ld(1.5, 0), seq(from = 1.5, length.out = 0))
+  expect_equivalent(nc_obj$seq_fd_ld(1.5, 1.1), seq(from = 1.5, length.out = 1.1))
+  expect_equivalent(nc_obj$seq_fd_ld(2, 10), seq(from = 2, length.out = 10))
+  expect_equivalent(nc_obj$seq_fd_ld(-1, 0), seq(from = -1, length.out = 0))
+  expect_equivalent(nc_obj$seq_fd_ld(-2, 1.1), seq(from = -2, length.out = 1.1))
+
+  expect_identical(nc_obj$seq_fi_ld(2, 10), seq(from = 2L, length.out = 10))
+  expect_equivalent(nc_obj$seq_fi_ld(-1, 0), seq(from = -1L, length.out = 0)) # R returns integer based on length.out value; we can't do that.
+  expect_identical(nc_obj$seq_fi_ld(-2, 1.1), seq(from = -2L, length.out = 1.1))
+
+  expect_equivalent(nc_obj$seq_td_ld(1.5, 10), seq(to = 1.5, length.out = 10))
+  expect_equivalent(nc_obj$seq_td_ld(1, 10), seq(to = 1, length.out = 10))
+  expect_equivalent(nc_obj$seq_td_ld(5, 1), seq(to = 5, length.out = 1))
+  expect_equivalent(nc_obj$seq_td_ld(5, 0), seq(to = 5, length.out = 0))
+  expect_error(nc_obj$seq_td_ld(5, -1)) # Correctly gives error msg
+  expect_identical(nc_obj$seq_ti_ld(5, 3), seq(to = 5, length.out = 3))
+  expect_identical(nc_obj$seq_td_li(5, 3), seq(to = 5, length.out = 3L))
+  expect_identical(nc_obj$seq_ti_li(5, 3), seq(to = 5, length.out = 3L))
+
+  expect_equivalent(nc_obj$seq_td_bd(3, 1), seq(to = 3, by = 1))
+  expect_equivalent(nc_obj$seq_td_bd(3, .1), seq(to = 3, by = .1))
+  expect_error(nc_obj$seq_td_bd(3, -.1)) # Correctly gives error msg
+  expect_error(nc_obj$seq_td_bd(-1.5, .1))  # Correctly gives error msg
+  expect_equivalent(nc_obj$seq_td_bd(-1.5, -.1), seq(to = -1.5, by = -.1))
+  expect_error(nc_obj$seq_td_bd(-1.5, 0)) # Correctly gives error msg
+  expect_identical(nc_obj$seq_ti_bd(3L, 1), seq(to = 3L, by = 1))
+  expect_identical(nc_obj$seq_td_bi(3, 1L), seq(to = 3, by = 1L))
+  expect_identical(nc_obj$seq_ti_bi(3L, 1L), seq(to = 3L, by = 1L))
+
+  expect_equivalent(nc_obj$seq_bd_ld(3, 5), seq(by = 3, length.out = 5))
+  expect_equivalent(nc_obj$seq_bd_ld(3, 1), seq(by = 3, length.out = 1))
+  expect_equivalent(nc_obj$seq_bd_ld(3, 0), seq(by = 3, length.out = 0))
+  expect_equivalent(nc_obj$seq_bd_ld(-3, 5), seq(by = -3, length.out = 5))
+  expect_equivalent(nc_obj$seq_bd_ld(-3, 1), seq(by = -3, length.out = 1))
+  expect_equivalent(nc_obj$seq_bd_ld(-3, 0), seq(by = -3, length.out = 0))
+  expect_error(nc_obj$seq_bd_ld(-3, -1)) # Correctly gives error msg
+  expect_identical(nc_obj$seq_bi_ld(3L, 5), seq(by = 3L, length.out = 5))
+  expect_identical(nc_obj$seq_bd_li(3, 5L), seq(by = 3, length.out = 5L))
+  expect_identical(nc_obj$seq_bi_li(3L, 5L), seq(by = 3L, length.out = 5L))
+
+  expect_equivalent(nc_obj$seq_fd_td_ld(10, -1, 12), seq(10, -1, length.out = 12 ))
+  expect_equivalent(nc_obj$seq_fd_td_ld(-4, 8, 5.6), seq(-4, 8, length.out = 5.6 ))
+
+  expect_identical(nc_obj$seq_fi_td_ld(10L, -1, 12), seq(10L, -1, length.out = 12 ))
+  expect_identical(nc_obj$seq_fd_ti_ld(10, -1L, 12), seq(10, -1L, length.out = 12 ))
+  expect_identical(nc_obj$seq_fi_ti_ld(10L, -1L, 12), seq(10L, -1L, length.out = 12 ))
+
+  expect_equivalent(nc_obj$seq_fd_bd_ld(10, -.4, 12), seq(10, by=-.4, length.out = 12 ))
+  expect_equivalent(nc_obj$seq_fd_bd_ld(10, -.4, 1), seq(10, by=-.4, length.out = 1 ))
+  expect_equivalent(nc_obj$seq_fd_bd_ld(10, -.4, 0), seq(10, by=-.4, length.out = 0 ))
+
+  expect_equivalent(nc_obj$seq_fi_bd_ld(10L, -.4, 12), seq(10L, by=-.4, length.out = 12 ))
+  expect_equivalent(nc_obj$seq_fd_bi_ld(10, -6L, 12), seq(10, by= -6L, length.out = 12 ))
+  expect_equivalent(nc_obj$seq_fi_bi_ld(10L, -6L, 12), seq(10L, by=-6L, length.out = 12 ))
+
+  expect_equivalent(nc_obj$seq_td_bd_ld(10, -.4, 5), seq(to = 10, by=-.4, length.out = 5 ))
+  expect_equivalent(nc_obj$seq_td_bd_ld(10, -.4, 1), seq(to = 10, by=-.4, length.out = 1 ))
+  expect_equivalent(nc_obj$seq_td_bd_ld(10, -.4, 1.1), seq(to = 10, by=-.4, length.out = 1.1 ))
+  expect_equivalent(nc_obj$seq_td_bd_ld(10, -.4, 0), seq(to = 10, by=-.4, length.out = 0 ))
+
+  expect_equivalent(nc_obj$seq_ti_bd_ld(10L, -.4, 5), seq(to = 10L, by=-.4, length.out = 5 ))
+  expect_equivalent(nc_obj$seq_td_bi_ld(10, -2L, 5), seq(to = 10, by=-2L, length.out = 5 ))
+  expect_equivalent(nc_obj$seq_ti_bi_ld(10L, -2L, 5), seq(to = 10L, by=-2L, length.out = 5 ))
+  
   ncc <- nCompile(nc)
 
   nc_obj <- ncc$new()

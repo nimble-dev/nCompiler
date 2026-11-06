@@ -70,8 +70,8 @@
 #include <nCompiler/nC_inter/nC_inter_pre_Rcpp.h>
 #endif
 
-#ifdef NCOMPILER_USES_NLIST
-#include <nCompiler/nList/nList_pre_Rcpp.h>
+#ifdef NCOMPILER_USES_NCPPVEC
+#include <nCompiler/nCppVec/nCppVec_pre_Rcpp.h>
 #endif
 
 // Main RCPP include

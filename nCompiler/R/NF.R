@@ -96,16 +96,23 @@ nFunction <- function(fun,
   # virtual (FALSE)
   # abstract (FALSE)
   # const (FALSE)
-  # depends (list()) : Values for Rcpp::depends, to use another package
+  # depends (list()) : Package names for Rcpp::depends, to use another package's
+  #   inst/include. Also added to LinkingTo when writing a package.
+  # Hincludes, CPPincludes : character vectors of #include targets, with
+  #   their delimiters, e.g. "<pkg/file.h>" or '"file.h"'.
+  # HpostCode, CPPpostCode : character vectors of verbatim code placed after
+  #   the main code of the .h or .cpp file (e.g. an #include that must come after
+  #   a declaration). Unlike preambles, these are not combined across files.
   # See cppDefs_core.R: generateFunctionHeader for more supported entries. These include:
   #   externC, template, static, and manual over-rides for returnType, (prototype, deftype), name,
   #   scopes, args,
   #   qualifiers
   # Also cpp_code_name (see NF_InternalsClass).
+  TreturnType <- nCaptureType(returnType)
   compileInfo <- updateDefaults(
     list(C_fun = NULL,
          callFromR = TRUE,
-         virtual=FALSE, abstract=FALSE, const=FALSE,
+         virtual = FALSE, abstract = FALSE, const = FALSE,
         depends = list()),
     compileInfo
   )
@@ -129,7 +136,7 @@ nFunction <- function(fun,
   # ADfun: should become AD_nFun
   ###
 
-  if(missing(name))
+  if(missing(name) || !length(name))   # Check for empty `name` per issue 162.
     name <- nFunctionLabelMaker()
   ## Create internals that will be used for compilation.
   internals <- NF_InternalsClass$new(fun,
@@ -137,7 +144,7 @@ nFunction <- function(fun,
                                      argTypes = argTypes,
                                      refArgs = refArgs,
                                      blockRefArgs = blockRefArgs,
-                                     returnType = returnType,
+                                     returnType = {{TreturnType}},
                                      enableDerivs = enableDerivs,
 #                                     check = check,
 #                                     C_fun = C_fun,

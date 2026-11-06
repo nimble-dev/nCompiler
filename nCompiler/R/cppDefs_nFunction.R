@@ -8,19 +8,22 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
-  ## handler nList in labelAbstractTypes does record in auxEnv if an
-  ## explicit call to nList() was uses. That is the beginning of a smarter
+  ## handler nCppVec in labelAbstractTypes does record in auxEnv if an
+  ## explicit call to nCppVec() was uses. That is the beginning of a smarter
   ## system for determining what #include (via #define) components are
   ## really needed. But I punted on further extension for now and
-  ## simply tacked NLIST onto the universal set of includes for now.
+  ## simply tacked NCPPVEC onto the universal set of includes for now.
+  ## NCOMPILER_USES_MVDISTS (multivariate distributions, e.g. dmnorm_chol)
+  ## is likewise just tacked on universally for now; a future pass could
+  ## set it only when generated code actually calls one.
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                           "#define NCOMPILER_USES_EIGEN",
-                          "// #define NCOMPILER_USES_TBB",
-                          "#define NCOMPILER_USES_NLIST",
+                          "#define NCOMPILER_USES_NCPPVEC",
+                          "#define NCOMPILER_USES_MVDISTS",
                           "#define USES_NCOMPILER")
   cppDef$Hincludes <- c(cppDef$Hincludes)#,
   ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
@@ -75,12 +78,18 @@ cpp_nFunctionClass <- R6::R6Class(
     SEXPwrapperCname = character(),
     NF_Compiler = NULL,
     initialize = function(...) {
-      ## conflicting protocols:.nCompiler inserts #include later
+      ## conflicting protocols: nCompiler inserts #include later
       ## inline/Rcpp plugins do not, so we strip them out here
       ## so that they can be inserted later.
       cpp_nFunctionClass_init_impl(self)
       ## nCompiler_plugin()$includes already have #include, so they go here
       super$initialize(...)
+    },
+    showTypes = function(annotations = FALSE) {
+      if(annotations) {
+        print(self$code$code, showType = TRUE)
+      } else print(self$NF_Compiler$symbolTable, parent = FALSE)
+      invisible(self)
     },
     getInternalDefs = function() {
       super$getInternalDefs()
@@ -89,13 +98,13 @@ cpp_nFunctionClass <- R6::R6Class(
       super$getExternalDefs()
     },
     getHincludes = function() {
-      c(self$Hincludes,
+      c(super$getHincludes(),
         if(!is.null(self$SEXPwrapper))
           self$SEXPwrapper$getHincludes()
       )
     },
     getCPPincludes = function() {
-      c(self$CPPincludes,
+      c(super$getCPPincludes(),
         unlist(
           lapply(
             self$CPPincludes,
@@ -112,7 +121,7 @@ cpp_nFunctionClass <- R6::R6Class(
       )
     },
     getCPPusings = function() {
-      unique(c(self$CPPusings,
+      unique(c(super$getCPPusings(),
                if(!is.null(self$SEXPwrapper))
                  self$SEXPwrapper$getCPPusings()
                )
@@ -143,12 +152,12 @@ cpp_nFunctionClass <- R6::R6Class(
 cpp_include_aux_content <- function(self,
                                     NF_Compiler) {
   ## Available aux content:
-  if(isTRUE(NF_Compiler$auxEnv$uses_nList)) {
+  if(isTRUE(NF_Compiler$auxEnv$uses_nCppVec)) {
     self$Hpreamble <- c(self$Hpreamble,
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
                         "#define USES_NCOMPILER")
     self$CPPpreamble <- c(self$CPPpreamble,
-                          "#define NCOMPILER_USES_NLIST",
+                          "#define NCOMPILER_USES_NCPPVEC",
                           "#define USES_NCOMPILER")
   }
   ## initializerList for a constructor
@@ -178,7 +187,7 @@ cpp_include_needed_nClasses <- function(cppDef,
   new_Hincludes <- character()
   for(i in seq_along(symTab$symbols)) {
     if(inherits(symTab$symbols[[i]], "symbolNC")) {
-      needed_nClass_cppname <- symTab$symbols[[i]]$NCgenerator$classname
+      needed_nClass_cppname <- NCinternals(symTab$symbols[[i]]$NCgenerator)$cpp_classname
       new_Hincludes <- c(new_Hincludes,
                          paste0('\"',
                                 make_cpp_filebase(needed_nClass_cppname),
@@ -190,7 +199,7 @@ cpp_include_needed_nClasses <- function(cppDef,
     auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
     for(i in seq_along(auxEnv_needed_nClasses)) {
       if(isNCgenerator(auxEnv_needed_nClasses[[i]])) {
-        needed_nClass_cppname <- auxEnv_needed_nClasses[[i]]$classname
+        needed_nClass_cppname <- NCinternals(auxEnv_needed_nClasses[[i]])$cpp_classname
         new_Hincludes <- c(new_Hincludes,
                            paste0('\"',
                                   make_cpp_filebase(needed_nClass_cppname),

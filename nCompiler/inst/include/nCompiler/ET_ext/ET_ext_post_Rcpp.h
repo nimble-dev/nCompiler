@@ -19,5 +19,6 @@
 #include <nCompiler/ET_ext/post_Rcpp/tensor_seq_op.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensor_rep_op.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensor_cat_op.h>
+#include <nCompiler/ET_ext/post_Rcpp/tensorSetSize.h>
 
 //#endif

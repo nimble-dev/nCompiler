@@ -122,7 +122,38 @@ namespace Eigen {
     };
 
     // See Eigen::TensorMap for alternative constructor ideas that have been removed.
-    // Constructor added for StridedTensorMap
+    // Constructors added for StridedTensorMap
+
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor) // default to mapping the full tensor
+      : m_data(inputTensor.data())
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions, // sizes
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+#ifdef DEBUG_STRIDED_TENSOR_MAP
+      std::cout<<"sizes\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_dimensions[i]<<" "; std::cout<<std::endl;
+      std::cout<<"starts\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_startIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"stops\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_stopIndices[i]<<" "; std::cout<<std::endl;
+      std::cout<<"strides\t"; for(size_t i = 0; i < NumIndices; ++i) std::cout<<m_strides[i]<<" "; std::cout<<std::endl;
+#endif
+    }
+
+    // const-ref overload so temporaries and const tensors/maps can be used as input.
+    // Only data() and dimensions() are needed; m_data points to the source data, which outlives the temp.
+    template<typename InputType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const InputType &inputTensor)
+      : m_data(const_cast<PointerType>(inputTensor.data()))
+    {
+      createSubTensorInfo<InputType::NumIndices, NumIndices, Scalar>(inputTensor.dimensions(),
+                                                                     m_dimensions,
+                                                                     m_strides,
+                                                                     m_startIndices,
+                                                                     m_stopIndices);
+    }
+
     template<typename InputType>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
@@ -155,15 +186,46 @@ namespace Eigen {
                                                                                 m_startIndices,
                                                                                 m_stopIndices);
     }
-   
+
+    // Default constructor: leaves the map empty (m_data == nullptr). Only
+    // valid use before rebind() is destruction or another rebind()/assignment
+    // from a fully-constructed StridedTensorMap; element access is guarded by
+    // eigen_assert below (debug-only, so this costs nothing in release builds).
+    // Added for StridedTensorMap so a persistent class member can be declared
+    // once (e.g. before the underlying object/field is known) and bound later
+    // via rebind(), without needing a wrapper like std::optional.
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap() : m_data(nullptr) {}
+
+    EIGEN_DEVICE_FUNC
+    EIGEN_STRONG_INLINE bool isEmpty() const { return m_data == nullptr; } // Added for StridedTensorMap
+
+    // Re-seats this map in place to a new data pointer/shape/selection, reusing
+    // the same setup as the (data, input_sizes, ss) constructor above. Unlike
+    // operator=, which is an elementwise value-copy through the *existing*
+    // m_data (matching Eigen's Map/Tensor assignment convention), rebind()
+    // changes what this map points to -- the only way to (re)point an
+    // already-constructed (or default-constructed/empty) StridedTensorMap
+    // somewhere new. Added for StridedTensorMap.
+    template<typename ss_type, typename input_sizes_type>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void rebind(Scalar *data,
+                                                       const input_sizes_type &input_sizes,
+                                                       const ss_type &ss)
+    {
+      m_data = data;
+      createSubTensorInfoGeneral<ss_type, input_sizes_type, NumIndices, Scalar>(ss,
+                                                                                input_sizes,
+                                                                                m_dimensions, // sizes
+                                                                                m_strides,
+                                                                                m_startIndices,
+                                                                                m_stopIndices);
+    }
+
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index rank() const { return m_dimensions.rank(); }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index dimension(Index n) const { return m_dimensions[n]; }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Index stride(Index n) const { return m_strides[n]; } // Added for StridedTensorMap
-    EIGEN_DEVICE_FUNC
-    EIGEN_STRONG_INLINE Index offset() const { return m_offset; } // Added for StridedTensorMap
     
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Dimensions& dimensions() const { return m_dimensions; }
@@ -183,6 +245,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(const array<Index, NumIndices>& indices) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       // StridedTensorMap: TO-DO
       //      eigen_assert(checkIndexRange(indices));
       if (PlainObjectType::Options&RowMajor) {
@@ -197,6 +260,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()() const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       EIGEN_STATIC_ASSERT(NumIndices == 0, YOU_MADE_A_PROGRAMMING_MISTAKE)
         return m_data[0];
     }
@@ -204,8 +268,9 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index index) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -213,6 +278,7 @@ namespace Eigen {
     template<typename... IndexTypes> EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in variadic const case"<<std::endl;
       EIGEN_STATIC_ASSERT(sizeof...(otherIndices) + 2 == NumIndices, YOU_MADE_A_PROGRAMMING_MISTAKE)
         if (PlainObjectType::Options&RowMajor) {
@@ -227,19 +293,20 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i1 + i0 * m_dimensions[1];
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in const operator()"<<std::endl;
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
@@ -256,6 +323,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2, Index i3) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0));
@@ -271,6 +339,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE const Scalar& operator()(Index i0, Index i1, Index i2, Index i3, Index i4) const
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         const Index index = i4 + m_dimensions[4] * (i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0)));
         return m_data[index];
@@ -291,6 +360,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(const array<Index, NumIndices>& indices)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       // StridedTensorMap: TO-DO
       //      eigen_assert(checkIndexRange(indices));
       if (PlainObjectType::Options&RowMajor) {
@@ -305,6 +375,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()()
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       EIGEN_STATIC_ASSERT(NumIndices == 0, YOU_MADE_A_PROGRAMMING_MISTAKE)
         return m_data[0];
     }
@@ -312,8 +383,9 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index index)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       eigen_internal_assert(index >= 0 && index < size());
-      return m_data[m_offset + m_strides[0] * index]; // Modified for StridedTensorMap.
+      return m_data[m_startIndices[0] + m_strides[0] * index]; // Modified for StridedTensorMap.
     }
 
 #if USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP //EIGEN_HAS_VARIADIC_TEMPLATES
@@ -321,6 +393,7 @@ namespace Eigen {
     template<typename... IndexTypes> EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in variadic non-const case"<<std::endl;
       static_assert(sizeof...(otherIndices) + 2 == NumIndices || NumIndices == Dynamic, "Number of indices used to access a tensor coefficient must be equal to the rank of the tensor.");
       const std::size_t NumDims = sizeof...(otherIndices) + 2;
@@ -336,19 +409,20 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i1 + i0 * m_dimensions[1];
         return m_data[index];
       } else {
         const Index index = m_startIndices[0] + i0*m_strides[0] + m_dimensions[0]*( (i1*m_strides[1] + m_startIndices[1])); // Modified for StridedTensorMap
-        m_offset +  m_strides[0] * (i0 + i1 * m_strides[1]); // Modified for StridedTensorMap
         return m_data[index];
       }
     }
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       std::cout<<"in non-variadic non-const case"<<std::endl;
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
@@ -364,6 +438,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2, Index i3)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0));
@@ -379,6 +454,7 @@ namespace Eigen {
     EIGEN_DEVICE_FUNC
     EIGEN_STRONG_INLINE Scalar& operator()(Index i0, Index i1, Index i2, Index i3, Index i4)
     {
+      eigen_assert(m_data != nullptr && "StridedTensorMap: element access on an unbound (empty) map -- call rebind() first."); // Added for StridedTensorMap
       if (PlainObjectType::Options&RowMajor) {
         // StridedTensorMap: TO-DO
         const Index index = i4 + m_dimensions[4] * (i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0)));
@@ -418,7 +494,6 @@ namespace Eigen {
     Dimensions m_strides; // Added for StridedTensorMap.  Could this be a simple array?
     Dimensions m_startIndices; // ditto 
     Dimensions m_stopIndices;  // ditto
-    Index m_offset;
   };
 
   // TensorEvaluator cases are modified from TensorSlidingSlicingOp
@@ -618,15 +693,29 @@ typename MakeIndexBlocksTypes<P...>::type MakeIndexBlocks(P ...p) {
 // or   MakeStridedTensorMap<2>::make(myEigenTensor, Eigen::array<b__, 3>({s(1, 2), s(), s(3)}))
 template<int output_nInd>
 struct MakeStridedTensorMap {
-  template<typename EigenInputType, typename IndexBlocksType>
+  template<typename EigenInputType>
    struct MakeOutputType {
-     typedef typename EigenInputType::Scalar Scalar;
+     typedef typename std::remove_reference<EigenInputType>::type EigenBaseType;
+     typedef typename EigenBaseType::Scalar Scalar;
      typedef Tensor<Scalar, output_nInd> EigenOutputType;
      typedef StridedTensorMap< EigenOutputType > type;
    };
   template<typename EigenInputType, typename IndexBlocksType>
-  static typename MakeOutputType<EigenInputType, IndexBlocksType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
-    return typename MakeOutputType<EigenInputType, IndexBlocksType>::type(x, indexBlockArray);
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(x, indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &x) {
+    return typename MakeOutputType<EigenInputType>::type(x);
+  }
+  // rvalue overloads so temporaries (e.g. TensorMap returned by nC_as) can be used as input.
+  template<typename EigenInputType, typename IndexBlocksType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x, const IndexBlocksType &indexBlockArray) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x), indexBlockArray);
+  }
+  template<typename EigenInputType>
+  static typename MakeOutputType<EigenInputType>::type make(EigenInputType &&x) {
+    return typename MakeOutputType<EigenInputType>::type(std::forward<EigenInputType>(x));
   }
 };
 
@@ -669,6 +758,145 @@ struct TensorEvaluator< StridedTensorMap<PlainObjectType, Options_, MakePointer_
 
 
 
+
+// ---------------------------------------------------------------------------
+// CastSTM<TargetScalar, SourceSTM>
+//
+// A read-only Eigen tensor expression that wraps a SourceSTM and casts its
+// elements to TargetScalar at read time.  No allocation; coeff(i) evaluates
+// to static_cast<TargetScalar>(source_evaluator.coeff(i)).
+//
+// Returned by RHSCastProxy::operator()() for cross-scalar as_nC<> calls,
+// making the result directly usable in Eigen ops and scalar indexing with
+// the same uniform as_nC<T,N,mode>(x)() interface.
+//
+// SourceSTM is stored by value (cheap: pointer + small index arrays) to
+// avoid lifetime issues when wrapping a proxy member.
+// ---------------------------------------------------------------------------
+
+// Forward declaration required before the traits specialisation.
+template<typename TargetScalar, typename SourceSTM> class CastSTM;
+
+namespace internal {
+  template<typename TargetScalar, typename SourceSTM>
+  struct traits<CastSTM<TargetScalar, SourceSTM>> {
+    typedef TargetScalar Scalar;
+    typedef typename traits<SourceSTM>::StorageKind StorageKind;
+    typedef typename traits<SourceSTM>::Index Index;
+    static const int NumDimensions = traits<SourceSTM>::NumDimensions;
+    static const int Layout = traits<SourceSTM>::Layout;
+    enum { Flags = 0 };
+    // PointerType: TypeConversion converts the source pointer's element type to
+    // TargetScalar*, matching the pattern used by TensorConversionOp.
+    typedef typename TypeConversion<TargetScalar,
+                       typename traits<SourceSTM>::PointerType>::type PointerType;
+  };
+
+  // eval: keep as a const reference (the expression is cheap to hold by reference).
+  template<typename TargetScalar, typename SourceSTM>
+  struct eval<CastSTM<TargetScalar, SourceSTM>, Eigen::Dense> {
+    typedef const CastSTM<TargetScalar, SourceSTM>& type;
+  };
+
+  // nested: store by value when nested inside another expression (avoids dangling
+  // reference when the CastSTM is a temporary returned from RHSCastProxy::operator()()).
+  template<typename TargetScalar, typename SourceSTM>
+  struct nested<CastSTM<TargetScalar, SourceSTM>, 1,
+                typename eval<CastSTM<TargetScalar, SourceSTM>>::type> {
+    typedef CastSTM<TargetScalar, SourceSTM> type;
+  };
+} // namespace internal
+
+template<typename TargetScalar, typename SourceSTM>
+class CastSTM : public TensorBase<CastSTM<TargetScalar, SourceSTM>, ReadOnlyAccessors>
+{
+public:
+  typedef typename internal::traits<CastSTM>::Scalar Scalar;
+  typedef typename internal::traits<CastSTM>::StorageKind StorageKind;
+  typedef typename internal::traits<CastSTM>::Index Index;
+  typedef typename internal::nested<CastSTM>::type Nested;
+  typedef Scalar CoeffReturnType;
+  typedef typename NumTraits<Scalar>::Real RealScalar;
+  typedef typename SourceSTM::Dimensions Dimensions;
+  static const int NumDimensions = SourceSTM::NumDimensions;
+
+  EIGEN_DEVICE_FUNC explicit CastSTM(const SourceSTM& src) : src_(src) {}
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const Dimensions& dimensions() const { return src_.dimensions(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const SourceSTM& source() const { return src_; }
+
+  // Element access — delegates cast to SourceSTM's operator(), which handles strides.
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TargetScalar operator()(Index i) const {
+    return static_cast<TargetScalar>(src_(i));
+  }
+
+  template<typename... IndexTypes>
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TargetScalar operator()(Index firstIndex, Index secondIndex, IndexTypes... otherIndices) const {
+    return static_cast<TargetScalar>(src_(firstIndex, secondIndex, otherIndices...));
+  }
+
+private:
+  SourceSTM src_; // stored by value — cheap and avoids proxy-member lifetime issues
+};
+
+template<typename TargetScalar, typename SourceSTM, typename Device>
+struct TensorEvaluator<const CastSTM<TargetScalar, SourceSTM>, Device>
+{
+  typedef CastSTM<TargetScalar, SourceSTM> XprType;
+  typedef typename XprType::Dimensions Dimensions;
+  typedef TargetScalar Scalar;
+  typedef TargetScalar CoeffReturnType;
+  typedef typename PacketType<CoeffReturnType, Device>::type PacketReturnType;
+  typedef typename XprType::Index Index;
+
+  enum {
+    IsAligned         = false,
+    PacketAccess      = false,
+    BlockAccess       = false,
+    PreferBlockAccess = false,
+    Layout            = TensorEvaluator<const SourceSTM, Device>::Layout,
+    RawAccess         = false
+  };
+
+  typedef internal::TensorBlockNotImplemented TensorBlock;
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TensorEvaluator(const XprType& op, const Device& device)
+    : src_eval_(op.source(), device) {}
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  const Dimensions& dimensions() const { return src_eval_.dimensions(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  bool evalSubExprsIfNeeded(CoeffReturnType*) {
+    src_eval_.evalSubExprsIfNeeded(nullptr);
+    return true;
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  void cleanup() { src_eval_.cleanup(); }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  CoeffReturnType coeff(Index index) const {
+    return static_cast<TargetScalar>(src_eval_.coeff(index));
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  TensorOpCost costPerCoeff(bool vectorized) const {
+    return src_eval_.costPerCoeff(vectorized);
+  }
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+  Scalar* data() const { return nullptr; }
+
+private:
+  TensorEvaluator<const SourceSTM, Device> src_eval_;
+};
 
 } // end namespace Eigen
 

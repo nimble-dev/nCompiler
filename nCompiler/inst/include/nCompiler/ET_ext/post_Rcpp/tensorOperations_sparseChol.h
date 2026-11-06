@@ -1,0 +1,118 @@
+#ifndef TENSOROPERATIONS_SPARSECHOL_H
+#define TENSOROPERATIONS_SPARSECHOL_H
+
+std::shared_ptr<sparseCholFactor> Cholesky(const Eigen::SparseMatrix<double>& x) {
+  std::shared_ptr<sparseCholFactor> ch = nClass_builder<sparseCholFactor>()();
+  ch->llt.compute(x);
+  if (ch->llt.info() != Eigen::Success)
+    throw std::runtime_error("sparse Cholesky factorization failed");
+  return ch;
+}
+
+// This overloads nLogdet, on top of use for standard matrices with calculation
+// done via the SVD.
+double nLogdet(std::shared_ptr<sparseCholFactor> ch) {
+    Eigen::SparseMatrix<double> L = ch->llt.matrixL();
+    return L.diagonal().array().log().sum();
+}
+
+// See tensorOperations.h for discussion of this size determination.
+
+template<typename Scalar>
+Eigen::Tensor<Scalar, 1> initSolveX(
+    Eigen::Tensor<Scalar, 1> const & b
+) {
+    auto bdim = nDimTraits2_dimensions(b);
+    return Eigen::Tensor<Scalar, 1>(bdim[0]);
+}
+
+template<typename Scalar>
+Eigen::Tensor<Scalar, 2> initSolveX(
+    Eigen::Tensor<Scalar, 2> const & b
+) {
+    auto bdim = nDimTraits2_dimensions(b);
+    return Eigen::Tensor<Scalar, 2>(bdim[0], bdim[1]);
+}
+
+
+template<typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nSolve(std::shared_ptr<sparseCholFactor> ch, const RHS & b
+  ) {
+    // explicit Eigen::Tensor types for inputs
+    typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
+    // evaluate arguments, if necessary
+    const auto & b_eval = eval(b);
+    // Not sure why this didn't work (CP) to return 1-col matrix: 
+    // bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
+    bTensor res = initSolveX(b_eval);
+    // map tensor objects to Eigen::Matrix types
+    auto bmap = matmap(b_eval);
+    auto resMap = matmap(res);
+    // solve linear system
+    resMap = ch->llt.solve(bmap);
+    return res;
+}
+
+
+template<typename RHS>
+Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> nBacksolve(std::shared_ptr<sparseCholFactor> ch, const RHS & b
+  ) {
+    // explicit Eigen::Tensor types for inputs
+    typedef Eigen::Tensor<typename RHS::Scalar, RHS::NumDimensions> bTensor;
+    // evaluate arguments, if necessary
+    const auto & b_eval = eval(b);
+    // bTensor res = Eigen::Tensor<typename RHS::Scalar, 2>(bdim[0], bdim.size() > 1 ? bdim[1]: 1);
+    bTensor res = initSolveX(b_eval);
+    // map tensor objects to Eigen::Matrix types
+    auto bmap = matmap(b_eval);
+    auto resMap = matmap(res);
+    // solve linear system
+    resMap = ch->llt.permutationPinv() * ch->llt.matrixU().triangularView<Eigen::Upper>().solve(bmap);
+    return res;
+}
+
+
+// Multiply L by matrix.
+template<
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Ypr, 2>(),
+        Ypr
+      >::type* = nullptr
+>
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto ymap = matmap(yeval);
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(ymap.rows(), ymap.cols());
+    // map and multiply!
+    matmap(res) = ch->llt.permutationPinv() * (ch->llt.matrixL() * ymap);
+    return res;
+}
+
+
+// Multiply L by vector.
+// TODO: Could we combine this with the above by determining whether to use ymap.cols() or 1?
+template<
+    typename Ypr,
+    typename std::enable_if<
+        HasNumDimensionsN<Ypr, 1>(),
+        Ypr
+    >::type* = nullptr
+>
+Eigen::Tensor<typename Ypr::Scalar, 2> nMul(std::shared_ptr<sparseCholFactor> ch, const Ypr & y) {
+    // evaluate arguments, if necessary
+    const auto & yeval = eval(y);
+    // map inputs and initialize output
+    auto ymap = matmap(yeval);
+    // initialize output
+    Eigen::Tensor<typename Ypr::Scalar, 2> res(ymap.size(), 1);
+    // map and multiply!
+    matmap(res) = ch->llt.permutationPinv() * (ch->llt.matrixL() * ymap);
+    return res;
+}
+
+
+
+#endif

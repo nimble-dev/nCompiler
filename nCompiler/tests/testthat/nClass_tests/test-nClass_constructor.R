@@ -73,12 +73,16 @@ test_that("nClass replacing default constructor works", {
 #  gc()
 })
 
-test_that("manual initialize works and Cpp ctor call is inserted", {
+test_that("manual initialize works and Cpp ctor call is made", {
+  # Requirement is that users include "super$initialize()".
+  # That seems reasonable.
+  # Manual alternative is below.
   nc <- nClass(
     classname = "methods_test",
     Rpublic = list(
       Ra = 0,
       initialize = function() {
+        super$initialize()
         print("calling initialize")
         self$Ra <- 1
       },
@@ -121,14 +125,19 @@ test_that("manual initialize works and Cpp ctor call is inserted", {
 })
 
 
-test_that("manual initialize with hand-coded C++ initialization works", {
+test_that("manual initialize with hand-coded Cpublic initialization works", {
+  # two distinct steps on display here:
+  # 1. manual alternative to calling super$initialize() is initialize_Cpublic()
+  # 2. If the auto_include of C++ constructor is turned off, it can be constructed manually
+  #    at whatever step of initialize one wants.
   nc <- nClass(
     classname = "methods_test",
     Rpublic = list(
       Ra = 0,
       initialize = function() {
         print("calling initialize")
-        if(isCompiled()) initializeCpp()
+        initialize_Cpublic() # step 1, for uncompiled or compiled
+        if(isCompiled()) initializeCpp() # step 2, only for compiled
         self$Ra <- 1
       },
       get_Ra = function() {
@@ -154,6 +163,7 @@ test_that("manual initialize with hand-coded C++ initialization works", {
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
+  expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
   #obj$Ca
   #obj$get_Ca()
@@ -172,6 +182,70 @@ test_that("manual initialize with hand-coded C++ initialization works", {
 })
 
 
+test_that("warning issued when Rpublic initialize lacks super$initialize or initialize_Cpublic", {
+  # Should warn: no super$initialize or initialize_Cpublic
+  expect_warning(
+    nClass(
+      classname = "warn_test",
+      Rpublic = list(
+        initialize = function() {
+          self$Ra <- 1
+        },
+        Ra = 0
+      ),
+      Cpublic = list(
+        Ca = 'numericScalar'
+      )
+    ),
+    "super\\$initialize"
+  )
+
+  # Should NOT warn: has super$initialize
+  expect_no_warning(
+    nClass(
+      classname = "no_warn_super",
+      Rpublic = list(
+        initialize = function(...) {
+          super$initialize(...)
+          self$Ra <- 1
+        },
+        Ra = 0
+      ),
+      Cpublic = list(
+        Ca = 'numericScalar'
+      )
+    )
+  )
+
+  # Should NOT warn: has initialize_Cpublic (manual-control pattern)
+  expect_no_warning(
+    nClass(
+      classname = "no_warn_init_cpublic",
+      Rpublic = list(
+        initialize = function() {
+          initialize_Cpublic()
+          if(isCompiled()) initializeCpp()
+          self$Ra <- 1
+        },
+        Ra = 0
+      ),
+      Cpublic = list(
+        Ca = 'numericScalar'
+      ),
+      compileInfo = list(omit_automatic_Cpp_construction = TRUE)
+    )
+  )
+
+  # Should NOT warn: no Rpublic initialize at all
+  expect_no_warning(
+    nClass(
+      classname = "no_warn_no_init",
+      Rpublic = list(Ra = 0),
+      Cpublic = list(Ca = 'numericScalar')
+    )
+  )
+})
+
 test_that("manual initialize OMITTED with hand-coded C++ initialization compiles but is correctly broken", {
   nc <- nClass(
     classname = "methods_test",
@@ -179,6 +253,7 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
       Ra = 0,
       initialize = function() {
         print("calling initialize")
+        super$initialize()
         # if(isCompiled()) initializeCpp() # OMITTED!
         self$Ra <- 1
       },
@@ -205,6 +280,7 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
+  expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
   #obj$Ca
   #obj$get_Ca()
@@ -229,4 +305,53 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   expect_equal(Cobj$get_Ca(), 2)
 
   rm(Cobj); gc()
+})
+
+test_that("nClass returned from nFunction connects to correct C++ object when initialize has args before ...", {
+  # This tests the fix where $new(CppObj = LOE) uses a named argument so that
+  # CppObj ends up in ... rather than binding to a positional parameter.
+  # Without the named CppObj, the LOE would bind to Ra_init and be dropped.
+  nc <- nClass(
+    classname = "return_test",
+    Rpublic = list(
+      Ra = 0,
+      initialize = function(Ra_init = 0, ...) {
+        super$initialize(...)   # CppObj = LOE flows through ... when returning from nFunction
+        self$Ra <- Ra_init
+      }
+    ),
+    Cpublic = list(
+      Ca = 'numericScalar'
+    )
+  )
+
+  nf <- nFunction(
+    function() {
+      obj <- nc$new()
+      obj$Ca <- 42
+      return(obj)
+    },
+    returnType = 'nc'
+  )
+
+  # check uncompiled
+  user_obj <- nc$new(Ra_init = 7)
+  expect_equal(user_obj$Ra, 7)
+  
+  # former bug:
+  user_obj <- nc$new(Ra_init = 7, junk = 0) # extra arg for ... previously threw an error
+  expect_equal(user_obj$Ra, 7)
+  
+  Cnc <- nCompile(nc, nf)
+  # Normal user-facing construction: Ra_init is used, no expectation for Ca since C++ scalars are not initialized.
+  user_obj <- Cnc$nc$new(Ra_init = 7)
+  expect_equal(user_obj$Ra, 7)
+  # expect_equal(user_obj$Ca, 0) # This worked on Mac, but failed on linux, and actually it is not guaranteed.
+
+  # Object returned from compiled nFunction: must be connected to the C++ object
+  # that had Ca set to 42, NOT a freshly default-initialized one.
+  returned_obj <- Cnc$nf()
+  expect_equal(returned_obj$Ca, 42)
+
+  rm(user_obj, returned_obj); gc()
 })

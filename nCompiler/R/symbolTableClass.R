@@ -124,11 +124,11 @@ symbolTableClass <-
         return(parentST),
       setParentST = function(ST)
         parentST <<- ST,
-      print = function() {
+      print = function(parent = TRUE) {
         writeLines('symbol table:')
         for(i in seq_along(symbols))
           symbols[[i]]$print()
-        if(!is.null(parentST)) {
+        if(!is.null(parentST) && parent) {
           writeLines('parent symbol table:')
           parentST$print()
         }

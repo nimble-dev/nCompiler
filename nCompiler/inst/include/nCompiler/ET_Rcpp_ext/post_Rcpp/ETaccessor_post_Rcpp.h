@@ -2,27 +2,134 @@
 #define NCOMPILER_ETACCESSOR_POST_RCPP_H_
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <memory>
+#include <type_traits>
+#include <string>
+#include <string_view>
+#include <nCompiler/ET_ext/StridedTensorMap.h>
+#include <nCompiler/ET_ext/RuntimeFlatView.h>
+#include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
+#include <nCompiler/ET_ext/post_Rcpp/tensorFlex.h>
 
 template<typename Scalar>
 class ETaccessorTyped;
 
+// The default for copy is given here (not in the definition below) because
+// ETaccessorBase::ETaccessorTyped_tensorPtr uses ETaccessor before it is defined.
+template<typename ERROR, bool copy = false>
+class ETaccessor;
+
+template<typename inDimsT, typename outDimsT>
+void set_output_dims(const inDimsT &inDim, outDimsT &outDim,
+                    size_t output_nDim) {
+  size_t in_nDim = inDim.size();
+  if(output_nDim >= in_nDim) {
+    for(size_t i = 0; i < in_nDim; ++i) 
+      outDim[i] = inDim[i];
+    for(size_t i = in_nDim; i < output_nDim; ++i)
+      outDim[i] = 1;
+  } else {
+    size_t i_out = 0;
+    for(size_t i_in = 0; i_in < in_nDim; ++i_in) {
+      if(inDim[i_in] > 1) {
+        if(i_out >= output_nDim)
+          Rcpp::stop("Too many non-singleton dimensions for requested morphing to lower dimensional object.");
+        outDim[i_out++] = inDim[i_in];
+      }
+    }
+    for(; i_out < output_nDim; ++i_out)
+      outDim[i_out] = 1;
+  }
+}
+
+enum class AsMode { TM, STM, LHS };
+
+// Forward declarations: proxy classes are defined in nC_as.h (included after
+// this file). ETaccessorTyped::asTyped() returns them; because asTyped() is a
+// template, instantiation is deferred to the call site where they are fully
+// defined.
+template<typename ViewType> class EmptyProxy;
+template<typename Scalar> class EmptyScalarProxy;
+template<typename TargetScalar, typename ViewType> class RHSCastProxy;
+template<typename TargetScalar, typename ViewType> class CastingProxy;
+template<typename TargetScalar, typename Scalar> class CastingScalarProxy;
+
+// Names of scalar types used to downcast an ETaccessorBase without relying on
+// RTTI matching across DLLs (see typed_cast below, and nc_cast in
+// generic_class_interface.h for the same issue with nClasses). An ETaccessor may be
+// created by one DLL (e.g. by access() of an object compiled there) and used by
+// another. Scalar types without a name here fall back to dynamic_cast.
+template<typename Scalar> struct ETscalar_key { static constexpr const char* value = nullptr; };
+template<> struct ETscalar_key<double> { static constexpr const char* value = "double"; };
+template<> struct ETscalar_key<int> { static constexpr const char* value = "int"; };
+template<> struct ETscalar_key<bool> { static constexpr const char* value = "bool"; };
+template<> struct ETscalar_key<std::string> { static constexpr const char* value = "std::string"; };
+
 // Virtual nDim-general methods (e.g. resize, conversions to and from SEXP).
 class ETaccessorBase {
   public:
+  // We need to support the purpose of dynamic_cast<ETaccessorTyped<TargetScalar>*>(&acc)
+  // where acc is an ETaccessorBase and we need to downcast to ETaccessorTyped<TargetScalar>*.
+  // If TargetScalar is not the right scalar type, we will return nullptr.
+  //
+  // The reason to do this here is to ensure RTTI (run-time type information) is used in the
+  // DLL where the ETaccessor was created, and virtual methods always dispatch to code in 
+  // the DLL where the object was created. 
+  //
+  // To avoid having templated virtual methods (not allowed), we use a string key for the scalar type.
+
+  // Return this as ETaccessorTyped<Scalar>* for the Scalar named by scalar_key (or as
+  // ETaccessor<Eigen::Tensor<Scalar, nDim> >* for tensor_cast), or nullptr if it is not
+  // of that type. Because these are virtual, the check is done by code in the DLL that
+  // created the accessor. Use ETaccessorTyped_ptr() or ETaccessorTyped_tensorPtr() rather than calling them directly.
+  virtual void* typed_cast(std::string_view scalar_key) {return nullptr;}
+  virtual void* tensor_cast(std::string_view scalar_key, int nDim) {return nullptr;}
+
+  template<typename Scalar>
+  ETaccessorTyped<Scalar>* ETaccessorTyped_ptr();
+
+  template<int nDim, typename Scalar>
+  ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorTyped_tensorPtr();
+
 //  virtual void resize(Eigen::Tensor<double, 1> &t)=0;
   // To iron out: set, get, generic ref access.
   virtual void set(SEXP Sinput)=0;
   virtual SEXP get()=0;
   virtual SEXP operator=(SEXP RHS) {set(RHS); return RHS;}
+  operator SEXP() {return get();}
 
   virtual std::vector<int> &intDims()=0;
+
+  // Virtual element-wise cast/writeback for cross-scalar RuntimeCastingProxy.
+  // Only 3 scalar types are supported so virtual templates are avoided.
+  virtual void castCopyToDouble(double* dest, size_t n) {
+    Rcpp::stop("castCopyToDouble not supported for this ETaccessor type.");
+  }
+  virtual void castCopyToInt(int* dest, size_t n) {
+    Rcpp::stop("castCopyToInt not supported for this ETaccessor type.");
+  }
+  virtual void castCopyToBool(bool* dest, size_t n) {
+    Rcpp::stop("castCopyToBool not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromDouble(const double* src, size_t n) {
+    Rcpp::stop("writeBackFromDouble not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromInt(const int* src, size_t n) {
+    Rcpp::stop("writeBackFromInt not supported for this ETaccessor type.");
+  }
+  virtual void writeBackFromBool(const bool* src, size_t n) {
+    Rcpp::stop("writeBackFromBool not supported for this ETaccessor type.");
+  }
 
   template<int nDim, typename Scalar>
   using ETM = Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> >;
 
+  template<int nDim, typename Scalar>
+  using ESTM = Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> >;
+
   template<typename Scalar = double>
   ETaccessorTyped<Scalar> &S() {
-    auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+    auto castptr = ETaccessorTyped_ptr<Scalar>();
     if(castptr == nullptr) Rcpp::stop("Problem with some form of access()\n.");
     return *castptr;
   }
@@ -31,10 +138,19 @@ class ETaccessorBase {
   ETM<nDim, Scalar> map();
 
   template<int nDim, typename Scalar = double>
+  ESTM<nDim, Scalar> STmap();
+
+  template<int nDim, typename Scalar = double>
   Eigen::Tensor<Scalar, nDim> &ref();
 
   template<typename Scalar = double>
   Scalar &scalar();
+
+  // Flattened get/set view of the whole object (ss empty, the default) or
+  // a strided subview of it (ss: one b__ block per raw dimension), without
+  // needing to know the object's rank at compile time. See RuntimeFlatView.h.
+  template<typename Scalar = double>
+  RuntimeFlatView<Scalar> flatten(const std::vector<b__> &ss = {});
 
   virtual ~ETaccessorBase(){};
 };
@@ -44,6 +160,14 @@ class ETaccessorTyped : public ETaccessorBase {
   public:
 
   virtual Scalar *data()=0;
+
+  void* typed_cast(std::string_view scalar_key) override {
+    if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+      if(scalar_key == ETscalar_key<Scalar>::value)
+        return static_cast<void*>(this);
+    }
+    return nullptr;
+  }
 
   template<int nDim>
   using ETM = Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> >;
@@ -57,6 +181,77 @@ class ETaccessorTyped : public ETaccessorBase {
     return *data();
   }
 
+  // Cast/writeback implementations (element-wise, supports all 3 numeric scalar types).
+  // These are virtual, so they are instantiated for every Scalar, including std::string.
+  // Casting between character and numeric types is not supported, so for those
+  // combinations castCopy compiles to a run-time error instead of an invalid static_cast.
+  void castCopyToDouble(double* dest, size_t n) override {
+    castCopy(data(), dest, n, "castCopyToDouble");
+  }
+  void castCopyToInt(int* dest, size_t n) override {
+    castCopy(data(), dest, n, "castCopyToInt");
+  }
+  void castCopyToBool(bool* dest, size_t n) override {
+    castCopy(data(), dest, n, "castCopyToBool");
+  }
+  void writeBackFromDouble(const double* src, size_t n) override {
+    castCopy(src, data(), n, "writeBackFromDouble");
+  }
+  void writeBackFromInt(const int* src, size_t n) override {
+    castCopy(src, data(), n, "writeBackFromInt");
+  }
+  void writeBackFromBool(const bool* src, size_t n) override {
+    castCopy(src, data(), n, "writeBackFromBool");
+  }
+
+  template<int output_nDim>
+  using ESTM = Eigen::StridedTensorMap<Eigen::Tensor<Scalar, output_nDim> >;
+
+  // StridedTensorMap variant of mapTyped — same singleton-drop/pad logic.
+  template<int output_nDim>
+  ESTM<output_nDim> STmapTyped() {
+    return Eigen::MakeStridedTensorMap<output_nDim>::make(mapTyped<output_nDim>());
+  }
+
+  // Central dispatch for as() operations. Returns a proxy wrapping the
+  // appropriate view. All proxy types expose operator()() uniformly.
+  template<typename TargetType, AsMode mode = AsMode::TM, 
+           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, eigenTensor>, int> = 0>
+  auto asTyped() {
+    typedef typename Eigen::nDimTraits2<TargetType>::Scalar TargetScalar;
+    constexpr int nDim = Eigen::nDimTraits2<TargetType>::NumDimensions;
+    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+      if constexpr (mode == AsMode::TM)
+        return EmptyProxy<ETM<nDim>>(mapTyped<nDim>());
+      else
+        return EmptyProxy<ESTM<nDim>>(STmapTyped<nDim>());
+    } else {
+      if constexpr (mode == AsMode::LHS) {
+        auto view = STmapTyped<nDim>();
+        return CastingProxy<TargetScalar, decltype(view)>(view);
+      } else if constexpr (mode == AsMode::STM) {
+        // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
+        // have correct strides in the lazy cast expression.
+        auto view = STmapTyped<nDim>();
+        return RHSCastProxy<TargetScalar, decltype(view)>(view);
+      } else {
+        auto view = mapTyped<nDim>();
+        return RHSCastProxy<TargetScalar, decltype(view)>(view);
+      }
+    }
+  }
+
+  template<typename TargetType, AsMode mode = AsMode::TM, 
+           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, trueScalar>, int> = 0>
+  auto asTyped() {
+    typedef TargetType TargetScalar;
+    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+      return EmptyScalarProxy<TargetScalar>(scalarTyped());
+    } else {
+      return CastingScalarProxy<TargetScalar, Scalar>(scalarTyped());
+    }
+  }
+
   template<int output_nDim>
   ETM<output_nDim> mapTyped() {
     //innate_nDim is the nDim of the object.
@@ -67,58 +262,80 @@ class ETaccessorTyped : public ETaccessorBase {
     //but there both the LHS and RHS nDims are known at compile time.
     //Here only the output_nDim is known at compile time.
     //Also it looks like in checkAndSetupDims, RHS singletons are always dropped
-    typedef typename Eigen::internal::traits<ETM<output_nDim> >::Index Index;
+    // typedef typename Eigen::internal::traits<ETM<output_nDim> >::Index Index;
     typedef typename ETM<output_nDim>::Dimensions output_Dimensions;
     output_Dimensions outDim;
-    const auto intDims_ = this->intDims();
-    size_t innate_nDim = intDims_.size();
-    if(output_nDim >= innate_nDim) {
-      for(size_t i = 0; i < innate_nDim; ++i)
-        outDim[i] = intDims_[i];
-      if(output_nDim > innate_nDim) {
-        for(size_t i = innate_nDim; i < output_nDim; ++i)
-          outDim[i] = 1;
-      }
-    } else {
-      size_t i_out = 0;
-      for(size_t i_innate = 0 ; i_innate < innate_nDim; ++i_innate) {
-        if(intDims_[i_innate] > 1) {
-          if(i_out >= output_nDim) {
-            Rcpp::stop("Problem making a TensorMap from some form of access(): Too many non-singleton dimensions for the requested map dimensions.\n");
-            break;
-          } else {
-            outDim[i_out++] = intDims_[i_innate];
-          }
-        }
-      }
-      for( ; i_out < output_nDim; ++i_out ) outDim[i_out]=1;
-    }
+    set_output_dims(this->intDims(), outDim, output_nDim);
     return ETM<output_nDim>(data(), outDim);
   }
+
+  RuntimeFlatView<Scalar> flattenTyped(const std::vector<b__> &ss = {}) {
+    return RuntimeFlatView<Scalar>(data(), RuntimeSubviewInfo(this->intDims(), ss));
+  }
+
   ~ETaccessorTyped(){};
+
+  private:
+  template<typename From, typename To>
+  static void castCopy(const From* src, To* dest, size_t n, const char* caller) {
+    if constexpr (std::is_arithmetic_v<From> && std::is_arithmetic_v<To>) {
+      for(size_t i = 0; i < n; ++i) dest[i] = static_cast<To>(src[i]);
+    } else {
+      Rcpp::stop(std::string(caller) + " not supported: casting to or from character is not supported for this ETaccessor type.");
+    }
+  }
 };
+
+// Downcast to ETaccessorTyped<Scalar> without relying on RTTI matching across DLLs
+// (see typed_cast). Falls back to dynamic_cast for Scalar types without an ETscalar_key.
+template<typename Scalar>
+ETaccessorTyped<Scalar>* ETaccessorBase::ETaccessorTyped_ptr() {
+  if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+    return static_cast<ETaccessorTyped<Scalar>*>(typed_cast(ETscalar_key<Scalar>::value));
+  } else {
+    return dynamic_cast<ETaccessorTyped<Scalar>*>(this);
+  }
+}
 
 template<int nDim, typename Scalar>
 Eigen::TensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::map() {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating a map() from some form of access().\n");
   return castptr->template mapTyped<nDim>();
 }
 
+template<int nDim, typename Scalar>
+Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> > ETaccessorBase::STmap() {
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
+  if(castptr == nullptr) Rcpp::stop("Problem creating an STmap() from some form of access().\n");
+  return castptr->template STmapTyped<nDim>();
+}
+
 template<typename Scalar>
 Scalar& ETaccessorBase::scalar() {
-  auto castptr = dynamic_cast<ETaccessorTyped<Scalar>* >(this);
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem using scalar() from some form of access().\n");
   return castptr->scalarTyped();
+}
+
+template<typename Scalar>
+RuntimeFlatView<Scalar> ETaccessorBase::flatten(const std::vector<b__> &ss) {
+  auto castptr = ETaccessorTyped_ptr<Scalar>();
+  if(castptr == nullptr) Rcpp::stop("Problem creating a flatten() view from some form of access().\n");
+  return castptr->flattenTyped(ss);
 }
 
 // default to throwing an error
 // then specialize to allow valid types (Eigen::Tensor's or true scalars)
 // These are supported as run-time errors because the genericInterfaceC
 // will access them by a name.
-template<typename ERROR>
+template<typename ERROR, bool copy>
 class ETaccessor : public ETaccessorTyped<double> {
   public:
+  // Assignment operators are never inherited: the compiler's implicit
+  // copy-assignment operator for this class would otherwise hide the
+  // virtual ETaccessorBase::operator=(SEXP), breaking `ETaccess(x) = SEXP`.
+  using ETaccessorBase::operator=;
   using ET = Eigen::Tensor<double, 0>;
   // I think to compile this all needs to be valid in terms of types but throw run-time errors everywhere.
   // It should never get past the constructor because that throws an error, but other errors are written
@@ -153,19 +370,35 @@ class ETaccessor : public ETaccessorTyped<double> {
 };
 
 
-template<typename Scalar, int nDim>
-class ETaccessor<Eigen::Tensor<Scalar, nDim> > : public ETaccessorTyped<Scalar> {
+template<typename Scalar, int nDim, bool copy>
+class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Scalar> {
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   using ET = Eigen::Tensor<Scalar, nDim>;
   // using Scalar = typename ET::Scalar;
   typedef typename Eigen::internal::traits<ET>::Index Index;
   // NumIndices should match nDim, so this is a bit redundant.
   static const Index NumIndices = ET::NumIndices; // StridedTensorMap: This is output number of dimensions (indices).
   typedef typename ET::Dimensions Dimensions;
-  ETaccessor(ET &obj_) : obj(obj_), intDims_(NumIndices) {};
+  ETaccessor(ET &obj_) : obj(obj_) {};
   ~ETaccessor() {};
+  // See typed_cast in ETaccessorBase. The copy = true version derives from this
+  // (copy = false) class and uses this, which is the type that ETaccessorTyped_tensorPtr() returns.
+  void* tensor_cast(std::string_view scalar_key, int nDim_) override {
+    if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+      if(nDim_ == nDim && scalar_key == ETscalar_key<Scalar>::value)
+        return static_cast<void*>(this);
+    }
+    return nullptr;
+  }
   Scalar *data() override {return obj.data();}
+  // Sized lazily here rather than in the constructor: a no-op (no
+  // reallocation) on every call after the first, but avoids the allocation
+  // entirely for an ETaccessor whose intDims() is never called (e.g. only
+  // data() is used).
   std::vector<int> &intDims() override {
+    intDims_.resize(NumIndices);
     Dimensions dim = obj.dimensions();
     std::copy(dim.begin(), dim.end(), intDims_.begin());
     return intDims_;
@@ -177,21 +410,36 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim> > : public ETaccessorTyped<Scalar> 
     return wrap(obj);
   }
   ET &innerRef() {return obj;}
-  // Scalar &scalar() {
-  //   Dimensions dim = obj.dimensions();
-  //   for(int i = 0; i < nDim; ++i) {
-  //     if(dim[i]!=1)
-  //       Rcpp::stop("Invalid call to scalar() for ETaccessor with dimensions not all equal to 1.");
-  //   }
-  //   return *obj.data(); // would leak memory but will never be reached and may reduce compiler warnings
-  // }
   ET &obj;
   std::vector<int> intDims_;
 };
 
-template<typename Scalar>
+template<typename ET>
+struct ETaccessorCopyHolder {
+  ET obj_copy;
+  ETaccessorCopyHolder(const ET &src) : obj_copy(src) {}
+  ETaccessorCopyHolder(ET &&src) : obj_copy(std::move(src)) {}
+};
+
+template<typename Scalar, int nDim>
+class ETaccessor<Eigen::Tensor<Scalar, nDim>, true> : 
+  private ETaccessorCopyHolder<Eigen::Tensor<Scalar, nDim>>,
+  public ETaccessor<Eigen::Tensor<Scalar, nDim>, false> {
+public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  using ET = Eigen::Tensor<Scalar, nDim>;
+  using Holder = ETaccessorCopyHolder<ET>;
+  ETaccessor(const ET &obj_) : Holder(obj_), ETaccessor<ET, false>(Holder::obj_copy) {};
+  ETaccessor(ET &&obj_) : Holder(std::move(obj_)), ETaccessor<ET, false>(Holder::obj_copy) {};
+  ~ETaccessor() {};
+};
+
+template<typename Scalar, bool copy=false>
 class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
   ETaccessorScalar(Scalar &obj_) : obj(obj_) {};
   ~ETaccessorScalar() {};
   Scalar *data() override {return &obj;}
@@ -202,84 +450,146 @@ class ETaccessorScalar : public ETaccessorTyped<Scalar> {
     Rcpp::stop("Invalid call to ref() for ETaccessor to scalar.");
     return *new Eigen::Tensor<double, 0>(); // bad memory mgmt (would leak) but will never be called. only to show compiler valid return.
   }
-  //Scalar &scalar() {return obj;}
   Scalar &obj;
   std::vector<int> intDims_;
 };
 
-template<>
-class ETaccessor<double> : public ETaccessorScalar<double> {
+template<typename Scalar>
+class ETaccessorScalar<Scalar, true> : 
+  private ETaccessorCopyHolder<Scalar>,
+  public ETaccessorScalar<Scalar, false> {
+public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  using ET = ETaccessorScalar<Scalar, false>;
+  using Holder = ETaccessorCopyHolder<Scalar>;
+  ETaccessorScalar(const Scalar &obj_) : Holder(obj_), ET(Holder::obj_copy) {};
+  ~ETaccessorScalar() {};
+};
+
+template<bool copy>
+class ETaccessor<double, copy> : public ETaccessorScalar<double, copy> {
+  using Ref = std::conditional_t<copy, const double&, double&>;
   public:
-  ETaccessor(double &obj_) : ETaccessorScalar(obj_) {};
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  ETaccessor(Ref obj_) : ETaccessorScalar<double, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
-// // CppAD header is not read by here, so this needs attention.
-// template<>
-// class ETaccessor<CppAD::AD<double> > : public ETaccessorScalar<CppAD::AD<double> > {
-//   public:
-//   ETaccessor(CppAD::AD<double> &obj_) : ETaccessorScalar(obj_) {};
-//   ~ETaccessor() {};
-// };
-
-template<>
-class ETaccessor<int> : public ETaccessorScalar<int> {
+template<bool copy>
+class ETaccessor<int, copy> : public ETaccessorScalar<int, copy> {
+  using Ref = std::conditional_t<copy, const int&, int&>;
   public:
-  ETaccessor(int &obj_) : ETaccessorScalar(obj_) {};
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  ETaccessor(Ref obj_) : ETaccessorScalar<int, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
-template<>
-class ETaccessor<bool> : public ETaccessorScalar<bool> {
+template<bool copy>
+class ETaccessor<bool, copy> : public ETaccessorScalar<bool, copy> {
+  using Ref = std::conditional_t<copy, const bool&, bool&>;
   public:
-  ETaccessor(bool &obj_) : ETaccessorScalar(obj_) {};
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  ETaccessor(Ref obj_) : ETaccessorScalar<bool, copy>(obj_) {};
   ~ETaccessor() {};
 };
 
-// template<>
-// class ETaccessor<double> : public ETaccessorTyped<double> {
-//   public:
-//   using Scalar = double;
+template<bool copy>
+class ETaccessor<std::string, copy> : public ETaccessorScalar<std::string, copy> {
+  using Ref = std::conditional_t<copy, const std::string&, std::string&>;
+  public:
+  // See note in the ETaccessor<ERROR, copy> primary template above.
+  using ETaccessorBase::operator=;
+  ETaccessor(Ref obj_) : ETaccessorScalar<std::string, copy>(obj_) {};
+  ~ETaccessor() {};
+};
 
-//   ETaccessor(Scalar &obj_) : obj(obj_) {};
-//   ~ETaccessor() {};
-//   Scalar *data() override {return &obj;}
-//   std::vector<int> &intDims() override {return intDims_;}
-//   void set(SEXP Sinput) override { obj = as<Scalar>(Sinput);}
-//   SEXP get() override {return wrap(obj);}
-//   Eigen::Tensor<double, 0> &ref() {
-//     Rcpp::stop("Invalid call to ref() for ETaccessor to scalar.");
-//     return *new Eigen::Tensor<double, 0>(); // bad memory mgmt (would leak) but will never be called. only to show compiler valid return.
-//   }
-//   Scalar &scalar() {return obj;}
-//   Scalar &obj;
-//   std::vector<int> intDims_;
-// };
+// Downcast to ETaccessor<Eigen::Tensor<Scalar, nDim> > without relying on RTTI matching
+// across DLLs (see tensor_cast). Falls back to dynamic_cast for Scalar types without an ETscalar_key.
+template<int nDim, typename Scalar>
+ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorBase::ETaccessorTyped_tensorPtr() {
+  if constexpr (ETscalar_key<Scalar>::value != nullptr) {
+    return static_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >*>(tensor_cast(ETscalar_key<Scalar>::value, nDim));
+  } else {
+    return dynamic_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >*>(this);
+  }
+}
 
 template<int nDim, typename Scalar>
 Eigen::Tensor<Scalar, nDim> &ETaccessorBase::ref() {
-  auto castptr = dynamic_cast<ETaccessor<Eigen::Tensor<Scalar, nDim> >* >(this);
+  auto castptr = ETaccessorTyped_tensorPtr<nDim, Scalar>();
   if(castptr == nullptr) Rcpp::stop("Problem creating a ref() from some form of access().\n");
   return castptr->innerRef();
 }
 
-// template<typename Scalar>
-// Scalar &ETaccessorBase::scalar() {
-//   auto castptr = dynamic_cast<ETaccessor<Scalar>* >(this);
-//   if(castptr == nullptr) Rcpp::stop("Problem creating a scalar() from some form of access().\n");
-//   return castptr->scalar();
-// }
-
-// template<typename Scalar, int nDim>
-// auto access(Eigen::Tensor<Scalar, nDim> &x) -> ETaccessor<Eigen::Tensor<Scalar, nDim> >{
-//   return ETaccessor<Eigen::Tensor<Scalar, nDim> >(x);
-// }
+// With copy = true, the argument may be an Eigen tensor expression (e.g. a slice like mu[1:3],
+// or a sum) rather than an Eigen::Tensor. ETaccessor is only specialized for Eigen::Tensor and
+// scalar types, so an expression is first evaluated into an Eigen::Tensor of the same scalar
+// type and number of dimensions, which the accessor then owns.
+template<typename T>
+struct ETaccess_is_Tensor_ : std::false_type {};
+template<typename Scalar, int nDim, int Options, typename IndexType>
+struct ETaccess_is_Tensor_<Eigen::Tensor<Scalar, nDim, Options, IndexType>> : std::true_type {};
 
 template<typename T>
-auto ETaccess(T &x) -> ETaccessor<T>{
-  return ETaccessor<T>(x);
+struct ETaccess_is_TensorExpr_ :
+  std::integral_constant<bool,
+    std::is_base_of<Eigen::TensorBase<T, Eigen::ReadOnlyAccessors>, T>::value &&
+    !ETaccess_is_Tensor_<T>::value> {};
+
+template<typename T, bool isExpr = ETaccess_is_TensorExpr_<T>::value>
+struct ETaccess_copy_type { using type = T; };
+template<typename T>
+struct ETaccess_copy_type<T, true> {
+  using type = Eigen::Tensor<std::remove_const_t<typename Eigen::internal::traits<T>::Scalar>,
+                             Eigen::internal::traits<T>::NumDimensions>;
+};
+
+template<bool copy=false, typename T>
+std::enable_if_t<!copy, ETaccessor<T, false>>
+ETaccess(T &x) {
+  return ETaccessor<T, false>(x);
+}
+
+template<bool copy, typename T>
+std::enable_if_t<copy, ETaccessor<typename ETaccess_copy_type<T>::type, true>>
+ETaccess(const T &x) {
+  using CT = typename ETaccess_copy_type<T>::type;
+  if constexpr (ETaccess_is_TensorExpr_<T>::value) {
+    CT evaluated = x;
+    return ETaccessor<CT, true>(evaluated);
+  } else {
+    return ETaccessor<CT, true>(x);
+  }
+}
+
+template<bool copy=false, typename T>
+std::enable_if_t<!copy, std::unique_ptr<ETaccessorBase>>
+ETaccessPtr(T &x) {
+  return std::make_unique<ETaccessor<T, false>>(x);
+}
+
+template<bool copy, typename T>
+std::enable_if_t<copy, std::unique_ptr<ETaccessorBase>>
+ETaccessPtr(const T &x) {
+  using CT = typename ETaccess_copy_type<T>::type;
+  if constexpr (ETaccess_is_TensorExpr_<T>::value) {
+    CT evaluated = x;
+    return std::make_unique<ETaccessor<CT, true>>(evaluated);
+  } else {
+    return std::make_unique<ETaccessor<CT, true>>(x);
+  }
 }
 
 // end ETaccess
+
+template<typename Scalar, typename SStype>
+RuntimeFlatView<Scalar> makeRuntimeFlatView(std::unique_ptr<ETaccessorBase> &acc, 
+                                            const SStype &ss) {
+  return RuntimeFlatView<Scalar>(acc->template S<Scalar>().data(), acc->intDims(), ss);
+}
 
 #endif // NCOMPILER_ETACCESSOR_POST_RCPP_H_

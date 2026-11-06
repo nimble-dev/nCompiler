@@ -26,7 +26,7 @@ namespace Rcpp {
       typedef typename Eigen::Tensor<T, nDim>::Index Index;
       typedef typename Eigen::array<Index, nDim> IndexArray;
       Exporter(SEXP Sx) : indexArray(SEXP_indices_2_IndexArray<Index, nDim>(Sx)) {
-        // This case is used in the Exporter for an nList< Eigen::Tensor<T, nDim> >.
+        // This case is used in the Exporter for an nCppVec< Eigen::Tensor<T, nDim> >.
         //
         // This whole system seems to impose an extra copy.
         // That is because we're being dispatched from ::Rcpp::traits::r_type_generic_tag
@@ -138,6 +138,23 @@ namespace Rcpp {
     }
     UNPROTECT(1);
     return(Sans);
+  };
+
+  template <int nDim>
+  SEXP wrap( const Eigen::Tensor<std::string, nDim> &x ) {
+    const typename Eigen::Tensor<std::string, nDim>::Dimensions &xDims = x.dimensions();
+    Rcpp::CharacterVector ans(x.size());
+    for(typename Eigen::Tensor<std::string, nDim>::Index i = 0; i < x.size(); i++) {
+      ans[i] = x(i); // x(i) is a flat index even for nDim > 1.
+    }
+    if(nDim > 1) {
+      Rcpp::IntegerVector dims(nDim);
+      for(unsigned int i = 0; i < nDim; i++) {
+        dims[i] = xDims[i];
+      }
+      ans.attr("dim") = dims;
+    }
+    return ans;
   };
 } // end namespace Rcpp
 

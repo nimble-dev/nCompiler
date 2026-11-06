@@ -10,7 +10,7 @@
 ## When calling nCompile with package=TRUE, or calling writePackage
 ## cppDefsList --> RcppPacket_list --> WP_writeCpp --> writeCpp_nCompiler (for each RcppPacket in the list)
 
-## Rcpp_nCompilerPacket represents information needed from cppDefs in.nCompiler
+## Rcpp_nCompilerPacket represents information needed from cppDefs in nCompiler
 ## to generate Rcpp-ready content.
 ## At the moment it is just a list, but we establish the abstraction
 ## because we suspect it will need to do more work in the future.
@@ -22,8 +22,8 @@ Rcpp_nCompilerPacket <- function(...) {
     list(...)
 }
 
-## Interface between.nCompiler's cppDef representation of code and
-##.nCompiler's packet of content for Rcpp
+## Interface between nCompiler's cppDef representation of code and
+## nCompiler's packet of content for Rcpp
 ## To be expanded to take a list of cppDefs
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {
@@ -42,7 +42,14 @@ cppDefs_2_RcppPacket <- function(cppDef,
   CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> prep()
   Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> prep()
   CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> prep()
+  depends <- allCppDefs |> lapply(\(x) x$getDepends()) |> prep()
   CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> prep()
+  if(length(depends))
+    CPPusings <- c(CPPusings, paste0("// [[Rcpp::depends(", depends, ")]]")) |> unique()
+  ## postCode is made unique by whole blocks, not lines.
+  prepBlocks <- function(x) do.call("c", x) |> unique() |> unlist(use.names=FALSE)
+  HpostCode <- allCppDefs |> lapply(\(x) x$getHpostCode()) |> prepBlocks()
+  CPPpostCode <- allCppDefs |> lapply(\(x) x$getCPPpostCode()) |> prepBlocks()
   compileInfos <- allCppDefs |> lapply(\(x) x$getCompileInfo())
 
   ## Fields like copyFiles can be extracted directly from the compileInfos
@@ -61,24 +68,26 @@ cppDefs_2_RcppPacket <- function(cppDef,
   cppCode <-
     unlist(
       lapply(allCppDefs,
-             function(x)
+             function(x) {
+               gen <- x$generate()
                capture.output( {
                  writeLines("")
-                 writeCode(x$generate())
+                 writeCode(gen)
                }, split = debugCpp) ## for debugging to send handler output to console
-             ),
+              }),
       use.names = FALSE
     )
 
   hCode <-
     unlist(
       lapply(allCppDefs,
-             function(x)
+             function(x) {
+               gen <- x$generate(declaration=TRUE)
                capture.output( {
                  writeLines("")
-                 writeCode(x$generate(declaration=TRUE))
+                 writeCode(gen)
                })
-             ),
+              }),
       use.names = FALSE
     )
 
@@ -86,16 +95,16 @@ cppDefs_2_RcppPacket <- function(cppDef,
 
   # preamble is now its own return list element so #inclue's can be combind across packets
 
-  cppContent <- collate_nCompiler_CppCode(preamble = "", #CPPpreamble,
-                                          includes = CPPincludes,
+  cppContent <- collate_nCompiler_CppCode(includes = CPPincludes,
                                           usings = CPPusings,
                                           code = cppCode,
+                                          postCode = CPPpostCode,
                                           ifndefName = paste0('__', name, '_CPP')
                                           )
 
-  hContent <- collate_nCompiler_CppCode(preamble = "", #Hpreamble,
-                                        includes = Hincludes,
+  hContent <- collate_nCompiler_CppCode(includes = Hincludes,
                                         code = hCode,
+                                        postCode = HpostCode,
                                         ifndefName = paste0('__', name, '_H')
                                         )
 
@@ -110,7 +119,8 @@ cppDefs_2_RcppPacket <- function(cppDef,
     hContent = hContent,
     filebase = filebase,
     post_cpp_compiler = post_cpp_compiler,
-    copyFiles = copyFiles
+    copyFiles = copyFiles,
+    depends = depends
   )
   # This sketches the idea that we could store packets in NCinternals and NFinternals.
   # In an earlier procesing flow of nCompile, we did this. Now it would be a bit trickier
@@ -122,12 +132,11 @@ cppDefs_2_RcppPacket <- function(cppDef,
 ## This replaces the role of the cppCodeFileClass.
 ## It mostly just concatenates pieces.  It does add the #ifndef protection
 ## against redundant inclusion.
-collate_nCompiler_CppCode <- function(preamble = character(),
-                                 includes = character(),
+collate_nCompiler_CppCode <- function(includes = character(),
                                  usings = character(),
                                  code = character(),
-                                 ifndefName = character(),
-                                 type = 'cpp') {
+                                 postCode = character(),
+                                 ifndefName = character()) {
     ## open ifndef
     openifndefOut <- if(length(ifndefName) > 0) {
                          c(paste0('#ifndef ',ifndefName),
@@ -147,6 +156,7 @@ collate_nCompiler_CppCode <- function(preamble = character(),
 
     ## usings are included as is
     ## code is included as is
+    ## postCode is included as is
 
     ## close ifndef
     closeifndefOut <- if(length(ifndefName) > 0) {
@@ -157,17 +167,11 @@ collate_nCompiler_CppCode <- function(preamble = character(),
 
   list(opener = openifndefOut,
        body =
-         c(#preamble
-           includesOut,
+         c(includesOut,
            usings,
            code,
+           postCode,
            closeifndefOut))
-  ## c(openifndefOut,
-  ##     preamble,
-  ##     includesOut,
-  ##     usings,
-  ##     code,
-  ##     closeifndefOut)
 }
 
 ## We need a way to get ignore.stderr = TRUE and ignore.stdout = TRUE
@@ -515,6 +519,7 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
   writePacketElement(RcppPacket$filebase, paste0(name, "_filebase.txt"))
   writePacketElement(RcppPacket$post_cpp_compiler, paste0(name, "_post_cpp_compiler.txt"))
   writePacketElement(RcppPacket$copyFiles, paste0(name, "_copyFiles.txt"))
+  writePacketElement(RcppPacket$depends, paste0(name, "_depends.txt"))
 
   # Write a manifest file listing what was saved
   manifest <- list(
@@ -527,7 +532,8 @@ saveRcppPacket <- function(RcppPacket, dir, name = NULL) {
       hContent = paste0(name, "_hContent.h"),
       filebase = paste0(name, "_filebase.txt"),
       post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
-      copyFiles = paste0(name, "_copyFiles.txt")
+      copyFiles = paste0(name, "_copyFiles.txt"),
+      depends = paste0(name, "_depends.txt")
     )
   )
 
@@ -573,12 +579,17 @@ loadRcppPacket <- function(dir, name) {
       hContent = paste0(name, "_hContent.h"),
       filebase = paste0(name, "_filebase.txt"),
       post_cpp_compiler = paste0(name, "_post_cpp_compiler.txt"),
-      copyFiles = paste0(name, "_copyFiles.txt")
+      copyFiles = paste0(name, "_copyFiles.txt"),
+      depends = paste0(name, "_depends.txt")
     ))
   }
 
   # Helper function to read content safely
   readPacketElement <- function(filename) {
+    # Older manifests may lack newer elements (e.g. depends)
+    if (is.null(filename)) {
+      return(NULL)
+    }
     filepath <- normalizePath(file.path(dir, filename), mustWork = FALSE)
     if (!file.exists(filepath)) {
       return(NULL)
@@ -639,7 +650,8 @@ loadRcppPacket <- function(dir, name) {
     hContent = readPacketElement(manifest$files$hContent),
     filebase = readPacketElement(manifest$files$filebase),
     post_cpp_compiler = readPacketElement(manifest$files$post_cpp_compiler),
-    copyFiles = readPacketElement(manifest$files$copyFiles)
+    copyFiles = readPacketElement(manifest$files$copyFiles),
+    depends = readPacketElement(manifest$files$depends)
   )
 
   return(RcppPacket)

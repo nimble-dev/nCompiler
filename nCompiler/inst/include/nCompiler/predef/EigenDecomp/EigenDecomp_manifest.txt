@@ -1,0 +1,7 @@
+list(saved_at = structure(1777583520.43493, class = c("POSIXct", 
+"POSIXt")), packet_name = "EigenDecomp", elements = c("preamble", 
+"cppContent", "hContent", "filebase", "post_cpp_compiler", "copyFiles"
+), files = list(preamble = "EigenDecomp_preamble.cpp", cppContent = "EigenDecomp_cppContent.cpp", 
+    hContent = "EigenDecomp_hContent.h", filebase = "EigenDecomp_filebase.txt", 
+    post_cpp_compiler = "EigenDecomp_post_cpp_compiler.txt", 
+    copyFiles = "EigenDecomp_copyFiles.txt"))

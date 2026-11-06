@@ -26,7 +26,7 @@ cppVarClass <- R6::R6Class(
       if(length(printName) > 0)
         printName <- paste0(printName, collapse = ', ')
       cleanWhite(paste(self$baseType,
-                       self$ptrs,
+                       ptrs,
                        if(isTRUE(self$ref))
                          '&'
                        else
@@ -45,6 +45,22 @@ cppVarClass <- R6::R6Class(
              Rname2CppName(name), ')'
              ) ## used to be ptr-asArg
     }
+  )
+)
+
+cppVarSelfClass <- R6::R6Class(
+  classname = 'cppVarSelfClass',
+  inherit = cppVarClass,
+  portable = TRUE,
+  public = list(
+    initialize = function(...) {
+      super$initialize(...)
+      self$name <- "self"
+    },
+    generate = function(printName = character(), ...) {
+      character()
+    },
+    generateUse = function(...) "nC_shared_from_this()"
   )
 )
 
@@ -172,11 +188,18 @@ cppTemplateDeclaration <- function(templateNames,
                       ...)
 }
 
-cppNlist <- function(name = character(),
+cppNcppVec <- function(name = character(),
                      elementVar) {
   cppVarFullClass$new(name = name,
-                      baseType = "nList",
+                      baseType = "nCppVec",
                       templateArgs = list(elementVar))
+}
+
+cppETaccBase <- function(name = character(), ...) {
+  cppVarFullClass$new(name = name,
+                      baseType = "std::unique_ptr",
+                      templateArgs = list("ETaccessorBase"),
+                      ...)
 }
 
 cppEigenTensorRef <- function(name = character(),

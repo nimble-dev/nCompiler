@@ -21,9 +21,6 @@ Collate:
     local_DLL.R
     Rcpp_nCompiler_plugin.R
     changeKeywords.R
-    distributions_implementations.R
-    distributions_inputList.R
-    distributions_processInputList.R
     compile_aaa_operatorLists.R
     compile_addDebug.R
     compile_nParse.R
@@ -38,7 +35,6 @@ Collate:
     compile_simpleIntermediates.R
     compile_simpleTransformations.R
     compile_finalTransformations.R
-    compileNimble.R
     cppDefs_core.R
     cppDefs_utils.R
     cppDefs_ADutils.R
@@ -49,6 +45,7 @@ Collate:
     cppDefs_TBB.R
     cppDefs_variables.R
     developerTools.R
+    distributions_implementations.R
     symbolTable.R
     symbolTableClass.R
     symbolTable_utils.R
@@ -74,11 +71,9 @@ Collate:
     NF_Utils.R
     nCompile.R
     nConstructor.R
-    nimbleModels.R
-    nList.R
+    nCppVec.R
     nTry.R
     packaging.R
-    RcppExports.R
     Rcpp_check.R
     Rcpp_nCompiler.R
     Rexecution.R
@@ -86,4 +81,4 @@ Collate:
     testingTools.R
     compile_zzz_operatorLists.R
     zzz_NC_Predefined.R
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3

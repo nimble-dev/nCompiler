@@ -4,6 +4,8 @@ message("test-indexing works but there are disabled tests at the end waiting for
 ## indexing by numeric vector for higher dimensional objects and for multiple indexing dimensions at once.
 ## setting option nimble=TRUE or the component options TRUE
 
+message("tests needed of empty brackets on LHS.")
+
 test_that("indexing by numeric vector works", {
   nC <- nClass(
     Cpublic = list(
@@ -17,12 +19,13 @@ test_that("indexing by numeric vector works", {
   )
   #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- matrix(1:20, nrow = 4)
   iv <- c(2,3,2,1,5)
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x, iv)
-    outR <- nC$public_methods[[test_i]](x, iv)
+    outR <- robj[[test_i]](x, iv)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -90,11 +93,12 @@ test_that("drop arg variations give correct results, 3D input", {
   )
 #  cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:105, c(3, 5, 7))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -141,11 +145,12 @@ test_that("indexing arg variations give correct results, 3D input", {
   )
   #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:105, c(3, 5, 7))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -173,13 +178,13 @@ test_that("assignment involving indexing give correct results, 3D input", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:105, c(3, 5, 7))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -206,13 +211,13 @@ test_that("expressions involving indexing give correct results, 3D input", {
       )
     )
   )
-  #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nCompile(nC)$new()
   x <- array(1:105, c(3, 8, 7))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -231,13 +236,13 @@ test_that("scalar input gives correct results", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- 3
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     expect_equal(
-      nC$public_methods[[test_i]](x), ## R
+      robj[[test_i]](x), ## R
       cobj[[test_i]](x)               ## C++
     )
   }
@@ -262,13 +267,13 @@ test_that("vector input gives correct results", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- 1:11
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -301,13 +306,13 @@ test_that("matrix input gives correct results", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- matrix(1:21, c(7, 3))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -340,13 +345,13 @@ test_that("3-dimensional input array gives correct results", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:84, c(3, 4, 7))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -393,13 +398,13 @@ test_that("4-dimensional input array gives correct results", {
       )
     )
   )
-  #cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:924, c(3, 7, 4, 11))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -418,13 +423,13 @@ test_that("5-dimensional input array gives correct results", {
       )
     )
   )
-  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
+  robj <- nC$new()
   x <- array(1:2310, c(2, 3, 7, 5, 11))
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
-    outR <- nC$public_methods[[test_i]](x)
+    outR <- robj[[test_i]](x)
     if (is.array(outC) && length(attributes(outC)$dim) == 1)
       attributes(outC)$dim <- NULL
     expect_equal(outC, outR)
@@ -444,6 +449,39 @@ test_that("3:3 style indexing arg doesn't drop dimension", {
   nfc <- nCompile(nf)
   x <- array(1:27, c(3, 3, 3))
   expect_silent(nfc(x))
+})
+
+test_that("LHS indexing by a variable or expression works", {
+  # Issue #215
+  nf <- nFunction(
+    fun = function(x = 'numericVector') {
+      x[c(2,3,5)] <- rep(1,3)
+      return(x)
+      returnType('numericVector')
+    }
+  )
+  cnf <- nCompile(nf)
+  x <- 1:10
+  check <- x
+  check[c(2, 3, 5)] <- rep(1, 3)
+  x <- nf(x)
+  expect_equal(x, check)
+
+  nf <- nFunction(
+    fun = function(x = 'numericVector') {
+      w <- c(2, 3, 5)
+      x[w + 1] <- rep(1,3)
+      return(x)
+      returnType('numericVector')
+    }
+  )
+  cnf <- nCompile(nf)
+  x <- 1:10
+  check <- x
+  check[c(2, 3, 5) + 1] <- rep(1, 3)
+  x <- nf(x)
+  expect_equal(x, check)
+
 })
 
 ## THESE TESTS WON'T PASS UNTIL SOME NEW ERROR-TRAPPING

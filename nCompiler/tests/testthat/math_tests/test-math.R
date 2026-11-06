@@ -17,6 +17,7 @@ utils <- system.file(
     c('testing_utils.R', 'testing_operatorLists.R',
       if(respect_known_failures) 'known_failures.R' else character(),
       'math_utils.R')
+
   ),
   package = 'nCompiler'
 )
@@ -116,7 +117,6 @@ run_test_suite(
   FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
   gold_file_dir
 )
-
 
 # FIXED: problem with 5: & -- seems like an Eigen quirk (C++ compile error)?
 # FIXED: same kind of problem with 14: |

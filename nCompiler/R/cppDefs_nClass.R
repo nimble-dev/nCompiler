@@ -11,14 +11,14 @@ nClassBaseClass_init_impl <- function(cppDef) {
   cppDef$Hpreamble <- pluginIncludes
   cppDef$Hpreamble <- c(cppDef$Hpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
   cppDef$CPPpreamble <- pluginIncludes
   cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
                         "#define NCOMPILER_USES_EIGEN",
-                        "// #define NCOMPILER_USES_TBB",
-                        "#define NCOMPILER_USES_NLIST",
+                        "#define NCOMPILER_USES_NCPPVEC",
+                        "#define NCOMPILER_USES_MVDISTS",
                         "#define USES_NCOMPILER")
 
   cppDef$Hincludes <- c(cppDef$Hincludes,
@@ -114,6 +114,13 @@ cpp_nClassBaseClass <- R6::R6Class(
       cpp_include_needed_nClasses(self, Compiler$symbolTable)
       symbolTable <<- symbolTable2cppSymbolTable(Compiler$symbolTable)
 #      variableNamesForInterface <<- symbolTable$getSymbolNames()
+      uses_TBB <- any(sapply(Compiler$NFcompilers, function(x) isTRUE(x$auxEnv$uses_TBB)))
+      if(uses_TBB) {
+        self$Hpreamble <- c(self$Hpreamble,
+                        "#define NCOMPILER_USES_TBB")
+        self$CPPpreamble <- c(self$CPPpreamble,
+                        "#define NCOMPILER_USES_TBB")
+      }
     },
     buildAll = function(where = where) {
       buildDefaultSEXPgenerator <- !isFALSE(self$compileInfo$createFromR)
@@ -200,15 +207,33 @@ cpp_nClassClass <- R6::R6Class(
         }
       }
     },
+    showTypes = function(annotations = FALSE) {
+      if(!annotations) {
+        cat("----------------- Class variables ---------------------------\n")
+        print(self$Compiler$symbolTable, parent = FALSE)
+      }
+      sapply(self$memberCppDefs, function(def) {
+        if(inherits(def, "cpp_nFunctionClass")) {
+          suffix <- paste0(rep("-", max(42-nchar(def$name), 5)), collapse = "")    
+          cat("----------------- ", def$name, " ", suffix, "\n", sep = "")
+          def$showTypes(annotations)
+        }
+      })
+      invisible(self)
+    },
     process_inheritance = function(Compiler) {
       for(oneInheritance in Compiler$compileInfo$inherit) {
         self$addInheritance(oneInheritance)
       }
       # This may not get used much or at all but here it is if needed.
       for(oneInheritance in Compiler$compileInfo$nClass_inherit) {
+        if(is.function(oneInheritance)) {
+          oneInheritance <- oneInheritance()
+        }
         self$add_nClass_inheritance(oneInheritance)
       }
-      inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals
+      inheritNCinternals <- Compiler$inheritInfo$inheritNCinternals
+#      inheritNCinternals <- NCinternals(self$Compiler$NCgenerator)$inheritNCinternals
       if(!is.null(inheritNCinternals)) {
         include_filebase <- make_cpp_filebase(inheritNCinternals$cpp_classname)
         self$Hincludes <- c(self$Hincludes, paste0("\"",include_filebase, ".h", "\""))
@@ -222,7 +247,7 @@ cpp_nClassClass <- R6::R6Class(
       buildParallelClassDefs()
     },
     buildFunctionDefs = function() {
-      message("To-do: Care needed to filter interfaced methods by exportMembers names.")
+      # message("To-do: Care needed to filter interfaced methods by exportMembers names.")
       for(i in seq_along(Compiler$NFcompilers)) {
         RCname <- names(Compiler$NFcompilers)[i]
         thisNFcomp <- Compiler$NFcompilers[[RCname]]
@@ -313,6 +338,7 @@ addADclassContent_impl <- function(cppDef) {
     }
     ADconstructorInits <- derivsContent$ADconstructorInits
     if(!is.null(ADconstructorInits)) {
+      # FIXME: The constructor is allowed to have a different name than then class, so the next line is not fully general.
       constructorDef <- cppDef$memberCppDefs[[ cppDef$name ]]
       if(is.null(constructorDef))
         warning("Could not find class constructor for ", cppDef$name, " when setting up AD tape managers.")

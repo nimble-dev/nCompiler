@@ -29,7 +29,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
                                  fillZeros=TRUE, recycle=TRUE, nDim,
                                  type="double") {},
              simpleTransformations=list(handler = nimArrayHandler))))
-  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), "nimArray")
+  expect_equal(ls(nCompiler:::operatorDefUserEnv), "nimArray")
 
   registerOpDef(
     list(nimArray2 =
@@ -39,7 +39,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
                                  type="double") {},
              simpleTransformations=list(handler = 'replace',
                                         replacement = 'nArray'))))
-  expect_equal(ls(`:::`("nCompiler", "operatorDefUserEnv")), c("nimArray", "nimArray2"))
+  expect_equal(ls(nCompiler:::operatorDefUserEnv), c("nimArray", "nimArray2"))
 
   nc <- nClass(
     Cpublic = list(
@@ -66,7 +66,7 @@ test_that("registering a global user-defined operator definition (opDef) works",
   #
   deregisterOpDef("nimArray")
   deregisterOpDef("nimArray2")
-  expect_equal(length(ls(`:::`("nCompiler", "operatorDefUserEnv"))), 0)
+  expect_equal(length(ls(nCompiler:::operatorDefUserEnv)), 0)
 })
 
 cat("User opDef could be dangerous prior to genCpp because it won't update cachedOpDef\n")
@@ -187,6 +187,10 @@ test_that("nFunction custom opDef works through a sequence of changes and handle
 })
 
 test_that("nClass custom opDefs of 3 kinds works through a sequence of changes and handlers", {
+  # This test sets up a series of name transformations.
+  # A custom handler at one compilation stage turns foo into foo2, then
+  # another one at the next compilation stage turns foo2 into foo3, then
+  # so on for foo3 to foo4. The custom handlers are provided in different ways.
 
   # foo is an nFunction with compileArgs and a simpleTrans handler that
   # renames it foo2 and emits a msg.
@@ -280,6 +284,12 @@ test_that("nClass custom opDefs of 3 kinds works through a sequence of changes a
       }, argTypes=list(), returnType=quote(double())
   )
 
+  # compiling call_foo uses opDef for foo, which is in the nFunction's compileInfo
+  # This emits two messages and replaces foo with foo2, which is handled next.
+  # The foo2 opDef is in the nClass' compileInfo, and that emits a msg and replaces
+  # foo2 with foo3, which has a handler in the nClass and doesn't even exist
+  # as a method. This emits a message and replaces foo3 with foo4, which does
+  # not emit a message but does modify the genCpp stage so we get a specific bit of math.
   foo_class <- nClass(
     Cpublic = list(
       foo = foo,
@@ -314,4 +324,202 @@ test_that("nClass custom opDefs of 3 kinds works through a sequence of changes a
   obj <- comp$foo_class$new()
   expect_equal(obj$call_foo(), 10*3.4 + 4.5)
   rm(obj); gc()
+
+  cat("Need extension of custom opDefs in nClasses to work in obj$op() calls\n")
+
+  # Next check that the various opDefs above are used when called as obj$op() from another nFunction.
+  ## use_foo_class <- nFunction(
+  ##   function(my_foo_class = 'foo_class()') {
+  ##     res1 <- my_foo_class$foo()
+  ##     res2 <- my_foo_class$foo2()
+  ##     res3 <- my_foo_class$foo3()
+  ##     res4 <- my_foo_class$call_foo()
+  ##     return(res1)
+  ##     returnType("numericScalar")
+  ##   }
+  ## )
+
+  ## debug(nCompiler:::compile_labelAbstractTypes)
+  ## debug(nCompiler:::labelAbstractTypesEnv$ChainedCall)
+  ## debug(nCompiler:::labelAbstractTypesEnv$DollarSign)
+  ## comp <- nCompile(use_foo_class, foo_class, foo)
+  ## my_foo_class <- comp$foo_class$new()
+  ## comp$use_foo_class()
 })
+
+test_that("matchDef of user-defined op is used", {
+  foo <- nFunction(
+    fun = function() {
+      bar(B = 2, A = 1) # See if this gets reordered
+    }
+  )
+  # first give an opDef without matchDef
+  on.exit(deregisterOpDef("bar"))
+  registerOpDef(
+    list(bar =
+           list()))
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(B = 2, A = 1\\)", nDeparse(test$code)[2]))
+
+  registerOpDef(
+    list(bar =
+           list(
+             matchDef = function(A, B) {}
+           )))
+
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
+})
+
+test_that("matchDef of another nFunction is used", {
+  bar <- nFunction(function(A = "numericScalar", B = "numericScalar") {})
+  foo <- nFunction(
+    fun = function() {
+      bar(B = 2, A = 1) # See if this gets reordered
+    }
+  )
+  # Args can't be re-ordered here because normalizeCalls does not see type of obj.
+  test <- nCompile_nFunction(foo, control = list(endStage = "normalizeCalls"))
+  expect_true(grepl("bar\\(A = 1, B = 2\\)", nDeparse(test$code)[2]))
+})
+
+test_that("custom_call picks up types correctly", {
+  on.exit(deregisterOpDef("foo"))
+  use_foo <- nFunction(
+    function() {
+      ans <- foo()
+    }
+  )
+  # 1. returnType given by string
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = "integerScalar"))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "integer")
+  expect_equal(foo_type$nDim, 0)
+
+  # 2. returnType given by a symbol object
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = type2symbol("logicalVector")))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "logical")
+  expect_equal(foo_type$nDim, 1)
+
+  # 3. returnType given by a type captured from nType
+  nc_hw <- nClass(classname = "nc_hw_class", Cpublic = list(x = 'numericScalar'))
+  my_type <- nType(nc_hw())
+  registerOpDef(
+    list(
+      foo = list(
+        labelAbstractTypes = list(handler = "custom_call",
+                                  recurse = TRUE,
+                                  returnType = my_type))))
+  expect_warning(
+    comp <- nCompile(use_foo, control = list(endStage = "labelAbstractTypes"))
+  )
+  foo_type <- comp[[1]]$code$args[[1]]$args[[2]]$type
+  expect_equal(foo_type$type, "nc_hw_class")
+  expect_true(inherits(foo_type, "symbolNC"))
+})
+
+message("See work in progress on matching and ordering arguments for obj$method")
+
+test_that("matchDef of method or user-defined op in an nClass is used", {
+  bar2_opDef = list(
+    labelAbstractTypes = list(
+      handler = function(code, ...) {
+        code$name <- "bar" # allows handling to continue 
+        code$aux$cpp_method_name <- "bar" # cheap trick and only works since we use "name = 'bar'" below
+        code$type <- type2symbol("numericScalar()")
+        NULL
+      }
+    )
+  )
+  
+  nc <- nClass(
+    classname = "nc",
+    Cpublic = list(
+      bar = nFunction(
+        name = "bar",
+        function(A = "numericScalar", B = "numericScalar") {
+          return(10*A + B)
+          returnType(double(0))
+        }),
+      bar2 = nFunction(function(C = "numericScalar", D = "numericScalar") {
+        return(100*C + 10*D) # This is never used because we'll make the opDef swap to bar 
+        returnType(double(0))
+      },
+      # bar2 has custom opDef at the nFunction level
+      compileInfo = list(
+        opDef = bar2_opDef
+      )),
+      # bar3 relies on custom opDef at the nClass level
+      bar3 = nFunction(function(C = "numericScalar", D = "numericScalar") {
+        return(100*C + 10*D) # This is never used because we'll make the opDef swap to bar
+        returnType(double(0))
+      }
+    )),
+    compileInfo = list(
+      opDefs = list(
+        bar3 = bar2_opDef,
+        bar4 = bar2_opDef # no actual method!
+      )
+    )
+  )
+  foo <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar(B = 2, A = 1) # See if this gets reordered
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo2 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar2(D = 3, C = 5)
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo3 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar3(D = 4, C = 6)
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  foo4 <- nFunction(
+    fun = function() {
+      obj <- nc$new()
+      ans <- obj$bar4(D = 7, C = 9) # these will not get re-ordered because there is no matchDef
+      return(ans)
+      returnType(double(0))
+    }
+  )
+  #undebug(labelAbstractTypesEnv$MethodCall)
+  comp <- nCompile(foo, foo2, foo3, foo4)
+  obj <- comp$foo()
+  expect_equal(obj, 12)
+  obj <- comp$foo2()
+  expect_equal(obj, 53) # 53 proves it went to bar. 530 would be from bar2, which would show failure.
+  obj <- comp$foo3()
+  expect_equal(obj, 64) # 64 vs 640 proves it went through bar
+  obj <- comp$foo4()
+  expect_equal(obj, 79) # 79 vs 790 or 97 or 970. The 7 and 9 were not reordered because bar4 is a pure class keyword
+})
+

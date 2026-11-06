@@ -2,11 +2,12 @@
 ## Section for outputting C++ code from an exprClass object ##
 ##############################################################
 
+# This should be moved into opDefs or handlers
 nimCppKeywordsThatFillSemicolon <- c(
   '{',
   'for',
   ifOrWhile,
-  'nimSwitch',
+  'nSwitch',
  # 'cppLiteral',
   'cppComment')
 
@@ -38,7 +39,7 @@ compile_generateCpp <- function(code,
             paste0('(', sign(value), 
                    ' * std::numeric_limits<double>::infinity())')
         else if (identical(code$type$type, 'double') &&
-                   identical(value %% 1, 0))
+                   (abs(value) > 9007199254740992  ||  identical(value %% 1, 0)))
           ## If value is a whole number we need to add "." or ".0" to the end
           ## or use scientific notation so C++ knows it's actually a double.
           format(x = value, nsmall = 1)
@@ -95,29 +96,42 @@ compile_generateCpp <- function(code,
   # An example is changes made in eigenization, such as inserting `index[`.
   # This is a core operator so it will be found in the check_cachedOpInfo with update=TRUE.
   opInfo <- check_cachedOpInfo(code, where=baseenv(), update=TRUE, allowFail = TRUE)
-  handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
+  handlingInfo <- NULL
+  isGeneric <- isTRUE(opInfo$opDef$isGeneric)
+  if(isGeneric) {
+    if(length(code$args) > 0) {
+      arg1 <- code$args[[1]]
+      handlingInfo <- symbol_find_overload(arg1$type, code$name, "cppOutput", inherits=TRUE)
+      # if(inherits(arg1$type, "symbolNC")) {
+      #   handlingInfo <- NC_find_overload(arg1$type$NCgenerator, code$name, "cppOutput", inherits=TRUE)
+      # }
+      handler <- handlingInfo[['handler']]
+    }
+  }
+  if(is.null(handlingInfo))
+    handler <- getOperatorField(opInfo$opDef, "cppOutput", "handler")
   #  handler <- getOperatorDef(code$name, "cppOutput", "handler")
   # opInfo <- operatorDefEnv[[code$name]]
   # if(!is.null(opInfo)) {
   #   handlingInfo <- opInfo[["cppOutput"]]
   #   if(!is.null(handlingInfo)) {
   #     handler <- handlingInfo$handler
-      if(!is.null(handler)) {
-        if (logging)
-          appendToLog(paste('Calling handler', handler, 'for', code$name))
-        if(is.function(handler))
-          res <- handler(code, symTab)
-        else
-          res <- eval(call(handler,
-                          code,
-                          symTab),
-                      envir = genCppEnv)
-        if (logging) {
-          appendToLog(paste('Finished handling', handler, 'for',
-                            code$name, 'with result:'))
-          appendToLog(res)
-        }
-        return(res)
+  if(!is.null(handler)) {
+    if (logging)
+      appendToLog(paste('Calling handler', handler, 'for', code$name))
+    if(is.function(handler))
+      res <- handler(code, symTab)
+    else
+      res <- eval(call(handler,
+                      code,
+                      symTab),
+                  envir = genCppEnv)
+    if (logging) {
+      appendToLog(paste('Finished handling', handler, 'for',
+                        code$name, 'with result:'))
+      appendToLog(res)
+    }
+    return(res)
       }
   #   }
   # }
@@ -160,13 +174,68 @@ inGenCppEnv(
 )
 
 inGenCppEnv(
-  nList <- function(code, symTab) {
+  Assign <- function(code, symTab) {
+    orig_name <- code$name
+    code$name <- '='
+    res <- MidOperator(code, symTab)
+    code$name <- orig_name
+    res
+  }
+)
+
+inGenCppEnv(
+  MakeScalar <- function(code, symTab) {
+    compile_generateCpp(code$args[[1]], symTab)
+  }
+)
+
+# inGenCppEnv(
+#   nList_doubleBracket <- function(code, symTab) {
+#     browser()
+#     inserts <- NULL
+#     if(length(inserts) == 0) NULL else inserts
+#   }
+# )
+
+inGenCppEnv(
+  nCppVec <- function(code, symTab) {
     elementSym <- code$type$elementSym
-    paste0("nList<", elementSym$genCppVar()$generate(), ">(",
+    paste0("nCppVec<", elementSym$genCppVar()$generate(), ">(",
       paste0(unlist(lapply(code$args,
                            compile_generateCpp,
                            symTab,
                            asArg = TRUE)), collapse=","), ")")
+  }
+)
+
+inGenCppEnv(
+  ETaccess <- function(code, symTab) {
+    copy <- isTRUE(code$aux$compileArgs$copy)
+    copy_piece <- if(copy) '<true>' else ''
+    paste0('ETaccessPtr', copy_piece, '(',
+           paste0(unlist(lapply(code$args,
+                                compile_generateCpp,
+                                symTab,
+                                asArg = TRUE)), collapse=","), ")")
+  }
+)
+
+inGenCppEnv(
+  Switch <- function(code, symTab) {
+    IDs <- code$aux$compileArgs$IDs
+    numChoices <- length(code$args)-1
+    if(numChoices <= 0) return('')
+    choicesCode <- vector('list', numChoices)
+    choiceValues <- IDs
+    if(length(choiceValues) != numChoices) stop(paste0('number of switch choices does not match number of indices.'))
+    for(i in 1:numChoices) {
+        if(code$args[[i+1]]$name != '{')
+            bracketedCode <- insertExprClassLayer(code, i+1, '{')
+        choicesCode[[i]] <- list(paste0('case ',choiceValues[i],':'), 
+                                        compile_generateCpp(code$args[[i+1]], symTab, showBracket=FALSE), 'break;')
+    }
+    ans <- list(paste('switch(',code$args[[1]]$name,') {'), choicesCode, '}')
+    ans
   }
 )
 
@@ -179,7 +248,8 @@ inGenCppEnv(
 
 inGenCppEnv(
   Generic_nFunction <- function(code, symTab) {
-    cpp_code_name <- code$aux$cachedOpInfo$obj_internals$cpp_code_name
+    # cpp_method_name is set for foo in A$foo(x) (see MethodCall)
+    cpp_code_name <- code$aux$cpp_method_name %||% code$aux$cachedOpInfo$obj_internals$cpp_code_name
     paste0(cpp_code_name,
            '(', paste0(unlist(lapply(code$args,
                                      compile_generateCpp,
@@ -192,7 +262,13 @@ inGenCppEnv(
 
 inGenCppEnv(
   nClass_constructor <- function(code, symTab) {
-    paste0("nClass_builder<" , code$type$name ,">()")
+    paste0("nClass_builder<" , code$aux$cpp_classname ,">()",
+           '(', paste0(unlist(lapply(code$args,
+                                     compile_generateCpp,
+                                     symTab,
+                                     asArg = TRUE) ),
+                       collapse = ', '),
+           ')' )
   }
 )
 
@@ -205,6 +281,20 @@ inGenCppEnv(
                                      asArg = TRUE) ),
                        collapse = ', '),
            ')' )
+  }
+)
+
+inGenCppEnv(
+  ## MethodCall(A, foo(x)) -> (A)->[output for foo(x)]
+  ## foo(x) is generated by its own handler, as if called directly within a method of A's class.
+  ## For the default handler (Generic_nFunction), the C++ name is aux$cpp_method_name,
+  ## set during labelAbstractTypes.
+  ## A custom opDef handler that cannot support use with an explicit object
+  ## can check for code$caller$name == "MethodCall".
+  MethodCall <- function(code, symTab) {
+    isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
+    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
+    paste0('(', objOutput, ')->', compile_generateCpp(code$args[[2]], symTab))
   }
 )
 
@@ -335,16 +425,18 @@ inGenCppEnv(
   }
 )
 
-cppOutputMemberData <- function(code, symTab) {
-  paste0( nimGenerateCpp(code$args[[1]], symTab), '.', code$args[[2]]$name)
-}
+# cppOutputMemberData <- function(code, symTab) {
+#   paste0( nimGenerateCpp(code$args[[1]], symTab), '.', Rname2CppName(code$args[[2]]$name))
+# }
 
 inGenCppEnv(
   ## Member(A, x) -> A.x
   Member <- function(code, symTab, connector = '.') {
+    isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
+    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
     paste0( '(',
-           compile_generateCpp(code$args[[1]], symTab),
-           ')', connector, code$args[[2]]$name)
+           objOutput,
+           ')', connector, Rname2CppName(code$args[[2]]$name))
   }
 )
 
@@ -359,7 +451,9 @@ inGenCppEnv(
   ## This differs from old system
   ## Method(A, foo, x) -> A.foo(x)
   Method <- function(code, symTab, connector = '.') {
-    obj <- paste0('(', compile_generateCpp(code$args[[1]], symTab), ')', connector)
+    isSelf <- code$args[[1]]$name == 'self' && inherits(code$args[[1]]$type, "symbolSelf")
+    objOutput <- if(isSelf) 'this' else compile_generateCpp(code$args[[1]], symTab)
+    objPart <- paste0('(', objOutput, ')', connector)
     opString <- getCppString(code$args[[2]])
     methodCall <- paste0(
       opString, '(',
@@ -368,7 +462,7 @@ inGenCppEnv(
         collapse = ', '
       ), ')'
     )
-    paste0(obj, methodCall)
+    paste0(objPart, methodCall)
   }
 )
 inGenCppEnv(
@@ -388,8 +482,16 @@ inGenCppEnv(
 
 inGenCppEnv(
   IndexingBracket <- function(code, symTab, brackets = c('[', ']')) {
+    # It seems universal that an indexing operation on an NC must be
+    # using operator[ in C++ and must want the shared_ptr to be derefenced.
+    # If that turns out not to be universal, then overloadDefs can be utilized
+    # to specify different handlers for different cases.
+    arg1res <- compile_generateCpp(code$args[[1]], symTab)
+    if(inherits(code$args[[1]]$type, "symbolNC")) {
+      arg1res <- paste0('(*', arg1res, ')')
+    }
     paste0(
-      compile_generateCpp(code$args[[1]], symTab),
+      arg1res,
       brackets[1],
       paste0(
         unlist(
@@ -549,11 +651,41 @@ inGenCppEnv(
 
 inGenCppEnv(
   ScalarCast <- function(code, symTab) {
+    newType <- code$aux$compileArgs$type
     paste0('scalar_cast_<',
-           compile_generateCpp(code$args[[2]]),
+           newType,
            '>::cast(',
            compile_generateCpp(code$args[[1]], symTab),
            ')')
+  }
+)
+
+inGenCppEnv(
+  as_op_scalarToCpp <- function(type) {
+    switch(type,
+      double  = 'double',
+      integer = 'int',
+      logical = 'bool',
+      stop(paste0("as_op: unknown scalar type '", type, "'"), call. = FALSE)
+    )
+  }
+)
+
+nCompiler:::inGenCppEnv(
+  As <- function(code, symTab) {
+    obj_cpp  <- compile_generateCpp(code$args[[1]], symTab)
+    target_sym <- code$type
+#    tgt_type <- code$type$type
+#    tgt_nDim <- code$type$nDim
+    use_stm  <- isTRUE(code$aux$useSTM)
+    is_lhs   <- isTRUE(code$aux$onLHS)
+
+    #tgt_cpp  <- as_op_scalarToCpp(target_sym$type)
+    mode_arg <- if(is_lhs) ', AsMode::LHS' else if(use_stm) ', AsMode::STM' else ''
+    # All proxy types expose operator()() — always append ().
+#    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')()')
+    paste0('as_nC<', target_sym$genCppVar()$generate(""),
+            mode_arg, '>(', obj_cpp, ')()')
   }
 )
 
@@ -570,7 +702,7 @@ inGenCppEnv(
   }
 )
 
-inGenCppEnv(
+nCompiler:::inGenCppEnv(
   # Lambda (anonymous) function (expression) in C++/
   # These are not part of the user-facing language for nCompiler
   # but may be created as part of an implementation.
@@ -581,12 +713,12 @@ inGenCppEnv(
   # This has two arguments. The first is a literal whose
   # character string gives
   # the '[](double x)' or variants of it.
-  # The second is to be genreated as the code, with
+  # The second is to be generated as the code, with
   # extra {} for good measure.
   LambdaFun_ <- function(code, symTab) {
     paste0(compile_generateCpp(code$args[[1]], symTab),
            '{',
-           compile_generateCpp(code$args[[2]], symTab),
+           paste0(unlist(compile_generateCpp(code$args[[2]], symTab)), collapse = '\n'),
            ';}'
            )
   }
@@ -594,8 +726,11 @@ inGenCppEnv(
 
 inGenCppEnv(
   PrependNamespace <- function(code, symTab) {
+    orig_name <- code$name
     code$name = paste0('nCompiler::', code$name, sep = '')
-    compile_generateCpp(code, symTab)
+    res <- compile_generateCpp(code, symTab)
+    code$name <- orig_name
+    res
   }
 )
 

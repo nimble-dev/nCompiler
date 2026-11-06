@@ -26,6 +26,7 @@ nCompile_nClass <- function(NC,
                             compileInfo = NULL,
                             control = list(),
                             interface = c("full", "generic", "both"),
+                            project_env = new.env(),
                             ...) {
   ## ... is used for internal arguments that are not necessarily documents or
   ## promised to stay stable.
@@ -69,29 +70,34 @@ nCompile_nClass <- function(NC,
     regular_filename <-  NCinternals(NC)$cpp_classname
     if(gather_needed_units)
       needed_units <- nCompile_process_manual_needed_units(NCinternals(NC),
-                                                                NC$parent_env, isNC = TRUE)
+                                                                NC$parent_env, isNC = TRUE,
+                                                                project_env = project_env)
     allow_write_predefined <- !isTRUE(compileInfo$auto_included)
   }
-  if(is_predefined && isFALSE(controlFull$generate_predefined)) {
+  if(is_predefined && (isFALSE(controlFull$generate_predefined) || !allow_write_predefined)) {
     RcppPacket <- loadRcppPacket(predefined_dir, regular_filename)
     cppDef <- cppRcppPacket$new(RcppPacket = RcppPacket)
     cppDef$externalCppDefs <- c(cppDef$externalCppDefs,
                                 get_R_interface_cppDef()) #might not be needed, but doesn't hurt to add and we don't have the details on whether it is needed from the loaded RcppPacket.
- } else {
+  } else {
     if(is.null(compileInfo)) compileInfo <- NCinternals(NC)$compileInfo
     ## Make a new compiler object
     NC_Compiler <- NC_CompilerClass$new(NC,
-                                        compileInfo = compileInfo)
+                                        compileInfo = compileInfo,
+                                        project_env = project_env)
     ## Use the compiler to generate a cppDef
+    class_env <- new.env()
     NC_Compiler$createCpp(control = controlFull,
                           sourceObj = NC,
-                          interfaceCalls = !is_predefined) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
+                          interfaceCalls = !is_predefined,
+                          class_env = class_env,
+                          project_env = project_env) ## We don't retain NC in NC_Compiler in order to simplify many environments pointing to each other.
     ## Get the cppDef
     cppDef <- NC_Compiler$cppDef
-    if(is_predefined && allow_write_predefined) {
+    if(is_predefined) { #  && allow_write_predefined) {
       predefined_gen_dir <- NCinternals(NC)$compileInfo$predefined_output_dir
       if(is.null(predefined_gen_dir))
-        predefined_gen_dir <- predefined_dir      
+        predefined_gen_dir <- predefined_dir
       RcppPacket <- cppDefs_2_RcppPacket(cppDef)
       saveRcppPacket(RcppPacket, predefined_gen_dir, regular_filename)
       # Now add interface calls if necessary for this live compilation, having
@@ -100,7 +106,7 @@ nCompile_nClass <- function(NC,
       # To do: check that there aren't any detected needed units that are not in the compileInfo$needed_units
       # because for a predefined, needed units must be provided manually by compileInfo.
     } else {
-      if(gather_needed_units) needed_units <- NC_Compiler$gather_needed_units()
+      if(gather_needed_units) needed_units <- NC_Compiler$gather_needed_units(project_env = project_env)
     }
 
     ##
@@ -117,50 +123,4 @@ nCompile_nClass <- function(NC,
     if(gather_needed_units) return(list(cppDef = cppDef, needed_units = needed_units))
     else return(cppDef)
   }
-  # We might deprecate from here onward.
-  # Then nCompile_nClass would only be called via nCompile
-  filebase <- controlFull$filename
-
-  if(is.null(filebase))
-    filebase <- make_cpp_filebase(cppDef$name)
-  RcppPacket <- cppDefs_2_RcppPacket(cppDef,
-                                     filebase = filebase)
-  NCinternals(NC)$RcppPacket <- RcppPacket
-
-  if(stopAfterRcppPacket)
-    return(NC)
-
-  compiledFuns <- cpp_nCompiler(RcppPacket,
-                              dir = dir,
-                              cacheDir = cacheDir,
-                              env = env,
-                              write = !NFcompilerMaybeStop('writeCpp', controlFull),
-                              compile = !NFcompilerMaybeStop('compileCpp', controlFull),
-                              ...)
-  if(NFcompilerMaybeStop('compileCpp', controlFull)) {
-    return(compiledFuns)
-  }
-
-  R6interface <- list(build_compiled_nClass(NC, compiledFuns, env = env))
-  names(R6interface) <- cppDef$name # formerly filebase
-
-  interface <- match.arg(interface)
-
-  newDLLenv <- make_DLLenv()
-  # newCobjFun <- setup_DLLenv(newCobjFun, newDLLenv)
-  finalFun <- setup_nClass_environments(compiledFuns,
-                                        newDLLenv,
-                                        #nC_names = NC$classname,
-                                        R6interfaces = R6interface)
-
-  if(length(finalFun) != 1)
-    warning("There may be a problem with number of returned functions in nCompile_nClass.")
-  #  newCobjFun <- wrapNCgenerator_for_DLLenv(newCobjFun, newDLLenv)
-
-  if(interface == "generic")
-    return(finalFun[[1]])
-  if(interface == "full")
-    return(R6interface[[1]])
-  ## interface is "both"
-  return(list(full = R6interface[[1]], generic = finalFun[[1]]))
-}
+  stop("nCompile_nClass deprecated for stopAfterCppDef=FALSE; use nCompile instead.")}

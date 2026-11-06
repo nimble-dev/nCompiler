@@ -28,5 +28,13 @@ public:
   }
 };
 
+template<typename vecT>
+std::vector<b__> vec_2_vecB__(const std::vector<vecT> &v) {
+  std::vector<b__> blocks;
+  for(const auto& inds : v) {
+    blocks.push_back(b__(inds[0]-1, inds[1]-1));
+  }
+  return blocks;
+}
 
 #endif // INDEX_BLOCK_H_

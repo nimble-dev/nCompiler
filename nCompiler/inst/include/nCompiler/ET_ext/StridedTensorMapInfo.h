@@ -10,7 +10,7 @@
 // output_strides gives strides necessary to move in each dimension of the output.
 //   These strides are not cumulatively multiplied.  Each stride is the number of steps to take in its
 //    dimension for a change in index.  The native values would be (1, 1, 1), not (1, dim[0], dim[0] * dim[1]), e.g.
-// We can think of the output_strides as "inner strides" nad the output_sizes as "outer strides".
+// We can think of the output_strides as "inner strides" and the output_sizes as "outer strides".
 // To move in the 0th dim, move by output_strides[0] * 1 (1 for outer strides).
 // To move in the 1st dim, move by output_strides[1] * output_sizes[0]
 // To move in the 2nd dim, move by output_strides[2] * output_sizes[0] * output_sizes[1];
@@ -101,6 +101,16 @@ void createSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
   createSubTensorInfoGeneral< Eigen::array<b__, input_nDim>, Eigen::array<long, input_nDim>, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
 }
   
+template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
+void createSubTensorInfo(const Eigen::array<long, input_nDim> &input_sizes,
+                         Eigen::array<long, output_nDim> &output_sizes,
+                         Eigen::array<long, output_nDim> &output_strides,
+                         Eigen::array<long, output_nDim> &output_startIndices,
+                         Eigen::array<long, output_nDim> &output_stopIndices) {
+  Eigen::array<b__, input_nDim> ss {}; // all empty blocks, resulting in full tensor
+  createSubTensorInfoGeneral< Eigen::array<b__, input_nDim>, Eigen::array<long, input_nDim>, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
+}
+
 template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
 void showSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
                        const Eigen::array<long, input_nDim> &input_sizes) {

@@ -653,3 +653,92 @@ test_that("access and ETaccess work for logicals", {
   expect_error    (obj$LM_get_set_arg_map_scalar(LM))
   expect_identical(obj$LM_get_set_arg_map_scalar(matrix(LS)), !LS)
 })
+
+test_that("ETaccess<true> copies data and isolates from original", {
+  nc <- nClass(
+    Cpublic = list(
+      # Scalar: reading from copy gives correct value
+      DS_copy_read = nFunction(
+        function(DSx = 'numericScalar') {
+          cppLiteral('return ETaccess<true>(DSx).scalar();')
+          returnType('numericScalar')
+        }
+      ),
+      # Scalar: writing to copy does not affect original
+      DS_copy_isolation = nFunction(
+        function(DSx = 'numericScalar') {
+          cppLiteral('{ auto acc = ETaccess<true>(DSx); acc.scalar() = 99.0; }')
+          cppLiteral('return ETaccess(DSx).scalar();')
+          returnType('numericScalar')
+        }
+      ),
+      # Vector: reading from copy gives correct value
+      DV_copy_read = nFunction(
+        function(DVx = 'numericVector') {
+          cppLiteral('ans = ETaccess<true>(DVx).map<1>();', types = list(ans = 'numericVector'))
+          cppLiteral('return ans;')
+          returnType('numericVector')
+        }
+      ),
+      # Vector: writing to copy does not affect original
+      DV_copy_isolation = nFunction(
+        function(DVx = 'numericVector') {
+          cppLiteral('{ auto acc = ETaccess<true>(DVx); acc.map<1>() = acc.map<1>() * 0.0; }')
+          cppLiteral('return ETaccess(DVx).map<1>();')
+          returnType('numericVector')
+        }
+      ),
+      # Vector: copy is constructed from a lazy expression
+      DV_copy_expr = nFunction(
+        function(DVx = 'numericVector') {
+          cppLiteral('ans = ETaccess<true, Eigen::Tensor<double,1>>(DVx * 2.0).map<1>();',
+                     types = list(ans = 'numericVector'))
+          cppLiteral('return ans;')
+          returnType('numericVector')
+        }
+      )
+    )
+  )
+  Cnc <- nCompile(nc)
+  obj <- Cnc$new()
+  DS <- 1.23456
+  DV <- DS * 1:3
+
+  # Scalar copy reads the correct initial value
+  expect_equal(obj$DS_copy_read(DS), DS)
+  # Scalar copy modification leaves the original unchanged
+  expect_equal(obj$DS_copy_isolation(DS), DS)
+
+  # Vector copy reads the correct initial values
+  expect_equal(obj$DV_copy_read(DV), DV)
+  # Vector copy modification leaves the original unchanged
+  expect_equal(obj$DV_copy_isolation(DV), DV)
+
+  # Lazy expression is evaluated into the copy; original is not involved
+  expect_equal(obj$DV_copy_expr(DV), DV * 2)
+  rm(obj); gc()
+})
+
+test_that("ETaccess flattening works", {
+
+  nc <- nClass(
+    Cpublic = list(
+      flatten_2D = nFunction(
+        function(x = 'numericMatrix') {
+          cppLiteral("auto acc = ETaccess(x)")
+          cppLiteral("ETaccessorBase* accptr = static_cast<ETaccessorBase*>(&acc)")
+          cppLiteral("auto flattener = accptr->flatten()")
+          res <- numeric(length = 12)
+          cppLiteral("flattener.copyIntoVector(res)")
+          return(res)
+          returnType(double(1))
+        }
+      )
+    )
+  )
+  comp <- nCompile(nc)
+  x <- matrix(seq(1.1, 12.1, by = 1), nrow = 4)
+  storage.mode(x)
+  obj <- comp$new()
+  obj$flatten_2D(x)
+})

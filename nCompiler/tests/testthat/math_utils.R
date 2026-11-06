@@ -23,6 +23,7 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
   }
 
   nC_compiled_obj <- nC_compiled$new()
+  nC_R_obj <- nC$new()
 
   for (i in seq_along(param_list)) {
     param <- param_list[[i]]
@@ -39,7 +40,7 @@ test_math <- function(base_list, verbose = nOptions('verbose'),
 
       if (verbose) cat("## Calling R version of nFunction \n")
       ansR <- try(
-        do.call(nC$public_methods[[nFun_i]], input),
+        do.call(nC_R_obj[[nFun_i]], input),
         silent = TRUE
       )
 
