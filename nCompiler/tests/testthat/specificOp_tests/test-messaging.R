@@ -1,5 +1,9 @@
 
 test_that("error/warn/message operators", {
+    # On GitHub Actions, logger's default layout is layout_gha, which omits the level name for DEBUG and TRACE.
+    old_layout <- logger::log_layout()
+    logger::log_layout(logger::layout_simple)
+    on.exit(logger::log_layout(eval(old_layout, getNamespace("logger"))), add = TRUE)
 
     nf <- nFunction(
         fun = function(x = double(1)) {
