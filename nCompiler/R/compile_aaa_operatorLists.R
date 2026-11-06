@@ -1657,6 +1657,113 @@ assignOperatorDef(
   )
 )
 
+# Output operators. See the `Output` handler in compile_generateCpp.R for the cppOutput settings.
+assignOperatorDef(
+  'nCat', # like R's cat: arguments separated by " "
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      sep = ' ',
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  'nimCat', # like nimble's nimCat: arguments not separated
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nPrint', 'nimPrint'), # like nimble's nimPrint: arguments not separated, followed by a newline
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      newline = TRUE,
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  'nMessage',
+  list(
+    matchDef = function(..., level = INFO) {},
+    labelAbstractTypes = list(
+      handler = 'nMessage'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nMessage_',
+      levelArg = 'level'
+    )
+  )
+)
+
+assignOperatorDef(
+  'nWarning',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nWarning_'
+    )
+  )
+)
+
+assignOperatorDef(
+  'nStop',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nStop_'
+    )
+  )
+)
+
+assignOperatorDef(
+  'progress_bar',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'progress_bar'
+    )
+  )
+)
+
+assignOperatorDef(
+  'progress_update',
+  list(
+    cppOutput = list(
+      handler = 'progress_update'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
@@ -1696,6 +1803,8 @@ for(op in names(specificCallReplacements))
     )
 
 ifOrWhile <- c('if','while')
+
+
 
 # aliasRiskOperators <- c('t', 'asRow') # If we develop asRow
 # These are currently hard-coded in compile_eigenize system.
