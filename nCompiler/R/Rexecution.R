@@ -868,12 +868,12 @@ progress_bar <- cli::cli_progress_bar
 progress_update <- cli::cli_progress_update
 
 #' @export
-is_na <- function(x) {
+nIs_na <- function(x) {
   is.na(x)
 }
 
 #' @export
-is_nan <- function(x) {
+nIs_nan <- function(x) {
   is.nan(x)
 }
 
