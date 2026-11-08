@@ -747,12 +747,12 @@ nSd <- function(x) {
 }
 
 #' @export
-is_na <- function(x) {
+nIs_na <- function(x) {
   is.na(x)
 }
 
 #' @export
-is_nan <- function(x) {
+nIs_nan <- function(x) {
   is.nan(x)
 }
 

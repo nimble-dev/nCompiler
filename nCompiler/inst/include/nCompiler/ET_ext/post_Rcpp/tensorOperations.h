@@ -4,6 +4,8 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 // #include "tensorIndexingOps.h"
 
+// Need this for `nIs_na{,n}` used in `any_na{,n}.
+#include <nCompiler/cWiseUnary_external.h>
 
 /**
  * Generate functors similar to std::binary_function, but where the 
@@ -721,7 +723,7 @@ Eigen::SparseMatrix<Scalar> asSparse(const TensorExpr &x) {
     // Eigen::Matrix class compatible with function arguments
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixType;
     // evaluate input tensor
-    const auto xEval = eval(x);
+    const auto& xEval = eval(x);
     // map to matrix, sparsify and return
     auto xDim = xEval.dimensions();
     Eigen::Map<const MatrixType> xmat(xEval.data(), xDim[0], xDim[1]);
@@ -1744,7 +1746,7 @@ bool nIsSymmetric(const Eigen::Tensor<Scalar, 2> &x) {
 template<typename XprType>
 double nVar(const XprType & x) {
     // evaluate input tensor
-    const auto xEval = eval(x);
+    const auto& xEval = eval(x);
     // sample variance
     return scalar_cast_<double>::cast(
         (xEval - scalar_cast_<double>::cast(xEval.mean())).pow(2.0).sum() / 
@@ -1789,5 +1791,37 @@ auto inprod(const XprType & x, const YprType & y) -> decltype((x*y).sum()) {
 
 template<typename T>
 auto nStep(T x) -> decltype(x >= 0 ? 1 : 0) { return(x >= 0 ? 1 : 0); }
+
+template<typename XprType>
+bool any_na(const XprType & x) {
+    // evaluate input tensor
+    const auto& xEval = eval(x);
+    const typename XprType::Scalar* data = xEval.data();
+    for (Eigen::Index i = 0; i < xEval.size(); ++i) {
+        if (nIs_na(data[i])) return true;
+    }
+    return false;
+}
+/*
+template<typename Scalar, int nDim>
+bool any_na(const Eigen::Tensor<Scalar, nDim>& x) {
+    const Scalar* data = x.data();
+    const Eigen::Index n = x.size();
+    for (Eigen::index i = 0; i < n; ++i) {
+        if (is_na(data[i])) return true;
+    }
+    return false;
+}
+*/
+
+template<typename Scalar, int nDim>
+bool any_nan(const Eigen::Tensor<Scalar, nDim>& x) {
+    const Scalar* data = x.data();
+    const Eigen::Index n = x.size();
+    for (Eigen::Index i = 0; i < n; ++i) {
+        if (nIs_nan(data[i])) return true;
+    }
+    return false;
+}
 
 #endif

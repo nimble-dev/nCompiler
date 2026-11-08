@@ -36,7 +36,9 @@ nKeyWords <- list(as = 'nAs',
                   backsolve = 'nBacksolve',
                   logdet = 'nLogdet',
                   var = 'nVar',
-                  sd = 'nSd'
+                  sd = 'nSd',
+                  is_na = 'nIs_na',
+                  is_nan = 'nIs_nan'
                   )
 
 nf_changeKeywords <- function(code, keywords = character()){

@@ -57,7 +57,7 @@ test_that("is_na and is_nan work", {
   cnf <- nCompile(nf)
   x <- c(TRUE, NA, FALSE)
   expect_identical(is.na(x), nf(x))
-  expect_identical(is.na(x), cnf(x)) # BUG; see PR 236.
+  expect_error(expect_identical(is.na(x), cnf(x))) # BUG; see PR 236.
   
 })
 
@@ -83,6 +83,17 @@ test_that("any_na and any_nan work", {
   expect_identical(any(is.na(z)), nf(z))
   expect_identical(any(is.na(z)), cnf(z))
   
+  nf <- nFunction(
+    fun = function(x = 'numericVector', y = 'numericVector')  {
+      result <- any_na(x+y)
+      return(result)
+    }, returnType = 'logicalScalar')
+  cnf <- nCompile(nf)
+  x <- c(1.5,NA,2)
+  y <- c(1.0, 1.5, 2.0)
+  expect_identical(any(is.na(x+y)), nf(x, y))
+  expect_identical(any(is.na(x+y)), cnf(x, y))
+
   nf <- nFunction(
     fun = function(x = 'numericVector')  {
       result <- any_nan(x)

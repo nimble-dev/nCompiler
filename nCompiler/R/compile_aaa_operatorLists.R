@@ -810,7 +810,18 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('all', 'any', 'any_na', 'all_na'),
+  c('any_na', 'any_nan'),
+  list(
+    help = 'Example help entry',
+    labelAbstractTypes = list(
+      handler = 'UnaryReduction',
+      returnTypeCode = returnTypeCodes$logical
+    )
+  )
+)
+
+assignOperatorDef(
+  c('all', 'any'),
   list(
     help = 'Example help entry',
     labelAbstractTypes = list(
@@ -827,7 +838,6 @@ assignOperatorDef(
     )
   )
 )
-updateOperatorDef(c('any_na','any_nan'), 'simpleTransformations', 'handler', 'any_na')
 
 assignOperatorDef(
   c('exp', 'lgamma', 'log', 'sqrt', 'tanh'), # We had an 'rsqrt'.  What was the use case for it?
@@ -870,7 +880,7 @@ assignOperatorDef(
     'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
     'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
     'loggam', 'log1p', 'factorial', 'lfactorial', 'logfact', 'cosh', 'sinh',
-    'nStep', 'is_na', 'is_nan'),
+    'nStep', 'nIs_na', 'nIs_nan'),
   list(
     help = 'cWiseUnary operators implemented via Tensor.unaryExpr',
     labelAbstractTypes = list(
@@ -889,7 +899,7 @@ updateOperatorDef(
   'nStep', 'labelAbstractTypes', 'returnTypeCode',returnTypeCodes$integer
 )
 updateOperatorDef(
-  c('is_na', 'is_nan'), 'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
+  c('nIs_na', 'nIs_nan'), 'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
 )
 updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
 updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
@@ -1631,8 +1641,8 @@ specificCallReplacements <- list(
     '^' = 'pow', # previously commented and changed instead at cppOutput. Was there a problem?
     '%%' = 'nc_mod', # ditto
 #    length = 'size',
-    is.na = 'is_na',
-    is.nan = 'is_nan',
+    is.na = 'nIs_na',
+    is.nan = 'nIs_nan',
 #    lgamma = 'lgammafn',
 #    logfact = 'lfactorial',
 #    loggam = 'lgammafn',
