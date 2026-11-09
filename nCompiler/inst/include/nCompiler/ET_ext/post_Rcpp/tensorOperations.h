@@ -1802,6 +1802,18 @@ bool any_na(const XprType & x) {
     }
     return false;
 }
+
+template<typename XprType>
+bool any_nan(const XprType & x) {
+    // evaluate input tensor
+    const auto& xEval = eval(x);
+    const typename XprType::Scalar* data = xEval.data();
+    for (Eigen::Index i = 0; i < xEval.size(); ++i) {
+        if (nIs_nan(data[i])) return true;
+    }
+    return false;
+}
+
 /*
 template<typename Scalar, int nDim>
 bool any_na(const Eigen::Tensor<Scalar, nDim>& x) {
@@ -1813,15 +1825,5 @@ bool any_na(const Eigen::Tensor<Scalar, nDim>& x) {
     return false;
 }
 */
-
-template<typename Scalar, int nDim>
-bool any_nan(const Eigen::Tensor<Scalar, nDim>& x) {
-    const Scalar* data = x.data();
-    const Eigen::Index n = x.size();
-    for (Eigen::Index i = 0; i < n; ++i) {
-        if (nIs_nan(data[i])) return true;
-    }
-    return false;
-}
 
 #endif
