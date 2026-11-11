@@ -598,6 +598,20 @@ nLogdet <- function(x) {
   ifelse(ldet$sign >= 0, ldet$modulus, NaN)
 }
 
+## Math functions from BUGS and nimble (definitions as in nimble).
+## `step`, `equals` and `inverse` are changed to `nStep`, `nEquals` and `nInverse` (see changeKeywords.R).
+
+#' @export
+nStep <- function(x) ifelse(x >= 0, 1L, 0L)
+#' @export
+nEquals <- function(x1, x2) if(x1 == x2) 1 else 0
+#' @export
+pow <- function(x1, x2) x1^x2
+#' @export
+inprod <- function(v1, v2) sum(v1 * v2)
+#' @export
+nInverse <- function(x) solve(x)
+
 #' Replicate Elements of Vectors and Lists
 #'
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}

@@ -1790,4 +1790,35 @@ auto inprod(const XprType & x, const YprType & y) -> decltype((x*y).sum()) {
 template<typename T>
 auto nStep(T x) -> decltype(x >= 0 ? 1 : 0) { return(x >= 0 ? 1 : 0); }
 
+// As in nimble: scalar arguments only.
+template<typename T1, typename T2>
+int nEquals(T1 x1, T2 x2) { return(x1 == x2 ? 1 : 0); }
+
+/**
+ * Inverse of a square, matrix-like object, i.e., a rank 2 Eigen::Tensor
+ * object or Tensor expression. As in nimble, this uses Eigen's inverse()
+ * (which uses a partial-pivoting LU decomposition for dynamic-size matrices).
+ *
+ * @tparam Xpr An Eigen::Tensor or tensor expression object type
+ */
+template<
+    typename Xpr,
+    typename std::enable_if<HasNumDimensionsN<Xpr, 2>(), Xpr>::type* = nullptr
+>
+Eigen::Tensor<double, 2> nInverse(const Xpr & x) {
+    // evaluate argument as double
+    Eigen::Tensor<double, 2> xeval = x.template cast<double>();
+    auto xDim = xeval.dimensions();
+    if(xDim[0] != xDim[1]) {
+        throw std::invalid_argument(
+            "nCompiler::nInverse - Cannot invert non-square matrix"
+        );
+    }
+    Eigen::Tensor<double, 2> res(xDim[0], xDim[1]);
+    auto xmap = matmap(xeval);
+    auto resMap = matmap(res);
+    resMap = xmap.inverse();
+    return res;
+}
+
 #endif
