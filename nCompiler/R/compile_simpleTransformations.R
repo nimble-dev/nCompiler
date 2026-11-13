@@ -246,3 +246,12 @@ inSimpleTransformationsEnv(
     )
   }
 )
+
+# Not used, as we have custom `is_na{,n}` for early stopping efficiency.
+inSimpleTransformationsEnv(
+  any_na <-
+    function(code, symTab, auxEnv, info) {
+      code$name <- sub("any_", "is_", code$name)
+      wrapInExprClass(code, 'any')
+    }
+)

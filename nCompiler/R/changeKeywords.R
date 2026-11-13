@@ -38,6 +38,8 @@ nKeyWords <- list(as = 'nAs',
                   logdet = 'nLogdet',
                   var = 'nVar',
                   sd = 'nSd',
+                  is_na = 'nIs_na',
+                  is_nan = 'nIs_nan',
                   warning = 'nWarning',
                   message = 'nMessage'
                   )
