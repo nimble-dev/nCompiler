@@ -1845,5 +1845,4 @@ Eigen::Tensor<double, 2> nInverse(const Xpr & x) {
     return res;
 }
 
->>>>>>> main
 #endif
