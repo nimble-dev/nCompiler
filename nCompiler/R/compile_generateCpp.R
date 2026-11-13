@@ -733,3 +733,56 @@ inGenCppEnv(
     res
   }
 )
+
+inGenCppEnv(
+  # Output operators (nCat, nimCat, nPrint, nimPrint, nStop, nWarning, nMessage).
+  # The arguments are streamed into a local std::ostringstream, which is passed to a C++
+  # function (see utils.h). A local stream, instead of a global one as in nimble,
+  # needs no clean-up and is thread-safe.
+  # Settings come from the opDef's cppOutput entry:
+  #   cppFun: the C++ function to call.
+  #   sep: separator streamed between arguments (default "").
+  #   newline: whether to stream a final newline.
+  #   useDigits: whether to use nOption 'digits' (if set) for numeric output.
+  #   levelArg: name of an argument that is passed as a second C++ argument instead of streamed.
+  Output <- function(code, symTab) {
+    info <- getOperatorDef(code$name, "cppOutput")
+    args <- code$args
+    extraCppArgs <- ""
+    if(!is.null(info$levelArg)) {
+      iLevel <- which(names(args) == info$levelArg)
+      if(length(iLevel) == 1) {
+        extraCppArgs <- paste0(", ", compile_generateCpp(args[[iLevel]], symTab, asArg = TRUE))
+        args <- args[-iLevel]
+      }
+    }
+    items <- unlist(lapply(args, compile_generateCpp, symTab, asArg = TRUE))
+    if(isTRUE(info$newline)) items <- c(items, '"\\n"')
+    sep <- if(is.null(info$sep)) "" else info$sep
+    streamed <- if(length(items) == 0) '""'
+                else paste0(items, collapse = if(nzchar(sep)) paste0(' << "', sep, '" << ') else ' << ')
+    setup <- ""
+    if(isTRUE(info$useDigits) && !is.null(get_nOption('digits')))
+      setup <- paste0("nC_output_.precision(", get_nOption('digits'), "); nC_output_ << std::fixed; ")
+    paste0("{std::ostringstream nC_output_; ", setup,
+           "nC_output_ << ", streamed, "; ",
+           info$cppFun, "(nC_output_", extraCppArgs, ");}")
+  }
+)
+
+inGenCppEnv(
+    progress_bar <- function(code, symTab) {
+        paste0('Rprogress_bar(', 
+               compile_generateCpp(code$args[[1]], symTab), ",",
+               compile_generateCpp(code$args[[2]], symTab),
+               ')')
+    }
+)
+
+# Perhaps we don't need this if we rename the C++ wrapper to be `progress_update`.
+# But we might want to allow arguments to be passed through...
+inGenCppEnv(
+    progress_update <- function(code, symTab) {
+        'Rprogress_update()'
+    }
+)

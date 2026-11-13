@@ -23,6 +23,9 @@
 
 #include <vector>
 #include <cstddef>
+#include <algorithm>
+#include <stdexcept>
+#include <string>
 #include "index_block.h"
 
 // Per-dimension (size, native stride) for the dimensions kept after applying
@@ -329,6 +332,80 @@ public:
 
   SetValuesProxy setValues_() { return SetValuesProxy(*this); }
 
+  // Access to one view, or to one element of the concatenation of all views,
+  // e.g. for nimble's values(model, nodes[i]) with i counting entries of
+  // `nodes` (one view each) or flattened scalar elements. Indices are 0-based
+  // and bounds-checked.
+  Eigen::Tensor<Scalar, 1> copyIntoVector_one(size_t i) const {
+    checkViewIndex_(i, "copyIntoVector_one");
+    return views_[i].copyIntoVector();
+  }
+
+  void copyFromVector_one(size_t i, const Eigen::Tensor<Scalar, 1> &src) {
+    checkViewIndex_(i, "copyFromVector_one");
+    if(src.size() != views_[i].size())
+      throw std::runtime_error("RuntimeFlatViewGroup::copyFromVector_one: src.size() != size of view " +
+                               std::to_string(i));
+    views_[i].copyFromVector(src.data());
+  }
+
+  // Scalar source, allowed only into a view of size 1.
+  void copyFromVector_one(size_t i, Scalar src) {
+    checkViewIndex_(i, "copyFromVector_one");
+    if(views_[i].size() != 1)
+      throw std::runtime_error("RuntimeFlatViewGroup::copyFromVector_one: scalar source for view " +
+                               std::to_string(i) + ", which does not have size 1");
+    views_[i].copyFromVector(&src);
+  }
+
+  // Element flatIndex of the concatenation of all views, in copyIntoVector order.
+  Scalar &at(long flatIndex) const {
+    if(flatIndex < 0 || flatIndex >= totalSize_)
+      throw std::runtime_error("RuntimeFlatViewGroup::at: index " + std::to_string(flatIndex) +
+                               " is out of range for total size " + std::to_string(totalSize_));
+    // The last view whose offset is <= flatIndex. This skips any zero-size views.
+    const size_t k = static_cast<size_t>(std::upper_bound(offsets_.begin(), offsets_.end(), flatIndex) -
+                                         offsets_.begin()) - 1;
+    return views_[k].at(flatIndex - offsets_[k]);
+  }
+
+  // Proxies so that `group.setValues_one_(i) = input;` and
+  // `group.setValues_at_(flatIndex) = input;` read as assignments.
+  class SetValuesOneProxy {
+  public:
+    SetValuesOneProxy(RuntimeFlatViewGroup &group, size_t i) : group_(group), i_(i) {}
+
+    void operator=(const Eigen::Tensor<Scalar, 1> &src) { group_.copyFromVector_one(i_, src); }
+    void operator=(Scalar src) { group_.copyFromVector_one(i_, src); }
+
+  private:
+    RuntimeFlatViewGroup &group_;
+    size_t i_;
+  };
+
+  SetValuesOneProxy setValues_one_(size_t i) {
+    checkViewIndex_(i, "setValues_one_");
+    return SetValuesOneProxy(*this, i);
+  }
+
+  class SetValuesAtProxy {
+  public:
+    SetValuesAtProxy(RuntimeFlatViewGroup &group, long flatIndex) : group_(group), flatIndex_(flatIndex) {}
+
+    void operator=(const Eigen::Tensor<Scalar, 1> &src) {
+      if(src.size() != 1)
+        throw std::runtime_error("RuntimeFlatViewGroup::setValues_at_: src.size() != 1");
+      group_.at(flatIndex_) = src(0);
+    }
+    void operator=(Scalar src) { group_.at(flatIndex_) = src; }
+
+  private:
+    RuntimeFlatViewGroup &group_;
+    long flatIndex_;
+  };
+
+  SetValuesAtProxy setValues_at_(long flatIndex) { return SetValuesAtProxy(*this, flatIndex); }
+
   // Element-wise copy to/from another group, view by view, with no
   // intermediate buffer -- each pair delegates to RuntimeFlatView::copyTo,
   // which checks that the pair's sizes agree. Requires both groups to have
@@ -353,6 +430,13 @@ public:
   void copyFrom(const RuntimeFlatViewGroup &src) { src.copyTo(*this); }
 
 private:
+  void checkViewIndex_(size_t i, const char *caller) const {
+    if(i >= views_.size())
+      throw std::runtime_error(std::string("RuntimeFlatViewGroup::") + caller + ": view index " +
+                               std::to_string(i) + " is out of range for " +
+                               std::to_string(views_.size()) + " views");
+  }
+
   std::vector<RuntimeFlatView<Scalar>> views_;
   std::vector<long> offsets_;
   long totalSize_ = 0;

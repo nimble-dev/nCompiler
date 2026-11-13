@@ -32,6 +32,7 @@ nKeyWords <- list(as = 'nAs',
                   optimDefaultControl = 'nOptimDefaultControl',
                   derivs = 'nDerivs',
                   solve = 'nSolve',
+                  inverse = 'nInverse',
                   forwardsolve = 'nForwardsolve',
                   backsolve = 'nBacksolve',
                   logdet = 'nLogdet',
@@ -39,6 +40,8 @@ nKeyWords <- list(as = 'nAs',
                   sd = 'nSd',
                   is_na = 'nIs_na',
                   is_nan = 'nIs_nan'
+                  warning = 'nWarning',
+                  message = 'nMessage'
                   )
 
 nf_changeKeywords <- function(code, keywords = character()){

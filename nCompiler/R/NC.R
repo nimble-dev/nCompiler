@@ -429,6 +429,11 @@ build_Cmethod_code_for_nClass <- function(fun, name) {
 
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
+  # With control = list(updateArgPassing = FALSE), refArgs and blockRefArgs apply
+  # only in C++, and the R method takes its arguments by value (as in getFunction).
+  if(isFALSE(NFinternals(fun)$control$updateArgPassing)) {
+    refArgs <- blockRefArgs <- character()
+  }
 
   if(length(refArgs) + length(blockRefArgs) == 0) {
     ans <- substitute(function(...) {

@@ -21,6 +21,10 @@
 #include <nCompiler/dists/dwish_chol_tensor.h>
 #include <nCompiler/dists/rwish_chol.h>
 #include <nCompiler/dists/rwish_chol_tensor.h>
+#include <nCompiler/dists/dinvwish_chol.h>
+#include <nCompiler/dists/dinvwish_chol_tensor.h>
+#include <nCompiler/dists/rinvwish_chol.h>
+#include <nCompiler/dists/rinvwish_chol_tensor.h>
 #include <nCompiler/dists/ddirch.h>
 #include <nCompiler/dists/ddirch_tensor.h>
 #include <nCompiler/dists/rdirch.h>
@@ -29,5 +33,9 @@
 #include <nCompiler/dists/dmulti_tensor.h>
 #include <nCompiler/dists/rmulti.h>
 #include <nCompiler/dists/rmulti_tensor.h>
+#include <nCompiler/dists/dcat.h>
+#include <nCompiler/dists/dcat_tensor.h>
+#include <nCompiler/dists/rcat.h>
+#include <nCompiler/dists/rcat_tensor.h>
 
 #endif // _NCOMPILER_DISTS_POST_RCPP

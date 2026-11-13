@@ -110,6 +110,25 @@ loggam <- lgamma
 logfact <- lfactorial
 #' @export
 nC <- c
+#' @export
+nCat <- cat
+#' @export
+nimCat <- function(...) { # As in nimble: arguments are not separated; arrays are printed with print().
+  items <- list(...)
+  for(i in seq_along(items)) {if(is.array(items[[i]])) print(items[[i]]) else cat(items[[i]])}
+}
+#' @export
+nPrint <- function(...) { # As nimble's nimPrint: nimCat followed by a newline.
+  nimCat(...)
+  cat('\n')
+}
+#' @export
+nimPrint <- nPrint
+#' @export
+nStop <- stop
+#' @export
+nWarning <- warning
+
 
 #' Creates numeric, integer or logical vectors for use in nFunctions
 #'
@@ -579,6 +598,20 @@ nLogdet <- function(x) {
   ifelse(ldet$sign >= 0, ldet$modulus, NaN)
 }
 
+## Math functions from BUGS and nimble (definitions as in nimble).
+## `step`, `equals` and `inverse` are changed to `nStep`, `nEquals` and `nInverse` (see changeKeywords.R).
+
+#' @export
+nStep <- function(x) ifelse(x >= 0, 1L, 0L)
+#' @export
+nEquals <- function(x1, x2) if(x1 == x2) 1 else 0
+#' @export
+pow <- function(x1, x2) x1^x2
+#' @export
+inprod <- function(v1, v2) sum(v1 * v2)
+#' @export
+nInverse <- function(x) solve(x)
+
 #' Replicate Elements of Vectors and Lists
 #'
 #' In a \code{nFunction}, \code{nRep} is identical to \code{base::rep}
@@ -772,3 +805,44 @@ any_na <- function(x) any(is.na(x))
 #' @rdname any_na
 #' @export
 any_nan <- function(x) any(is.nan(x))
+
+#' Log/message handling via `logger` package, including within progress bar execution.
+#'
+#' Arguments in `...` are combined as by `message()`. `level` must be given by name.
+#'
+#' @export
+nMessage <- function(..., level = INFO) {
+    msg <- .makeMessage(...) # Combine arguments as message() does.
+    if(!cli::cli_progress_num()) {  # No active progress bar.
+        logger::log_level(logger::as.loglevel(level), msg)
+    } else {
+        if(level <= log_threshold()) { 
+            ## `capture.output()` does not work.
+            con <- textConnection("log_output", open = "w", local = TRUE)  
+            logger::log_appender(logger::appender_file(con))
+            logger::log_level(logger::as.loglevel(level), msg)
+            output <- try(cli::cli_progress_output(log_output, .envir = globalenv()), silent = TRUE)  # Cleanly handle the interrupting msg.
+            ## Having trouble with uncompiled execution needing to 'look' in different env:
+            ## Browse[1]> cli:::clienv$progress_ids
+            ## $`<environment: 0x64b09faa2ef8>`
+            ## [1] "cli-151-47"
+            ## This is a work-around, noting that this is a corner case (message within progress bar within uncompiled exec.).
+            logger::log_appender(logger::appender_stdout)
+            if(is(output, 'try-error'))
+                logger::log_level(logger::as.loglevel(level), msg)  # Accept that interruption won't be clean.
+        }
+    }
+}
+
+#' Progress bar functionality via `cli`.
+#' N.B. If we wrap these functions instead of alias them,
+#' we have problems in R execution with
+#' "Cannot find current progress bar for `<environment: R_GlobalEnv>`"
+#' related to lookup of `cli:::clienv`.
+#' 
+#' @export
+progress_bar <- cli::cli_progress_bar
+
+#' @export
+progress_update <- cli::cli_progress_update
+

@@ -1385,6 +1385,49 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c("dinvwish_chol"),
+  list(
+    matchDef = function(x, cholesky, df, scale_param = TRUE, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rinvwish_chol"),
+  list(
+    matchDef = function(n = 1, cholesky, df, scale_param = TRUE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist',
+      return_nDim = 2
+    )
+  )
+)
+
+# dcat and rcat have a scalar value but a vector parameter, so they use the MVDist handler
+# (scalar double return) and the Eigen::Tensor wrappers in dists/dcat_tensor.h and rcat_tensor.h.
+assignOperatorDef(
+  c("dcat"),
+  list(
+    matchDef = function(x, prob, log = FALSE) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
+  c("rcat"),
+  list(
+    matchDef = function(n = 1, prob) {},
+    labelAbstractTypes = list(
+      handler = 'MVDist'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nSwitch'),
   list(
     matchDef = function(expr, IDs, ...) {},
@@ -1412,7 +1455,7 @@ assignOperatorDef(
       returnTypeCode = returnTypeCodes$integer
     ),
     eigenImpl = list(
-      handler = 'Reduction',
+      handler = 'Length',
       noPromotion = TRUE,
       replaceForScalar = 1,
       method = TRUE,
@@ -1539,6 +1582,30 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
+  c('nInverse'),
+  list(
+    matchDef = function(x) {},
+    labelAbstractTypes = list(
+      handler = 'nInverse'
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nEquals'),
+  list(
+    matchDef = function(x1, x2) {},
+    labelAbstractTypes = list(
+      handler = 'nEquals',
+      returnTypeCode = returnTypeCodes$integer
+    ),
+    cppOutput = list(
+      handler = 'AsIs'
+    )
+  )
+)
+
+assignOperatorDef(
   c('nDiag', 'nDiagonal'),
   list(
     matchDef = function(x=1, nrow, ncol) {},
@@ -1629,6 +1696,113 @@ assignOperatorDef(
   )
 )
 
+# Output operators. See the `Output` handler in compile_generateCpp.R for the cppOutput settings.
+assignOperatorDef(
+  'nCat', # like R's cat: arguments separated by " "
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      sep = ' ',
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  'nimCat', # like nimble's nimCat: arguments not separated
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  c('nPrint', 'nimPrint'), # like nimble's nimPrint: arguments not separated, followed by a newline
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nCout_',
+      newline = TRUE,
+      useDigits = TRUE
+    )
+  )
+)
+
+assignOperatorDef(
+  'nMessage',
+  list(
+    matchDef = function(..., level = INFO) {},
+    labelAbstractTypes = list(
+      handler = 'nMessage'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nMessage_',
+      levelArg = 'level'
+    )
+  )
+)
+
+assignOperatorDef(
+  'nWarning',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nWarning_'
+    )
+  )
+)
+
+assignOperatorDef(
+  'nStop',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'Output',
+      cppFun = 'nStop_'
+    )
+  )
+)
+
+assignOperatorDef(
+  'progress_bar',
+  list(
+    labelAbstractTypes = list(
+      handler = 'output'
+    ),
+    cppOutput = list(
+      handler = 'progress_bar'
+    )
+  )
+)
+
+assignOperatorDef(
+  'progress_update',
+  list(
+    cppOutput = list(
+      handler = 'progress_update'
+    )
+  )
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
@@ -1666,6 +1840,8 @@ for(op in names(specificCallReplacements))
     )
 
 ifOrWhile <- c('if','while')
+
+
 
 # aliasRiskOperators <- c('t', 'asRow') # If we develop asRow
 # These are currently hard-coded in compile_eigenize system.

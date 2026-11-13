@@ -585,8 +585,9 @@ inLabelAbstractTypesEnv(
 #   }
 # )
 
+
 inLabelAbstractTypesEnv(
-  nC <- function(code, symTab, auxEnv, handlingInfo) {
+    nC <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
     nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
@@ -2029,6 +2030,43 @@ inLabelAbstractTypesEnv(
 )
 
 inLabelAbstractTypesEnv(
+  nInverse <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      argType <- code$args[[1]]$type
+      if(inherits(argType, 'symbolSparse') ||
+         isTRUE(argType$type %in% c('denseCholFactor', 'sparseCholFactor')))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'inverse is not supported for sparse matrices or the result of `Cholesky`.'
+        ), call. = FALSE)
+      if(!identical(as.integer(argType$nDim), 2L))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'inverse requires a matrix argument.'
+        ), call. = FALSE)
+      code$type <- symbolBasic$new(nDim = 2, type = "double")
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
+  # As in nimble, `equals` (`nEquals`) supports only scalar arguments.
+  nEquals <-
+    function(code, symTab, auxEnv, handlingInfo) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      if(any(sapply(code$args, function(arg) arg$type$nDim) != 0))
+        stop(exprClassProcessingErrorMsg(
+          code,
+          'equals (nEquals) supports only scalar arguments.'
+        ), call. = FALSE)
+      code$type <- symbolBasic$new(nDim = 0,
+                                   type = setReturnType(handlingInfo, "integer"))
+      inserts
+    }
+)
+
+inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
@@ -2212,6 +2250,37 @@ inLabelAbstractTypesEnv(
     invisible(inserts)
   }
 )
+
+inLabelAbstractTypesEnv(
+    output <- function(code, symTab, auxEnv, handlingInfo) {
+        inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+        invisible(inserts)
+    }
+)
+
+inLabelAbstractTypesEnv(
+  # `level` may be a `logger` level name (e.g. `INFO`, the default).
+  # Replace it by its integer value so the C++ does not need level names.
+  nMessage <- function(code, symTab, auxEnv, handlingInfo) {
+    iLevel <- which(names(code$args) == "level")
+    if(length(iLevel) == 1) {
+      levelArg <- code$args[[iLevel]]
+      levels <- logger_levels()
+      if(isTRUE(levelArg$isName) && levelArg$name %in% names(levels)) {
+        setArg(code, iLevel, literalIntegerExpr(levels[[levelArg$name]]))
+      }
+    }
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    invisible(inserts)
+  }
+)
+
+# Integer values of the `logger` levels re-exported by nCompiler (see all_utils.R).
+logger_levels <- function() {
+  levelNames <- c("OFF", "FATAL", "ERROR", "WARN", "SUCCESS", "INFO", "DEBUG", "TRACE")
+  sapply(levelNames, function(nm) as.integer(getExportedValue("logger", nm)), simplify = FALSE)
+}
+
 
 inLabelAbstractTypesEnv(
   DEBUG <- function(code, symTab, auxEnv, handlingInfo) {

@@ -225,3 +225,24 @@ dimOrLength <- function(obj, scalarize = FALSE) {
   if(is.null(dim(obj))) return(length(obj))
   return(dim(obj))
 }
+
+# Re-export `logger` functions and log levels for use with `nMessage`.
+#' @importFrom logger log_threshold OFF FATAL ERROR WARN SUCCESS INFO DEBUG TRACE
+#' @export
+logger::log_threshold
+#' @export
+logger::OFF
+#' @export
+logger::FATAL
+#' @export
+logger::ERROR
+#' @export
+logger::WARN
+#' @export
+logger::SUCCESS
+#' @export
+logger::INFO
+#' @export
+logger::DEBUG
+#' @export
+logger::TRACE
