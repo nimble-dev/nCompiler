@@ -29,21 +29,23 @@
 # These tests also attempt to cover mixes of needing Eigen or not in one or the other part of
 # the dependency.
 
-#library(nCompiler)
+# library(nCompiler)
 library(testthat)
-#nOptions(showCompilerOutput=TRUE)
-#nOptions(showCompilerOutput=FALSE)
+# nOptions(showCompilerOutput=TRUE)
+# nOptions(showCompilerOutput=FALSE)
 
 test_that("#includes work when one nFunction calls another", {
   f1 <- nFunction(
-    function(x = 'numericScalar') {
-      return(x+1); returnType('numericScalar')
+    function(x = "numericScalar") {
+      return(x + 1)
+      returnType("numericScalar")
     }
   )
   f2 <- nFunction(
-    function(x = 'numericVector') {
+    function(x = "numericVector") {
       x[1] <- f1(x[1])
-      return(x[1]); returnType('numericScalar')
+      return(x[1])
+      returnType("numericScalar")
     }
   )
   comp1 <- nCompile(f1, f2)
@@ -54,25 +56,27 @@ test_that("#includes work when one nFunction calls another", {
   expect_equal(comp1$f1(2), 3)
   expect_equal(comp1$f2(2:4), 3)
 
-  comp1 <- nCompile(f1, f2, package=TRUE)
+  comp1 <- nCompile(f1, f2, package = TRUE)
   expect_equal(comp1$f1(2), 3)
   expect_equal(comp1$f2(2:4), 3)
 
-  comp1 <- nCompile(f2, f1, package=TRUE)
+  comp1 <- nCompile(f2, f1, package = TRUE)
   expect_equal(comp1$f1(2), 3)
   expect_equal(comp1$f2(2:4), 3)
 
   # Now make f1 use Eigen while f2 doesn't
   f1 <- nFunction(
-    function(x = 'numericVector') {
-      return(x[1]+1); returnType('numericScalar')
+    function(x = "numericVector") {
+      return(x[1] + 1)
+      returnType("numericScalar")
     }
   )
   f2 <- nFunction(
     function() {
       x <- numeric(length = 3, value = 2)
       x[1] <- f1(x)
-      return(x[1]); returnType('numericScalar')
+      return(x[1])
+      returnType("numericScalar")
     }
   )
   comp1 <- nCompile(f1, f2)
@@ -83,11 +87,11 @@ test_that("#includes work when one nFunction calls another", {
   expect_equal(comp1$f1(2:4), 3)
   expect_equal(comp1$f2(), 3)
 
-  comp1 <- nCompile(f1, f2, package=TRUE)
+  comp1 <- nCompile(f1, f2, package = TRUE)
   expect_equal(comp1$f1(2:4), 3)
   expect_equal(comp1$f2(), 3)
 
-  comp1 <- nCompile(f2, f1, package=TRUE)
+  comp1 <- nCompile(f2, f1, package = TRUE)
   expect_equal(comp1$f1(2:4), 3)
   expect_equal(comp1$f2(), 3)
 })
@@ -95,19 +99,22 @@ test_that("#includes work when one nFunction calls another", {
 test_that("#includes work when an nFunction creates an nClass internally (only)", {
   nc1 <- nClass(
     Cpublic = list(
-      x = 'numericVector',
+      x = "numericVector",
       foo = nFunction(
-        function(v = 'numericScalar') {
-        return(v + x[1]); returnType('numericScalar')
-      })
+        function(v = "numericScalar") {
+          return(v + x[1])
+          returnType("numericScalar")
+        }
+      )
     )
   )
   f1 <- nFunction(
-    function(z = 'numericScalar') {
+    function(z = "numericScalar") {
       my_nc1 <- nc1$new()
       my_nc1$x <- numeric(length = 3, value = 2)
       ans <- my_nc1$foo(z)
-      return(ans); returnType('numericScalar')
+      return(ans)
+      returnType("numericScalar")
     }
   )
   comp1 <- nCompile(nc1, f1)

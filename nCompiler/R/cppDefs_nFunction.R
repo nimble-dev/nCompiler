@@ -1,16 +1,18 @@
 cpp_nFunctionClass_init_impl <- function(cppDef) {
   usingEigen <- TRUE
-  pluginIncludes <- if(usingEigen) {
-                      nCompiler_Eigen_plugin()$includes
-                    } else {
-                      nCompiler_plugin()$includes
-                    }
+  pluginIncludes <- if (usingEigen) {
+    nCompiler_Eigen_plugin()$includes
+  } else {
+    nCompiler_plugin()$includes
+  }
   cppDef$Hpreamble <- pluginIncludes
-  cppDef$Hpreamble <- c(cppDef$Hpreamble,
-                        "#define NCOMPILER_USES_EIGEN",
-                        "#define NCOMPILER_USES_NCPPVEC",
-                        "#define NCOMPILER_USES_MVDISTS",
-                        "#define USES_NCOMPILER")
+  cppDef$Hpreamble <- c(
+    cppDef$Hpreamble,
+    "#define NCOMPILER_USES_EIGEN",
+    "#define NCOMPILER_USES_NCPPVEC",
+    "#define NCOMPILER_USES_MVDISTS",
+    "#define USES_NCOMPILER"
+  )
   ## handler nCppVec in labelAbstractTypes does record in auxEnv if an
   ## explicit call to nCppVec() was uses. That is the beginning of a smarter
   ## system for determining what #include (via #define) components are
@@ -20,12 +22,14 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   ## is likewise just tacked on universally for now; a future pass could
   ## set it only when generated code actually calls one.
   cppDef$CPPpreamble <- pluginIncludes
-  cppDef$CPPpreamble <- c(cppDef$CPPpreamble,
-                          "#define NCOMPILER_USES_EIGEN",
-                          "#define NCOMPILER_USES_NCPPVEC",
-                          "#define NCOMPILER_USES_MVDISTS",
-                          "#define USES_NCOMPILER")
-  cppDef$Hincludes <- c(cppDef$Hincludes)#,
+  cppDef$CPPpreamble <- c(
+    cppDef$CPPpreamble,
+    "#define NCOMPILER_USES_EIGEN",
+    "#define NCOMPILER_USES_NCPPVEC",
+    "#define NCOMPILER_USES_MVDISTS",
+    "#define USES_NCOMPILER"
+  )
+  cppDef$Hincludes <- c(cppDef$Hincludes) # ,
   ##                      nCompilerIncludeFile("nCompiler_omnibus_first_h.h"))
   ## cppDef$CPPincludes <- c(cppDef$CPPincludes,
   ##                       nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"))
@@ -41,36 +45,43 @@ cpp_nFunctionClass_init_impl <- function(cppDef) {
   ##                       '<math.h>'
   ##                       )
   usingEigen <- TRUE
-  if(usingEigen) {
-    checkPackage <- find.package(c(#"RcppEigenAD",
-                                   "Rcereal"),
-                                 quiet = TRUE)
-    if(length(checkPackage)!=1) { #2) {
-#      stop("Packages RcppEigenAD and Rcereal must be installed.")
+  if (usingEigen) {
+    checkPackage <- find.package(
+      c( # "RcppEigenAD",
+        "Rcereal"
+      ),
+      quiet = TRUE
+    )
+    if (length(checkPackage) != 1) { # 2) {
+      #      stop("Packages RcppEigenAD and Rcereal must be installed.")
       stop("Package Rcereal must be installed.")
     }
     ## require(RcppEigenAD)
     ## require(Rcereal)
-                                        # We can put includes here that need to occur after the file's own .h is included.
-    cppDef$CPPusings <- c(cppDef$CPPusings,
-                     #   paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
-                        "using namespace Rcpp;",
-                        "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
-                   #     "// [[Rcpp::depends(RcppEigenAD)]]",
-                        "// [[Rcpp::depends(RcppParallel)]]",
-                        "// [[Rcpp::depends(nCompiler)]]",
-                        "// [[Rcpp::depends(Rcereal)]]")
+    # We can put includes here that need to occur after the file's own .h is included.
+    cppDef$CPPusings <- c(
+      cppDef$CPPusings,
+      #   paste0("#include ", nCompilerIncludeFile("nCompiler_Eigen_fxns.h")),
+      "using namespace Rcpp;",
+      "// [[Rcpp::plugins(nCompiler_Eigen_plugin)]]",
+      #     "// [[Rcpp::depends(RcppEigenAD)]]",
+      "// [[Rcpp::depends(RcppParallel)]]",
+      "// [[Rcpp::depends(nCompiler)]]",
+      "// [[Rcpp::depends(Rcereal)]]"
+    )
   } else {
-    cppDef$CPPusings <- c(cppDef$CPPusings,
-                        "using namespace Rcpp;",
-                        "// [[Rcpp::plugins(nCompiler_plugin)]]",
-                        "// [[Rcpp::depends(nCompiler)]]")
+    cppDef$CPPusings <- c(
+      cppDef$CPPusings,
+      "using namespace Rcpp;",
+      "// [[Rcpp::plugins(nCompiler_plugin)]]",
+      "// [[Rcpp::depends(nCompiler)]]"
+    )
   }
   NULL
 }
 
 cpp_nFunctionClass <- R6::R6Class(
-  classname = 'cpp_nFunctionClass',
+  classname = "cpp_nFunctionClass",
   inherit = cppFunctionClass,
   portable = FALSE,
   public = list(
@@ -86,9 +97,11 @@ cpp_nFunctionClass <- R6::R6Class(
       super$initialize(...)
     },
     showTypes = function(annotations = FALSE) {
-      if(annotations) {
+      if (annotations) {
         print(self$code$code, showType = TRUE)
-      } else print(self$NF_Compiler$symbolTable, parent = FALSE)
+      } else {
+        print(self$NF_Compiler$symbolTable, parent = FALSE)
+      }
       invisible(self)
     },
     getInternalDefs = function() {
@@ -98,44 +111,53 @@ cpp_nFunctionClass <- R6::R6Class(
       super$getExternalDefs()
     },
     getHincludes = function() {
-      c(super$getHincludes(),
-        if(!is.null(self$SEXPwrapper))
+      c(
+        super$getHincludes(),
+        if (!is.null(self$SEXPwrapper)) {
           self$SEXPwrapper$getHincludes()
+        }
       )
     },
     getCPPincludes = function() {
-      c(super$getCPPincludes(),
+      c(
+        super$getCPPincludes(),
         unlist(
           lapply(
             self$CPPincludes,
-            function(x)
-              if(is.character(x))
+            function(x) {
+              if (is.character(x)) {
                 NULL
-            else
-              x$getCPPincludes()
+              } else {
+                x$getCPPincludes()
+              }
+            }
           ),
           recursive = FALSE
-        ), 
-        if(!is.null(self$SEXPwrapper))
+        ),
+        if (!is.null(self$SEXPwrapper)) {
           self$SEXPwrapper$getCPPincludes()
+        }
       )
     },
     getCPPusings = function() {
-      unique(c(super$getCPPusings(),
-               if(!is.null(self$SEXPwrapper))
-                 self$SEXPwrapper$getCPPusings()
-               )
-             )
+      unique(c(
+        super$getCPPusings(),
+        if (!is.null(self$SEXPwrapper)) {
+          self$SEXPwrapper$getCPPusings()
+        }
+      ))
     },
     buildFunction = function(NF_Compiler,
                              parentST = NULL) {
-      cpp_nFunction_buildFunction(self,
-                                  NF_Compiler,
-                                  parentST)
+      cpp_nFunction_buildFunction(
+        self,
+        NF_Compiler,
+        parentST
+      )
       cpp_include_needed_nFunctions(self, NF_Compiler)
       cpp_include_needed_nClasses(self, NF_Compiler$symbolTable, NF_Compiler)
       cpp_include_aux_content(self, NF_Compiler)
-    }##,
+    } ## ,
     ## # There was a step of development where we used this as a way to
     ## # obtain information needed for post-processing after calling C++ compiler.
     ## # Now that need has gone away as the design has evolved. We keep the
@@ -152,17 +174,21 @@ cpp_nFunctionClass <- R6::R6Class(
 cpp_include_aux_content <- function(self,
                                     NF_Compiler) {
   ## Available aux content:
-  if(isTRUE(NF_Compiler$auxEnv$uses_nCppVec)) {
-    self$Hpreamble <- c(self$Hpreamble,
-                        "#define NCOMPILER_USES_NCPPVEC",
-                        "#define USES_NCOMPILER")
-    self$CPPpreamble <- c(self$CPPpreamble,
-                          "#define NCOMPILER_USES_NCPPVEC",
-                          "#define USES_NCOMPILER")
+  if (isTRUE(NF_Compiler$auxEnv$uses_nCppVec)) {
+    self$Hpreamble <- c(
+      self$Hpreamble,
+      "#define NCOMPILER_USES_NCPPVEC",
+      "#define USES_NCOMPILER"
+    )
+    self$CPPpreamble <- c(
+      self$CPPpreamble,
+      "#define NCOMPILER_USES_NCPPVEC",
+      "#define USES_NCOMPILER"
+    )
   }
   ## initializerList for a constructor
-  if(!is.null(NF_Compiler$NFinternals$aux)) {
-    if(!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
+  if (!is.null(NF_Compiler$NFinternals$aux)) {
+    if (!is.null(NF_Compiler$NFinternals$aux$initializerList_exprClasses)) {
       self$initializerList <-
         NF_Compiler$NFinternals$aux$initializerList_exprClasses
     }
@@ -171,12 +197,15 @@ cpp_include_aux_content <- function(self,
 
 cpp_include_needed_nFunctions <- function(cppDef,
                                           NF_Compiler) {
-  needed_cpp_code_names <- lapply(NF_Compiler$auxEnv$needed_nFunctions,
-                                  function(x)
-                                    NFinternals(nGet(x[[1]], where = x[[2]]))$cpp_code_name)
-  if(length(needed_cpp_code_names)) {
+  needed_cpp_code_names <- lapply(
+    NF_Compiler$auxEnv$needed_nFunctions,
+    function(x) {
+      NFinternals(nGet(x[[1]], where = x[[2]]))$cpp_code_name
+    }
+  )
+  if (length(needed_cpp_code_names)) {
     needed_filebases <- make_cpp_filebase(unlist(needed_cpp_code_names))
-    cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"',needed_filebases, '.h\"'))
+    cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"', needed_filebases, '.h\"'))
   }
   invisible(NULL)
 }
@@ -185,29 +214,37 @@ cpp_include_needed_nClasses <- function(cppDef,
                                         symTab,
                                         NF_Compiler = NULL) {
   new_Hincludes <- character()
-  for(i in seq_along(symTab$symbols)) {
-    if(inherits(symTab$symbols[[i]], "symbolNC")) {
+  for (i in seq_along(symTab$symbols)) {
+    if (inherits(symTab$symbols[[i]], "symbolNC")) {
       needed_nClass_cppname <- NCinternals(symTab$symbols[[i]]$NCgenerator)$cpp_classname
-      new_Hincludes <- c(new_Hincludes,
-                         paste0('\"',
-                                make_cpp_filebase(needed_nClass_cppname),
-                                '.h\"'))
+      new_Hincludes <- c(
+        new_Hincludes,
+        paste0(
+          '\"',
+          make_cpp_filebase(needed_nClass_cppname),
+          '.h\"'
+        )
+      )
     }
   }
   #  cppDef$CPPincludes <- c(cppDef$CPPincludes, paste0('\"', needed_nClass_cppname, '.h\"'))
-  if(!is.null(NF_Compiler)) {
+  if (!is.null(NF_Compiler)) {
     auxEnv_needed_nClasses <- NF_Compiler$auxEnv$needed_nClasses
-    for(i in seq_along(auxEnv_needed_nClasses)) {
-      if(isNCgenerator(auxEnv_needed_nClasses[[i]])) {
+    for (i in seq_along(auxEnv_needed_nClasses)) {
+      if (isNCgenerator(auxEnv_needed_nClasses[[i]])) {
         needed_nClass_cppname <- NCinternals(auxEnv_needed_nClasses[[i]])$cpp_classname
-        new_Hincludes <- c(new_Hincludes,
-                           paste0('\"',
-                                  make_cpp_filebase(needed_nClass_cppname),
-                                  '.h\"'))
+        new_Hincludes <- c(
+          new_Hincludes,
+          paste0(
+            '\"',
+            make_cpp_filebase(needed_nClass_cppname),
+            '.h\"'
+          )
+        )
       }
     }
   }
-  new_Hincludes <- unique(new_Hincludes)  
+  new_Hincludes <- unique(new_Hincludes)
   cppDef$Hincludes <- unique(c(cppDef$Hincludes, new_Hincludes))
   invisible(NULL)
 }
@@ -221,42 +258,56 @@ cpp_nFunction_buildFunction <- function(cppDef,
   symTab <- NF_Compiler$symbolTable
   argsCppSymTab <- ## arguments only
     symbolTable2cppSymbolTable(symTab,
-                               args = TRUE,
-                               parentSymbolTable = parentSymbolTable
+      args = TRUE,
+      parentSymbolTable = parentSymbolTable
     )
   cppDef$args <- argsCppSymTab
-  templateTypes <- unlist(lapply(argsCppSymTab$symbols,
-                                 function(x) {
-                                   if(substr(x$baseType, 1, 2) == "TT")
-                                     x$baseType
-                                   else
-                                     NULL
-                                 })
-  )
-  if(length(templateTypes) > 0)
+  templateTypes <- unlist(lapply(
+    argsCppSymTab$symbols,
+    function(x) {
+      if (substr(x$baseType, 1, 2) == "TT") {
+        x$baseType
+      } else {
+        NULL
+      }
+    }
+  ))
+  if (length(templateTypes) > 0) {
     cppDef$template <- cppTemplateDeclaration(templateTypes)
-  
+  }
+
   localVarsCppSymTab <- ## local variables
     symbolTable2cppSymbolTable(symTab,
-                               args = FALSE,
-                               parentSymbolTable = argsCppSymTab)
-  cppDef$code <- cppCodeBlockClass$new(code =  NF_Compiler$code,
-                                       symbolTable = localVarsCppSymTab)
-  if(is.null(NF_Compiler$returnSymbol))
-    stop(paste("returnType not valid.  If a nCompilerList is being",
-               "returned, returnType must be the name of the nCompilerList",
-               "definition."),
-         call. = FALSE
+      args = FALSE,
+      parentSymbolTable = argsCppSymTab
     )
+  cppDef$code <- cppCodeBlockClass$new(
+    code = NF_Compiler$code,
+    symbolTable = localVarsCppSymTab
+  )
+  if (is.null(NF_Compiler$returnSymbol)) {
+    stop(
+      paste(
+        "returnType not valid.  If a nCompilerList is being",
+        "returned, returnType must be the name of the nCompilerList",
+        "definition."
+      ),
+      call. = FALSE
+    )
+  }
   cppDef$returnType <-
     NF_Compiler$returnSymbol$genCppVar()
-  if(!cppDef$classMethod && !NF_Compiler$isAD)
-    if(isTRUE(cppDef$export))
-      cppDef$commentsAbove <- paste0('// [[Rcpp::export(name = "',cppDef$compileInfo$exportName,'")]]')
-  if(NF_Compiler$isAD)
+  if (!cppDef$classMethod && !NF_Compiler$isAD) {
+    if (isTRUE(cppDef$export)) {
+      cppDef$commentsAbove <- paste0('// [[Rcpp::export(name = "', cppDef$compileInfo$exportName, '")]]')
+    }
+  }
+  if (NF_Compiler$isAD) {
     cppDef$CPPincludes <- c(
       cppDef$CPPincludes,
-      nCompilerIncludeFile("nCompiler_CppAD.h"))
+      nCompilerIncludeFile("nCompiler_CppAD.h")
+    )
+  }
   ## For external calls:
   ## cppDef$CPPincludes <-
   ##     c(cppDef$CPPincludes,

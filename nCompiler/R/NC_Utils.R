@@ -7,22 +7,24 @@
 #' @return \code{TRUE} or \code{FALSE}
 #'
 #' @export
-isNC <- function(x) inherits(x, 'nClass')
+isNC <- function(x) inherits(x, "nClass")
 
 #' @export
-isCNC <- function(x) inherits(x, 'nClass') && isTRUE(x$isCompiled())
+isCNC <- function(x) inherits(x, "nClass") && isTRUE(x$isCompiled())
 
 #' @export
 compileInfo <- function(NC) {
-  if(!isNCgenerator(NC))
+  if (!isNCgenerator(NC)) {
     stop("NC must be a nClass generator (returned from nClass).")
+  }
   NCinternals(NC)$compileInfo
 }
 
 #' @export
 `compileInfo<-` <- function(NC, value) {
-  if(!isNCgenerator(NC))
+  if (!isNCgenerator(NC)) {
     stop("NC must be a nClass generator (returned from nClass).")
+  }
   NCinternals(NC)$compileInfo <- value
   NC
 }
@@ -37,10 +39,11 @@ compileInfo <- function(NC) {
 #'
 #' @export
 isNCgenerator <- function(x) {
-  if(inherits(x, "R6ClassGenerator"))
+  if (inherits(x, "R6ClassGenerator")) {
     exists(".nCompiler", x)
-  else
+  } else {
     FALSE
+  }
 }
 
 #' Determine if an object is a compiled nClass generator
@@ -53,10 +56,11 @@ isNCgenerator <- function(x) {
 #'
 #' @export
 isCompiledNCgenerator <- function(x) {
-  if(inherits(x, "R6ClassGenerator"))
+  if (inherits(x, "R6ClassGenerator")) {
     exists(".newCobjFun", x$parent_env)
-  else
+  } else {
     FALSE
+  }
 }
 
 #' Access internal information of a nClass object
@@ -67,14 +71,20 @@ isCompiledNCgenerator <- function(x) {
 #'
 #' @export
 NCinternals <- function(x) {
-  if(isNC(x))
-    stop("NCinternals for an nClass object is not supported.") # deprecated?: parent.env(x)$.NCinternals
-  else if(isNCgenerator(x))
+  if (isNC(x)) {
+    stop("NCinternals for an nClass object is not supported.")
+  } # deprecated?: parent.env(x)$.NCinternals
+  else if (isNCgenerator(x)) {
     x$.nCompiler
-  else
-    stop(paste('Invalid input to NCinternals.  Argument x is of invalid class',
-               paste(class(x), collapse = ',')),
-         call. = FALSE)
+  } else {
+    stop(
+      paste(
+        "Invalid input to NCinternals.  Argument x is of invalid class",
+        paste(class(x), collapse = ",")
+      ),
+      call. = FALSE
+    )
+  }
 }
 
 #' Set internal information of a nClass object
@@ -85,18 +95,24 @@ NCinternals <- function(x) {
 #'
 #' @export
 `NCinternals<-` <- function(x, value) {
-  if(isNC(x))
-    stop("NCinternals<- for an nClass object is not supported.") # deprecated?: parent.env(x)$.NCinternals <- value
-  else if(isNCgenerator(x))
+  if (isNC(x)) {
+    stop("NCinternals<- for an nClass object is not supported.")
+  } # deprecated?: parent.env(x)$.NCinternals <- value
+  else if (isNCgenerator(x)) {
     x$.nCompiler <- value
-  else
-    stop(paste('Invalid input to NCinternals<-.  Argument x is of invalid class',
-               paste(class(x), collapse = ',')),
-         call. = FALSE)
+  } else {
+    stop(
+      paste(
+        "Invalid input to NCinternals<-.  Argument x is of invalid class",
+        paste(class(x), collapse = ",")
+      ),
+      call. = FALSE
+    )
+  }
   x
 }
 
-symbol_find_overload <- function(symbol, name, stage, inherits=TRUE) {
+symbol_find_overload <- function(symbol, name, stage, inherits = TRUE) {
   overload <- symbol$overloadDefs[[name]][[stage]]
   overload # may be NULL
 }
@@ -129,22 +145,24 @@ symbol_find_overload <- function(symbol, name, stage, inherits=TRUE) {
 
 # Utility function to allow searching up an inheritance
 # ladder to find a method.
-NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
-  if(!isNCgenerator(NCgenerator))
+NC_find_method <- function(NCgenerator, name, inherits = TRUE) {
+  if (!isNCgenerator(NCgenerator)) {
     stop("Input must be a nClass generator.")
+  }
   current_NCgen <- NCgenerator
   done <- FALSE
   method <- NULL
-  while(!done) {
-    if(name %in% NCinternals(current_NCgen)$methodNames) {
+  while (!done) {
+    if (name %in% NCinternals(current_NCgen)$methodNames) {
       method <- NC_get_Cpub_class(current_NCgen)$public_methods[[name]]
       done <- TRUE
     } else {
-      if(inherits)  {
-        current_NCgen <- current_NCgen$get_inherit() #parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
+      if (inherits) {
+        current_NCgen <- current_NCgen$get_inherit() # parent_env$.inherit_obj # same as current_NCgen$get_inherit() if there is inheritance, but get_inherit returns the base class at the top
         done <- !isNCgenerator(current_NCgen)
-      } else
+      } else {
         done <- TRUE
+      }
     }
   }
   method
@@ -164,20 +182,25 @@ NC_find_method <- function(NCgenerator, name, inherits=TRUE) {
 #
 # The previous calls will have initialized NCint$check_inherit_done to FALSE
 NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
-  allow_method_overloading <- isTRUE(get_nOption('allow_method_overloading'))
-  allow_inherited_field_duplicates <- isTRUE(get_nOption('allow_inherited_field_duplicates'))
-  if(allow_method_overloading && allow_inherited_field_duplicates) return(invisible(NULL))
+  allow_method_overloading <- isTRUE(get_nOption("allow_method_overloading"))
+  allow_inherited_field_duplicates <- isTRUE(get_nOption("allow_inherited_field_duplicates"))
+  if (allow_method_overloading && allow_inherited_field_duplicates) {
+    return(invisible(NULL))
+  }
 
-  if(!isNCgenerator(NCgenerator))
+  if (!isNCgenerator(NCgenerator)) {
     stop("Input to NC_check_inheritance must be a nClass generator.")
+  }
   NCint <- NCinternals(NCgenerator)
 
-  if(is.null(NCint$inheritQ)) {
+  if (is.null(NCint$inheritQ)) {
     inheritInfo$check_inherit_done <- TRUE
     inheritInfo$virtualMethodNames <- NCint$virtualMethodNames
     return(inheritInfo$virtualMethodNames)
   }
-  if(inheritInfo$check_inherit_done) return(inheritInfo$virtualMethodNames)
+  if (inheritInfo$check_inherit_done) {
+    return(inheritInfo$virtualMethodNames)
+  }
   # At this point, we have inheritance and have checked this NCgenerator yet.
   inheritNCinternals <- inheritInfo$inheritNCinternals
   inheritNCgenerator <- eval(NCint$inheritQ, envir = NCint$env)
@@ -187,16 +210,17 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
   # which can be accessed from the NCgenerator but not the NCinternals.
   # That is why this function is not a method of NCinternals.
   inherit_virtualMethodNames <- NC_check_inheritance(inheritNCgenerator, parent_nClass_Info$inheritInfo,
-                                                      project_env = project_env)
+    project_env = project_env
+  )
   new_virtualMethodNames <- character()
 
-  if(!allow_method_overloading) {
+  if (!allow_method_overloading) {
     # default: check for disallowed method overloading
     allMethodNames <- inheritInfo$allMethodNames
-    for(mN in allMethodNames) {
+    for (mN in allMethodNames) {
       # if a method is not in the self method names, it was inherited, so there is nothing to check
-      if(!(mN %in% NCint$methodNames)) next
-      if(!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
+      if (!(mN %in% NCint$methodNames)) next
+      if (!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
         # current level is the first one with this method name, so here we tag its virtual status
         new_virtualMethodNames <- c(new_virtualMethodNames, mN)
         next
@@ -204,45 +228,62 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
       # At this point the current level has the method and it is inherited
       localMethod <- NC_get_Cpub_class(NCgenerator)$public_methods[[mN]]
       inheritMethod <- NC_find_method(inheritNCgenerator, mN)
-      if(is.null(inheritMethod))
+      if (is.null(inheritMethod)) {
         stop("Problem finding inherited method ", mN, " in NC_check_inheritance.", call. = FALSE)
-      if(!NF_types_match(localMethod, inheritMethod))
-        stop(paste0("Method ", mN, " does not have the same arguments names,",
-                    " and/or argument types, and/or returnType as a base class method of the same name.",
-                    " Methods of the same name in an nClass hierarchy must have all of these the same",
-                    " and the top-level one must be marked with compileInfo(virtual=TRUE).",
-                    " (If you want to allow method overloading in C++ by turning off these requirements,",
-                    " set nOptions(allow_method_overloading=TRUE)"),
-             call. = FALSE)
-      if(!(mN %in% inherit_virtualMethodNames))
-        stop(paste0("Method ", mN, " is inherited, so",
-                " it must be marked with compileInfo(virtual=TRUE) in the top-level nClass that includes it.",
-                " That does not appear to be the case.",
-                " (If you want to allow method over-loading in C++ by turning off this requirement,",
-                " set nOptions(allow_method_overloading=TRUE)"),
-          call. = FALSE)
+      }
+      if (!NF_types_match(localMethod, inheritMethod)) {
+        stop(
+          paste0(
+            "Method ", mN, " does not have the same arguments names,",
+            " and/or argument types, and/or returnType as a base class method of the same name.",
+            " Methods of the same name in an nClass hierarchy must have all of these the same",
+            " and the top-level one must be marked with compileInfo(virtual=TRUE).",
+            " (If you want to allow method overloading in C++ by turning off these requirements,",
+            " set nOptions(allow_method_overloading=TRUE)"
+          ),
+          call. = FALSE
+        )
+      }
+      if (!(mN %in% inherit_virtualMethodNames)) {
+        stop(
+          paste0(
+            "Method ", mN, " is inherited, so",
+            " it must be marked with compileInfo(virtual=TRUE) in the top-level nClass that includes it.",
+            " That does not appear to be the case.",
+            " (If you want to allow method over-loading in C++ by turning off this requirement,",
+            " set nOptions(allow_method_overloading=TRUE)"
+          ),
+          call. = FALSE
+        )
+      }
     }
   }
-  if(!allow_inherited_field_duplicates) {
+  if (!allow_inherited_field_duplicates) {
     # This would be slightly more efficient to do in NC_InternalsClass::process_inherit
     # but we keep it here so all the checking is together here.
     #
     # If any of my own field names already existed from my inherited classes,
     # that's not allowed
     badFields <- NCint$fieldNames %in% parent_nClass_Info$inheritInfo$allFieldNames
-    if(any(badFields))
-      stop(paste0("Problem with field(s): ", paste(NCint$fieldNames[badFields], collapse = ", "),
-                  ". Fields with the same name are not allowed in base and inherited classes.",
-                  " (If you want to allow local fields of the same name in C++ by turning off this requirement,",
-                " set nOptions(allow_inherited_field_duplicates=TRUE)"),
-           call. = FALSE  )
+    if (any(badFields)) {
+      stop(
+        paste0(
+          "Problem with field(s): ", paste(NCint$fieldNames[badFields], collapse = ", "),
+          ". Fields with the same name are not allowed in base and inherited classes.",
+          " (If you want to allow local fields of the same name in C++ by turning off this requirement,",
+          " set nOptions(allow_inherited_field_duplicates=TRUE)"
+        ),
+        call. = FALSE
+      )
+    }
   }
   inheritInfo$check_inherit_done <- TRUE
   c(new_virtualMethodNames, inherit_virtualMethodNames)
 }
 
 NC_get_Cpub_class <- function(NCgenerator) {
-  if(!isNCgenerator(NCgenerator))
+  if (!isNCgenerator(NCgenerator)) {
     stop("Input to NC_get_Cpub_class must be a nClass generator.")
+  }
   NCgenerator$parent_env$.Cpub_class
 }

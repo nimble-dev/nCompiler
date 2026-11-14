@@ -1,12 +1,12 @@
 ## A loadedObjectEnv is simply an environment that holds
 ## an external pointer to a C++ object and/or a serialization
 ## of that object.  This facilitates saving and loading via
-## R's serialization mechanisms.  One will first need to 
+## R's serialization mechanisms.  One will first need to
 ## explicitly serialize the C++ objects via a simple
 ## interface.  Then they can be saved as regular R
 ## objects.  Since R's saving and loading serialization
-## manages environments correctly (i.e. without redundantly 
-## saving multiple copies), the same will be true for 
+## manages environments correctly (i.e. without redundantly
+## saving multiple copies), the same will be true for
 ## the serialized contents of nClass objects.
 
 ## The system could be organized using R6 classes or the like,
@@ -16,9 +16,11 @@
 #' @export
 new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
   ans <- new.env()
-  if(!is.null(parentEnv)) 
-    if(!identical(parentEnv, .GlobalEnv)) #.GlobalEnv is default of an Rcpp::Environment object
+  if (!is.null(parentEnv)) {
+    if (!identical(parentEnv, .GlobalEnv)) { # .GlobalEnv is default of an Rcpp::Environment object
       parent.env(ans) <- parentEnv
+    }
+  }
   ans$extptr <- extptr
   class(ans) <- "loadedObjectEnv"
   ans
@@ -26,27 +28,33 @@ new.loadedObjectEnv <- function(extptr = NULL, parentEnv = NULL) {
 
 #' @export
 to_full_interface <- function(LOE) {
-#  parentEnv <- parent.env(LOE)
-  if(!is.loadedObjectEnv(LOE)) {
-    if(isCNC(obj)) return(LOE)
-    else stop("LOE should be a loadedObjectEnv")
+  #  parentEnv <- parent.env(LOE)
+  if (!is.loadedObjectEnv(LOE)) {
+    if (isCNC(obj)) {
+      return(LOE)
+    } else {
+      stop("LOE should be a loadedObjectEnv")
+    }
   }
   CnCenv <- get_CnCenv(LOE)
-  if(exists('.R6interface', CnCenv)) {
+  if (exists(".R6interface", CnCenv)) {
     fullAns <- CnCenv$.R6interface$new(CppObj = LOE)
     return(fullAns)
   }
   LOE # default to non-full
 }
 
-#'@export
+#' @export
 to_generic_interface <- function(obj) {
-  if(!isCNC(obj)) {
-    if(is.loadedObjectEnv(obj)) return(obj)
-    else stop("obj should be a compiled nClass object")
+  if (!isCNC(obj)) {
+    if (is.loadedObjectEnv(obj)) {
+      return(obj)
+    } else {
+      stop("obj should be a compiled nClass object")
+    }
   }
   obj$private$Cpublic_obj$private$CppObj
-}  
+}
 
 #' @export
 new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = NULL) {
@@ -54,10 +62,10 @@ new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = 
   # When is_full is NULL, we follow the default for the class (return_mode below)
   # When is_full is provided, we over-ride the default.
   ans <- new.loadedObjectEnv(extptr, parentEnv)
-  if(!is.null(parentEnv)) { # This doesn't really do anything
-    if(exists('.R6interface', parentEnv)) {
+  if (!is.null(parentEnv)) { # This doesn't really do anything
+    if (exists(".R6interface", parentEnv)) {
       is_full <- is_full %||% (parentEnv$return_mode == "full")
-      if(is_full) {
+      if (is_full) {
         fullAns <- parentEnv$.R6interface$new(CppObj = ans)
         return(fullAns)
       }
@@ -68,39 +76,43 @@ new.loadedObjectEnv_full <- function(extptr = NULL, parentEnv = NULL, is_full = 
 
 #' @export
 isCompiled <- function(obj) {
-  if(inherits(obj, "nClass"))
+  if (inherits(obj, "nClass")) {
     isTRUE(obj$isCompiled())
-  else 
-   is.loadedObjectEnv(obj)
+  } else {
+    is.loadedObjectEnv(obj)
+  }
 }
 
 #' @export
 is.loadedObjectEnv <- function(env) {
   ## The checks here may be over-kill.
   ## We may be able to rely solely on the class label.
-#
-#  if(!is.environment(env)) return(FALSE)
-#  if(!exists("extptr", where = env)) return(FALSE)
-#  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
-#.  else TRUE
-  if(inherits(env, "loadedObjectEnv"))
+  #
+  #  if(!is.environment(env)) return(FALSE)
+  #  if(!exists("extptr", where = env)) return(FALSE)
+  #  if(class(env)[1] != "loadedObjectEnv") return(FALSE)
+  # .  else TRUE
+  if (inherits(env, "loadedObjectEnv")) {
     TRUE
-  else
+  } else {
     FALSE
+  }
 }
 
 #' @export
 getExtptr <- function(env) {
-    ## If env$extptr ever changes, the C++ code for as< std::shared_ptr< T > > should also be changed.
-    ## This is written as a custom Exporter added to namespace Rcpp::traits
-  if(!is.loadedObjectEnv(env))
+  ## If env$extptr ever changes, the C++ code for as< std::shared_ptr< T > > should also be changed.
+  ## This is written as a custom Exporter added to namespace Rcpp::traits
+  if (!is.loadedObjectEnv(env)) {
     stop("env should be a loadedObjectEnv")
+  }
   env$extptr
 }
 
 setExtptr <- function(env, xptr) {
-  if(!is.loadedObjectEnv(env))
+  if (!is.loadedObjectEnv(env)) {
     stop("env should be a loadedObjectEnv")
+  }
   env$extptr <- xptr
   env
 }
@@ -112,28 +124,38 @@ make_DLLenv <- function() {
 }
 
 get_DLLenv <- function(obj) {
-  if(class(obj)[1] == "CnClass_env") parent.env(obj)
-  else if(class(obj)[1] == "loadedObjectEnv")
+  if (class(obj)[1] == "CnClass_env") {
+    parent.env(obj)
+  } else if (class(obj)[1] == "loadedObjectEnv") {
     parent.env(parent.env(obj))
-  else
+  } else {
     stop("DLLenv not available.")
+  }
 }
 
 #' @export
 DLLenv <- function(obj) get_DLLenv(obj)
 
-DLLpackageName <- function(obj)
+DLLpackageName <- function(obj) {
   environmentName(environment(get_DLLenv(obj)$call_method))
+}
 
 is.CnC_env <- function(env) {
-  if(!is.environment(env)) return(FALSE)
-  if(class(env)[1] != "CnClass_env") return(FALSE)
+  if (!is.environment(env)) {
+    return(FALSE)
+  }
+  if (class(env)[1] != "CnClass_env") {
+    return(FALSE)
+  }
   TRUE
 }
 
 get_CnCenv <- function(obj) {
-  if(class(obj)[1] == "loadedObjectEnv") parent.env(obj)
-  else stop("CnCenv not available.")
+  if (class(obj)[1] == "loadedObjectEnv") {
+    parent.env(obj)
+  } else {
+    stop("CnCenv not available.")
+  }
 }
 
 # This will be called from nCompile and nCompile_nClass
@@ -146,19 +168,25 @@ setup_nClass_environments <- function(compiledFuns,
                                       methodFns,
                                       interfaceTypes,
                                       returnList = FALSE) {
-  if(missing(newDLLenv)) newDLLenv <- make_DLLenv()
+  if (missing(newDLLenv)) newDLLenv <- make_DLLenv()
   compiledFuns <- setup_DLLenv(compiledFuns, newDLLenv, returnList = FALSE)
-  for(i in seq_along(exportNames)) {
-    compiledFuns <- setup_CnClass_env(compiledFuns,
-                                      newDLLenv,
-                                      exportNames[i],
-                                      NCgenerators[[i]],
-                                      methodFns[[i]],
-                                      interfaceTypes[i])
+  for (i in seq_along(exportNames)) {
+    compiledFuns <- setup_CnClass_env(
+      compiledFuns,
+      newDLLenv,
+      exportNames[i],
+      NCgenerators[[i]],
+      methodFns[[i]],
+      interfaceTypes[i]
+    )
   }
-  if(is.list(compiledFuns)) compiledFuns
-  else if(returnList) list(compiledFuns)
-  else compiledFuns
+  if (is.list(compiledFuns)) {
+    compiledFuns
+  } else if (returnList) {
+    list(compiledFuns)
+  } else {
+    compiledFuns
+  }
 }
 
 #' @export
@@ -168,47 +196,58 @@ setup_nClass_environments_from_package <- function(nClass_exportNames,
                                                    CnCgenerators,
                                                    methodFns,
                                                    pkgName) {
-                                        # nClass_names will really be exportNames
+  # nClass_names will really be exportNames
   message("setup_nClass_environments_from_package should support interface 'none' cases.")
-  if(missing(pkgName)) pkgName <- evalq(packageName(), envir=parent.frame())
+  if (missing(pkgName)) pkgName <- evalq(packageName(), envir = parent.frame())
   packageEnv <- getNamespace(pkgName)
   DLLenv <- make_DLLenv() # This is the spot to change the parent.env of the DLLenv if necessary (currently it will be the nCompiler namespace)
   reqdFuns <- character()
-  if(any(interfaceTypes!="none"))
-    reqdFuns <- c(reqdFuns,
-                  "call_method",
-                  "get_value",
-                  "set_value",
-                  "get_names")
-  for(i in seq_along(interfaceTypes)) {
-    if(createFromR[i])
+  if (any(interfaceTypes != "none")) {
+    reqdFuns <- c(
+      reqdFuns,
+      "call_method",
+      "get_value",
+      "set_value",
+      "get_names"
+    )
+  }
+  for (i in seq_along(interfaceTypes)) {
+    if (createFromR[i]) {
       reqdFuns <- c(reqdFuns, nClass_exportNames[i])
-    if(interfaceTypes[i] != "none")
-      reqdFuns <- c(reqdFuns, paste0("set_CnClass_env_", nClass_exportNames[i]) )
+    }
+    if (interfaceTypes[i] != "none") {
+      reqdFuns <- c(reqdFuns, paste0("set_CnClass_env_", nClass_exportNames[i]))
+    }
   }
-  optFuns <- c("new_serialization_mgr",
-               "nComp_serialize_",
-               "nComp_deserialize_")
+  optFuns <- c(
+    "new_serialization_mgr",
+    "nComp_serialize_",
+    "nComp_deserialize_"
+  )
   compiledFuns <- list()
-  get_fn <- function(fn, warn=FALSE) {
-    if(exists(fn, envir = packageEnv, inherits=FALSE))
-      compiledFuns[[fn]] <<- get(fn, envir=packageEnv, inherits=FALSE)
-    else
-      if(warn)
-        warning(
-          paste0("function ", fn,
-                 " was expected but does not exist in the package namespace."))
+  get_fn <- function(fn, warn = FALSE) {
+    if (exists(fn, envir = packageEnv, inherits = FALSE)) {
+      compiledFuns[[fn]] <<- get(fn, envir = packageEnv, inherits = FALSE)
+    } else if (warn) {
+      warning(
+        paste0(
+          "function ", fn,
+          " was expected but does not exist in the package namespace."
+        )
+      )
+    }
   }
-  for(fn in reqdFuns) get_fn(fn, TRUE)
-  for(fn in optFuns) get_fn(fn, FALSE)
+  for (fn in reqdFuns) get_fn(fn, TRUE)
+  for (fn in optFuns) get_fn(fn, FALSE)
   # TO-DO: Case when CnCgenerators are set up
   setup_nClass_environments(compiledFuns,
-                            DLLenv,
-                            exportNames = nClass_exportNames,
-                            CnCgenerators,
-                            methodFns,
-                            interfaceTypes,
-                            returnList = TRUE)
+    DLLenv,
+    exportNames = nClass_exportNames,
+    CnCgenerators,
+    methodFns,
+    interfaceTypes,
+    returnList = TRUE
+  )
 }
 
 setup_CnClass_env <- function(compiledFuns,
@@ -222,31 +261,33 @@ setup_CnClass_env <- function(compiledFuns,
   # That would only be a bit useful for debugging. But the point of get_CnClass_env_<name>
   # is that without an object, there is no other way to find the CnClass_env.
   fun_names <- c(set_nClass_env_name)
-  
+
   CnClass_env <- new.env(parent = DLLenv)
   class(CnClass_env) <- "CnClass_env"
-  
-  compiledFuns <- move_funs_from_list_to_env(fun_names, compiledFuns,
-                                             CnClass_env)
-  if(exists(set_nClass_env_name, envir = CnClass_env, inherits=FALSE)) {
+
+  compiledFuns <- move_funs_from_list_to_env(
+    fun_names, compiledFuns,
+    CnClass_env
+  )
+  if (exists(set_nClass_env_name, envir = CnClass_env, inherits = FALSE)) {
     CnClass_env[[set_nClass_env_name]](CnClass_env)
   }
   CnClass_env$.R6interface <- R6interface
   CnClass_env$return_mode <- interfaceType
-  for(i in seq_along(methodFns)) {
+  for (i in seq_along(methodFns)) {
     CnClass_env[[names(methodFns)[i]]] <- methodFns[[i]]
-    environment( CnClass_env[[names(methodFns)[i]]] ) <- CnClass_env
+    environment(CnClass_env[[names(methodFns)[i]]]) <- CnClass_env
   }
   compiledFuns
 }
 
 # This function takes as input the results of a call to sourceCpp (compiledFuns)
 # and an environment to use as the DLL environment.
-# 
+#
 # The DLL environment will hold DLL-level compiled functions, such as those
 # for serialization and deserializtion.
 #
-# compiled nClass environments (CnCenv) will have a DLL env as their 
+# compiled nClass environments (CnCenv) will have a DLL env as their
 # parent environment.
 #
 # Individual nClass object extptr's will be in a loadedObjectEnv,
@@ -258,25 +299,30 @@ setup_CnClass_env <- function(compiledFuns,
 # It returns an updated compiledFuns list, or function
 # if there is only one left after removing DLL functions
 # and if returnList == FALSE.
-setup_DLLenv <- function(compiledFuns, 
+setup_DLLenv <- function(compiledFuns,
                          newDLLenv,
                          returnList = FALSE) {
   # If there is any serialization etc., compiledFuns must be a list.
   # Hence, if compiledFuns is not a list, there can't be any DLL funs
   # to move to the DLL env.
-  if(!is.list(compiledFuns)) return(compiledFuns) 
-  namesForDLLenv <- c("nComp_serialize_",
-                      "nComp_deserialize_",
-                      "new_serialization_mgr",
-                      "get_value",
-                      "set_value",
-                      "call_method",
-                      "get_names"
-                      )
-  
-  compiledFuns <- move_funs_from_list_to_env(namesForDLLenv,
-                                             compiledFuns, newDLLenv)
-  
+  if (!is.list(compiledFuns)) {
+    return(compiledFuns)
+  }
+  namesForDLLenv <- c(
+    "nComp_serialize_",
+    "nComp_deserialize_",
+    "new_serialization_mgr",
+    "get_value",
+    "set_value",
+    "call_method",
+    "get_names"
+  )
+
+  compiledFuns <- move_funs_from_list_to_env(
+    namesForDLLenv,
+    compiledFuns, newDLLenv
+  )
+
   # keep <- rep(TRUE, length(compiledFuns))
   # for(DLLname in namesForDLLenv) {
   #   found <- grepl(DLLname, names(compiledFuns))
@@ -289,25 +335,31 @@ setup_DLLenv <- function(compiledFuns,
   #   }
   # }
   # if(!all(keep)) compiledFuns <- compiledFuns[keep]
-  if(!returnList)
-      if(length(compiledFuns) == 1) compiledFuns[[1]]
-      else compiledFuns
-  else compiledFuns
+  if (!returnList) {
+    if (length(compiledFuns) == 1) {
+      compiledFuns[[1]]
+    } else {
+      compiledFuns
+    }
+  } else {
+    compiledFuns
+  }
 }
 
 move_funs_from_list_to_env <- function(funNames, funList, env) {
   keep <- rep(TRUE, length(funList))
-  for(funName in funNames) {
-    found <- funName == names(funList) #grepl(funName, names(funList))
-    if(any(found)) {
+  for (funName in funNames) {
+    found <- funName == names(funList) # grepl(funName, names(funList))
+    if (any(found)) {
       i <- which(found)
-      if(length(i) != 1)
+      if (length(i) != 1) {
         stop("Something is wrong with names returned from compilation.")
+      }
       keep[i] <- FALSE
       env[[funName]] <- funList[[i]]
     }
   }
-  if(!all(keep)) funList <- funList[keep]
+  if (!all(keep)) funList <- funList[keep]
   funList
 }
 

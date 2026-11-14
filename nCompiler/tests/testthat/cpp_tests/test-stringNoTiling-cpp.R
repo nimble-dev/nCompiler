@@ -5,8 +5,9 @@
 library(Rcpp)
 test_that("Eigen does not use tiled evaluation for std::string tensors", {
   cppfile <- system.file(
-    file.path('tests', 'testthat', 'cpp', 'stringNoTiling_tests.cpp'),
-    package = 'nCompiler')
+    file.path("tests", "testthat", "cpp", "stringNoTiling_tests.cpp"),
+    package = "nCompiler"
+  )
   test <- nCompiler:::QuietSourceCpp(cppfile)
 
   tileable <- stringNoTiling_isTileable()

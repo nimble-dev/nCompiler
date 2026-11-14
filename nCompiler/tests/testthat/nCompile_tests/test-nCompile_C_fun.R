@@ -8,7 +8,7 @@ test_that("C_fun works in an nFunction", {
   # 3. By default, changeKeywords does not happen, so "nStep" instead of "step"
   foo <- nFunction(
     fun = function(x, y, z) {
-      x+1
+      x + 1
     },
     compileInfo = list(
       C_fun = function(x, y, z) {
@@ -16,8 +16,8 @@ test_that("C_fun works in an nFunction", {
         return(ans)
       }
     ),
-    argTypes = list(x='numericVector',y='numericScalar', z='numericScalar'),
-    returnType = 'numericVector'
+    argTypes = list(x = "numericVector", y = "numericScalar", z = "numericScalar"),
+    returnType = "numericVector"
   )
 
   expect_equal(foo(3), 4)
@@ -29,7 +29,7 @@ test_that("C_fun errors out in an nFunction from not changing keywords ", {
   # Now expect and error if "step" was used
   foo <- nFunction(
     fun = function(x, y, z) {
-      x+1
+      x + 1
     },
     compileInfo = list(
       C_fun = function(x, y, z) {
@@ -37,8 +37,8 @@ test_that("C_fun errors out in an nFunction from not changing keywords ", {
         return(ans)
       }
     ),
-    argTypes = list(x='numericVector',y='numericScalar', z='numericScalar'),
-    returnType = 'numericVector'
+    argTypes = list(x = "numericVector", y = "numericScalar", z = "numericScalar"),
+    returnType = "numericVector"
   )
 
   cat("Expected error message about no op def for step.\n")
@@ -49,18 +49,19 @@ test_that("C_fun works in an nFunction with changeKeywords=TRUE", {
   # Now step is ok b/c control$changeKeywords is TRUE
   foo <- nFunction(
     fun = function(x, y, z) {
-      x+1
+      x + 1
     },
     compileInfo = list(
       C_fun = function(x, y, z) {
         ans <- x + y + step(z)
         return(ans)
-      }),
-    control = list(
-      changeKeywords=TRUE
+      }
     ),
-    argTypes = list(x='numericVector',y='numericScalar', z='numericScalar'),
-    returnType = 'numericVector'
+    control = list(
+      changeKeywords = TRUE
+    ),
+    argTypes = list(x = "numericVector", y = "numericScalar", z = "numericScalar"),
+    returnType = "numericVector"
   )
   expect_equal(foo(3), 4)
   cfoo <- nCompile(foo)
@@ -70,21 +71,22 @@ test_that("C_fun works in an nFunction with changeKeywords=TRUE", {
 test_that("C_fun works in an nClass method", {
   foo <- nFunction(
     fun = function(x, y, z) {
-      x+1
+      x + 1
     },
     compileInfo = list(
       C_fun = function(x, y, z) {
         ans <- x + y + step(z)
         return(ans)
-      }),
-    control = list(
-      changeKeywords=TRUE
+      }
     ),
-    argTypes = list(x='numericVector',y='numericScalar', z='numericScalar'),
-    returnType = 'numericVector'
+    control = list(
+      changeKeywords = TRUE
+    ),
+    argTypes = list(x = "numericVector", y = "numericScalar", z = "numericScalar"),
+    returnType = "numericVector"
   )
   fooClass <- nClass(
-    Cpublic=list(foo=foo)
+    Cpublic = list(foo = foo)
   )
   obj <- fooClass$new()
   expect_equal(obj$foo(3), 4)

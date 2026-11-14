@@ -19,26 +19,28 @@ make_argType_tuples <- function(..., rhs = NULL) {
   argTypes <- c(...)
   if (is.null(rhs)) rhs <- argTypes
   ans <- as.list(
-    data.frame(t(expand.grid(argTypes, rhs)), stringsAsFactors=FALSE)
+    data.frame(t(expand.grid(argTypes, rhs)), stringsAsFactors = FALSE)
   )
   names(ans) <- NULL
   ans
 }
 
 make_input <- function(argTypes, input_gen_funs = NULL) {
-  if (is.null(input_gen_funs) || is.null(names(input_gen_funs)))
-    if (length(input_gen_funs) <= 1)
+  if (is.null(input_gen_funs) || is.null(names(input_gen_funs))) {
+    if (length(input_gen_funs) <= 1) {
       input <- lapply(argTypes, argType_2_input, input_gen_funs)
-  else
-    stop(
-      'input_gen_funs of length greater than 1 must have names',
-      call. = FALSE
-    )
-  else {
+    } else {
+      stop(
+        "input_gen_funs of length greater than 1 must have names",
+        call. = FALSE
+      )
+    }
+  } else {
     input <- sapply(
       names(argTypes),
-      function(name)
-        argType_2_input(!!argTypes[[name]], input_gen_funs[[name]]),
+      function(name) {
+        argType_2_input(!!argTypes[[name]], input_gen_funs[[name]])
+      },
       simplify = FALSE
     )
   }
@@ -57,58 +59,62 @@ make_input <- function(argTypes, input_gen_funs = NULL) {
 ## Takes an argSymbol and if argSymbol$size is NA adds default sizes.
 add_missing_size <- function(argSymbol, vector_size = 3, matrix_size = c(3, 4),
                              array_size = c(3, 4, 5)) {
-  if (argSymbol$nDim > 3)
+  if (argSymbol$nDim > 3) {
     stop(
-      'Testing does not currently support args with nDim > 3',
+      "Testing does not currently support args with nDim > 3",
       call. = FALSE
     )
-  if (any(is.na(argSymbol$size)))
+  }
+  if (any(is.na(argSymbol$size))) {
     argSymbol$size <- switch(argSymbol$nDim,
-                             vector_size,
-                             matrix_size,
-                             array_size)
+      vector_size,
+      matrix_size,
+      array_size
+    )
+  }
   invisible(argSymbol)
 }
 
 argType_2_input <- function(argType, input_gen_fun = NULL) {
   targType <- nCaptureType(argType)
   argSymbol <- add_missing_size(
-    `:::`("nCompiler", "type2symbol")({{targType}})
+    `:::`("nCompiler", "type2symbol")({{ targType }})
   )
   type <- argSymbol$type
   nDim <- argSymbol$nDim
   size <- argSymbol$size
-  if (is.null(input_gen_fun))
+  if (is.null(input_gen_fun)) {
     input_gen_fun <- function(arg_size, arg_type) {
-      switch(
-        arg_type,
+      switch(arg_type,
         "double"  = rnorm(prod(arg_size)),
         "integer" = rgeom(prod(arg_size), 0.5),
         "logical" = sample(c(TRUE, FALSE), prod(arg_size), replace = TRUE)
       )
     }
-  arg <- switch(
-    nDim + 1,
+  }
+  arg <- switch(nDim + 1,
     input_gen_fun(1, type), ## nDim is 0
     input_gen_fun(size, type), ## nDim is 1
     matrix(input_gen_fun(size, type), nrow = size[1], ncol = size[2]), ## nDim is 2
     array(input_gen_fun(size, type), dim = size) ## nDim is 3
   )
-  if (is.null(arg))
-    stop('Something went wrong while making test input.', call.=FALSE)
+  if (is.null(arg)) {
+    stop("Something went wrong while making test input.", call. = FALSE)
+  }
   return(arg)
 }
 
 gen_nFunction <- function(param) {
   fun <- function() {}
-  formals(fun) <- lapply(param$argTypes, function(x) quote(expr=))
+  formals(fun) <- lapply(param$argTypes, function(x) quote(expr = ))
   tmp <- quote({})
   tmp[[2]] <- param$expr
   tmp[[3]] <- quote(return(ans))
   body(fun) <- tmp
   return(
     nFunction(
-      fun, argTypes = param$argTypes, returnType = !!(param$returnType)
+      fun,
+      argTypes = param$argTypes, returnType = !!(param$returnType)
     )
   )
 }
@@ -137,16 +143,17 @@ gen_nClass <- function(param) {
 ##
 ## TODO: add argument descriptions
 ##
-test_base <- function(param_list, test_name = '', test_fun = NULL,
+test_base <- function(param_list, test_name = "", test_fun = NULL,
                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
-                      control = list(), verbose = nOptions('verbose'),
+                      control = list(), verbose = nOptions("verbose"),
                       compile_all_funs = FALSE, gold_test = FALSE,
                       suppress_err_msgs = TRUE, skip_known_failures = FALSE,
                       ...) {
   # TODO: port over the nimble AD testing knownFailure setup
   compile_error <- sapply(
-    param_list, function(param)
+    param_list, function(param) {
       isTRUE(param$compilation_failure)
+    }
   )
 
   ## only test knownFailures in full testing
@@ -155,22 +162,29 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
     error_params <- param_list[compile_error]
     if (length(error_params) > 0) {
       nFuns_error <- lapply(error_params, gen_nFunction)
-      names(nFuns_error) <- paste0('nFun_error', 1:length(nFuns_error))
+      names(nFuns_error) <- paste0("nFun_error", 1:length(nFuns_error))
       for (i in seq_along(nFuns_error)) {
-        if (verbose) cat(paste0('### Known compilation failure: ',
-                               error_params[[i]]$name, ' ###\n'))
+        if (verbose) {
+          cat(paste0(
+            "### Known compilation failure: ",
+            error_params[[i]]$name, " ###\n"
+          ))
+        }
         nC_error <- gen_nClass(
           list(
             Cpublic = nFuns_error[i],
-            enableDerivs = if (isTRUE(error_params[[i]]$enableDerivs))
-              names(nFuns_error)[i] else NULL
+            enableDerivs = if (isTRUE(error_params[[i]]$enableDerivs)) {
+              names(nFuns_error)[i]
+            } else {
+              NULL
+            }
           )
         )
         test_that(paste0(test_name, " knownFailures fail to compile"), {
           if (suppress_err_msgs) {
             expect_error(capture.output(
-              nCompile(nC_error, control = control)))
-
+              nCompile(nC_error, control = control)
+            ))
           } else {
             expect_error(nCompile(nC_error, control = control))
           }
@@ -189,15 +203,15 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
   ##  leaving finalizers that destruct shared_ptrs whose underlying object implementations
   ##  are unloaded, giving a crash.
   ## That is also the reason for the defensive gc() at the end of this function.
-  if(gold_test)
+  if (gold_test) {
     `:::`("nCompiler", "resetLabelFunctionCreators")()
+  }
 
   nFuns <- lapply(compiles, gen_nFunction)
 
   retVal <- if (length(nFuns) > 0) {
-
     nFun_names <- names(nFuns) ## for verbose output
-    names(nFuns) <- paste0('nFun', 1:length(nFuns))
+    names(nFuns) <- paste0("nFun", 1:length(nFuns))
 
     enableDerivs_filter <- sapply(compiles, function(param) {
       isTRUE(param$enableDerivs)
@@ -211,33 +225,36 @@ test_base <- function(param_list, test_name = '', test_fun = NULL,
     ## if gold_test is TRUE, go directly to nCompiler stages without any
     ## checking for knownFailures and without proceeding to C++ compilation
     if (isTRUE(gold_test)) {
-      control$endStage <- 'makeRcppPacket'
+      control$endStage <- "makeRcppPacket"
       ## make sure generated class / function names are the same every time
       return(
         test_gold_file(
-          nCompile(nC, control = control), test_name, ...)
+          nCompile(nC, control = control), test_name, ...
+        )
       )
     } else if (compile_all_funs) {
       ## useful for debugging an nClass compilation failure
       ## e.g. test_math(binaryOpTests[['+']], compile_all_funs = TRUE)
       for (i in seq_along(nFuns)) {
-        if (verbose)
-          cat(paste('### Compiling function for test of:', nFun_names[i], '###\n'))
+        if (verbose) {
+          cat(paste("### Compiling function for test of:", nFun_names[i], "###\n"))
+        }
         nCompile(nFuns[[i]], control = control)
       }
     }
-    if (is.function(test_fun))
+    if (is.function(test_fun)) {
       test_fun( # run remainder of test
         list(param_list = compiles, nC = nC, test_name = test_name),
         control = control, verbose = verbose, ...
       )
+    }
   }
   gc() ## This is defensive, because a crash can arise from finalizing an object whose DLL has been unloaded, so we force finalizations here.
   retVal
 }
 
 wrap_if_matches <- function(pattern, string, wrapper, expr) {
-  if (!is.null(pattern) && any(grepl(paste0('^', pattern, '$'), string))) {
+  if (!is.null(pattern) && any(grepl(paste0("^", pattern, "$"), string))) {
     wrapper(expr)
   } else {
     expr
@@ -277,8 +294,9 @@ modifyBatchOnMatch <-
     ## @param env The environment in which to modify `x`.
     ## @param ... Additional arguments for `grepl`.
     for (op in names(x)) {
-      if (grepl(op_pattern, op, ...))
+      if (grepl(op_pattern, op, ...)) {
         eval(substitute(modifyOnMatch(x[[op]], arg_pattern, key, value)), env)
+      }
     }
   }
 
@@ -291,7 +309,9 @@ get_matching_ops <- function(field, subfield = NULL, test = isTRUE) {
   ## subfield) returns TRUE when the test function is applied to it.
   ops <- ls(nCompiler:::operatorDefEnv, all.names = TRUE)
   values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield)
-  if (is.null(values)) return(character(0))
+  if (is.null(values)) {
+    return(character(0))
+  }
   names(values)[sapply(values, test)]
 }
 
@@ -299,7 +319,8 @@ get_ops_values <- function(field, subfield = NULL) {
   ## Return a named (by operator) list of the values found in field/subfield.
   ops <- ls(nCompiler:::operatorDefEnv, all.names = TRUE)
   values <- sapply(ops, nCompiler:::getOperatorDef, field, subfield,
-                   simplify = FALSE)
+    simplify = FALSE
+  )
   non_null <- sapply(values, function(x) !is.null(x))
   return(values[non_null])
 }
@@ -310,29 +331,35 @@ get_ops_values <- function(field, subfield = NULL) {
 ## op:       An operator string
 ## argTypes: A character vector of argTypes (e.g. "double(0)".
 return_type_string <- function(op, argTypes) {
-
   opDef <- `:::`("nCompiler", "getOperatorDef")(op)
-  if(is.null(opDef))
-    stop(paste0('No operator definition found for operator: ', op), call. = FALSE)
+  if (is.null(opDef)) {
+    stop(paste0("No operator definition found for operator: ", op), call. = FALSE)
+  }
   simpTrans <- opDef$simpleTransformations
-  if(!is.null(simpTrans)) {
-    if(identical(simpTrans$handler, "replace")) {
-      if(!is.null(simpTrans$replacement))
-       op <- simpTrans$replacement
+  if (!is.null(simpTrans)) {
+    if (identical(simpTrans$handler, "replace")) {
+      if (!is.null(simpTrans$replacement)) {
+        op <- simpTrans$replacement
+      }
     }
   }
 
-  returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'labelAbstractTypes',
-                                               'returnTypeCode')
-  recycling_rule_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing',
-                                                  'recyclingRuleOp')
+  returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, "labelAbstractTypes",
+    "returnTypeCode")
+  recycling_rule_op <- `:::`("nCompiler", "getOperatorDef")(op, "testing",
+    "recyclingRuleOp")
 
-  if (is.null(returnTypeCode))
-    returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'returnTypeCode')
+  if (is.null(returnTypeCode)) {
+    returnTypeCode <- `:::`("nCompiler", "getOperatorDef")(op, "testing", "returnTypeCode")
+  }
 
-  if (is.null(returnTypeCode))
-    if (!isTRUE(recycling_rule_op)) return(argTypes[1])
-  else returnTypeCode <- 1
+  if (is.null(returnTypeCode)) {
+    if (!isTRUE(recycling_rule_op)) {
+      return(argTypes[1])
+    } else {
+      returnTypeCode <- 1
+    }
+  }
 
   scalarTypeString <- `:::`("nCompiler", "returnTypeCode2String")(returnTypeCode)
 
@@ -346,51 +373,64 @@ return_type_string <- function(op, argTypes) {
   # argSymTab <- nCompiler:::typeList2symbolTable(argTypesList)
   # args <- lapply(names(argTypesList), function(name) argSymTab$getSymbol(name))
   args <- lapply(
-    argTypes, function(argType)
+    argTypes, function(argType) {
       nCompiler:::type2symbol(!!argType)
+    }
   )
 
   scalarTypeString <-
-    if (length(argTypes) == 1) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type,
-                                                                returnTypeCode = returnTypeCode)
-    else if(length(argTypes) == 2) `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type, args[[2]]$type,
-                                                                    returnTypeCode = returnTypeCode)
-    else stop(
-           paste0(
-             'Testing does not currently know how to handle ops with more than 2',
-             ' args and returnTypeCode not equal to 1, 2, or 3.',
-             call. = FALSE
-           )
-         )
-
-  ## arithmeticOutputType might return 'double'
-  if (scalarTypeString == 'double') scalarTypeString <- 'numeric'
-
-  reduction_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'reductionOp')
-
-  nDim <- if (isTRUE(reduction_op)) 0 else max(sapply(args, `[[`, 'nDim'))
-
-  if (nDim > 3)
-    stop(
-      'Testing does not currently support args with nDim > 3',
-      call. = FALSE
-    )
-
-  matrix_mult_op <- `:::`("nCompiler", "getOperatorDef")(op, 'testing', 'matrixMultOp')
-
-  # if arg sizes weren't provided this will just be NULL
-  sizes <- if (nDim == 0) NULL
-  else if (length(argTypes) == 1) args[[1]]$size
-  else if (isTRUE(matrix_mult_op))  {
-    if (!length(argTypes) == 2)
+    if (length(argTypes) == 1) {
+      `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type,
+        returnTypeCode = returnTypeCode)
+    } else if (length(argTypes) == 2) {
+      `:::`("nCompiler", "arithmeticOutputType")(args[[1]]$type, args[[2]]$type,
+        returnTypeCode = returnTypeCode)
+    } else {
       stop(
         paste0(
-          'matrixMultOps should only have 2 args but got ',
-          length(argTypes)
-        ), call. = FALSE
+          "Testing does not currently know how to handle ops with more than 2",
+          " args and returnTypeCode not equal to 1, 2, or 3.",
+          call. = FALSE
+        )
       )
-    if (is.null(args[[1]]$size)) NULL
-    else c(args[[1]]$size[1], args[[2]]$size[2])
+    }
+
+  ## arithmeticOutputType might return 'double'
+  if (scalarTypeString == "double") scalarTypeString <- "numeric"
+
+  reduction_op <- `:::`("nCompiler", "getOperatorDef")(op, "testing", "reductionOp")
+
+  nDim <- if (isTRUE(reduction_op)) 0 else max(sapply(args, `[[`, "nDim"))
+
+  if (nDim > 3) {
+    stop(
+      "Testing does not currently support args with nDim > 3",
+      call. = FALSE
+    )
+  }
+
+  matrix_mult_op <- `:::`("nCompiler", "getOperatorDef")(op, "testing", "matrixMultOp")
+
+  # if arg sizes weren't provided this will just be NULL
+  sizes <- if (nDim == 0) {
+    NULL
+  } else if (length(argTypes) == 1) {
+    args[[1]]$size
+  } else if (isTRUE(matrix_mult_op)) {
+    if (!length(argTypes) == 2) {
+      stop(
+        paste0(
+          "matrixMultOps should only have 2 args but got ",
+          length(argTypes)
+        ),
+        call. = FALSE
+      )
+    }
+    if (is.null(args[[1]]$size)) {
+      NULL
+    } else {
+      c(args[[1]]$size[1], args[[2]]$size[2])
+    }
   } else if (nDim %in% c(2, 3)) {
     # one arg is a matrix (but this is not matrix multiplication) or an array,
     # so assume that output size is same as the first arg with this nDim
@@ -398,26 +438,31 @@ return_type_string <- function(op, argTypes) {
     args[has_right_nDim][[1]]$size
   } else {
     # nDim is 1 so either recycling rule or simple vector operator
-    if (is.null(args[[1]]$size)) NULL
-    else max(sapply(args, `[[`, 'size'))
+    if (is.null(args[[1]]$size)) {
+      NULL
+    } else {
+      max(sapply(args, `[[`, "size"))
+    }
   }
 
-  size_string <- if (is.null(sizes) || is.na(sizes)) '' else {
-    if (nDim == 1) size_str <- sizes
-    else {
-      size_str <- paste0('size = c(', paste(sizes, collapse = ', '), ')')
-      if (nDim == 3) size_str <- paste0(', ', size_str)
+  size_string <- if (is.null(sizes) || is.na(sizes)) {
+    ""
+  } else {
+    if (nDim == 1) {
+      size_str <- sizes
+    } else {
+      size_str <- paste0("size = c(", paste(sizes, collapse = ", "), ")")
+      if (nDim == 3) size_str <- paste0(", ", size_str)
     }
 
     size_str
   }
 
-  dimString <- switch(
-    nDim + 1,
-    'Scalar()', # nDim is 0
-    paste0('Vector(', size_string, ')'), # nDim is 1
-    paste0('Matrix(', size_string, ')'), # nDim is 2
-    paste0('Array(nDim = 3', size_string, ')') # nDim is 3
+  dimString <- switch(nDim + 1,
+    "Scalar()", # nDim is 0
+    paste0("Vector(", size_string, ")"), # nDim is 1
+    paste0("Matrix(", size_string, ")"), # nDim is 2
+    paste0("Array(nDim = 3", size_string, ")") # nDim is 3
   )
 
   return(paste0(scalarTypeString, dimString))
@@ -427,13 +472,13 @@ make_test_param <- function(op, argTypes, input_gen_funs = NULL,
                             more_args = NULL, known_failures = NULL) {
   arg_names <- names(argTypes)
   if (is.null(arg_names)) {
-    arg_names <- paste0('arg', 1:length(argTypes))
+    arg_names <- paste0("arg", 1:length(argTypes))
     op_args <- lapply(arg_names, as.name)
   } else {
     op_args <- sapply(arg_names, as.name, simplify = FALSE)
   }
 
-  args_string <- paste0(arg_names, ' = ', argTypes, collapse = ' ')
+  args_string <- paste0(arg_names, " = ", argTypes, collapse = " ")
   name <- paste(op, args_string)
 
   expr <- substitute(
@@ -460,49 +505,51 @@ make_test_param <- function(op, argTypes, input_gen_funs = NULL,
     argTypes = argTypesList,
     input_gen_funs = input_gen_funs,
     returnType = return_type_string(op, argTypes),
-    compilation_failure = known_failure == 'compilation',
-    runtime_failure = known_failure == 'runtime'
+    compilation_failure = known_failure == "compilation",
+    runtime_failure = known_failure == "runtime"
   )
 }
 
 compare_files_using_diff <- function(trial_file, correct_file, main = "") {
-  if (main == "") main <- paste0(trial_file, ' and ', correct_file, ' do not match\n')
-  diff_out <- system2('diff', c(trial_file, correct_file), stdout = TRUE)
+  if (main == "") main <- paste0(trial_file, " and ", correct_file, " do not match\n")
+  diff_out <- system2("diff", c(trial_file, correct_file), stdout = TRUE)
   test_that(
-    paste0(main, paste0(diff_out, collapse = '\n')),
+    paste0(main, paste0(diff_out, collapse = "\n")),
     expect_true(length(diff_out) == 0)
   )
   invisible(NULL)
 }
 
-test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
+test_gold_file <- function(uncompiled, filename = paste0("test_", date()),
                            gold_file_dir = system.file(
-                             file.path('tests', 'testthat', 'gold_files'),
-                             package = 'nCompiler'
+                             file.path("tests", "testthat", "gold_files"),
+                             package = "nCompiler"
                            ), write_gold_file = FALSE, batch_mode = FALSE,
                            ...) {
-  filename <- paste0(gsub(' ', '_', filename), '.gold')
+  filename <- paste0(gsub(" ", "_", filename), ".gold")
   ## replace operators that can't be used in filenames with an alphabetic name
   ## greedily replace by ordering according to decreasing number of characters
-  replacements <- unlist(get_ops_values('testing', 'alpha_name'))
+  replacements <- unlist(get_ops_values("testing", "alpha_name"))
   replacements <- replacements[
     order(nchar(names(replacements)), decreasing = TRUE)
   ]
   for (i in seq_along(replacements)) {
     filename <- gsub(
-      names(replacements)[i], replacements[i], filename, fixed = TRUE
+      names(replacements)[i], replacements[i], filename,
+      fixed = TRUE
     )
   }
   filepath <- file.path(gold_file_dir, filename)
   if (isNF(uncompiled)) {
     RcppPacket <- NFinternals(uncompiled)$RcppPacket
-  } else if (inherits(uncompiled, 'cpp_nClassClass'))
+  } else if (inherits(uncompiled, "cpp_nClassClass")) {
     RcppPacket <- `:::`("nCompiler", "cppDefs_2_RcppPacket")(
-      uncompiled, filebase = '.'
+      uncompiled, filebase = "."
       ## filebase won't be used since we provide 'con' to writeCpp_nCompiler
     )
-  else ## assume uncompiled is an RcppPacket
+  } else { ## assume uncompiled is an RcppPacket
     RcppPacket <- uncompiled
+  }
   if (isTRUE(write_gold_file)) { ## either create or overwrite gold_file
     con <- file(filepath, open = "w")
     `:::`("nCompiler", "writeCpp_nCompiler")(
@@ -511,7 +558,7 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
     close(con)
   } else if (isFALSE(batch_mode)) {
     ## read the existing gold file and compare to the current RcppPacket
-    temp_file <- paste0(filepath, 'tmp')
+    temp_file <- paste0(filepath, "tmp")
     con <- file(temp_file, open = "w")
     `:::`("nCompiler", "writeCpp_nCompiler")(
       RcppPacket, con = con
@@ -568,37 +615,32 @@ test_gold_file <- function(uncompiled, filename = paste0('test_', date()),
 ## gold_file_dir:   Where test_gold_file() should look for and save gold files.
 ## ...:             Additional arguments to pass to test_base
 ##
-run_test_suite <- function(batch_of_ops, test_name = '', test_fun = NULL,
+run_test_suite <- function(batch_of_ops, test_name = "", test_fun = NULL,
                            full = FALSE, granularity = NA,
                            write_gold_file = FALSE, gold_file_dir = system.file(
-                             file.path('tests', 'testthat', 'gold_files'),
-                             package = 'nCompiler'
+                             file.path("tests", "testthat", "gold_files"),
+                             package = "nCompiler"
                            ), ...) {
   if (!full) {
-
     ## Run gold file testing with one file per op in batch_of_ops.
     ## Don't pass test_fun to test_base so that only gold testing runs.
     for (op in names(batch_of_ops)) {
       test_base(
-        batch_of_ops[[op]], paste(c(test_name, op), collapse = '_'),
+        batch_of_ops[[op]], paste(c(test_name, op), collapse = "_"),
         gold_test = TRUE, write_gold_file = write_gold_file,
         gold_file_dir = gold_file_dir, ...
       )
     }
-
   } else if (isTRUE(granularity == 3)) {
-
-    for (test_param in unlist(batch_of_ops, recursive = FALSE))
+    for (test_param in unlist(batch_of_ops, recursive = FALSE)) {
       ## TODO: avoid having to wrap test_param in list()?
       test_base(list(test_param), test_param$name, test_fun, ...)
-
+    }
   } else if (isTRUE(granularity == 2)) {
-
-    for (op in names(batch_of_ops))
+    for (op in names(batch_of_ops)) {
       test_base(batch_of_ops[[op]], op, test_fun, ...)
-
+    }
   } else if (isTRUE(granularity == 1)) {
-
     test_base(unlist(batch_of_ops, recursive = FALSE), test_name, test_fun, ...)
   }
 }
@@ -608,14 +650,18 @@ get_known_failure <- function(argTypes, known_failures = NULL) {
     filter_fun <- function(x) identical(x, argTypes)
     if (!is.null(known_failures$compilation)) {
       ans <- Filter(filter_fun, known_failures$compilation)
-      if (length(ans) > 0) return('compilation')
+      if (length(ans) > 0) {
+        return("compilation")
+      }
     }
     if (!is.null(known_failures$runtime)) {
       ans <- Filter(filter_fun, known_failures$runtime)
-      if (length(ans) > 0) return('runtime')
+      if (length(ans) > 0) {
+        return("runtime")
+      }
     }
   }
-  return('none')
+  return("none")
 }
 
 #############################
@@ -626,6 +672,6 @@ get_known_failure <- function(argTypes, known_failures = NULL) {
 gen_pos_def_matrix <- function(arg_size) {
   m <- arg_size[1] ## assumes matrix argType is square
   mat <- diag(1:m)
-  mat[lower.tri(mat)] <- runif(m*(m - 1)/2)
+  mat[lower.tri(mat)] <- runif(m * (m - 1) / 2)
   mat %*% t(mat)
 }

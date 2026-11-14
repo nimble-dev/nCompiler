@@ -1,4 +1,4 @@
-nClassLabelMaker <- labelFunctionCreator('nClass')
+nClassLabelMaker <- labelFunctionCreator("nClass")
 
 #' @keywords internal3
 #' @noRd
@@ -66,21 +66,22 @@ CpubClass <- R6::R6Class(
 #'   returned from a call to \code{nClass}.
 #' @examples
 #' \donttest{
-#'     nc1 <- nClass(
-#'     Rpublic = list(
-#'         Rv = NULL,
-#'         Rfoo = function(x) x+1
-#'     ),
-#'     Cpublic = list(
-#'         Cv = 'numericScalar',
-#'         Cfoo = nFunction(
-#'             fun = function(x) {
-#'                 return(x+1)
-#'             },
-#'             argTypes = list(x = 'numericScalar'),
-#'             returnType = 'numericScalar')
-#'         )
+#' nc1 <- nClass(
+#'   Rpublic = list(
+#'     Rv = NULL,
+#'     Rfoo = function(x) x + 1
+#'   ),
+#'   Cpublic = list(
+#'     Cv = "numericScalar",
+#'     Cfoo = nFunction(
+#'       fun = function(x) {
+#'         return(x + 1)
+#'       },
+#'       argTypes = list(x = "numericScalar"),
+#'       returnType = "numericScalar"
+#'     )
 #'   )
+#' )
 #' }
 #' @export
 nClass <- function(classname,
@@ -89,7 +90,7 @@ nClass <- function(classname,
                    enableDerivs = character(),
                    enableSaving = get_nOption("enableSaving"),
                    inherit = NULL,
-                  # control = list(),
+                   # control = list(),
                    compileInfo = list(),
                    predefined = FALSE,
                    env = parent.frame()) {
@@ -119,17 +120,17 @@ nClass <- function(classname,
   # createFromR: Default TRUE, whether to enable creation of objects from R.
   #
   # packageNames: can be a vector or list of two names, possibly named by "uncompiled" and "compiled",
-  #  and taken in that order if unnamed. 
-  #. These will be the names of the uncompiled and compiled class generators when writing package code,
+  #  and taken in that order if unnamed.
+  # . These will be the names of the uncompiled and compiled class generators when writing package code,
   #  either through writePackage or nCompile(..., package=TRUE). If another nClass inherits from this one,
-  #. the inherit name must be the uncompiled packageNames element if compiling through a package.
-  #. A good practice will be my_nClass_unc <- nClass(..., packageNames = c("my_nClass_unc", "my_nClass_comp"))
+  # . the inherit name must be the uncompiled packageNames element if compiling through a package.
+  # . A good practice will be my_nClass_unc <- nClass(..., packageNames = c("my_nClass_unc", "my_nClass_comp"))
   #  If these are missing, nCompile can generate names that will work if there is no inheritance by other nClasses,
-  #. and will often work through nCompiler(..., package=TRUE) if there is inheritance, but will not work
-  #. if there is inheritance and writePackage is called to help create a new package. The difference in these cases
+  # . and will often work through nCompiler(..., package=TRUE) if there is inheritance, but will not work
+  # . if there is inheritance and writePackage is called to help create a new package. The difference in these cases
   #  is that nCompile() returns a (possibly list of) compiled results in an active R session, but writePackage
-  #. must create names that will be the names used by the new package. nCompile(nc1, nc2) can return a list with 
-  #. elements nc1 and nc2 that are the compiled versions of nc1 and nc2. But writePackage(nc1, nc2) can't
+  # . must create names that will be the names used by the new package. nCompile(nc1, nc2) can return a list with
+  # . elements nc1 and nc2 that are the compiled versions of nc1 and nc2. But writePackage(nc1, nc2) can't
   #  safely do that because if it renames the compiled versions to nc1 and nc2, then the uncompiled versions
   #  must be given some other automated names, which will break `inherits` statements.
   #
@@ -156,42 +157,55 @@ nClass <- function(classname,
   # compiled method. It is also not supported to create the C++ object for an R6 interface
   # object by anything but a default constructor.
   compileInfo <- updateDefaults(
-    list(exportName = NULL, interface = "full",
-         interfaceInclude = NULL,
-         depends = list(),
-         inherit = list(),
-         nClass_inherit = list(),
-         packageNames = character()),
+    list(
+      exportName = NULL, interface = "full",
+      interfaceInclude = NULL,
+      depends = list(),
+      inherit = list(),
+      nClass_inherit = list(),
+      packageNames = character()
+    ),
     compileInfo
   )
-  if(missing(classname))
+  if (missing(classname)) {
     classname <- c(generated = nClassLabelMaker())
-  if(is.null(compileInfo$classname))
-    compileInfo$classname <- classname # paste0(classname, "_compiled") # the classname field of the R6 generators *can* be the same and it is useful for S3 dispatch
-  if('finalize' %in% names(Cpublic)) {
-    if('finalize' %in% names(Rpublic))
-      stop("If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",
-           "If you want a C++ destructor that is not an R finalizer, name it 'destructor'.")
-    if(!isTRUE(NFinternals(Cpublic[['finalize']])$compileInfo$destructor))
-      stop("In nFunction 'finalize', use 'compileInfo = list(destructor=TRUE)'.")
-  } else if('destructor' %in% names(Cpublic)) {
-    if(!isTRUE(NFinternals(Cpublic[['destructor']])$compileInfo$destructor))
-      stop("In nFunction 'destructor', use 'compileInfo = list(destructor=TRUE)'.")
   }
-  if('initialize' %in% names(Cpublic)) {
-    if('initialize' %in% names(Rpublic))
-      stop("If an initialize method is provided in Rpublic, it can't be provided in Cpublic.",
-           "If you want a C++ constructor that is not an R constructor, give it a name and set",
-           "compileInfo$constructor=TRUE.")
-    if(!isTRUE(NFinternals(Cpublic[['initialize']])$compileInfo$constructor))
+  if (is.null(compileInfo$classname)) {
+    compileInfo$classname <- classname
+  } # paste0(classname, "_compiled") # the classname field of the R6 generators *can* be the same and it is useful for S3 dispatch
+  if ("finalize" %in% names(Cpublic)) {
+    if ("finalize" %in% names(Rpublic)) {
+      stop(
+        "If a finalize method is provided in Rpublic, it can't be provided in Cpublic.",
+        "If you want a C++ destructor that is not an R finalizer, name it 'destructor'."
+      )
+    }
+    if (!isTRUE(NFinternals(Cpublic[["finalize"]])$compileInfo$destructor)) {
+      stop("In nFunction 'finalize', use 'compileInfo = list(destructor=TRUE)'.")
+    }
+  } else if ("destructor" %in% names(Cpublic)) {
+    if (!isTRUE(NFinternals(Cpublic[["destructor"]])$compileInfo$destructor)) {
+      stop("In nFunction 'destructor', use 'compileInfo = list(destructor=TRUE)'.")
+    }
+  }
+  if ("initialize" %in% names(Cpublic)) {
+    if ("initialize" %in% names(Rpublic)) {
+      stop(
+        "If an initialize method is provided in Rpublic, it can't be provided in Cpublic.",
+        "If you want a C++ constructor that is not an R constructor, give it a name and set",
+        "compileInfo$constructor=TRUE."
+      )
+    }
+    if (!isTRUE(NFinternals(Cpublic[["initialize"]])$compileInfo$constructor)) {
       stop("In nFunction 'initialize', use 'compileInfo = list(constructor=TRUE)'.")
+    }
   }
 
-  if('initialize' %in% names(Rpublic) && is.function(Rpublic[['initialize']])) {
-    init_body_text <- deparse(body(Rpublic[['initialize']]))
-    has_super_init    <- any(grepl("super\\$initialize",  init_body_text))
-    has_init_cpublic  <- any(grepl("initialize_Cpublic", init_body_text))
-    if(!has_super_init && !has_init_cpublic && isTRUE(get_nOption("NCwarn")))
+  if ("initialize" %in% names(Rpublic) && is.function(Rpublic[["initialize"]])) {
+    init_body_text <- deparse(body(Rpublic[["initialize"]]))
+    has_super_init <- any(grepl("super\\$initialize", init_body_text))
+    has_init_cpublic <- any(grepl("initialize_Cpublic", init_body_text))
+    if (!has_super_init && !has_init_cpublic && isTRUE(get_nOption("NCwarn"))) {
       warning(
         "The Rpublic 'initialize' function does not call 'super$initialize()' or ",
         "'initialize_Cpublic()'. Without one of these, the Cpublic component will not ",
@@ -203,21 +217,24 @@ nClass <- function(classname,
         "'if(isCompiled()) initializeCpp()' for manual control.",
         call. = FALSE
       )
+    }
   }
 
   inheritQ <- substitute(inherit)
   inherit_provided <- !is.null(inheritQ)
 
-  internals = NC_InternalsClass$new(classname = classname,
-                                    Cpublic = Cpublic,
-                                    RpublicNames = names(Rpublic),
-                                    enableDerivs = enableDerivs,
-                                    enableSaving = enableSaving,
-                                    inheritQ = inheritQ,
-                                 #   control = control,
-                                    compileInfo = compileInfo,
-                                    predefined = predefined,
-                                    env = env)
+  internals <- NC_InternalsClass$new(
+    classname = classname,
+    Cpublic = Cpublic,
+    RpublicNames = names(Rpublic),
+    enableDerivs = enableDerivs,
+    enableSaving = enableSaving,
+    inheritQ = inheritQ,
+    #   control = control,
+    compileInfo = compileInfo,
+    predefined = predefined,
+    env = env
+  )
   ## We put the internals in 2 places:
   ## 1. in an environment layer around every instance
 
@@ -226,14 +243,15 @@ nClass <- function(classname,
   # so if provided in the nClass call, we stick it in new_env.
   # (That is not the only reason for new_env.)
   # Also note that the inherit arg is for nClass inheritance. The compileInfo$inherit element is for hard-coded C++ inheritance statements.
-  #if(!is.null(inherit)) new_env$.inherit_obj <- inherit
+  # if(!is.null(inherit)) new_env$.inherit_obj <- inherit
 
   # Uncompiled behavior for Cpublic fields needs to be handled.
   # Right now a type string like 'numericScalar' just becomes a
   # default value.
-  if("isCompiled" %in% names(Cpublic)) {
+  if ("isCompiled" %in% names(Cpublic)) {
     stop("The name 'isCompiled' in Cpublic is reserved for nCompiler internal use.",
-         call. = FALSE)
+      call. = FALSE
+    )
   }
   # Cpublic$initialize may be provided and should check isCompiled() for behavior
   # because it will be inherited directly in the compiled Cpublic class.
@@ -271,88 +289,116 @@ nClass <- function(classname,
   NCgenerator
 }
 
-make_uncompiled_Cpub_class_code <- function(classname, 
-                                            inheritQ = NULL, 
+make_uncompiled_Cpub_class_code <- function(classname,
+                                            inheritQ = NULL,
                                             Cpublic = NULL) {
   inherit_provided <- !is.null(inheritQ)
   Cpublic_code <- quote(Cpublic)
-  if(!is.null(Cpublic)) {
-    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
-    Cpublic_code_list <- Cpublic |> lapply(\(x) if(is.function(x)) parsedcopy(x) else x)
-    Cpublic_code <- do.call("call", c("list",
-                              Cpublic_code_list))
+  if (!is.null(Cpublic)) {
+    parsedcopy <- \(f) {
+      ans <- substitute(\() BODY, list(BODY = body(f))) |> removeSource()
+      if (!is.null(formals(f))) ans[[2]] <- formals(f)
+      ans
+    }
+    Cpublic_code_list <- Cpublic |> lapply(\(x) if (is.function(x)) parsedcopy(x) else x)
+    Cpublic_code <- do.call("call", c(
+      "list",
+      Cpublic_code_list
+    ))
   }
   substitute(
     R6::R6Class(
       classname = CLASSNAME,
-      public = c(CPUBLIC,
-                  list(isCompiled=function() FALSE)),
+      public = c(
+        CPUBLIC,
+        list(isCompiled = function() FALSE)
+      ),
       portable = FALSE,
       inherit = INHERIT,
       parent_env = NULL
     ),
-    list(CLASSNAME = paste0(classname, "_Cpub_uncompiled"),
-          CPUBLIC = Cpublic_code,
-          INHERIT =
-            if(inherit_provided) substitute((INHERITQ)$parent_env$.Cpub_class, list(INHERITQ = inheritQ))
-            else quote(nCompiler::CpubClass))
+    list(
+      CLASSNAME = paste0(classname, "_Cpub_uncompiled"),
+      CPUBLIC = Cpublic_code,
+      INHERIT =
+        if (inherit_provided) {
+          substitute((INHERITQ)$parent_env$.Cpub_class, list(INHERITQ = inheritQ))
+        } else {
+          quote(nCompiler::CpubClass)
+        }
+    )
   )
 }
 
 make_nClass_code <- function(internals,
-                    Cpublic = NULL, # if nFunctions (called from nClass), create method. If R function (called from WP_writeRinterfaces), use that ()
-                    Rpublic = NULL  # If NULL (called from nClass), use quote(Rpublic). If provided (from WP_writeRinterfaces), deparse.
-                    ) {
+                             Cpublic = NULL, # if nFunctions (called from nClass), create method. If R function (called from WP_writeRinterfaces), use that ()
+                             Rpublic = NULL # If NULL (called from nClass), use quote(Rpublic). If provided (from WP_writeRinterfaces), deparse.
+) {
   classname <- internals$classname
   inheritQ <- internals$inheritQ
   fieldNames <- internals$fieldNames
   CmethodNames <- internals$methodNames
-                            
+
   inherit_provided <- !is.null(inheritQ)
 
-  activeBindings_code <- fieldNames |> lapply(
-    function(name) {
-      substitute(
-        function(value) {
-        if(missing(value))
-          private$Cpublic_obj$NAME
-        else
-          private$Cpublic_obj$NAME <- value
-        },
-        list(NAME = name)
-      ) |> removeSource()} # otherwise future srcref persists as fourth list element -- confusing!
-    ) |> structure(names = fieldNames)
+  activeBindings_code <- fieldNames |>
+    lapply(
+      function(name) {
+        substitute(
+          function(value) {
+            if (missing(value)) {
+              private$Cpublic_obj$NAME
+            } else {
+              private$Cpublic_obj$NAME <- value
+            }
+          },
+          list(NAME = name)
+        ) |> removeSource()
+      } # otherwise future srcref persists as fourth list element -- confusing!
+    ) |>
+    structure(names = fieldNames)
   activeBindings_list_code <- do.call("call", c("list", activeBindings_code))
 
-  if(length(CmethodNames)) {
+  if (length(CmethodNames)) {
     Cmethods_code_list <- mapply(build_Cmethod_code_for_nClass,
-                                fun = Cpublic[CmethodNames],
-                                name = CmethodNames)
+      fun = Cpublic[CmethodNames],
+      name = CmethodNames
+    )
   } else {
     Cmethods_code_list <- list()
   }
-  Cmethods_code <- do.call("call", c("list",
-                                Cmethods_code_list))
+  Cmethods_code <- do.call("call", c(
+    "list",
+    Cmethods_code_list
+  ))
 
   builtIn_code_list <- list(isCompiled = quote(function() FALSE)) # Will be overridden in compiled version to return TRUE
 
   Rpublic_code <- quote(Rpublic)
-  if(!is.null(Rpublic)) {
-    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
-    Rpublic_code_list <- Rpublic |> lapply(\(x) if(is.function(x)) parsedcopy(x) else x)
-    Rpublic_code <- do.call("call", c("list",
-                              Rpublic_code_list))
+  if (!is.null(Rpublic)) {
+    parsedcopy <- \(f) {
+      ans <- substitute(\() BODY, list(BODY = body(f))) |> removeSource()
+      if (!is.null(formals(f))) ans[[2]] <- formals(f)
+      ans
+    }
+    Rpublic_code_list <- Rpublic |> lapply(\(x) if (is.function(x)) parsedcopy(x) else x)
+    Rpublic_code <- do.call("call", c(
+      "list",
+      Rpublic_code_list
+    ))
   }
 
   substitute(
     R6::R6Class(
       classname = CLASSNAME,
-      public = c(RPUBLIC,
-                CMETHODS,
-                list(isCompiled = function() FALSE)),
+      public = c(
+        RPUBLIC,
+        CMETHODS,
+        list(isCompiled = function() FALSE)
+      ),
       private = list(
         Cpublic_obj = NULL,
-        init_Cpublic_obj_code = quote(if(isCompiled()).Cpub_class$new(...) else .Cpub_class$new()),
+        init_Cpublic_obj_code = quote(if (isCompiled()) .Cpub_class$new(...) else .Cpub_class$new()),
         initialize_Cpublic_obj = function(...) {
           private$Cpublic_obj <- eval(private$init_Cpublic_obj_code)
         }
@@ -362,18 +408,23 @@ make_nClass_code <- function(internals,
       inherit = INHERIT,
       parent_env = new.env() # We do this so that the parsed code for writePackage is clean, and we modify the result below.
     ),
-    list(CLASSNAME = classname,
-         RPUBLIC = Rpublic_code,
-         CMETHODS = Cmethods_code,
-         ACTIVE = activeBindings_list_code,
-         INHERIT =
-           if(inherit_provided) inheritQ
-         else quote(nCompiler::nClassClass)) # devtools::document() problem if we use :: instead of ::: for first run, then can change
+    list(
+      CLASSNAME = classname,
+      RPUBLIC = Rpublic_code,
+      CMETHODS = Cmethods_code,
+      ACTIVE = activeBindings_list_code,
+      INHERIT =
+        if (inherit_provided) {
+          inheritQ
+        } else {
+          quote(nCompiler::nClassClass)
+        }
+    ) # devtools::document() problem if we use :: instead of ::: for first run, then can change
   )
 }
 
 #' @export
-connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
+connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator = NULL) {
   # The NCgen at this point has been created by R6::R6Class
   # with "parent_env = new.env()".
   # The Cpub_gen has been created by R6::R6Class
@@ -393,8 +444,9 @@ connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
   Cpub_gen$parent_env <- (new_env <- NCgen$parent_env)
   parent.env(new_env) <- env
   new_env$.Cpub_class <- Cpub_gen
-  if(!is.null(.NCgenerator))
-    new_env$.NCgenerator <- .NCgenerator # It would be (for overall network of environments) not to need this reference
+  if (!is.null(.NCgenerator)) {
+    new_env$.NCgenerator <- .NCgenerator
+  } # It would be (for overall network of environments) not to need this reference
 }
 
 # Provenance of names for an nClass:
@@ -408,16 +460,18 @@ connect_nClass_envs <- function(NCgen, Cpub_gen, env, .NCgenerator=NULL) {
 # See nCompile comments for more.
 
 build_Cmethod_code_for_nClass <- function(fun, name) {
-  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  
-  if(!isNF(fun)) {
-    if(is.function(fun)) { # This was called from writePackge with a method from a previously built nClass
+  if (is.null(fun)) {
+    return(NULL)
+  } ## convenient for how this is used from mapply
+
+  if (!isNF(fun)) {
+    if (is.function(fun)) { # This was called from writePackge with a method from a previously built nClass
       return(parse(text = deparse(fun), keep.source = FALSE)[[1]])
     } else {
       stop("In nClass, Cpublic method ", name, " is not a function or nFunction.")
     }
   }
-  if(!NFinternals(fun)$compileInfo$callFromR) {
+  if (!NFinternals(fun)$compileInfo$callFromR) {
     ans <- substitute(
       function(...) {
         stop("method ", NAME, " cannot be called directly from R (because compileInfo$callFromR is FALSE).")
@@ -431,14 +485,15 @@ build_Cmethod_code_for_nClass <- function(fun, name) {
   blockRefArgs <- NFinternals(fun)$blockRefArgs
   # With control = list(updateArgPassing = FALSE), refArgs and blockRefArgs apply
   # only in C++, and the R method takes its arguments by value (as in getFunction).
-  if(isFALSE(NFinternals(fun)$control$updateArgPassing)) {
+  if (isFALSE(NFinternals(fun)$control$updateArgPassing)) {
     refArgs <- blockRefArgs <- character()
   }
 
-  if(length(refArgs) + length(blockRefArgs) == 0) {
-    ans <- substitute(function(...) {
-      private$Cpublic_obj$NAME(...)
-    },
+  if (length(refArgs) + length(blockRefArgs) == 0) {
+    ans <- substitute(
+      function(...) {
+        private$Cpublic_obj$NAME(...)
+      },
       list(NAME = name)
     ) |> removeSource()
     return(ans)
@@ -448,23 +503,34 @@ build_Cmethod_code_for_nClass <- function(fun, name) {
   ## We need the arguments in place instead of using ...
   ## so that we can use passByReference if needed.
   formals_fun <- formals(fun)
-  innerCallDollarPart <- substitute(private$Cpublic_obj$NAME,
-                                   list(NAME = name))
-  innerArgsList <- names(formals_fun) |> lapply(as.name) |> structure(names = names(formals_fun))
-  innerCallTemplate <- as.call(c(list(as.name("CALL__")),
-                               innerArgsList))
-  innerCall <- do.call("substitute",
-                       list(expr = innerCallTemplate,
-                            env = list(CALL__ = innerCallDollarPart)))
+  innerCallDollarPart <- substitute(
+    private$Cpublic_obj$NAME,
+    list(NAME = name)
+  )
+  innerArgsList <- names(formals_fun) |>
+    lapply(as.name) |>
+    structure(names = names(formals_fun))
+  innerCallTemplate <- as.call(c(
+    list(as.name("CALL__")),
+    innerArgsList
+  ))
+  innerCall <- do.call(
+    "substitute",
+    list(
+      expr = innerCallTemplate,
+      env = list(CALL__ = innerCallDollarPart)
+    )
+  )
 
   ans <- substitute(
     function() {
       INNERCALL
-  },
+    },
     list(INNERCALL = innerCall)
   ) |> removeSource()
-  if(!is.null(formals_fun)) ans[[2]] <- formals_fun
-  if(!is.null(ans[[3]]))
+  if (!is.null(formals_fun)) ans[[2]] <- formals_fun
+  if (!is.null(ans[[3]])) {
     ans[[3]] <- passByReference(ans[[3]], refArgs, blockRefArgs)
+  }
   ans
 }

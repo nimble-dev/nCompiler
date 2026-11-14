@@ -1,4 +1,4 @@
-nFunctionLabelMaker <- labelFunctionCreator('nFun')
+nFunctionLabelMaker <- labelFunctionCreator("nFun")
 
 ## nFunction represents a pure function, not a class, although it
 ## may sometimes be implemented as a class.
@@ -30,9 +30,8 @@ nFunctionClass <- setClass(
   Class = "nFunction",
   contains = "function",
   slots = list(
-    internals = "ANY"       ## An NF_InternalsClass.
+    internals = "ANY" ## An NF_InternalsClass.
     , originalCode = "ANY"
-    
   )
 )
 
@@ -51,26 +50,28 @@ nFunctionClass <- setClass(
 #' @param where Environment to be used as the closure of the returned \code{nFunction}.
 #' @return An object of class \code{nFunction}, which inherits from class \code{function}.
 #' @details A \code{nFunction} is a special kind of R function that can be compiled by automatic generation of C++.  See (TBD) for information about writing \code{nFunctions}.  See (TBD) for information about type declarations.
-#' 
+#'
 #' @seealso \cite{\link{NFinternals}} for access to the internal information of a \code{nFunction} (for advanced use only).
 #'
 #' @examples
 #' \donttest{
 #' rawfoo <- function(a = 5, b) {
-#'     b <- b + a
-#'     return(a) ## explicit use of return() is necessary
+#'   b <- b + a
+#'   return(a) ## explicit use of return() is necessary
 #' }
 #' foo <- nFunction(
-#'     fun = rawfoo,
-#'     argTypes = list(a = "numericScalar()",
-#'                     b = "ref(integerVector())"),
-#'     # First alternative is to provide arguments in \code{rawfoo} as
-#'     #    function(a = numericScalar(5), b = ref(integerVector()))
-#'     # Second alternative is to use b = integerVector() and provide
-#'     #    refArgs = "b".
-#'     returnType = "numericScalar()"
-#'     # Alternative would be to include "returnType(numericVector())"
-#'     # in \code{rawfoo}
+#'   fun = rawfoo,
+#'   argTypes = list(
+#'     a = "numericScalar()",
+#'     b = "ref(integerVector())"
+#'   ),
+#'   # First alternative is to provide arguments in \code{rawfoo} as
+#'   #    function(a = numericScalar(5), b = ref(integerVector()))
+#'   # Second alternative is to use b = integerVector() and provide
+#'   #    refArgs = "b".
+#'   returnType = "numericScalar()"
+#'   # Alternative would be to include "returnType(numericVector())"
+#'   # in \code{rawfoo}
 #' )
 #' }
 #' @export
@@ -81,14 +82,13 @@ nFunction <- function(fun,
                       blockRefArgs = character(),
                       returnType = NULL,
                       enableDerivs = FALSE,
-#                      check = get_nOption('check_nFunction'),
+                      #                      check = get_nOption('check_nFunction'),
                       # returnCallable = TRUE,
                       control = list(),
                       compileInfo = list(),
                       predefined = FALSE,
                       where = parent.frame(),
-                      ...
-                      ) {
+                      ...) {
   # Supported (Default value) elements of compileInfo
   # C_fun (NULL) : alternative to fun to use for compilation pathway
   # callFromR (TRUE): TRUE if compiled version should
@@ -110,10 +110,12 @@ nFunction <- function(fun,
   # Also cpp_code_name (see NF_InternalsClass).
   TreturnType <- nCaptureType(returnType)
   compileInfo <- updateDefaults(
-    list(C_fun = NULL,
-         callFromR = TRUE,
-         virtual = FALSE, abstract = FALSE, const = FALSE,
-        depends = list()),
+    list(
+      C_fun = NULL,
+      callFromR = TRUE,
+      virtual = FALSE, abstract = FALSE, const = FALSE,
+      depends = list()
+    ),
     compileInfo
   )
   # Supported (Default value) elements of control:
@@ -125,9 +127,11 @@ nFunction <- function(fun,
   # updateArgPassing (TRUE): whether to automatically use ref and blockRef
   #   in the R function.
   control <- updateDefaults(
-    list(returnInternals=FALSE, check=get_nOption('check_nFunction'),
-         changeKeywords = is.null(compileInfo$C_fun), # by default, if C_fun is provided, don't change it, but user can override.
-         updateArgPassing = TRUE),
+    list(
+      returnInternals = FALSE, check = get_nOption("check_nFunction"),
+      changeKeywords = is.null(compileInfo$C_fun), # by default, if C_fun is provided, don't change it, but user can override.
+      updateArgPassing = TRUE
+    ),
     control
   )
   # Supported elements or values of enableDerivs:
@@ -136,33 +140,35 @@ nFunction <- function(fun,
   # ADfun: should become AD_nFun
   ###
 
-  if(missing(name) || !length(name))   # Check for empty `name` per issue 162.
+  if (missing(name) || !length(name)) { # Check for empty `name` per issue 162.
     name <- nFunctionLabelMaker()
+  }
   ## Create internals that will be used for compilation.
   internals <- NF_InternalsClass$new(fun,
-                                     name = name,
-                                     argTypes = argTypes,
-                                     refArgs = refArgs,
-                                     blockRefArgs = blockRefArgs,
-                                     returnType = {{TreturnType}},
-                                     enableDerivs = enableDerivs,
-#                                     check = check,
-#                                     C_fun = C_fun,
-                                     control = control,
-                                     compileInfo = compileInfo,
-                                     predefined = predefined,
-                                     where = where)
+    name = name,
+    argTypes = argTypes,
+    refArgs = refArgs,
+    blockRefArgs = blockRefArgs,
+    returnType = {{ TreturnType }},
+    enableDerivs = enableDerivs,
+    #                                     check = check,
+    #                                     C_fun = C_fun,
+    control = control,
+    compileInfo = compileInfo,
+    predefined = predefined,
+    where = where
+  )
   ## Return a callable function.
   ## This will be modified:
   ## 1. to provide pass-by-reference behavior
   ## as requested for any arguments.
   ## 2. with any returnType() statement removed.
-  if(!isTRUE(control$returnInternals)) {
+  if (!isTRUE(control$returnInternals)) {
     modifiedFun <- internals$getFunction()
     nFunctionClass(modifiedFun, internals = internals)
-  }
-  else
+  } else {
     internals
+  }
 }
 
 # Provenance of names
@@ -171,4 +177,4 @@ nFunction <- function(fun,
 # This name goes in the NF_InternalsClass object, where it is also copied to uniqueName
 #
 # The NF_InternalsClass object makes a cpp_code_name by pasting the name to a unique ID separated by "_"
-# 
+#

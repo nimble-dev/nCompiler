@@ -17,17 +17,18 @@ test_that("indexing by numeric vector works", {
       })
     )
   )
-  #cobj <- nCompile_nClass(nC)$new()
+  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   robj <- nC$new()
   x <- matrix(1:20, nrow = 4)
-  iv <- c(2,3,2,1,5)
+  iv <- c(2, 3, 2, 1, 5)
   method_names <- ls(nC$public_methods)
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x, iv)
     outR <- robj[[test_i]](x, iv)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -36,62 +37,62 @@ test_that("drop arg variations give correct results, 3D input", {
   nC <- nClass(
     Cpublic = list(
       test1 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, ] ## no drop arg => TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       }),
       test2 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = TRUE] ## explicit TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       }),
       test3 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = FALSE] ## explicit FALSE
         return(ans)
         returnType(numericArray(nDim = 3))
       }),
       test4 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = 0] ## drop = 0 => FALSE
         return(ans)
         returnType(numericArray(nDim = 3))
       }),
       test5 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = 1] ## drop = 1 => TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       }),
       test6 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = "T"] ## drop = "T" => TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       }),
       test7 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = "F"] ## drop = "F" => FALSE
         return(ans)
         returnType(numericArray(nDim = 3))
       }),
       test8 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = NA] ## drop = NA => TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       }),
       test9 = nFunction(function(x = numericArray(nDim = 3)) {
-        i  <- 1
+        i <- 1
         ans <- x[i, 2:3, , drop = NaN] ## drop = NaN => TRUE
         return(ans)
         returnType(numericArray(nDim = 2))
       })
     )
   )
-#  cobj <- nCompile_nClass(nC)$new()
+  #  cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   robj <- nC$new()
   x <- array(1:105, c(3, 5, 7))
@@ -99,8 +100,9 @@ test_that("drop arg variations give correct results, 3D input", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -117,16 +119,16 @@ test_that("indexing arg variations give correct results, 3D input", {
       ),
       test2 = nFunction( ## basic scalar expressions work as indexing args
         function(x = numericArray(nDim = 3)) {
-          i  <- 1
-          ans <- x[i+1, 2:3, ]
+          i <- 1
+          ans <- x[i + 1, 2:3, ]
           return(ans)
           returnType(numericMatrix())
         }
       ),
       test3 = nFunction( ## basic scalar expressions work as indexing args, drop = FALSE
         function(x = numericArray(nDim = 3)) {
-          i  <- 1
-          ans <- x[2*i + 1, 2:3, , drop = FALSE]
+          i <- 1
+          ans <- x[2 * i + 1, 2:3, , drop = FALSE]
           return(ans)
           returnType(numericArray(nDim = 3))
         }
@@ -143,7 +145,7 @@ test_that("indexing arg variations give correct results, 3D input", {
       )
     )
   )
-  #cobj <- nCompile_nClass(nC)$new()
+  # cobj <- nCompile_nClass(nC)$new()
   cobj <- nCompile(nC)$new()
   robj <- nC$new()
   x <- array(1:105, c(3, 5, 7))
@@ -151,8 +153,9 @@ test_that("indexing arg variations give correct results, 3D input", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -185,8 +188,9 @@ test_that("assignment involving indexing give correct results, 3D input", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -196,7 +200,7 @@ test_that("expressions involving indexing give correct results, 3D input", {
     Cpublic = list(
       test1 = nFunction( ## exp of indexed block
         function(x = numericArray(nDim = 3)) {
-          i  <- 1
+          i <- 1
           ans <- exp(x[2, 2:3, ])
           return(ans)
           returnType(numericMatrix())
@@ -218,8 +222,9 @@ test_that("expressions involving indexing give correct results, 3D input", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -243,7 +248,7 @@ test_that("scalar input gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     expect_equal(
       robj[[test_i]](x), ## R
-      cobj[[test_i]](x)               ## C++
+      cobj[[test_i]](x) ## C++
     )
   }
 })
@@ -274,8 +279,9 @@ test_that("vector input gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -313,8 +319,9 @@ test_that("matrix input gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -352,8 +359,9 @@ test_that("3-dimensional input array gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -405,8 +413,9 @@ test_that("4-dimensional input array gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -430,8 +439,9 @@ test_that("5-dimensional input array gives correct results", {
   for (test_i in method_names[startsWith(method_names, "test")]) {
     outC <- cobj[[test_i]](x)
     outR <- robj[[test_i]](x)
-    if (is.array(outC) && length(attributes(outC)$dim) == 1)
+    if (is.array(outC) && length(attributes(outC)$dim) == 1) {
       attributes(outC)$dim <- NULL
+    }
     expect_equal(outC, outR)
   }
 })
@@ -445,7 +455,7 @@ test_that("3:3 style indexing arg doesn't drop dimension", {
       returnType(numericArray(nDim = 2))
     }
   )
-#  nfc <- nCompile_nFunction(nf)
+  #  nfc <- nCompile_nFunction(nf)
   nfc <- nCompile(nf)
   x <- array(1:27, c(3, 3, 3))
   expect_silent(nfc(x))
@@ -454,10 +464,10 @@ test_that("3:3 style indexing arg doesn't drop dimension", {
 test_that("LHS indexing by a variable or expression works", {
   # Issue #215
   nf <- nFunction(
-    fun = function(x = 'numericVector') {
-      x[c(2,3,5)] <- rep(1,3)
+    fun = function(x = "numericVector") {
+      x[c(2, 3, 5)] <- rep(1, 3)
       return(x)
-      returnType('numericVector')
+      returnType("numericVector")
     }
   )
   cnf <- nCompile(nf)
@@ -468,11 +478,11 @@ test_that("LHS indexing by a variable or expression works", {
   expect_equal(x, check)
 
   nf <- nFunction(
-    fun = function(x = 'numericVector') {
+    fun = function(x = "numericVector") {
       w <- c(2, 3, 5)
-      x[w + 1] <- rep(1,3)
+      x[w + 1] <- rep(1, 3)
       return(x)
-      returnType('numericVector')
+      returnType("numericVector")
     }
   )
   cnf <- nCompile(nf)
@@ -481,7 +491,6 @@ test_that("LHS indexing by a variable or expression works", {
   check[c(2, 3, 5) + 1] <- rep(1, 3)
   x <- nf(x)
   expect_equal(x, check)
-
 })
 
 ## THESE TESTS WON'T PASS UNTIL SOME NEW ERROR-TRAPPING

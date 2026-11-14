@@ -4,11 +4,14 @@
 
 #' @export
 method <- function(obj, name) {
-  if(inherits(obj, "nClass"))
-    if(obj$isCompiled())
-      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
-    else 
+  if (inherits(obj, "nClass")) {
+    if (obj$isCompiled()) {
+      obj <- obj$private$Cpublic_obj$private$CppObj
+    } # obj$private$CppObj
+    else {
       stop("method() can only be used on compiled nClass objects.")
+    }
+  }
   CnCenv <- get_CnCenv(obj)
   ans <- CnCenv[[name]]
   environment(ans) <- new.env(parent = environment(ans))
@@ -34,13 +37,15 @@ method <- function(obj, name) {
 
 #' @export
 value <- function(obj, name) {
-  if(inherits(obj, "nClass"))
-    if(obj$isCompiled())
-      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
+  if (inherits(obj, "nClass")) {
+    if (obj$isCompiled()) {
+      obj <- obj$private$Cpublic_obj$private$CppObj
+    } # obj$private$CppObj
     else {
       return(obj[[name]])
       # stop("value() can only be used on compiled nClass objects.")
     }
+  }
   DLLenv <- get_DLLenv(obj)
   extptr <- getExtptr(obj)
   DLLenv$get_value(extptr, name)
@@ -49,11 +54,14 @@ value <- function(obj, name) {
 #' @export
 interface_names <- function(obj, what = c("members", "methods")) {
   what <- match.arg(what)
-  if(inherits(obj, "nClass"))
-    if(obj$isCompiled())
-      obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
-    else
+  if (inherits(obj, "nClass")) {
+    if (obj$isCompiled()) {
+      obj <- obj$private$Cpublic_obj$private$CppObj
+    } # obj$private$CppObj
+    else {
       stop("interface_names() can only be used on compiled nClass objects.")
+    }
+  }
   DLLenv <- get_DLLenv(obj)
   extptr <- getExtptr(obj)
   DLLenv$get_names(extptr, methods = (what == "methods"))
@@ -61,9 +69,9 @@ interface_names <- function(obj, what = c("members", "methods")) {
 
 #' @export
 `value<-` <- function(obj, name = NULL, value) {
-   # we make work_obj separate so we can return obj
-   if(inherits(obj, "nClass")) {
-    if(obj$isCompiled()) {
+  # we make work_obj separate so we can return obj
+  if (inherits(obj, "nClass")) {
+    if (obj$isCompiled()) {
       work_obj <- obj$private$Cpublic_obj$private$CppObj # obj$private$CppObj
     } else {
       obj[[name]] <- value
@@ -71,14 +79,15 @@ interface_names <- function(obj, what = c("members", "methods")) {
       # This uncompiled behavior is not perfect because, if obj[[name]] should get an nClass (including nList) object
       # and value is a list or environment, the compiled handling would assign from list or environment variables
       # to the correct object type, but uncompiled handling will just assign the list or environment to obj[[name]].
-      # 
-      #stop("value<-() can only be used on compiled nClass objects.")
+      #
+      # stop("value<-() can only be used on compiled nClass objects.")
     }
-   } else {
-     work_obj <- obj
-     if(!is.loadedObjectEnv(work_obj))
-       stop("value<-() can only be used on compiled nClass objects or loadedObjectEnv objects.")
-   }
+  } else {
+    work_obj <- obj
+    if (!is.loadedObjectEnv(work_obj)) {
+      stop("value<-() can only be used on compiled nClass objects or loadedObjectEnv objects.")
+    }
+  }
   DLLenv <- get_DLLenv(work_obj)
   extptr <- getExtptr(work_obj)
   DLLenv$set_value(extptr, name, value)

@@ -46,15 +46,15 @@ test_that("pass 1D by copy works (compiled & uncompiled)", {
       x <- x + 1
       return(x)
     },
-    returnType = 'numericVector'
+    returnType = "numericVector"
   )
   x <- 1:3
   y <- foo(x)
-  expect_equal(x+1, y)
+  expect_equal(x + 1, y)
   cfoo <- nCompile(foo)
   x <- 1:3
   y <- cfoo(x)
-  expect_equal(x+1, y)
+  expect_equal(x + 1, y)
 })
 
 ####################
@@ -71,9 +71,9 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
       xBlockRef <- xRef + 1000
       return(x)
     },
-    refArgs = 'xRef',
-    blockRefArgs = 'xBlockRef',
-    returnType = 'numericVector'
+    refArgs = "xRef",
+    blockRefArgs = "xBlockRef",
+    returnType = "numericVector"
   )
   test_foo <- function(fn) {
     x <- as.numeric(1:3)
@@ -82,7 +82,7 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
     xBlockRef <- as.numeric(21:23)
     xBlockRef2 <- xBlockRef
     expect_error(fn(x, 11:13, xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, 11:13))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, 11:13)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3])
     expect_equal(y, x[1:2] + 10 + 100)
@@ -102,15 +102,16 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
   # and our then our tricky code failed. So we stopped being tricky in C++
   # and took another approach. However we still have
   # second-calls as regression tests on this problem.
-  cfoo <- nCompile(foo, package=TRUE)
+  cfoo <- nCompile(foo, package = TRUE)
   test_foo(cfoo)
   test_foo(cfoo)
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing")
-  test <- writePackage(foo, pkgName = "testpackage", dir = dir, modify="clear")
+  test <- writePackage(foo, pkgName = "testpackage", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage")
     test_foo(access_dynamic_package("testpackage", "foo"))
@@ -121,8 +122,8 @@ test_that("pass 1D by ref and blockRef works and error-traps (compiled & uncompi
 test_that("pass 1D by ref and blockRef works and error-traps via nClass method (compiled & uncompiled)", {
   message("This test has four trapped errors.")
 
-  #debug(nCompiler:::make_nClass_code)
-  #undebug(nCompiler:::build_Cmethod_code_for_nClass)
+  # debug(nCompiler:::make_nClass_code)
+  # undebug(nCompiler:::build_Cmethod_code_for_nClass)
   nc1 <- nClass(
     Cpublic = list(
       foo = nFunction(
@@ -132,17 +133,19 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
           xBlockRef <- xRef + 1000
           return(x)
         },
-        refArgs = 'xRef',
-        blockRefArgs = 'xBlockRef',
-        returnType = 'numericVector'
-      )))
+        refArgs = "xRef",
+        blockRefArgs = "xBlockRef",
+        returnType = "numericVector"
+      )
+    )
+  )
 
   test_foo <- function(fn) {
     x <- as.numeric(1:3)
     xRef <- as.numeric(11:13)
     xBlockRef <- as.numeric(21:23)
     expect_error(fn(x, 11:13, xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, 11:13))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, 11:13)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3])
     expect_equal(y, x[1:2] + 10 + 100)
@@ -158,28 +161,32 @@ test_that("pass 1D by ref and blockRef works and error-traps via nClass method (
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
   # Compiled via package
   Cnc1 <- nCompile(nc1, package = TRUE)
   Cobj <- Cnc1$new()
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
   # Compiled via package via writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassingb")
-  test <- writePackage(nc1, pkgName = "testpackageb", dir = dir, modify="clear")
+  test <- writePackage(nc1, pkgName = "testpackageb", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassingb")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackageb"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackageb")
     Cobj <- access_dynamic_package("testpackageb", "nc1")$new()
     test_foo(Cobj$foo)
     CppObj <- to_generic_interface(Cobj)
     test_foo(method(CppObj, "foo"))
-    rm(Cobj, CppObj); gc()
+    rm(Cobj, CppObj)
+    gc()
   })
 })
 
@@ -196,16 +203,16 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
       xBlockRef <- xRef + 1000
       return(x)
     },
-    refArgs = 'xRef',
-    blockRefArgs = 'xBlockRef',
-    returnType = 'numericMatrix'
+    refArgs = "xRef",
+    blockRefArgs = "xBlockRef",
+    returnType = "numericMatrix"
   )
   test_foo <- function(fn) {
     x <- matrix(as.numeric(1:12), nrow = 3)
     xRef <- matrix(as.numeric(11:22), nrow = 3)
     xBlockRef <- matrix(as.numeric(21:32), nrow = 3)
     expect_error(fn(x, matrix(as.numeric(11:22), nrow = 3), xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, matrix(as.numeric(21:32)), nrow = 3))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, matrix(as.numeric(21:32)), nrow = 3)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3, 1:4], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3, 2:4])
     expect_equal(y, x[1:2, 1:3] + 10 + 100)
@@ -219,16 +226,17 @@ test_that("pass 2D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(cfoo)
   test_foo(cfoo) # Do twice to invoke byte-compiled version.
 
-  cfoo <- nCompile(foo, package=TRUE)
+  cfoo <- nCompile(foo, package = TRUE)
   test_foo(cfoo)
   test_foo(cfoo)
 
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing2")
-  test <- writePackage(foo, pkgName = "testpackage2", dir = dir, modify="clear")
+  test <- writePackage(foo, pkgName = "testpackage2", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2")
     test_foo(testpackage2::foo)
@@ -247,17 +255,18 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
           xBlockRef <- xRef + 1000
           return(x)
         },
-        refArgs = 'xRef',
-        blockRefArgs = 'xBlockRef',
-        returnType = 'numericMatrix'
+        refArgs = "xRef",
+        blockRefArgs = "xBlockRef",
+        returnType = "numericMatrix"
       )
-    ))
+    )
+  )
   test_foo <- function(fn) {
     x <- matrix(as.numeric(1:12), nrow = 3)
     xRef <- matrix(as.numeric(11:22), nrow = 3)
     xBlockRef <- matrix(as.numeric(21:32), nrow = 3)
     expect_error(fn(x, matrix(as.numeric(11:22), nrow = 3), xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, matrix(as.numeric(21:32)), nrow = 3))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, matrix(as.numeric(21:32)), nrow = 3)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3, 1:4], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3, 2:4])
     expect_equal(y, x[1:2, 1:3] + 10 + 100)
@@ -276,7 +285,8 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
 
   # Compiled via package
   Cnc1 <- nCompile(nc1, package = TRUE)
@@ -284,22 +294,25 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
 
   # Compiled via package via writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing2b")
-  test <- writePackage(nc1, pkgName = "testpackage2b", dir = dir, modify="clear")
+  test <- writePackage(nc1, pkgName = "testpackage2b", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing2b")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage2b"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage2b")
     Cobj <- testpackage2b::nc1$new()
     test_foo(Cobj$foo)
     CppObj <- to_generic_interface(Cobj)
     test_foo(method(CppObj, "foo"))
-    rm(Cobj, CppObj); gc()
+    rm(Cobj, CppObj)
+    gc()
   })
 })
 
@@ -310,22 +323,22 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
 test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompiled) in nFunction", {
   message("This test has many trapped errors.")
   foo <- nFunction(
-    function(x = numericArray(nDim=3), xRef = numericArray(nDim=3), xBlockRef = numericArray(nDim=3)) {
+    function(x = numericArray(nDim = 3), xRef = numericArray(nDim = 3), xBlockRef = numericArray(nDim = 3)) {
       xRef <- x[1:2, 1:3, 1:4] + 10
       x <- xRef + 100
       xBlockRef <- xRef + 1000
       return(x)
     },
-    refArgs = 'xRef',
-    blockRefArgs = 'xBlockRef',
-    returnType = 'numericArray(nDim=3)'
+    refArgs = "xRef",
+    blockRefArgs = "xBlockRef",
+    returnType = "numericArray(nDim=3)"
   )
   test_foo <- function(fn) {
     x <- array(as.numeric(1:60), dim = c(3, 4, 5))
     xRef <- x + 10
     xBlockRef <- x + 20
     expect_error(fn(x, array(as.numeric(1:60), dim = c(3, 4, 5)), xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, array(as.numeric(1:60), dim = c(3, 4, 5)), nrow = 3))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, array(as.numeric(1:60), dim = c(3, 4, 5)), nrow = 3)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3, 1:4, 1:5], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3, 2:4, 2:5])
     expect_equal(y, x[1:2, 1:3, 1:4] + 10 + 100)
@@ -339,16 +352,17 @@ test_that("pass 3D by ref and blockRef works and error-traps (compiled & uncompi
   test_foo(cfoo)
   test_foo(cfoo) # Do twice to invoke byte-compiled version.
 
-  cfoo <- nCompile(foo, package=TRUE)
+  cfoo <- nCompile(foo, package = TRUE)
   test_foo(cfoo)
   test_foo(cfoo)
 
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing3")
-  test <- writePackage(foo, pkgName = "testpackage3", dir = dir, modify="clear")
+  test <- writePackage(foo, pkgName = "testpackage3", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3")
     test_foo(testpackage3::foo)
@@ -361,23 +375,24 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   nc1 <- nClass(
     Cpublic = list(
       foo = nFunction(
-        function(x = numericArray(nDim=3), xRef = numericArray(nDim=3), xBlockRef = numericArray(nDim=3)) {
+        function(x = numericArray(nDim = 3), xRef = numericArray(nDim = 3), xBlockRef = numericArray(nDim = 3)) {
           xRef <- x[1:2, 1:3, 1:4] + 10
           x <- xRef + 100
           xBlockRef <- xRef + 1000
           return(x)
         },
-        refArgs = 'xRef',
-        blockRefArgs = 'xBlockRef',
-        returnType = 'numericArray(nDim=3)'
+        refArgs = "xRef",
+        blockRefArgs = "xBlockRef",
+        returnType = "numericArray(nDim=3)"
       )
-    ))
+    )
+  )
   test_foo <- function(fn) {
     x <- array(as.numeric(1:60), dim = c(3, 4, 5))
     xRef <- x + 10
     xBlockRef <- x + 20
     expect_error(fn(x, array(as.numeric(1:60), dim = c(3, 4, 5)), xBlockRef)) # Can't pass literal to ref
-    expect_error(fn(x, xRef, array(as.numeric(1:60), dim = c(3, 4, 5)), nrow = 3))      # Can't pass literal to blockRef
+    expect_error(fn(x, xRef, array(as.numeric(1:60), dim = c(3, 4, 5)), nrow = 3)) # Can't pass literal to blockRef
     expect_error(fn(x, xRef[1:3, 1:4, 1:5], blockRef)) # Can't pass block to ref
     y <- fn(x, xRef, xBlockRef[2:3, 2:4, 2:5])
     expect_equal(y, x[1:2, 1:3, 1:4] + 10 + 100)
@@ -397,7 +412,8 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
 
   # Compiled via package
   Cnc1 <- nCompile(nc1, package = TRUE)
@@ -405,22 +421,25 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
   test_foo(Cobj$foo)
   CppObj <- to_generic_interface(Cobj)
   test_foo(method(CppObj, "foo"))
-  rm(Cobj, CppObj); gc()
+  rm(Cobj, CppObj)
+  gc()
 
   # Compiled via package via writePackage
   dir <- file.path(tempdir(), "test_nComp_testpackage_argPassing3b")
-  test <- writePackage(nc1, pkgName = "testpackage3b", dir = dir, modify="clear")
+  test <- writePackage(nc1, pkgName = "testpackage3b", dir = dir, modify = "clear")
   lib <- file.path(tempdir(), "test_nComp_lib_argPassing3b")
-  dir.create(lib, showWarnings=FALSE)
+  dir.create(lib, showWarnings = FALSE)
   withr::with_libpaths(lib, action = "prefix", code = devtools::install(file.path(dir, "testpackage3b"),
-                                              upgrade = FALSE, dependencies = FALSE, quick=TRUE, quiet=TRUE))
+    upgrade = FALSE, dependencies = FALSE, quick = TRUE, quiet = TRUE
+  ))
   withr::with_libpaths(lib, action = "prefix", code = {
     load_dynamic_namespace("testpackage3b")
     Cobj <- testpackage3b::nc1$new()
     test_foo(Cobj$foo)
     CppObj <- to_generic_interface(Cobj)
     test_foo(method(CppObj, "foo"))
-    rm(Cobj, CppObj); gc()
+    rm(Cobj, CppObj)
+    gc()
   })
 })
 
@@ -429,19 +448,19 @@ test_that("pass 2D by ref and blockRef works and error-traps via nClass method (
 
 test_that("nested pass by ref works", {
   foo1 <- nFunction(
-    fun=function(x=double(1)) {
-      x <- x+1
+    fun = function(x = double(1)) {
+      x <- x + 1
     },
     refArgs = "x"
   )
   foo2 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       foo1(x)
     },
     refArgs = "x"
   )
   foo3 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       x <- x + 1
       foo1(x)
     },
@@ -470,7 +489,7 @@ test_that("nested pass by ref works", {
 
   # Nest from R to C++
   foo4 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       C$foo3(x)
     },
     refArgs = "x"
@@ -482,19 +501,19 @@ test_that("nested pass by ref works", {
 
 test_that("nested pass by blockRef case 1 works", {
   foo1 <- nFunction(
-    fun=function(x=double(1)) {
-      x <- x+1
+    fun = function(x = double(1)) {
+      x <- x + 1
     },
     blockRefArgs = "x"
   )
   foo2 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       foo1(x)
     },
     blockRefArgs = "x"
   )
   foo3 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       x <- x + 1
       foo1(x)
     },
@@ -525,7 +544,7 @@ test_that("nested pass by blockRef case 1 works", {
 
   # Nest from R to C++
   foo4 <- nFunction(
-    fun=function(x=double(1)) {
+    fun = function(x = double(1)) {
       C$foo3(x)
     },
     blockRefArgs = "x"
@@ -540,10 +559,10 @@ test_that("nested pass by blockRef case 1 works", {
 # in the case from R to C++
 test_that("pass by ref with same ref in multiple args works except R->C++", {
   foo1 <- nFunction(
-    fun=function(x=double(1), y=double(1)) {
+    fun = function(x = double(1), y = double(1)) {
       z <- x
-      x <- x+1
-      y <- z+2
+      x <- x + 1
+      y <- z + 2
       # foo1(v, v) should set v = v+2
     },
     refArgs = c("x", "y")
@@ -553,17 +572,17 @@ test_that("pass by ref with same ref in multiple args works except R->C++", {
   expect_equal(v, 3:4)
 
   foo2 <- nFunction(
-    fun=function(x=double(1), y=double(1)) {
+    fun = function(x = double(1), y = double(1)) {
       z <- x
-      y <- z+2
-      x <- x+1
+      y <- z + 2
+      x <- x + 1
       # foo1(v, v) should set v = v + 2
     },
     refArgs = c("x", "y")
   )
   v <- as.numeric(1:2)
   foo2(v, v)
-  expect_equal(v, (1:2)+3)
+  expect_equal(v, (1:2) + 3)
 
   C <- nCompile(foo1, foo2)
 
@@ -573,17 +592,17 @@ test_that("pass by ref with same ref in multiple args works except R->C++", {
 
   v <- as.numeric(1:2)
   C$foo2(v, v)
-  expect_false(identical(v, (1:2)+3)) # WILL NOT WORK
+  expect_false(identical(v, (1:2) + 3)) # WILL NOT WORK
   # Nest from R to C++
 })
 
 # This will NEVER be made to work in the case from R to C++
 test_that("pass by blockRef with same ref in multiple args works except R->C++", {
   foo1 <- nFunction(
-    fun=function(x=double(1), y=double(1)) {
+    fun = function(x = double(1), y = double(1)) {
       z <- x
-      x <- x+1
-      y <- z+2
+      x <- x + 1
+      y <- z + 2
       # foo1(v, v) should set v = v+2
     },
     blockRefArgs = c("x", "y")
@@ -593,10 +612,10 @@ test_that("pass by blockRef with same ref in multiple args works except R->C++",
   expect_equal(v, c(1, (2:3) + 2))
 
   foo2 <- nFunction(
-    fun=function(x=double(1), y=double(1)) {
+    fun = function(x = double(1), y = double(1)) {
       z <- x
-      y <- z+2
-      x <- x+1
+      y <- z + 2
+      x <- x + 1
       # foo1(v, v) should set v = v + 2
     },
     blockRefArgs = c("x", "y")
@@ -671,8 +690,6 @@ message("Uncomment an argumentPassing test when nested STM / ISEQS_ issues are f
 ##   expect_equal(x, 3:4)
 
 ## })
-
-
 
 
 ## It seems like this test should give an error because we are assigning

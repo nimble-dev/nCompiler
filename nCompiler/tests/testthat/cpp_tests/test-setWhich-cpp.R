@@ -1,8 +1,9 @@
-
 library(Rcpp)
 test_that("basic uses of setWhich work", {
-  cppfile <- system.file(file.path('tests', 'testthat', 'cpp',
-                                   'setWhich_tests.cpp'), package = 'nCompiler')
+  cppfile <- system.file(file.path(
+    "tests", "testthat", "cpp",
+    "setWhich_tests.cpp"
+  ), package = "nCompiler")
   `:::`("nCompiler", "QuietSourceCpp")(cppfile)
   expect_equivalent(setWhich_test1(TRUE), which(TRUE))
   expect_equivalent(setWhich_test1(FALSE), which(FALSE))

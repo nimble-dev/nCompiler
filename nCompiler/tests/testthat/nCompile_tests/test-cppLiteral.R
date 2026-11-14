@@ -12,12 +12,12 @@ test_that("cppLiteral with list of scalars works", {
   Rcpp::Named("item1") = a,
   Rcpp::Named("item2") = b
   );',
- types = list(ans = "RcppList")
- )
+        types = list(ans = "RcppList")
+      )
       return(ans)
       returnType("RcppList")
     }
- )
+  )
   nfC <- nCompile(nf)
   ans <- nfC(2, FALSE)
   expect_true(is.list(ans))
@@ -37,19 +37,19 @@ test_that("cppLiteral with list including vector works", {
   Rcpp::Named("y") = y,
   Rcpp::Named("z") = Rcpp::wrap(z)
 );',
-types = list(ans = "RcppList")
-)
+        types = list(ans = "RcppList")
+      )
       return(ans)
       returnType("RcppList")
     }
-)
+  )
   nfC <- nCompile(nf)
-  ans <- nfC(c(1,2,3), 4)
+  ans <- nfC(c(1, 2, 3), 4)
   expect_true(is.list(ans))
   expect_equal(length(ans), 3)
-  expect_equal(ans$x, c(1,2,3))
+  expect_equal(ans$x, c(1, 2, 3))
   expect_equal(ans$y, 4)
-  expect_equal(ans$z, c(5,6,7))
+  expect_equal(ans$z, c(5, 6, 7))
 })
 
 ##########
@@ -59,8 +59,10 @@ types = list(ans = "RcppList")
 test_that("nCpp works with vector of text", {
   nf <- nFunction(
     fun = function() {
-      nCpp(c("int x = 0;",
-             "Rprintf(\"hw %i\\n \", x)"))
+      nCpp(c(
+        "int x = 0;",
+        "Rprintf(\"hw %i\\n \", x)"
+      ))
     }
   )
   nfC <- nCompile(nf)
@@ -72,8 +74,10 @@ test_that("nCpp works with evaluation in correct environment", {
     x_value <- 10
     nf <- nFunction(
       fun = function() {
-        nCpp(c("int x = ", x_value, ";",
-               "Rprintf(\"hw %i\\n \", x)"))
+        nCpp(c(
+          "int x = ", x_value, ";",
+          "Rprintf(\"hw %i\\n \", x)"
+        ))
       }
     )
   }
@@ -89,8 +93,10 @@ test_that("nCpp works with evaluation in correct environment in nClass", {
     x_value <- 10 # will be ignored because there will be a new parent env
     nf <- nFunction(
       fun = function() {
-        nCpp(c("int x = ", x_value, ";",
-               "Rprintf(\"hw %i\\n \", x)"))
+        nCpp(c(
+          "int x = ", x_value, ";",
+          "Rprintf(\"hw %i\\n \", x)"
+        ))
       }
     )
   }
@@ -114,11 +120,14 @@ test_that("nCpp works with evaluation in correct environment", {
       Cpublic = list(
         nf = nFunction(
           fun = function() {
-            nCpp(c("int x = ", x_value, ";",
-                   "Rprintf(\"hw %i\\n \", x)"))
+            nCpp(c(
+              "int x = ", x_value, ";",
+              "Rprintf(\"hw %i\\n \", x)"
+            ))
           }
         )
-      ))
+      )
+    )
     nc
   }
   nc <- make_nc()
@@ -130,9 +139,9 @@ test_that("nCpp works with evaluation in correct environment", {
 test_that("nCpp works as a type declaration", {
   make_nf <- function() {
     nf <- nFunction(
-      fun = function(ivec = nCpp('Eigen::Tensor<int, 1>')) {
+      fun = function(ivec = nCpp("Eigen::Tensor<int, 1>")) {
         nCpp("return(ivec);")
-        returnType('integerVector')
+        returnType("integerVector")
       }
     )
   }
@@ -145,13 +154,13 @@ test_that("nCpp works within a line", {
   make_nf <- function() {
     nf <- nFunction(
       fun = function(ivec = integerVector()) {
-        x <- nCpp("(ivec + int(1))", types = list(return = 'integerVector')) + 2L
+        x <- nCpp("(ivec + int(1))", types = list(return = "integerVector")) + 2L
         return(x)
-        returnType('integerVector')
+        returnType("integerVector")
       }
     )
   }
   nf <- make_nf()
   nfC <- nCompile(nf)
-  expect_equal(nfC(1:3), (1:3)+3)
+  expect_equal(nfC(1:3), (1:3) + 3)
 })

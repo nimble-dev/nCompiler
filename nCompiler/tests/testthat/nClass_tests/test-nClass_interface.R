@@ -5,10 +5,11 @@ test_that("member-specific control over full vs generic return works", {
     Cpublic = list(
       Cfoo = nFunction(
         fun = function(x) {
-          return(x+1)
+          return(x + 1)
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar'),
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      ),
       ## Add another method to check that order from
       ## interface_names matches order listed here.
       AAA = nFunction(
@@ -22,10 +23,11 @@ test_that("member-specific control over full vs generic return works", {
     Cpublic = list(
       Cfoo = nFunction(
         fun = function(x) {
-          return(x+2)
+          return(x + 2)
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      )
     ),
     compileInfo = list(interface = "full")
   )
@@ -34,10 +36,11 @@ test_that("member-specific control over full vs generic return works", {
     Cpublic = list(
       Cfoo = nFunction(
         fun = function(x) {
-          return(x+3)
+          return(x + 3)
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      )
     )
     # pick up interface setting nCompile call.
   )
@@ -97,7 +100,8 @@ test_that("member-specific control over full vs generic return works", {
   expect_equal(interface_names(obj2$x8), character())
   expect_equal(interface_names(obj2$x8, "methods"), "Cfoo")
 
-  rm(obj2, obj1, obj1a, obj1b); gc()
+  rm(obj2, obj1, obj1a, obj1b)
+  gc()
 })
 
 
@@ -107,17 +111,18 @@ test_that(
     nc1 <- nClass(
       Rpublic = list(
         Rv = NULL,
-        Rfoo = function(x) x+1
+        Rfoo = function(x) x + 1
       ),
       Cpublic = list(
-        Cv = 'numericScalar',
-        Ca = 'numericVector',
+        Cv = "numericScalar",
+        Ca = "numericVector",
         Cfoo = nFunction(
           fun = function(x) {
-            return(x+1)
+            return(x + 1)
           },
-          argTypes = list(x = 'numericScalar'),
-          returnType = 'numericScalar')
+          argTypes = list(x = "numericScalar"),
+          returnType = "numericScalar"
+        )
       )
     )
 
@@ -125,15 +130,15 @@ test_that(
     obj <- ans()
     expect_equal(interface_names(obj), c("Cv", "Ca"))
     expect_equal(interface_names(obj, "methods"), "Cfoo")
-    value(obj, 'Cv') <- 2.3
-    check <- value(obj, 'Cv')
+    value(obj, "Cv") <- 2.3
+    check <- value(obj, "Cv")
     expect_equal(check, 2.3, info = "scalar value() and `value<-()`")
 
-    value(obj, 'Ca') <- c(2.3, 3.4, 4.5)
-    check <- value(obj, 'Ca')
+    value(obj, "Ca") <- c(2.3, 3.4, 4.5)
+    check <- value(obj, "Ca")
     expect_equal(check, c(2.3, 3.4, 4.5), info = "vector value() and `value()<-`")
 
-    check <- method(obj, 'Cfoo')(3.4)
+    check <- method(obj, "Cfoo")(3.4)
     expect_equal(check, 4.4, info = "method()")
 
     nc1c <- build_compiled_nClass(nc1)
@@ -148,8 +153,10 @@ test_that(
     expect_equal(check, 8.8, info = "full interface R method")
     check <- test$Cfoo(8.9)
     expect_equal(check, 9.9, info = "full interface R method")
-    rm(obj, test); gc()
-  })
+    rm(obj, test)
+    gc()
+  }
+)
 
 test_that(
   "interface = \"full\" works",
@@ -157,17 +164,18 @@ test_that(
     nc1 <- nClass(
       Rpublic = list(
         Rv = NULL,
-        Rfoo = function(x) x+1
+        Rfoo = function(x) x + 1
       ),
       Cpublic = list(
-        Cv = 'numericScalar',
-        Ca = 'numericVector',
+        Cv = "numericScalar",
+        Ca = "numericVector",
         Cfoo = nFunction(
           fun = function(x) {
-            return(x+1)
+            return(x + 1)
           },
-          argTypes = list(x = 'numericScalar'),
-          returnType = 'numericScalar')
+          argTypes = list(x = "numericScalar"),
+          returnType = "numericScalar"
+        )
       )
     )
 
@@ -189,8 +197,10 @@ test_that(
 
     check <- obj$Cfoo(3.4)
     expect_equal(check, 4.4, info = "method from a full interface")
-    rm(obj); gc()
-  })
+    rm(obj)
+    gc()
+  }
+)
 
 test_that("getting an interface base class pointer within C++ works", {
   nc1 <- nList("integerVector()")
@@ -217,9 +227,10 @@ test_that("getting an interface base class pointer within C++ works", {
       check1 = nFunction(
         function() {
           cppLiteral("auto basePtr = this->get_interface_ptr(\"nc2obj\")")
-          #derivedPtr <- nc2$new()
+          # derivedPtr <- nc2$new()
           cppLiteral("derivedPtr = std::dynamic_pointer_cast<nc2>(basePtr);",
-                     types = list(derivedPtr = "nc2()"))
+            types = list(derivedPtr = "nc2()")
+          )
           ans <- derivedPtr$x
           return(ans)
           returnType("integerVector")
@@ -229,7 +240,8 @@ test_that("getting an interface base class pointer within C++ works", {
         function() {
           cppLiteral("auto basePtr = this->get_interface_ptr(\"nc1obj\")")
           cppLiteral("nListBasePtr = std::dynamic_pointer_cast<nListBase_nClass>(basePtr);",
-                     types = list(nListBasePtr = "nListBase_nClass()"))
+            types = list(nListBasePtr = "nListBase_nClass()")
+          )
           cppLiteral("bool ok; if(nListBasePtr) {ok=true;} else {ok=false;} ")
           cppLiteral("std::cout<< ok << std::endl;")
           length(nListBasePtr) <- 3
@@ -239,7 +251,8 @@ test_that("getting an interface base class pointer within C++ works", {
         function() {
           cppLiteral("auto basePtr = nc2obj->get_interface_ptr(\"nc1obj\")")
           cppLiteral("nListBasePtr = std::dynamic_pointer_cast<nListBase_nClass>(basePtr);",
-                     types = list(nListBasePtr = "nListBase_nClass()"))
+            types = list(nListBasePtr = "nListBase_nClass()")
+          )
           cppLiteral("{bool ok; if(nListBasePtr) {ok=true;} else {ok=false;} ")
           cppLiteral("std::cout<< ok << std::endl;}")
 
@@ -247,7 +260,8 @@ test_that("getting an interface base class pointer within C++ works", {
           # N.B. The name "nList_I1" can be found from the NCinternals of nc1.
           # It is the classID.
           cppLiteral("nListDerPtr = std::dynamic_pointer_cast<nList_I1>(nListBasePtr);",
-                      types = list(nListDerPtr = "nc1()"))
+            types = list(nListDerPtr = "nc1()")
+          )
           cppLiteral("bool ok; if(nListDerPtr) {ok=true;} else {ok=false;} ")
           cppLiteral("std::cout<<ok<<std::endl")
           nListDerPtr[[1]] <- 1L:3L
@@ -273,5 +287,6 @@ test_that("getting an interface base class pointer within C++ works", {
   obj$check3()
   expect_equal(obj$nc2obj$nc1obj |> as.list() |> length(), 2)
   expect_equal(obj$nc2obj$nc1obj[[1]], 1L:3L)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })

@@ -1,26 +1,29 @@
-cppFileLabelFunction <- labelFunctionCreator('nCompiler_units')
+cppFileLabelFunction <- labelFunctionCreator("nCompiler_units")
 
 ## Compare two compilation units for identity, preferring classID over identical().
 ## For NCgenerators, classID (a digest hash) is always set and gives stable identity
 ## even for dynamically generated parameterised types like nList where two separate
 ## R objects can represent the same logical type.
 unit_is_duplicate <- function(a, b) {
-  if(isNCgenerator(a) && isNCgenerator(b)) {
+  if (isNCgenerator(a) && isNCgenerator(b)) {
     id_a <- NCinternals(a)$classID
     id_b <- NCinternals(b)$classID
-    if(!is.null(id_a) && !is.null(id_b))
+    if (!is.null(id_a) && !is.null(id_b)) {
       return(id_a == id_b)
+    }
   }
   identical(a, b)
 }
 
 ## classID-aware replacement for unique() on lists of compilation units.
 unique_units <- function(units) {
-  if(length(units) <= 1L) return(units)
+  if (length(units) <= 1L) {
+    return(units)
+  }
   keep <- rep(TRUE, length(units))
-  for(i in seq(2L, length(units))) {
-    for(j in seq(1L, i - 1L)) {
-      if(keep[j] && unit_is_duplicate(units[[i]], units[[j]])) {
+  for (i in seq(2L, length(units))) {
+    for (j in seq(1L, i - 1L)) {
+      if (keep[j] && unit_is_duplicate(units[[i]], units[[j]])) {
         keep[i] <- FALSE
         break
       }
@@ -63,35 +66,35 @@ unique_units <- function(units) {
 #
 # Addendum:
 #  exportNames are names exported from sourceCpp, i.e.from Rcpp::export labeling.
-#. returnNames are the names returned to the user from nCompile.
+# . returnNames are the names returned to the user from nCompile.
 #
 # compiled generator names when going through writePackage:
 #  This is a subtle issue.
-#. If a user has written an nClass with an inherit argument for another nClass,
-#. we *must* preserve the name of the base class so that it will be found by
-#. the derived class by the name used when programming them. Since we don't know
-#. where or when inheritance might be done, that means we should preserve all original names.
+# . If a user has written an nClass with an inherit argument for another nClass,
+# . we *must* preserve the name of the base class so that it will be found by
+# . the derived class by the name used when programming them. Since we don't know
+# . where or when inheritance might be done, that means we should preserve all original names.
 #
-#. However, from the input to nCompile or writePackage, we don't know those names.
+# . However, from the input to nCompile or writePackage, we don't know those names.
 #  We only know the intended *returnNames*. In some cases (and when parsed from unnamed inputs),
 #  those may match the original generator object name.
 #
 #  There is also a different need for writePackage called directly vs nCompile with package=TRUE.
 #
-#. For nCompile with package=TRUE, the user should give returnName matching generator name
-#.  (or let that happen by not providing a name). Then the uncompiled generator in the
+# . For nCompile with package=TRUE, the user should give returnName matching generator name
+# .  (or let that happen by not providing a name). Then the uncompiled generator in the
 #   written package code will have the correct name for inheritance, and the same name
-#.  can be used for the list element of the compiled generator returned to the user.
-#.  (If there is no nClass inheritance, the user can safely change the returnName.)
+# .  can be used for the list element of the compiled generator returned to the user.
+# .  (If there is no nClass inheritance, the user can safely change the returnName.)
 #
 #  However, for writePackage called directly, that scheme will not work. We *must*
-#. preserve the original uncompiled generator name (for any inherts) and we must have a distinct
-#. object name for the compiled generator.
+# . preserve the original uncompiled generator name (for any inherts) and we must have a distinct
+# . object name for the compiled generator.
 #  To do that we use compileInfo$classname. A default value of which (if needed) is
 #  created by the original NC by appending "_compiled".
 #
 #  In internal code, the uncompiled generator name will be uncomp_gen_name
-#. and the compiled generator name will be comp_gen_name.
+# . and the compiled generator name will be comp_gen_name.
 #
 # Although the compiled_name is strictly only necessary for writePackage called directly,
 # we will support and use it also for nCompile with package=TRUE so that that can be used
@@ -106,27 +109,37 @@ unique_units <- function(units) {
 #' @export
 get_nCompile_types <- function(units) {
   ans <- character(length(units))
-  for(i in seq_along(units)) {
-    if(isNF(units[[i]])) {
-      ans[i] <- if(NFinternals(units[[i]])$compileInfo$callFromR)
-                  'nF' else 'nF_noExport'
-    } else if(isNCgenerator(units[[i]])) ans[i] <- 'nCgen'
-    else if(isNC(units[[i]]))
-      stop(paste0("The #", i, " object to be compiled is an nClass object.\n",
-                  "Only nClass generators (the class definition, not an object of the class) should be compiled."),
-           call.=FALSE)
-    else stop(paste0("The #", i, " object to be compiled is neither an nFunction nor an nClass generator (class definition).\n"))
+  for (i in seq_along(units)) {
+    if (isNF(units[[i]])) {
+      ans[i] <- if (NFinternals(units[[i]])$compileInfo$callFromR) {
+        "nF"
+      } else {
+        "nF_noExport"
+      }
+    } else if (isNCgenerator(units[[i]])) {
+      ans[i] <- "nCgen"
+    } else if (isNC(units[[i]])) {
+      stop(
+        paste0(
+          "The #", i, " object to be compiled is an nClass object.\n",
+          "Only nClass generators (the class definition, not an object of the class) should be compiled."
+        ),
+        call. = FALSE
+      )
+    } else {
+      stop(paste0("The #", i, " object to be compiled is neither an nFunction nor an nClass generator (class definition).\n"))
+    }
   }
   ans
 }
 
 nCompile_createCppDefsInfo <- function(units,
-                              unitTypes,
-                              control,
-                              compileInfos,
-                              project_env = new.env()) {
-  if(is.null(names(units))) names(units) <- rep('', length(units))
-  if(length(units) == 0) stop('No objects for compilation provided')
+                                       unitTypes,
+                                       control,
+                                       compileInfos,
+                                       project_env = new.env()) {
+  if (is.null(names(units))) names(units) <- rep("", length(units))
+  if (length(units) == 0) stop("No objects for compilation provided")
   unitResults <- vector("list", length(units))
   cpp_names <- character(length(units))
   needed_nClasses <- vector("list", length(units))
@@ -134,65 +147,74 @@ nCompile_createCppDefsInfo <- function(units,
   raw_results <- vector("list", length(units))
   use_raw_results <- FALSE # raw_results may be triggered by an error but also by debugging via a choice of control$endStage
   raw_result_names <- character()
-  for(i in seq_along(units)) {
+  for (i in seq_along(units)) {
     compileInfo <- compileInfos[[i]]
-    if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
+    if (unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       oneResult <- nCompile_nFunction(units[[i]],
-                                      stopAfterCppDef = TRUE,
-                                      env = env,
-                                      compileInfo = compileInfo,
-                                      control = control,
-                                      project_env = project_env)
+        stopAfterCppDef = TRUE,
+        env = env,
+        compileInfo = compileInfo,
+        control = control,
+        project_env = project_env
+      )
       cpp_names[i] <- NFinternals(units[[i]])$cpp_code_name
-    } else if(unitTypes[i] == "nCgen") {
+    } else if (unitTypes[i] == "nCgen") {
       # update compileInfo for explicit inheritance base class if provided.
       nClass_info <- register_known_nClass(units[[i]], project_env)
       NCint <- NCinternals(units[[i]])
-      if(!is.null(NCint$inheritQ)) {      
-        if(!NCint$inherit_base_provided) {
-          compileInfo$nClass_inherit$base <- 
+      if (!is.null(NCint$inheritQ)) {
+        if (!NCint$inherit_base_provided) {
+          compileInfo$nClass_inherit$base <-
             nClass_info$inheritInfo$inheritNCinternals$cpp_classname
         }
       }
       oneResult <- nCompile_nClass(units[[i]],
-                                  stopAfterCppDef = TRUE,
-                                  env = env,
-                                  compileInfo = compileInfo,
-                                  control = control,
-                                  project_env = project_env)
+        stopAfterCppDef = TRUE,
+        env = env,
+        compileInfo = compileInfo,
+        control = control,
+        project_env = project_env
+      )
       cpp_names[i] <- NCinternals(units[[i]])$cpp_classname
     }
     # here is.list(oneResult) is a cheap check of whether we are in fully operational mode
-    if(!is.list(oneResult)) {
+    if (!is.list(oneResult)) {
       # stop("nCompile_nFunction or nCompile_nClass did not return a list for ", cpp_names[i])
       raw_result_names <- c(raw_result_names, names(units)[i])
       use_raw_results <- TRUE
     }
     raw_results[[i]] <- oneResult
-    if(!use_raw_results) {
+    if (!use_raw_results) {
       unitResults[[i]] <- oneResult$cppDef
       needed_nClasses[[i]] <- oneResult$needed_units$needed_nClasses
       needed_nFunctions[[i]] <- oneResult$needed_units$needed_nFunctions
     }
   }
-  if((!use_raw_results) && (length(raw_results)))
-   for(i in length(raw_results):1) raw_results[[i]] <- NULL
-  if(use_raw_results) {
+  if ((!use_raw_results) && (length(raw_results))) {
+    for (i in length(raw_results):1) raw_results[[i]] <- NULL
+  }
+  if (use_raw_results) {
     attr(raw_results, "raw_results") <- TRUE
-    warning("Not all compilation units completed (including at least ", paste(raw_result_names, collapse = ", "), ").\n",
-        "This may be due to an problem or use of debugging tools such as control$endStage.\n",
-        "Intermediate objects will be returned.")
+    warning(
+      "Not all compilation units completed (including at least ", paste(raw_result_names, collapse = ", "), ").\n",
+      "This may be due to an problem or use of debugging tools such as control$endStage.\n",
+      "Intermediate objects will be returned."
+    )
     return(raw_results)
   }
-  list(cppDefs = unitResults,
-       cpp_names = cpp_names,
-       needed_nClasses = needed_nClasses,
-       needed_nFunctions = needed_nFunctions)
+  list(
+    cppDefs = unitResults,
+    cpp_names = cpp_names,
+    needed_nClasses = needed_nClasses,
+    needed_nFunctions = needed_nFunctions
+  )
 }
 
 cppDefsList_2_RcppPacketList <- function(cppDefs) {
-  allCppDefs <- c(cppDefs,
-                  do.call("c", lapply(cppDefs, function(x) x$getExternalDefs())))
+  allCppDefs <- c(
+    cppDefs,
+    do.call("c", lapply(cppDefs, function(x) x$getExternalDefs()))
+  )
   allCppDefs <- allCppDefs[!duplicated(allCppDefs)] # preserves names. unique(allCppDefs) does not.
   RcppPacket_list <- lapply(allCppDefs, cppDefs_2_RcppPacket)
   RcppPacket_list
@@ -206,8 +228,7 @@ cppDefsList_2_RcppPacketList <- function(cppDefs) {
 # that need other units that then need prepared
 # information
 nCompile_prepare_units <- function(...,
-                          interfaces = list()
-                        ) {
+                                   interfaces = list()) {
   # Input can arrive in several ways:
   # - separate units in ..., with or without names
   # -  some elements of ... can be lists of units, with or without names
@@ -221,40 +242,42 @@ nCompile_prepare_units <- function(...,
   # A key use case is predefined nClasses that are generated once
   # and then later used, including auto-included, by either package or non-package
   # pathways.
-  # In that case the exportName *must* be stable, so the naming 
+  # In that case the exportName *must* be stable, so the naming
   #  decision tree below should be careful with exportName.
   # Recommended will be to provide it explicitly in the compileInfo$exportName
-  #.  of a predefined nClass, and then that must be respected.
+  # .  of a predefined nClass, and then that must be respected.
 
 
-  #(1) Put together inputs from ...
+  # (1) Put together inputs from ...
   # dotsDeparses is used to get default names for unnamed inputs.
-  dotsDeparses <- unlist(lapply( substitute(list(...))[-1], deparse ))
+  dotsDeparses <- unlist(lapply(substitute(list(...))[-1], deparse))
   # origList can have several kinds of elements:
   # nc = nc_generator
   # nf = nFunction
   # not_used = list(nc1 = nc1, nf1 = nf2, etc) (in which case the name of the list isn't used)
 
-  # When input has units within the ..., 
+  # When input has units within the ...,
   # any unnamed units get a default name by deparsing the ... entry.
   # e.g. nCompile(foo) gets a default name of "foo", as if it were nCompile(foo=foo)
   # But unnamed entries in a provided list are left with name "" and get named at the end.
   origList <- list(...)
-  if(is.null(names(origList)))
-    names(origList) <- rep('', length(origList))
-  boolNoName <- names(origList)==''
+  if (is.null(names(origList))) {
+    names(origList) <- rep("", length(origList))
+  }
+  boolNoName <- names(origList) == ""
   origIsList <- unlist(lapply(origList, is.list))
-  dotsDeparses[origIsList] <- ''
+  dotsDeparses[origIsList] <- ""
   names(origList)[boolNoName & !origIsList] <- "NO_NAME_PROVIDED"
-  for(i in which(origIsList)) {
-    if(is.null(names(origList[[i]])))
-      names(origList[[i]]) <- rep('', length(origList[[i]]))
+  for (i in which(origIsList)) {
+    if (is.null(names(origList[[i]]))) {
+      names(origList[[i]]) <- rep("", length(origList[[i]]))
+    }
   }
   dotsDeparse_boolNoName_before_c <- dotsDeparses[boolNoName & !origIsList] # This puts default names from deparsing ... entries into list
   # for `nCompile(A = foo, foo2))`, names(units) will be c("A", "foo2")
-  units <- do.call('c', origList)
-  boolNoName <- names(units)=='NO_NAME_PROVIDED' | names(units)==''
-  names(units)[names(units)=='NO_NAME_PROVIDED'] <- dotsDeparse_boolNoName_before_c
+  units <- do.call("c", origList)
+  boolNoName <- names(units) == "NO_NAME_PROVIDED" | names(units) == ""
+  names(units)[names(units) == "NO_NAME_PROVIDED"] <- dotsDeparse_boolNoName_before_c
 
   # This retains info about what was provided as input so we can respect that later.
   inputNamesInfo <- list(names = names(units), boolNameProvided = !boolNoName)
@@ -268,11 +291,11 @@ nCompile_prepare_units <- function(...,
   #  from compileInfos. If a named vector of list is provided,
   #  they will over-ride on a one-by-one bases.
   # Note that this uses names(units). That's why we skip it if interfaces weren't provided,
-  #.  allowing names(units) to be empty ("").
-  if(interfaces_provided) {
-    if(!is.list(interfaces)) {
-      if(is.character(interfaces)) {
-        if(length(interfaces) == 1) {
+  # .  allowing names(units) to be empty ("").
+  if (interfaces_provided) {
+    if (!is.list(interfaces)) {
+      if (is.character(interfaces)) {
+        if (length(interfaces) == 1) {
           interfaces <- rep(interfaces, length(units))
           names(interfaces) <- names(units) # nFunction units will just be ignored
         }
@@ -280,22 +303,25 @@ nCompile_prepare_units <- function(...,
       interfaces <- as.list(interfaces)
     }
     # check for invalid interface names.
-    # We could add a check for interfaces that are not for nClasses.  
-    if(!all(names(interfaces) %in% names(units))) {
+    # We could add a check for interfaces that are not for nClasses.
+    if (!all(names(interfaces) %in% names(units))) {
       i_bad_names <- which(!(names(interfaces) %in% names(units)))
-      stop("Some names in 'interfaces' do not match names of compilation units in '...':",
-          paste(names(interfaces)[i_bad_names], collapse=','))
+      stop(
+        "Some names in 'interfaces' do not match names of compilation units in '...':",
+        paste(names(interfaces)[i_bad_names], collapse = ",")
+      )
     }
     # make interfaces match the order of units and fill in NULLs when no interface is provided
     # (which will be the case for nFunctions)
-    for(un in names(units))
-      if(!(un %in% names(interfaces))) interfaces[un] <- ""
+    for (un in names(units)) {
+      if (!(un %in% names(interfaces))) interfaces[un] <- ""
+    }
     interfaces <- interfaces[names(units)]
   } else {
     interfaces <- rep("", length(units))
     names(interfaces) <- names(units) # could have blanks at this point, will be renamed at the end
   }
-  
+
   unitTypes <- get_nCompile_types(units)
 
   # We defer processing of nClass inheritance until compile time to allow nClass
@@ -320,7 +346,7 @@ nCompile_prepare_units <- function(...,
   # set up exportNames, returnNames, and packageNames
   # exportNames: These appear in C++ as [[Rcpp::export(exportName = <exportName>)]].
   #              Thus they give the name of the R function that will call the C++ version of the nFunction or nClass generator function.
-  #.      IF PROVIDED, this must be respected so that predefined nClasses will have stable exportName.
+  # .      IF PROVIDED, this must be respected so that predefined nClasses will have stable exportName.
   # returnNames: These are the names used in the list returned from nCompile (for units provided by the user, not auto-included)
   # packageNames: Each element is a vector of two names. The first is the
   #               uncompiled generator name in package code. The second is the
@@ -330,8 +356,8 @@ nCompile_prepare_units <- function(...,
   #
   # Note that we have retained information from the inputs (... or list) on
   #  (i) whether a name was affirmatively provided (name = unit) and
-  #. (ii) what a default name from deparsing the ... would be.
-  #.      with the possibility that the default name is "" if the input was from an unnamed list element.
+  # . (ii) what a default name from deparsing the ... would be.
+  # .      with the possibility that the default name is "" if the input was from an unnamed list element.
   #
   # The naming decisions are as follows:
   # exportName defaults to compileInfo$exportName, if provided.
@@ -349,22 +375,22 @@ nCompile_prepare_units <- function(...,
   # [nFunction case:] exportName defaults to NFinternals -> cpp_code_name;
   #                   returnName defaults to name in NFinternals -> name
   # [next four steps will only matter in nClass case,
-  #.   because packageNames$compiled is now set for nFunction case]
+  # .   because packageNames$compiled is now set for nFunction case]
   # If neither part of packageNames is provided,
-  #.   packageNames$compiled defaults to returnName.
+  # .   packageNames$compiled defaults to returnName.
   # If we have only packageNames$compiled (provided, or defaulting to returnName)
-  #.   packageNames$uncompiled next defaults to the deparsed ... name, if available, otherwise returnName, if distinct,
-  #.   otherwise returnName
-  #.     Beware for cases where this breaks the inherits scheme (because an nClass inheriting from this class must find the uncompiled generator name).
-  #.   If this results in packageNames$uncompiled and packageNames$compiled being the same, then append "_uncompiled" to packageNames$uncompiled.
+  # .   packageNames$uncompiled next defaults to the deparsed ... name, if available, otherwise returnName, if distinct,
+  # .   otherwise returnName
+  # .     Beware for cases where this breaks the inherits scheme (because an nClass inheriting from this class must find the uncompiled generator name).
+  # .   If this results in packageNames$uncompiled and packageNames$compiled being the same, then append "_uncompiled" to packageNames$uncompiled.
   # If only packageNames$uncompiled is provided:
   #    packageNames$compiled next defaults to returnName
   # If packageNames$compiled and packageNames$uncompiled match (even possibly by faulty user input)
-  #.   append "_compiled" to packageNames$compiled
+  # .   append "_compiled" to packageNames$compiled
   #    This may be then hard to find if unexpected by the user, but they need to give better input (likely via compileInfo$packageNames).
   #
   # [nClass case:] If exportName matches either packageNames element:
-  #.   if interface=="full" and the exportName was not provided, exportName gets "_new" appended.
+  # .   if interface=="full" and the exportName was not provided, exportName gets "_new" appended.
   #    Otherwise the conflicting name gets "_compiled" or "_uncompiled" appended
   #
   # Examples:
@@ -377,110 +403,128 @@ nCompile_prepare_units <- function(...,
   # For nFunctions:
   # Most of the naming decisions are the same as for nClasses.
   # Key difference: the exportName and packageNames$compiled are redunant.
-  #.  Whatever is exported from Rcpp is directly the function in R to call that C++ function.
+  # .  Whatever is exported from Rcpp is directly the function in R to call that C++ function.
   #   Hence the separate steps above
   #
   returnNames <- exportNames <- vector("character", length(units))
   packageNames <- vector("list", length(units))
   compileInfos <- structure(vector("list", length(units)),
-                            names = names(units)) # could have blanks at this point, will be filled in below
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
+    names = names(units)
+  ) # could have blanks at this point, will be filled in below
+  for (i in seq_along(units)) {
+    if (unitTypes[i] == "nF" || unitTypes[i] == "nF_noExport") {
       compileInfo <- NFinternals(units[[i]])$compileInfo
       case <- "NF"
     } else {
       compileInfo <- NCinternals(units[[i]])$compileInfo
       case <- "NC"
-      if(interfaces[[i]] == "")
+      if (interfaces[[i]] == "") {
         interfaces[[i]] <- compileInfo$interface
-      if(!(interfaces[[i]] %in% c("full", "generic", "none")))
+      }
+      if (!(interfaces[[i]] %in% c("full", "generic", "none"))) {
         stop("Could not determine a valid interface value ('full', 'generic', or 'none') for ", names(units)[i])
+      }
     }
 
     exportName_provided <- FALSE
-    if(!is.null(compileInfo$exportName)) {
+    if (!is.null(compileInfo$exportName)) {
       exportNames[i] <- compileInfo$exportName
       exportName_provided <- TRUE
     }
-    if(isTRUE(inputNamesInfo$boolNameProvided[i])) returnNames[i] <- inputNamesInfo$names[i]
-    if(!is.null(compileInfo$packageNames)) packageNames[[i]] <- compileInfo$packageNames
-    if(is.null(packageNames[[i]])) packageNames[[i]] <- c(uncompiled = "", compiled = "")
+    if (isTRUE(inputNamesInfo$boolNameProvided[i])) returnNames[i] <- inputNamesInfo$names[i]
+    if (!is.null(compileInfo$packageNames)) packageNames[[i]] <- compileInfo$packageNames
+    if (is.null(packageNames[[i]])) packageNames[[i]] <- c(uncompiled = "", compiled = "")
     # Note other packageNames normalization is done in NC_InternalsClass$initialize
     # and if a classname was provided, the packageNames$uncompiled defaults to that classname
     # We do some normalization here because a user could have modified the compileInfo$packageNames
     # manually and left one or other element empty.
-    if(is.na(packageNames[[i]]["compiled"])) packageNames[[i]]["compiled"] <- ""
-    if(is.na(packageNames[[i]]["uncompiled"])) packageNames[[i]]["uncompiled"] <- ""
+    if (is.na(packageNames[[i]]["compiled"])) packageNames[[i]]["compiled"] <- ""
+    if (is.na(packageNames[[i]]["uncompiled"])) packageNames[[i]]["uncompiled"] <- ""
     packageNames[[i]] <- packageNames[[i]][c("uncompiled", "compiled")]
 
-    if(case == "NF")
-      if(packageNames[[i]]["compiled"] == "" && exportNames[i] != "")
+    if (case == "NF") {
+      if (packageNames[[i]]["compiled"] == "" && exportNames[i] != "") {
         packageNames[[i]]["compiled"] <- exportNames[i]
+      }
+    }
 
     # Further "it just works" handling of packageNames can be provided.
     # For now it should have named elements "uncompiled" and "compiled".
-    if(returnNames[i] == "")
-      if(packageNames[[i]]["compiled"] != "")
+    if (returnNames[i] == "") {
+      if (packageNames[[i]]["compiled"] != "") {
         returnNames[i] <- packageNames[[i]]["compiled"]
-    if(returnNames[i] == "")
-      if(inputNamesInfo$names[i] != "")
+      }
+    }
+    if (returnNames[i] == "") {
+      if (inputNamesInfo$names[i] != "") {
         returnNames[i] <- inputNamesInfo$names[i]
-    if(exportNames[i] == "") exportNames[i] <- returnNames[i]
-    if(returnNames[i] == "") returnNames[i] <- exportNames[i]
-    if(returnNames[i] == "" && exportNames[i] == "")
-      if(case == "NC")
+      }
+    }
+    if (exportNames[i] == "") exportNames[i] <- returnNames[i]
+    if (returnNames[i] == "") returnNames[i] <- exportNames[i]
+    if (returnNames[i] == "" && exportNames[i] == "") {
+      if (case == "NC") {
         returnNames[i] <- exportNames[i] <- NCinternals(units[[i]])$classname
-      else if(case == "NF") {
+      } else if (case == "NF") {
         exportNames[i] <- NFinternals(units[[i]])$cpp_code_name
         returnNames[i] <- NFinternals(units[[i]])$name
       }
+    }
 
-    if(case == "NC") {
+    if (case == "NC") {
       # First three of these steps should never be relevant for an nFunction anyway,
       # but it is clearer to but them within this if
       # neither part of packageNames provided
-      if(packageNames[[i]]["compiled"] == "" && packageNames[[i]]["uncompiled"] == "")
+      if (packageNames[[i]]["compiled"] == "" && packageNames[[i]]["uncompiled"] == "") {
         packageNames[[i]]["compiled"] <- returnNames[i]
+      }
       # packageNames$compiled only (provided or just set to default returnName)
-      if(packageNames[[i]]["uncompiled"] == "" && packageNames[[i]]["compiled"] != "") {
-        if(inputNamesInfo$names[i] != "") packageNames[[i]]["uncompiled"] <- inputNamesInfo$names[i]
-        else  packageNames[[i]]["uncompiled"] <- returnNames[i]
+      if (packageNames[[i]]["uncompiled"] == "" && packageNames[[i]]["compiled"] != "") {
+        if (inputNamesInfo$names[i] != "") {
+          packageNames[[i]]["uncompiled"] <- inputNamesInfo$names[i]
+        } else {
+          packageNames[[i]]["uncompiled"] <- returnNames[i]
+        }
         # if packageNames now match, disambiguate by changing uncompiled name
-        if(packageNames[[i]]["uncompiled"] == packageNames[[i]]["compiled"])
+        if (packageNames[[i]]["uncompiled"] == packageNames[[i]]["compiled"]) {
           packageNames[[i]]["uncompiled"] <- paste0(packageNames[[i]]["compiled"], "_uncompiled")
+        }
         # Any class inheriting from this class will likely not find it if we are in this
         # case of default handling. The user must provide packageNames to fix this.
       }
       # packageNames$uncompiled only provided)
-      if(packageNames[[i]]["compiled"] == "" && packageNames[[i]]["uncompiled"] != "") {
+      if (packageNames[[i]]["compiled"] == "" && packageNames[[i]]["uncompiled"] != "") {
         packageNames[[i]]["compiled"] <- returnNames[i]
       }
 
-      if(packageNames[[i]]["compiled"] == packageNames[[i]]["uncompiled"])
+      if (packageNames[[i]]["compiled"] == packageNames[[i]]["uncompiled"]) {
         packageNames[[i]]["compiled"] <- paste0(packageNames[[i]]["uncompiled"], "_compiled")
+      }
 
-      if(exportNames[i] %in% packageNames[[i]]) {
-        if(interfaces[i] == "full" && !exportName_provided) {
+      if (exportNames[i] %in% packageNames[[i]]) {
+        if (interfaces[i] == "full" && !exportName_provided) {
           exportNames[i] <- paste0(exportNames[i], "_new")
         } else {
-          if(exportNames[i] == packageNames[[i]]["compiled"])
+          if (exportNames[i] == packageNames[[i]]["compiled"]) {
             packageNames[[i]]["compiled"] <- paste0(packageNames[[i]]["compiled"], "_compiled")
-          else if(exportNames[i] == packageNames[[i]]["uncompiled"])
+          } else if (exportNames[i] == packageNames[[i]]["uncompiled"]) {
             packageNames[[i]]["uncompiled"] <- paste0(packageNames[[i]]["uncompiled"], "_uncompiled")
+          }
           ## DANGER! With interface != "full", the exportName gets dominance because that will be the
           ##  generator function for generic C++ objects. This means the uncompiled name must be changed
-          ##. if it clashes, and this means any inherits or usage of the name will fail.
+          ## . if it clashes, and this means any inherits or usage of the name will fail.
           ##  Error-trapping this cleanly can't be done (easily) right here because its a question of whether this is
-          ##. used anywhere by other code being compiled.
+          ## . used anywhere by other code being compiled.
         }
       }
     }
 
-    if(names(units)[i] == "") {
+    if (names(units)[i] == "") {
       names(units)[i] <- returnNames[i]
       names(compileInfos)[i] <- returnNames[i]
-      if(unitTypes[i] == "nCgen")
+      if (unitTypes[i] == "nCgen") {
         names(interfaces)[i] <- returnNames[i]
+      }
     }
     # In some cases this is the first addition of an exportName to a compileInfo
     compileInfo$exportName <- exportNames[i]
@@ -488,18 +532,20 @@ nCompile_prepare_units <- function(...,
     compileInfo$packageNames <- packageNames[[i]]
     compileInfos[[i]] <- compileInfo
   }
-  list(units = units,
-     unitTypes = unitTypes,
-     interfaces = interfaces,
-     compileInfos = compileInfos,
-     exportNames = exportNames,
-     returnNames = returnNames,
-     packageNames = packageNames)
+  list(
+    units = units,
+    unitTypes = unitTypes,
+    interfaces = interfaces,
+    compileInfos = compileInfos,
+    exportNames = exportNames,
+    returnNames = returnNames,
+    packageNames = packageNames
+  )
 }
 
 update_known_nClasses <- function(new_units, new_unitTypes, project_env) {
-  for(i in seq_along(new_units)) {
-    if(new_unitTypes[i] == "nCgen") {
+  for (i in seq_along(new_units)) {
+    if (new_unitTypes[i] == "nCgen") {
       register_known_nClass(new_units[[i]], project_env)
     }
   }
@@ -512,22 +558,25 @@ register_known_nClass <- function(NCgenerator, project_env, classID = NULL) {
   # not cached or reused, so it costs one registration/inheritance walk and is
   # thrown away (no different from the pre-existing uncached behavior in
   # check_built_types() when project_env is NULL).
-  if(is.null(project_env)) {
+  if (is.null(project_env)) {
     project_env <- new.env()
     project_env$known_nClasses <- new.env()
   }
   # classID will be non-null when called to register a built type such as an nList.
   known_nClasses <- project_env$known_nClasses
-  if(is.null(classID)) {
+  if (is.null(classID)) {
     classID <- NCinternals(NCgenerator)$classID
   }
-  if(exists(classID, envir = known_nClasses, inherits = FALSE)) 
+  if (exists(classID, envir = known_nClasses, inherits = FALSE)) {
     return(known_nClasses[[classID]])
+  }
   # creating an entry before the next step is needed to avoid
   # infinite recursion potential from resolving TBD symbols.
-  known_nClasses[[classID]] <- list2env(list(NCgenerator = NCgenerator,
-                                            symbolTable = NULL,
-                                            inheritInfo = NULL))
+  known_nClasses[[classID]] <- list2env(list(
+    NCgenerator = NCgenerator,
+    symbolTable = NULL,
+    inheritInfo = NULL
+  ))
   update_known_nClass_info(NCgenerator, classID, project_env = project_env)
   known_nClasses[[classID]]
 }
@@ -545,36 +594,39 @@ update_known_nClass_info <- function(NCgenerator, classID, project_env = new.env
   ## Update any symbolTBD symbols by scoped lookup
   known_nClasses <- project_env$known_nClasses
   resolveTBDsymbols(symbolTable,
-                    NCgenerator,
-                    project_env = project_env)
+    NCgenerator,
+    project_env = project_env
+  )
   inheritInfo <- process_inheritance(NCgenerator,
-                                    symbolTable = symbolTable,
-                                    project_env = project_env)
+    symbolTable = symbolTable,
+    project_env = project_env
+  )
   known_nClasses[[classID]]$symbolTable <- symbolTable
   known_nClasses[[classID]]$inheritInfo <- inheritInfo
 }
 
 #' @export
 nCompile <- function(...,
-                     dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                     cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
+                     dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                     cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
                      env = parent.frame(),
                      control = list(),
                      unitControls = list(),
                      interfaces = list(),
                      package = FALSE,
                      returnList = FALSE) { ## return a list even if there is only one unit being compiled.
-  #(1) Put together inputs from ...
+  # (1) Put together inputs from ...
   # cat("starting nCompile\n")
 
   controlFull <- updateDefaults(
-    get_nOption('compilerOptions'),
+    get_nOption("compilerOptions"),
     control
   )
   controlFull$always_include_units <- TRUE # Do this even if auto_include_units is FALSE, so we can error-trap
 
   unit_info <- nCompile_prepare_units(...,
-                                      interfaces = interfaces)
+    interfaces = interfaces
+  )
   new_units <- unit_info$units
   new_unitTypes <- unit_info$unitTypes
   new_interfaces <- unit_info$interfaces
@@ -584,7 +636,7 @@ nCompile <- function(...,
   new_packageNames <- unit_info$packageNames
 
   unique_new_units <- unique_units(new_units)
-  if(!identical(unique_new_units, new_units)) {
+  if (!identical(unique_new_units, new_units)) {
     stop("All compilation units must be unique.")
   }
 
@@ -605,7 +657,10 @@ nCompile <- function(...,
   auto_included <- rep(FALSE, length(new_units))
   # the compileInfos$auto_included field is used in nCompile_nFunction and nCompile_nClass
   # to decide whether it is allowed to generate predefined code. For auto_included units, NO.
-  new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- FALSE; x})
+  new_compileInfos <- new_compileInfos |> lapply(\(x) {
+    x$auto_included <- FALSE
+    x
+  })
 
   project_env <- new.env()
   # # built_types is for types created by nClassBuilders.
@@ -620,12 +675,14 @@ nCompile <- function(...,
   #  - inheritInfo: an environment with inheritance-related content
   project_env$known_nClasses <- new.env()
 
-  while(!done_finding_units) {
+  while (!done_finding_units) {
     update_known_nClasses(new_units, new_unitTypes, project_env)
     existing_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
-    cppDefs_info <- nCompile_createCppDefsInfo(new_units, new_unitTypes, controlFull, 
-                                               new_compileInfos, project_env)
-    if(isTRUE(attr(cppDefs_info, "raw_results"))) {
+    cppDefs_info <- nCompile_createCppDefsInfo(
+      new_units, new_unitTypes, controlFull,
+      new_compileInfos, project_env
+    )
+    if (isTRUE(attr(cppDefs_info, "raw_results"))) {
       # This is a failure case, likely due to an error or use of control$endStage for debugging.
       # We return the raw results so the user can inspect them.
       return(cppDefs_info)
@@ -645,12 +702,14 @@ nCompile <- function(...,
 
     new_needed_nClasses <- do.call("c", cppDefs_info$needed_nClasses) |> unique_units()
     new_needed_nFunctions <- do.call("c", cppDefs_info$needed_nFunctions) |> unique()
-    #names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
+    # names(new_needed_nClasses) <- new_needed_nClasses |> lapply(\(x) x$classname)
     names(new_needed_nFunctions) <- new_needed_nFunctions |> lapply(\(x) NFinternals(x)$uniqueName)
     #
     updated_known_nClass_names <- ls(project_env$known_nClasses, all.names = TRUE)
-    new_needed_known_nClasses <- lapply(setdiff(updated_known_nClass_names, existing_known_nClass_names),
-                                     \(x) project_env$known_nClasses[[x]]$NCgenerator)
+    new_needed_known_nClasses <- lapply(
+      setdiff(updated_known_nClass_names, existing_known_nClass_names),
+      \(x) project_env$known_nClasses[[x]]$NCgenerator
+    )
     # names(new_needed_built_nClasses) <- new_needed_built_nClasses |> lapply(\(x) x$classname)
     # A bit of design irony: At this point, the needed units are
     # nicely organized into nClasses and nFunctions,
@@ -662,20 +721,20 @@ nCompile <- function(...,
     ## types (e.g. nList) are correctly identified as duplicates even when they
     ## are represented by different R objects with the same classID hash.
     keep_new_unit <- rep(TRUE, length(new_units))
-    for(i in seq_along(new_units)) {
+    for (i in seq_along(new_units)) {
       this_new_unit <- new_units[[i]]
-      for(j in seq_along(units)) {
-        if(unit_is_duplicate(this_new_unit, units[[j]])) {
+      for (j in seq_along(units)) {
+        if (unit_is_duplicate(this_new_unit, units[[j]])) {
           keep_new_unit[i] <- FALSE
           break
         }
       }
     }
     new_units <- new_units[keep_new_unit]
-    if(length(new_units) == 0) {
-        done_finding_units <- TRUE
+    if (length(new_units) == 0) {
+      done_finding_units <- TRUE
     } else {
-      if(isTRUE(controlFull$nCompile_include_units)) {
+      if (isTRUE(controlFull$nCompile_include_units)) {
         # rely on any included unit having compileInfo$interface set.
         new_unit_info <- nCompile_prepare_units(new_units)
         new_units <- new_unit_info$units
@@ -686,40 +745,51 @@ nCompile <- function(...,
         new_returnNames <- new_unit_info$returnNames
         new_packageNames <- new_unit_info$packageNames
         auto_included <- c(auto_included, rep(TRUE, length(new_units)))
-        new_compileInfos <- new_compileInfos |> lapply(\(x) {x$auto_included <- TRUE; x})
+        new_compileInfos <- new_compileInfos |> lapply(\(x) {
+          x$auto_included <- TRUE
+          x
+        })
       } else {
-        stop("During compilation, additional units (nClasses or nFunctions) were needed but were not provided in the nCompile call. ",
-            "To have nCompile automatically include such units, include control(nCompile_include_units=TRUE) or (to change the setting for all calls) do set_nOption(\"nCompile_include_units\", TRUE, \"compilerOptions\").",
-            "The missing units are:\n", paste(names(new_units), collapse = "\n"))
+        stop(
+          "During compilation, additional units (nClasses or nFunctions) were needed but were not provided in the nCompile call. ",
+          "To have nCompile automatically include such units, include control(nCompile_include_units=TRUE) or (to change the setting for all calls) do set_nOption(\"nCompile_include_units\", TRUE, \"compilerOptions\").",
+          "The missing units are:\n", paste(names(new_units), collapse = "\n")
+        )
       }
     }
   }
 
-  if(isTRUE(controlFull$show_types)) 
-      sapply(cppDefs, function(def) {
-          nm <- def$name
-          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
-          def$showTypes()
-          cat("\n")
-      })
-  if(isTRUE(controlFull$show_annotations)) 
-      sapply(cppDefs, function(def) {
-          nm <- def$name
-          cat("================= ", nm, " ", paste0(rep("=", 42-nchar(nm)), collapse = ''), "\n", sep = '')
-          def$showTypes(annotations = TRUE)
-          cat("\n")
-      })
+  if (isTRUE(controlFull$show_types)) {
+    sapply(cppDefs, function(def) {
+      nm <- def$name
+      cat("================= ", nm, " ", paste0(rep("=", 42 - nchar(nm)), collapse = ""), "\n", sep = "")
+      def$showTypes()
+      cat("\n")
+    })
+  }
+  if (isTRUE(controlFull$show_annotations)) {
+    sapply(cppDefs, function(def) {
+      nm <- def$name
+      cat("================= ", nm, " ", paste0(rep("=", 42 - nchar(nm)), collapse = ""), "\n", sep = "")
+      def$showTypes(annotations = TRUE)
+      cat("\n")
+    })
+  }
 
-  if(isTRUE(controlFull$return_cppDefs)) return(cppDefs)
-    
+  if (isTRUE(controlFull$return_cppDefs)) {
+    return(cppDefs)
+  }
+
   # writePackage inserts roxygen here
 
   # (3) Create RcppPacket_list
 
   # called from writePackage or not
   from_writePackage <- controlFull$.writePackage
-  if(!is.null(from_writePackage) || package) {
-    createFromR <- compileInfos |> lapply(\(x) !isFALSE(x$createFromR)) |> unlist()
+  if (!is.null(from_writePackage) || package) {
+    createFromR <- compileInfos |>
+      lapply(\(x) !isFALSE(x$createFromR)) |>
+      unlist()
     controlFull$prepared_content <- list(
       units = units,
       unitTypes = unitTypes,
@@ -733,103 +803,120 @@ nCompile <- function(...,
     )
   }
 
-  if(!is.null(from_writePackage)) {
+  if (!is.null(from_writePackage)) {
     # .writePackage content was provided, so we were called from writePackage
     # cat("doing return(writePackage(...))\n")
     return(
-      writePackage(pkgName = from_writePackage$pkgName,
-                    dir = dir,
-                    control = controlFull,
-                    unitControls = unitControls,
-                    modify = from_writePackage$modify,
-                    memberData = from_writePackage$memberData,
-                    roxygen = from_writePackage$roxygen
-                    # see inside writePackage for interfaces handling -- to clean up
-                    )
+      writePackage(
+        pkgName = from_writePackage$pkgName,
+        dir = dir,
+        control = controlFull,
+        unitControls = unitControls,
+        modify = from_writePackage$modify,
+        memberData = from_writePackage$memberData,
+        roxygen = from_writePackage$roxygen
+        # see inside writePackage for interfaces handling -- to clean up
+      )
     )
   }
 
   # From here on, we were not called from writePackage
-  if(package) {
+  if (package) {
     # cat("calling writePackage for package mode\n")
     # user requests nCompile use packaging mechanism
     temppkgname <- basename(tempfile("TEMPPKG", ""))
-    writePackage(pkgName = temppkgname,
-                 dir = dir,
-                 control = controlFull,
-                 unitControls = unitControls,
-                 modify = "clear",
-                 memberData = list(),
-                 roxygen = list()
-                 )
-    if(isTRUE(get_nOption('pause_after_writing_files')))
+    writePackage(
+      pkgName = temppkgname,
+      dir = dir,
+      control = controlFull,
+      unitControls = unitControls,
+      modify = "clear",
+      memberData = list(),
+      roxygen = list()
+    )
+    if (isTRUE(get_nOption("pause_after_writing_files"))) {
       browser()
+    }
     lib <- file.path(tempdir(), "templib")
-    if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
+    if (!dir.exists(lib)) dir.create(lib, recursive = TRUE)
     pkgDir <- file.path(dir, temppkgname)
     # cat("about to try devtools::install\n")
     ans <- try({
-      withr::with_libpaths(lib, action="prefix", code = {
+      withr::with_libpaths(lib, action = "prefix", code = {
         devtools::install(pkgDir,
-                          quick = TRUE,
-                          quiet = !isTRUE(get_nOption("showCompilerOutput")),
-                          upgrade = FALSE, dependencies = FALSE) # Make quiet follow showCompilerOutput
-        withr::with_libpaths(lib, action="prefix",
-                            code = loadNamespace(temppkgname))
+          quick = TRUE,
+          quiet = !isTRUE(get_nOption("showCompilerOutput")),
+          upgrade = FALSE, dependencies = FALSE
+        ) # Make quiet follow showCompilerOutput
+        withr::with_libpaths(lib,
+          action = "prefix",
+          code = loadNamespace(temppkgname)
+        )
       })
       pkgNames <- returnNames
       pc <- controlFull$prepared_content
-      for(i in seq_along(pc$units)) {
-        if(pc$unitTypes[[i]] == "nCgen") {
-          if(pc$interfaces[[i]] == "full")
+      for (i in seq_along(pc$units)) {
+        if (pc$unitTypes[[i]] == "nCgen") {
+          if (pc$interfaces[[i]] == "full") {
             pkgNames[i] <- pc$packageNames[[i]][["compiled"]]
-          else
+          } else {
             pkgNames[i] <- pc$exportNames[i]
+          }
         }
       }
       pkgEnv <- getNamespace(temppkgname)
       ans_ <- lapply(pkgNames, function(x) {
-        if(exists(x, envir = pkgEnv, inherits=FALSE)) #might not exist for interface="none"
-          get(x, envir = pkgEnv, inherits=FALSE)
-        else NULL
+        if (exists(x, envir = pkgEnv, inherits = FALSE)) { # might not exist for interface="none"
+          get(x, envir = pkgEnv, inherits = FALSE)
+        } else {
+          NULL
+        }
       })
       names(ans_) <- returnNames
       # Remove any auto_included entries.
       # See comment below in nCompile_finish_package about this step.
-      if(any(auto_included)) {
+      if (any(auto_included)) {
         ans_ <- ans_[!auto_included]
       }
       ans_
     })
     # cat("done trying devtools::install\n")
-    if(inherits(ans, "try-error")) {
-      stop("It looks like the package code was generated without stopping,\n",
-           "but there was an error installing or loading it.\n",
-           "If you want to inspect the package code, ",
-           "it is in ", pkgDir, ".")
+    if (inherits(ans, "try-error")) {
+      stop(
+        "It looks like the package code was generated without stopping,\n",
+        "but there was an error installing or loading it.\n",
+        "If you want to inspect the package code, ",
+        "it is in ", pkgDir, "."
+      )
     }
-    if(length(ans)==1)
-      if(!returnList) return(ans[[1]])
+    if (length(ans) == 1) {
+      if (!returnList) {
+        return(ans[[1]])
+      }
+    }
     return(ans)
   } else {
     # We will not use packaging mechanism
     RcppPacket_list <- cppDefsList_2_RcppPacketList(cppDefs)
     # cat("doing nCompile_finish_nonpackage\n")
     return(
-      nCompile_finish_nonpackage(units = units,
-                                 cppDefs = cppDefs,
-                                 unitTypes = unitTypes,
-                                 cpp_names = cpp_names,
-                            #     exportNames = exportNames,
-                                 returnNames = returnNames,
-                            #     interfaces = interfaces,
-                                 RcppPacket_list = RcppPacket_list,
-                                 dir = dir,
-                                 cacheDir = cacheDir,
-                                 env = env,
-                                 returnList = returnList,
-                                 compileInfos = compileInfos,
-                                 auto_included = auto_included))
+      nCompile_finish_nonpackage(
+        units = units,
+        cppDefs = cppDefs,
+        unitTypes = unitTypes,
+        cpp_names = cpp_names,
+        #     exportNames = exportNames,
+        returnNames = returnNames,
+        #     interfaces = interfaces,
+        RcppPacket_list = RcppPacket_list,
+        dir = dir,
+        cacheDir = cacheDir,
+        env = env,
+        returnList = returnList,
+        compileInfos = compileInfos,
+        auto_included = auto_included
+      )
+    )
   }
 }
 
@@ -848,39 +935,46 @@ writePackage <- function(...,
   pkgDir <- file.path(dir, pkgName)
   modify <- match.arg(modify, c("no", "add", "clear"))
   initializePkg <- FALSE
-  if(modify == "clear") { # Always initialize
+  if (modify == "clear") { # Always initialize
     initializePkg <- TRUE
   } else {
     if (dir.exists(pkgDir)) {
-      if (modify == "no") stop(paste0("Package ", pkgName, " already exists in directory ", dir,
-                                      ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
-                                      " (to erase it before writing). Use erasePackage to erase it as a separate step."))
+      if (modify == "no") {
+        stop(paste0(
+          "Package ", pkgName, " already exists in directory ", dir,
+          ". Change 'modify' argument 'add' (to add to it) or 'clear' ",
+          " (to erase it before writing). Use erasePackage to erase it as a separate step."
+        ))
+      }
     } else {
       initializePkg <- TRUE # Initialize is modify != "clear" but no package exists yet
     }
   }
-  if(grepl("_", pkgName))
+  if (grepl("_", pkgName)) {
     stop("Package names are not allowed to have underscore characters.")
+  }
 
   content <- control$prepared_content
-  if(is.null(content)) { # this means we are being called directly, not from nCompile
+  if (is.null(content)) { # this means we are being called directly, not from nCompile
     # We call nCompile with control$.writePackage containing arguments needed for
     #  nCompile to recurse back to writePackage with control$prepared_content filled in.
     # cat("calling nCompile\n")
     res <- nCompile(...,
-              dir = dir,
-              env = parent.frame(), # will not be used
-              control = c(control,
-                          list(.writePackage=list(
-                            pkgName = pkgName,
-                            modify = modify,
-                            memberData = memberData,
-                            roxygen = roxygen
-                          ))),
-              unitControls = unitControls,
-              interfaces = interfaces,
-              returnList = TRUE # will not be used
-              )
+      dir = dir,
+      env = parent.frame(), # will not be used
+      control = c(
+        control,
+        list(.writePackage = list(
+          pkgName = pkgName,
+          modify = modify,
+          memberData = memberData,
+          roxygen = roxygen
+        ))
+      ),
+      unitControls = unitControls,
+      interfaces = interfaces,
+      returnList = TRUE # will not be used
+    )
     # nCompile will call writePackage again, this time with control$prepared_content
     # note that nCompile may be called by the user with package=TRUE, which will then
     # also call writePackage with control$prepared_content
@@ -897,8 +991,11 @@ writePackage <- function(...,
   packageNames <- content$packageNames
   # Handle roxygen input
   if (!is.list(roxygen)) {
-    if (is.character(roxygen)) roxygen <- list(roxygen)
-    else stop("in writePackage: unknown roxygen type")
+    if (is.character(roxygen)) {
+      roxygen <- list(roxygen)
+    } else {
+      stop("in writePackage: unknown roxygen type")
+    }
   }
   if (length(roxygen) == 0) {
     roxygenFlag <- "none"
@@ -907,8 +1004,10 @@ writePackage <- function(...,
   } else if (length(roxygen) == length(units)) { # Are there as many rox entries as units?
     roxygenFlag <- "indices"
   } else { # If neither, we don't know what to do about it
-    stop("If fewer roxygen entries are provided than objects, they must be named",
-         " in the input list to indicate the objects to which they correspond.")
+    stop(
+      "If fewer roxygen entries are provided than objects, they must be named",
+      " in the input list to indicate the objects to which they correspond."
+    )
   }
   # pkgDir <- file.path(dir, pkgName)
   Rdir <- file.path(pkgDir, "R")
@@ -916,17 +1015,20 @@ writePackage <- function(...,
   instDir <- file.path(pkgDir, "inst")
   codeDir <- file.path(instDir, "include", "nCompGeneratedCode")
   datDir <- file.path(pkgDir, "data")
-#
+  #
   # cat("starting writePackage writing steps\n")
   WP_check_unit_types(units, unitTypes)
   cppDefs <- WP_add_roxygen_fxns_to_cppDefs(cppDefs, units, unitTypes, roxygen, roxygenFlag)
-  CnCgenerator_codes <- WP_build_CnCgenerators(units, unitTypes, interfaces, exportNames,
-                                                returnNames, packageNames)
+  CnCgenerator_codes <- WP_build_CnCgenerators(
+    units, unitTypes, interfaces, exportNames,
+    returnNames, packageNames
+  )
   methodFns <- WP_build_methodFns(units, unitTypes, interfaces)
   #
-  if (initializePkg)
+  if (initializePkg) {
     WP_initializePkg(pkgName, dir, pkgDir, instDir, datDir, codeDir, modify)
-#
+  }
+  #
   # Rfilepath <- character(length(units))
   #
   RcppPacket_list <- cppDefsList_2_RcppPacketList(cppDefs)
@@ -935,17 +1037,22 @@ writePackage <- function(...,
   ## Rcpp's Rcpp::interfaces attribute for C++ that provides some automated inst/include
   ## generation of R interface functions.
   WP_writeCpp(RcppPacket_list, srcDir, codeDir)
-  WP_writeRinterfaces(units, unitTypes, interfaces, returnNames, packageNames,
-                      Rdir, CnCgenerator_codes, methodFns, roxygen, roxygenFlag)
+  WP_writeRinterfaces(
+    units, unitTypes, interfaces, returnNames, packageNames,
+    Rdir, CnCgenerator_codes, methodFns, roxygen, roxygenFlag
+  )
   WP_writeMemberData(memberData, datDir)
-  WP_write_dotOnLoad(units, unitTypes, interfaces, exportNames, returnNames, packageNames,
-                      createFromR, Rdir)
+  WP_write_dotOnLoad(
+    units, unitTypes, interfaces, exportNames, returnNames, packageNames,
+    createFromR, Rdir
+  )
   WP_write_DESCRIPTION_NAMESPACE(units, unitTypes, interfaces, createFromR, returnNames,
-                                 initializePkg, pkgDir, pkgName,
-                                 depends = RcppPacket_list |>
-                                   lapply(\(x) x$depends) |>
-                                   unlist(use.names = FALSE) |>
-                                   unique())
+    initializePkg, pkgDir, pkgName,
+    depends = RcppPacket_list |>
+      lapply(\(x) x$depends) |>
+      unlist(use.names = FALSE) |>
+      unique()
+  )
   ## if (!initializePkg) {
   ##   compiledObjs <- list.files(srcDir, pattern = "o$")
   ##   # message("Deleting ", compiledObjs)
@@ -953,61 +1060,72 @@ writePackage <- function(...,
   ## }
   # cat("calling compileAttributs\n")
   compileAttributes(pkgdir = pkgDir)
-  update_compileAttributes_for_argPassing(Rdir,
-                                          units, unitTypes, returnNames)
+  update_compileAttributes_for_argPassing(
+    Rdir,
+    units, unitTypes, returnNames
+  )
   # cat("finished writePackage\n")
   invisible(NULL)
 }
 
 update_compileAttributes_for_argPassing <- function(Rdir,
                                                     units, unitTypes, returnNames) {
-  if(!any(unitTypes == "nF")) return();
+  if (!any(unitTypes == "nF")) {
+    return()
+  }
   RcppExports_file <- file.path(Rdir, "RcppExports.R")
   parsed_RcppExports <- parse(RcppExports_file)
   lines_RcppExports <- readLines(RcppExports_file)
   nLines <- length(lines_RcppExports)
-  names_RcppExports <- lapply(parsed_RcppExports,
-                              function(x) {
-                                if(x[[1]] == "<-") as.character(x[[2]]) else NULL
-                              })
+  names_RcppExports <- lapply(
+    parsed_RcppExports,
+    function(x) {
+      if (x[[1]] == "<-") as.character(x[[2]]) else NULL
+    }
+  )
   any_updates <- FALSE
-  for(iUnit in seq_along(units)) {
-    if(unitTypes[iUnit] == "nF") {
+  for (iUnit in seq_along(units)) {
+    if (unitTypes[iUnit] == "nF") {
       refArgs <- NFinternals(units[[iUnit]])$refArgs
       blockRefArgs <- NFinternals(units[[iUnit]])$blockRefArgs
-      if(any(unlist(refArgs)) || any(unlist(blockRefArgs))) {
+      if (any(unlist(refArgs)) || any(unlist(blockRefArgs))) {
         iExpr <- which(names_RcppExports == returnNames[iUnit])
         this_name <- returnNames[iUnit]
-        if(length(iExpr)!=1) stop("Problem updating arg passing handling for ", this_name)
+        if (length(iExpr) != 1) stop("Problem updating arg passing handling for ", this_name)
         local_env <- new.env()
         eval(parsed_RcppExports[[iExpr]], envir = local_env)
-        updatedExpr <-  passByReferenceIntoC(local_env[[ this_name ]],
-                                             refArgs = refArgs,
-                                             blockRefArgs = blockRefArgs)
+        updatedExpr <- passByReferenceIntoC(local_env[[this_name]],
+          refArgs = refArgs,
+          blockRefArgs = blockRefArgs
+        )
         updatedText <- deparse(updatedExpr)
         updatedText[1] <- paste0(this_name, " <- ", updatedText[1])
-        replace_begin_linenum <- grep(paste0("^",this_name, " <- function\\("), lines_RcppExports)
+        replace_begin_linenum <- grep(paste0("^", this_name, " <- function\\("), lines_RcppExports)
         replace_end_linenum <- replace_begin_linenum
-        if(replace_begin_linenum < nLines) {
-          replace_end_linenum <- grep("^}$", lines_RcppExports[(replace_begin_linenum+1):nLines])[1] + replace_begin_linenum
+        if (replace_begin_linenum < nLines) {
+          replace_end_linenum <- grep("^}$", lines_RcppExports[(replace_begin_linenum + 1):nLines])[1] + replace_begin_linenum
         }
         lines_before <- character()
-        if(replace_begin_linenum > 1)
-          lines_before <- lines_RcppExports[1:(replace_begin_linenum-1)]
+        if (replace_begin_linenum > 1) {
+          lines_before <- lines_RcppExports[1:(replace_begin_linenum - 1)]
+        }
         lines_after <- character()
-        if(replace_end_linenum < nLines)
-          lines_after <- lines_RcppExports[(replace_end_linenum+1):nLines]
+        if (replace_end_linenum < nLines) {
+          lines_after <- lines_RcppExports[(replace_end_linenum + 1):nLines]
+        }
         lines_RcppExports <- c(lines_before, updatedText, lines_after)
         nLines <- length(lines_RcppExports)
         any_updates <- TRUE
       }
     }
   }
-  if(any_updates) {
+  if (any_updates) {
     comment_linenums <- grep("^# Gen", lines_RcppExports)
-    updated_lines <- c(lines_RcppExports[comment_linenums],
-                       "# Modified by nCompiler to handle ref or blockRef argument passing",
-                       lines_RcppExports[-comment_linenums])
+    updated_lines <- c(
+      lines_RcppExports[comment_linenums],
+      "# Modified by nCompiler to handle ref or blockRef argument passing",
+      lines_RcppExports[-comment_linenums]
+    )
     writeLines(updated_lines, con = RcppExports_file)
   }
   any_updates
@@ -1017,85 +1135,91 @@ nCompile_finish_nonpackage <- function(units,
                                        cppDefs = cppDefs,
                                        unitTypes,
                                        cpp_names,
-                                  #     exportNames,
+                                       #     exportNames,
                                        returnNames,
-                                  #     interfaces,
+                                       #     interfaces,
                                        RcppPacket_list,
                                        dir,
                                        cacheDir,
                                        env,
                                        returnList,
                                        compileInfos,
-                                       auto_included = rep(FALSE, length(units))
-                                       ) {
-  cppfile <- paste0(cppFileLabelFunction(),".cpp") ## "nCompiler_multiple_units.cpp"
+                                       auto_included = rep(FALSE, length(units))) {
+  cppfile <- paste0(cppFileLabelFunction(), ".cpp") ## "nCompiler_multiple_units.cpp"
   resultEnv <- new.env()
   compiledFuns <- cpp_nCompiler(RcppPacket_list,
-                                cppfile = cppfile,
-                                dir = dir,
-                                cacheDir = cacheDir,
-                                env = resultEnv,
-                                packetList = TRUE,
-                                returnList = TRUE)
-  if(!(length(units)==length(compileInfos)))
+    cppfile = cppfile,
+    dir = dir,
+    cacheDir = cacheDir,
+    env = resultEnv,
+    packetList = TRUE,
+    returnList = TRUE
+  )
+  if (!(length(units) == length(compileInfos))) {
     stop("Problem while post-processing nCompile results.")
-  methodFns <- vector(mode="list", length = length(units) ) # ditto
-  createFromR_funs <- vector(mode="list", length = length(units) )
+  }
+  methodFns <- vector(mode = "list", length = length(units)) # ditto
+  createFromR_funs <- vector(mode = "list", length = length(units))
   exportNames <- unlist(lapply(compileInfos, function(x) x$exportName))
   expect_nC_interface <- rep(FALSE, length(units))
   expect_createFromR <- rep(FALSE, length(units))
-  interfaceTypes <- compileInfos |> lapply(\(x) if(is.null(x$interface)) NA else x$interface ) |> unlist() # can replace some code below using this
-  for(i in seq_along(units)) {
-    iRes <- which( exportNames[i] == names(compiledFuns))
-    if(unitTypes[i] == "nCgen") { #unit_is_nClass[i]) {
+  interfaceTypes <- compileInfos |>
+    lapply(\(x) if (is.null(x$interface)) NA else x$interface) |>
+    unlist() # can replace some code below using this
+  for (i in seq_along(units)) {
+    iRes <- which(exportNames[i] == names(compiledFuns))
+    if (unitTypes[i] == "nCgen") { # unit_is_nClass[i]) {
       expect_nC_interface[i] <- isTRUE(interfaceTypes[i] %in% c("full", "generic"))
       expect_createFromR[i] <- !isFALSE(compileInfos[[i]]$createFromR) &&
         expect_nC_interface[i] ## Currently one can't create objects without interface support
-      if(expect_nC_interface[i]) {
-        #createFromR_fun <- NULL
-        if((length(iRes) != 1) && expect_createFromR[i]) {
+      if (expect_nC_interface[i]) {
+        # createFromR_fun <- NULL
+        if ((length(iRes) != 1) && expect_createFromR[i]) {
           warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nClass ", exportNames[i], "."))
         } else {
-          if(expect_createFromR[i]) createFromR_funs[[i]] <- compiledFuns[[iRes]]
+          if (expect_createFromR[i]) createFromR_funs[[i]] <- compiledFuns[[iRes]]
           methodFns[[i]] <- try(build_generic_fns_for_compiled_nClass(units[[i]]))
-          if(inherits(methodFns[[i]], "try-error")) {
+          if (inherits(methodFns[[i]], "try-error")) {
             warning(paste0("There was a problem building functions for generic nClass interface for ", exportNames[i], "."))
             methodFns[[i]] <- NULL
           }
         }
       }
-    } else if(unitTypes[i]=="nF") {
-        if(length(iRes) != 1) {
-          warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nFunction ", exportNames[i], "."))
-        } else {
-          refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
-          blockRefArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$blockRefArgs # ditto
-          compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
-                                                        refArgs = refArgs,
-                                                        blockRefArgs = blockRefArgs)
+    } else if (unitTypes[i] == "nF") {
+      if (length(iRes) != 1) {
+        warning(paste0("Post-processing in nCompile: Name matching of results had a problem for nFunction ", exportNames[i], "."))
+      } else {
+        refArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$refArgs # alt: NFinternals(units[[i]])$refArgs
+        blockRefArgs <- cppDefs[[i]]$NF_Compiler$NFinternals$blockRefArgs # ditto
+        compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
+          refArgs = refArgs,
+          blockRefArgs = blockRefArgs
+        )
       }
     }
   }
   CnCgenerators <- build_compiled_nClasses(units,
-                                          unitTypes,
-                                          interfaceTypes,
-                                          exportNames,
-                                          returnNames,
-                                          createFromR_funs,
-                                          package=FALSE)
+    unitTypes,
+    interfaceTypes,
+    exportNames,
+    returnNames,
+    createFromR_funs,
+    package = FALSE
+  )
   names(CnCgenerators) <- returnNames
 
-  if(any(unitTypes == "nCgen")) {
+  if (any(unitTypes == "nCgen")) {
     newDLLenv <- make_DLLenv()
     # The next call does NOT rely on alignment of compiledFuns and the other inputs.
     # The other inputs are used to pick out and move subsets of compiledFuns.
     compiledFuns <- setup_nClass_environments(compiledFuns,
-                                              newDLLenv,
-                                              exportNames = exportNames[expect_nC_interface],
-                                              NCgenerators = CnCgenerators[expect_nC_interface],
-                                              methodFns = methodFns[expect_nC_interface],
-                                              interfaceTypes = interfaceTypes[expect_nC_interface],
-                                              returnList = TRUE)
+      newDLLenv,
+      exportNames = exportNames[expect_nC_interface],
+      NCgenerators = CnCgenerators[expect_nC_interface],
+      methodFns = methodFns[expect_nC_interface],
+      interfaceTypes = interfaceTypes[expect_nC_interface],
+      returnList = TRUE
+    )
   }
 
   ## Next we re-order results using input names,
@@ -1106,21 +1230,24 @@ nCompile_finish_nonpackage <- function(units,
   ## names(units), in the order corresponding to cpp_names, but skipping non-exported nF's.
   ##
   ## At the last step, we also exclude returning auto_included entries, and we must track that through any reordering
-  unit_is_nF_noExport <- unitTypes=="nF_noExport"
-  ans <- vector(mode="list", length = length(units))
+  unit_is_nF_noExport <- unitTypes == "nF_noExport"
+  ans <- vector(mode = "list", length = length(units))
   ans_names <- character(length = length(units))
   ans_auto_included <- logical(length = length(units))
-  for(i in seq_along(units)) {
+  for (i in seq_along(units)) {
     iRes <- -1 # will not get used. in cases where it is not replaced next, it is not used.
-    if(unitTypes[i] == "nF") {
+    if (unitTypes[i] == "nF") {
       iRes <- which(exportNames[i] == names(compiledFuns)) # iRes is index in compiledFuns of the i-th unit
-    } else if(unitTypes[i] == "nCgen") {
-      if(expect_createFromR[i])
-        iRes <- which( exportNames[i] == names(compiledFuns))
+    } else if (unitTypes[i] == "nCgen") {
+      if (expect_createFromR[i]) {
+        iRes <- which(exportNames[i] == names(compiledFuns))
+      }
     }
-    if(length(iRes) != 1) {
-      warning(paste0("Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
-                     "  Returning list of compiled results with internal C++ names."))
+    if (length(iRes) != 1) {
+      warning(paste0(
+        "Collecting results: Name matching of results had a problem for ", names(units)[i], ".\n",
+        "  Returning list of compiled results with internal C++ names."
+      ))
       return(compiledFuns)
     }
     ## In the case of nCgen and !expect_createFromR[i], ans[[i]] will remain NULL
@@ -1132,19 +1259,22 @@ nCompile_finish_nonpackage <- function(units,
     ans_names[i] <- returnNames[i]
     ans_auto_included[i] <- auto_included[i]
 
-    if(unitTypes[i] == "nF") {
+    if (unitTypes[i] == "nF") {
       ans[[i]] <- compiledFuns[[iRes]]
-    } else if(unitTypes[i] == "nCgen") {
+    } else if (unitTypes[i] == "nCgen") {
       interfaceType <- compileInfos[[i]]$interface
-      if(is.null(interfaceType))
+      if (is.null(interfaceType)) {
         interfaceType <- "full"
-      if(interfaceType == "full") {
-        if(expect_createFromR[i])
-          ans[[i]] <- CnCgenerators[[returnNames[i] ]]
-      } else if(interfaceType == "generic") {
-        if(expect_createFromR[i])
+      }
+      if (interfaceType == "full") {
+        if (expect_createFromR[i]) {
+          ans[[i]] <- CnCgenerators[[returnNames[i]]]
+        }
+      } else if (interfaceType == "generic") {
+        if (expect_createFromR[i]) {
           ans[[i]] <- compiledFuns[[iRes]]
         }
+      }
     }
     # ans[[i]] will be left NULL for nF_noExport or nClass with interface "none".
     # This is good as the result will always align with
@@ -1156,24 +1286,35 @@ nCompile_finish_nonpackage <- function(units,
   # Arguably this could be done earlier and save work.
   # It is done here for two reasons: being added to the code later,
   #   and potential cleanness in being able to turn it off or modify later.
-  if(any(ans_auto_included)) {
+  if (any(ans_auto_included)) {
     ans <- ans[!ans_auto_included]
   }
 
-  if(is.list(ans)) { # ans should always be a list but this handles if it isn't
-    if(!returnList) {
-      if(length(ans) == 1) ans[[1]]
-      else ans
-    } else ans
-  } else if(returnList) list(ans)
-  else ans
+  if (is.list(ans)) { # ans should always be a list but this handles if it isn't
+    if (!returnList) {
+      if (length(ans) == 1) {
+        ans[[1]]
+      } else {
+        ans
+      }
+    } else {
+      ans
+    }
+  } else if (returnList) {
+    list(ans)
+  } else {
+    ans
+  }
 }
 
 WP_check_unit_types <- function(units, unitTypes) {
-  for(i in seq_along(units)) {
-    if((unitTypes[i] != "nF") && (unitTypes[i] != "nCgen") && (unitTypes[i] != "nF_noExport"))
-      stop(paste("In writePackage: only nFunctions and nClass generators are",
-                   "allowed. Cannot compile object of class ", paste(class(units[[i]]), collapse=" ")))
+  for (i in seq_along(units)) {
+    if ((unitTypes[i] != "nF") && (unitTypes[i] != "nCgen") && (unitTypes[i] != "nF_noExport")) {
+      stop(paste(
+        "In writePackage: only nFunctions and nClass generators are",
+        "allowed. Cannot compile object of class ", paste(class(units[[i]]), collapse = " ")
+      ))
+    }
   }
 }
 
@@ -1182,14 +1323,17 @@ WP_add_roxygen_fxns_to_cppDefs <- function(cppDefs,
                                            unitTypes,
                                            roxygen,
                                            roxygenFlag) {
-  for(i in seq_along(units)) {
-    if(unitTypes[i] == "nF") {
+  for (i in seq_along(units)) {
+    if (unitTypes[i] == "nF") {
       thisRox <- switch(roxygenFlag,
-                        none = NULL,
-                        indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                        names = if (objNames[[i]] %in% names(roxygen))
-                          roxygen[[ objNames[i] ]]
-                        else NULL)
+        none = NULL,
+        indices = if (length(roxygen) < i) roxygen[[i]] else NULL,
+        names = if (objNames[[i]] %in% names(roxygen)) {
+          roxygen[[objNames[i]]]
+        } else {
+          NULL
+        }
+      )
       if (!is.null(thisRox)) {
         cppDefs[[i]]$commentsAbove <- c(thisRox$header, cppDefs[[i]]$commentsAbove)
         # Possible more complicated scheme to insert roxygen content immediately above Rcpp::export tag
@@ -1207,23 +1351,25 @@ WP_add_roxygen_fxns_to_cppDefs <- function(cppDefs,
 }
 
 WP_build_CnCgenerators <- function(units, unitTypes, interfaces, exportNames,
-                                      returnNames, packageNames) {
-  CnCgenerator_codes <- build_compiled_nClasses(units = units,
-                                          unitTypes = unitTypes,
-                                          interfaces = interfaces,
-                                          exportNames = exportNames,
-                                          returnNames = returnNames,
-                                          newCobjFuns = exportNames,
-                                          package=TRUE,
-                                          packageNames = packageNames)
+                                   returnNames, packageNames) {
+  CnCgenerator_codes <- build_compiled_nClasses(
+    units = units,
+    unitTypes = unitTypes,
+    interfaces = interfaces,
+    exportNames = exportNames,
+    returnNames = returnNames,
+    newCobjFuns = exportNames,
+    package = TRUE,
+    packageNames = packageNames
+  )
   CnCgenerator_codes
 }
 
 WP_build_methodFns <- function(units, unitTypes, interfaces) {
   methodFns <- vector("list", length = length(units))
-  for(i in seq_along(units)) {
-    if(unitTypes[i]=="nCgen") {
-      if(isTRUE(interfaces[[i]] %in% c("full", "generic"))) {
+  for (i in seq_along(units)) {
+    if (unitTypes[i] == "nCgen") {
+      if (isTRUE(interfaces[[i]] %in% c("full", "generic"))) {
         methodFns[[i]] <- build_generic_fns_for_compiled_nClass(units[[i]])
       }
     }
@@ -1242,25 +1388,31 @@ WP_initializePkg <- function(pkgName,
   ## The following eval(substitute(...), ...) construction is necessary because
   ## Rcpp.package.skeleton (and also pkgKitten::kitten) has a bug when used
   ## directly as needed here from inside a function.
-  dir.create(dir, showWarnings=FALSE, recursive=TRUE)
+  dir.create(dir, showWarnings = FALSE, recursive = TRUE)
   erasePackage(pkgName, dir = dir, quiet = TRUE, error = FALSE)
   suppressMessages(
     eval(
       substitute(
         Rcpp.package.skeleton(PN,
-                              path = DIR,
-                              # list = "nCompiler_placeholder",
-                              author = "This package was generated by the nCompiler",
-                              force = FORCE),
-        list(DIR = dir,
-             PN = pkgName,
-             FORCE = modify == "clear")),
-      envir = .GlobalEnv)
+          path = DIR,
+          # list = "nCompiler_placeholder",
+          author = "This package was generated by the nCompiler",
+          force = FORCE
+        ),
+        list(
+          DIR = dir,
+          PN = pkgName,
+          FORCE = modify == "clear"
+        )
+      ),
+      envir = .GlobalEnv
+    )
   )
-  if(file.exists(file.path(pkgDir, "Read-and-delete-me")))
+  if (file.exists(file.path(pkgDir, "Read-and-delete-me"))) {
     file.remove(file.path(pkgDir, "Read-and-delete-me"))
-  dir.create(instDir, recursive=TRUE)
-  dir.create(datDir, recursive=TRUE)
+  }
+  dir.create(instDir, recursive = TRUE)
+  dir.create(datDir, recursive = TRUE)
   dir.create(codeDir, recursive = TRUE)
 }
 
@@ -1268,14 +1420,16 @@ WP_writeCpp <- function(RcppPacket_list, srcDir, codeDir) {
   for (i in seq_along(RcppPacket_list)) {
     ## We write the code once for the package's DLL...
     writeCpp_nCompiler(RcppPacket_list[[i]],
-                                    dir = srcDir)
+      dir = srcDir
+    )
     ## ... and again for other packages that need to
     ## compile against this package's source code.
     ## Otherwise, C++ source code is not present in an installed package.
     ## Compiling against source code is necessary because of
     ## heavy use of C++ templates.
     writeCpp_nCompiler(RcppPacket_list[[i]],
-                                   dir = codeDir)
+      dir = codeDir
+    )
   }
 }
 
@@ -1283,7 +1437,7 @@ WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames, packa
                                 Rdir, CnCgenerator_codes, methodFns, roxygen, roxygenFlag) {
   Rfilepath <- vector("character", length(units))
   for (i in seq_along(units)) {
-    if ((unitTypes[i]=='nCgen') && isTRUE(interfaces[[i]]!="none")) {
+    if ((unitTypes[i] == "nCgen") && isTRUE(interfaces[[i]] != "none")) {
       ## Write the nClass full interface to the package's R directory
       generator_name <- packageNames[[i]]["uncompiled"] # must be unchanged in case inherited
       NCI <- NCinternals(units[[i]])
@@ -1292,21 +1446,21 @@ WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames, packa
       #   generator_name <- returnNames[i] # note this may differ from the name in input list
       # else
       #   generator_name <- paste0(".", returnNames[i], "_CnCgenerator")
-      Rfile <- paste0(returnNames[i], '.R')
+      Rfile <- paste0(returnNames[i], ".R")
       Rfilepath[i] <- file.path(Rdir, Rfile)
-      con <- file(Rfilepath[i], open = 'w')
+      con <- file(Rfilepath[i], open = "w")
       on.exit(close(con))
-      if(is.null(CnCgenerator_codes[[i]])) { # likely a problem, but we'll try to proceed
+      if (is.null(CnCgenerator_codes[[i]])) { # likely a problem, but we'll try to proceed
         warning("In writePackage: R6 interface code for ", returnNames[i], " missing.")
         deparsed_CnCgenerator <- "NULL"
       } else {
         deparsed_CnCgenerator <- CnCgenerator_codes[[i]]$CncGen_code |> deparse()
         deparsed_CnCgenerator[1] <- paste0(
-          compiled_generator_name, ' <- ', deparsed_CnCgenerator[1]
+          compiled_generator_name, " <- ", deparsed_CnCgenerator[1]
         )
         deparsed_Cpub_comp <- CnCgenerator_codes[[i]]$Cpub_comp_code |> deparse()
         deparsed_Cpub_comp[1] <- paste0(
-          compiled_generator_name, '_CpubGen <- ', deparsed_Cpub_comp[1]
+          compiled_generator_name, "_CpubGen <- ", deparsed_Cpub_comp[1]
         )
 
         inherit_obj <- units[[i]] # NCgenerator from which the CncGen_code will inherit
@@ -1314,44 +1468,52 @@ WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames, packa
 
         # deparsed_main_class <- NCI_inherit$main_class_code |> deparse()
         RpublicMethodNames <- NCI_inherit$RpublicNames[
-          NCI_inherit$RpublicNames %in% names(units[[i]]$public_methods)]
+          NCI_inherit$RpublicNames %in% names(units[[i]]$public_methods)
+        ]
         RpublicFieldNames <- NCI_inherit$RpublicNames[
-          NCI_inherit$RpublicNames %in% names(units[[i]]$public_fields)]
-        #N.B: Cpublic fields are build from NCI_inherit$fieldNames.
+          NCI_inherit$RpublicNames %in% names(units[[i]]$public_fields)
+        ]
+        # N.B: Cpublic fields are build from NCI_inherit$fieldNames.
         deparsed_main_class <- make_nClass_code(
           internals = NCI_inherit,
           Cpublic = units[[i]]$public_methods[NCI_inherit$methodNames],
-          Rpublic = c(units[[i]]$public_methods[RpublicMethodNames],
-                      units[[i]]$public_fields[RpublicFieldNames])
+          Rpublic = c(
+            units[[i]]$public_methods[RpublicMethodNames],
+            units[[i]]$public_fields[RpublicFieldNames]
+          )
         ) |> deparse()
         deparsed_main_class[1] <- paste0(
-          generator_name, ' <- ', deparsed_main_class[1]
+          generator_name, " <- ", deparsed_main_class[1]
         )
 
-        exportTag <- "#' @export\n" #if (totalControl[[i]]$export) "#' @export\n" else NULL
+        exportTag <- "#' @export\n" # if (totalControl[[i]]$export) "#' @export\n" else NULL
         # Retrieve roxygen entry
         thisRox <- switch(roxygenFlag,
-                          none = NULL,
-                          indices = if(length(roxygen) < i) roxygen[[i]] else NULL,
-                          names = roxygen[[ names(units)[i] ]]
-                          )
+          none = NULL,
+          indices = if (length(roxygen) < i) roxygen[[i]] else NULL,
+          names = roxygen[[names(units)[i]]]
+        )
         if (!is.null(thisRox)) {
           # Find the spot where each documented method is defined
           for (m in 1:length(thisRox$methods)) {
             thisDefn <- grep(paste0(names(thisRox$methods)[m], " = function("),
-                             deparsed_CnCgenerator, fixed = TRUE)
+              deparsed_CnCgenerator,
+              fixed = TRUE
+            )
             targetStr <- deparsed_CnCgenerator[thisDefn]
             deparsed_CnCgenerator[thisDefn] <-
-              gsub(pattern = names(thisRox$methods)[m],
-                   replacement = paste0(
-                     "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
-                   ),
-                   x = deparsed_CnCgenerator[thisDefn],
-                   fixed = TRUE)
+              gsub(
+                pattern = names(thisRox$methods)[m],
+                replacement = paste0(
+                  "\n", thisRox$methods[m], "\n", names(thisRox$methods)[m]
+                ),
+                x = deparsed_CnCgenerator[thisDefn],
+                fixed = TRUE
+              )
           }
         }
         all_class_output <- c(
-          '## Generated by nCompiler::writePackage() -> do not edit by hand\n',
+          "## Generated by nCompiler::writePackage() -> do not edit by hand\n",
           deparsed_main_class,
           deparsed_Cpub_comp,
           if (is.list(thisRox)) thisRox[["header"]] else thisRox,
@@ -1366,7 +1528,7 @@ WP_writeRinterfaces <- function(units, unitTypes, interfaces, returnNames, packa
       methodFns_name <- paste0(".", returnNames[i], "_methodFns")
       deparsed_methodFns <- deparse(methodFns[[i]])
       deparsed_methodFns[1] <- paste0(
-        methodFns_name, ' <- ', deparsed_methodFns[1]
+        methodFns_name, " <- ", deparsed_methodFns[1]
       )
       writeLines(deparsed_methodFns, con)
       on.exit()
@@ -1381,16 +1543,20 @@ WP_writeMemberData <- function(memberData, datDir) {
     datEnv <- as.environment(memberData)
     ls_datEnv <- ls(datEnv, all.names = TRUE)
     for (i in seq_along(ls_datEnv)) {
-      save(list = ls_datEnv[i], envir = datEnv,
-           file = file.path(datDir, paste0(ls_datEnv[i], ".RData")))
+      save(
+        list = ls_datEnv[i], envir = datEnv,
+        file = file.path(datDir, paste0(ls_datEnv[i], ".RData"))
+      )
     }
   }
 }
 
 WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, returnNames, packageNames,
-                              createFromR, Rdir) {
+                               createFromR, Rdir) {
   expect_nC_interface <- unitTypes == "nCgen" & interfaces %in% c("full", "generic")
-  if(!any(expect_nC_interface)) return()
+  if (!any(expect_nC_interface)) {
+    return()
+  }
   exportNames <- exportNames[expect_nC_interface]
   returnNames <- returnNames[expect_nC_interface]
   interfaces <- interfaces[expect_nC_interface]
@@ -1404,7 +1570,7 @@ WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, return
   # we check if there is a valid compiled generator name.
   CnCgeneratorNames <- packageNames |> lapply(\(x) x["compiled"])
   keep <- (!is.na(CnCgeneratorNames)) & (!CnCgeneratorNames == "")
-  #units |> lapply(function(x)
+  # units |> lapply(function(x)
   #  if(isNCgenerator(x)) NCinternals(x)$compileInfo$classname else NULL) |> unlist()
   # CnCgeneratorNames <- ifelse(interfaces == "full",
   #                            returnNames,
@@ -1413,7 +1579,7 @@ WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, return
   #                                    NA))
 
   CnCgeneratorNames <- CnCgeneratorNames[keep]
-  Cpub_generator_names <- paste0(CnCgeneratorNames, '_CpubGen')
+  Cpub_generator_names <- paste0(CnCgeneratorNames, "_CpubGen")
   # Cpub_generator_names <- ifelse(interfaces == "full",
   #                               paste0(returnNames, '_CpubGen'),
   #                               ifelse(interfaces == "generic",
@@ -1421,7 +1587,7 @@ WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, return
   #                                      NA))
   methodFnsNames <- paste0(".", returnNames, "_methodFns")
   paste0cq <- function(names) {
-    paste0("c(", paste0("\"",names,"\"", collapse = ", "), ")")
+    paste0("c(", paste0("\"", names, "\"", collapse = ", "), ")")
   }
   .NCgenerator_names <- packageNames |> lapply(\(x) x["uncompiled"])
   .NCgenerator_names <- .NCgenerator_names[keep]
@@ -1430,17 +1596,23 @@ WP_write_dotOnLoad <- function(units, unitTypes, interfaces, exportNames, return
   #                             ifelse(interfaces == "generic",
   #                                    paste0(".", returnNames, "_CnCgenerator_uncompiled"),
   #                                    NA))
-  onLoad_lines <- c(".onLoad <- function(libname, pkgname) {\n",
-                    paste0("nCompiler::connect_nClass_envs(", CnCgeneratorNames, ",", Cpub_generator_names,
-                                      ", env = asNamespace(pkgname), .NCgenerator = ", .NCgenerator_names, ")") |>
-                                      paste(collapse = "\n"), #replace parent.frame() with the package env?
-                    paste0(" nCompiler::setup_nClass_environments_from_package(\n",
-                           "  nClass_exportNames = ", paste0cq(exportNames), ",\n",
-                           "  interfaceTypes = ", paste0cq(interfaces), ",\n",
-                           "  createFromR = c(", paste0(createFromR, collapse=","), "),\n",
-                           "  CnCgenerators = list(", paste0(CnCgeneratorNames, collapse=","), "),\n",
-                           "  methodFns = list(", paste0(methodFnsNames, collapse=","), "))\n"),
-                    "NULL}\n")
+  onLoad_lines <- c(
+    ".onLoad <- function(libname, pkgname) {\n",
+    paste0(
+      "nCompiler::connect_nClass_envs(", CnCgeneratorNames, ",", Cpub_generator_names,
+      ", env = asNamespace(pkgname), .NCgenerator = ", .NCgenerator_names, ")"
+    ) |>
+      paste(collapse = "\n"), # replace parent.frame() with the package env?
+    paste0(
+      " nCompiler::setup_nClass_environments_from_package(\n",
+      "  nClass_exportNames = ", paste0cq(exportNames), ",\n",
+      "  interfaceTypes = ", paste0cq(interfaces), ",\n",
+      "  createFromR = c(", paste0(createFromR, collapse = ","), "),\n",
+      "  CnCgenerators = list(", paste0(CnCgeneratorNames, collapse = ","), "),\n",
+      "  methodFns = list(", paste0(methodFnsNames, collapse = ","), "))\n"
+    ),
+    "NULL}\n"
+  )
   writeLines(onLoad_lines, con = file.path(Rdir, "zzz.R"))
 }
 
@@ -1456,8 +1628,10 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     ## DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "RcppEigen", "RcppParallel", "nCompiler", sep = ",")
     ## A nClass might need:
     DESCRIPTION[1, "LinkingTo"] <- paste(DESCRIPTION[1, "LinkingTo"], "nCompiler", "RcppEigen",
-                                         #"RcppEigenAD",
-                                         "RcppParallel", "Rcereal", sep = ",")
+      # "RcppEigenAD",
+      "RcppParallel", "Rcereal",
+      sep = ","
+    )
     # On Linux RcppParallel might need to be in both LinkingTo and Imports.
     # Having it in Imports allows the symbols to be found when the on-the-fly package is loaded.
     # DESCRIPTION[1, "Imports"] <- paste(DESCRIPTION[1, "Imports"], "RcppParallel", sep = ",")
@@ -1466,36 +1640,39 @@ WP_write_DESCRIPTION_NAMESPACE <- function(units, unitTypes, interfaces, createF
     ## If so, it will need to be installed in R's main library, not some local location.
     # DESCRIPTION[1, "Collate"] <- paste(Rfilepath, collapse = ", ")
     write.dcf(DESCRIPTION, DESCfile)
-    NAMESPACE <- c(paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
-                   "importFrom(Rcpp, evalCpp)", # required at package loading
-                   if(isTRUE(nCompiler_pluginEnv$uses_TBB))
-                       "importFrom(RcppParallel, RcppParallelLibs)" #else NULL
-#                   "export(nComp_serialize_)",
-#                   "export(nComp_deserialize_)",
-#                   "export(call_method)",
-#                   "export(get_value)",
-#                   "export(set_value)"
-                   )
+    NAMESPACE <- c(
+      paste0("useDynLib(", pkgName, ", .registration=TRUE)"),
+      "importFrom(Rcpp, evalCpp)", # required at package loading
+      if (isTRUE(nCompiler_pluginEnv$uses_TBB)) {
+        "importFrom(RcppParallel, RcppParallelLibs)"
+      } # else NULL
+      #                   "export(nComp_serialize_)",
+      #                   "export(nComp_deserialize_)",
+      #                   "export(call_method)",
+      #                   "export(get_value)",
+      #                   "export(set_value)"
+    )
   } else {
     NAMESPACE <- readLines(NAMEfile)
   }
   # Packages from Rcpp::depends (e.g. via compileInfo$depends) must be in LinkingTo,
   # because Rcpp::depends attributes are not used when building a package.
-  if(length(depends)) {
+  if (length(depends)) {
     DESCRIPTION <- read.dcf(DESCfile)
-    current <- if("LinkingTo" %in% colnames(DESCRIPTION)) DESCRIPTION[1, "LinkingTo"] else NA
-    existing <- if(is.na(current)) character() else trimws(strsplit(current, ",")[[1]])
+    current <- if ("LinkingTo" %in% colnames(DESCRIPTION)) DESCRIPTION[1, "LinkingTo"] else NA
+    existing <- if (is.na(current)) character() else trimws(strsplit(current, ",")[[1]])
     new_depends <- setdiff(depends, existing)
-    if(length(new_depends)) {
-      if(!("LinkingTo" %in% colnames(DESCRIPTION)))
+    if (length(new_depends)) {
+      if (!("LinkingTo" %in% colnames(DESCRIPTION))) {
         DESCRIPTION <- cbind(DESCRIPTION, LinkingTo = NA)
+      }
       DESCRIPTION[1, "LinkingTo"] <- paste(c(existing, new_depends), collapse = ",")
       write.dcf(DESCRIPTION, DESCfile)
     }
   }
   need_export <- interfaces %in% c("generic", "full") & createFromR
-  if(sum(need_export)) {
-    new_exports <- paste0("export(",returnNames[need_export],")")
+  if (sum(need_export)) {
+    new_exports <- paste0("export(", returnNames[need_export], ")")
     needed <- !(new_exports %in% NAMESPACE)
     NAMESPACE <- c(NAMESPACE, new_exports[needed])
   }

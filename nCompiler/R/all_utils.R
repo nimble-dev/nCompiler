@@ -18,16 +18,16 @@ labelFunctionMetaCreator <- function() {
     nextIndex <- start
     force(lead)
     labelGenerator <- function(reset = FALSE, count = 1, envName = "") {
-      if(reset) {
+      if (reset) {
         nextIndex <<- 1
         return(invisible(NULL))
       }
-      lead <- paste(lead, envName , sep = '_')
+      lead <- paste(lead, envName, sep = "_")
       ans <- paste0(lead, nextIndex - 1 + (1:count))
       nextIndex <<- nextIndex + count
       ans
     }
-    allLabelFunctionCreators[[ length(allLabelFunctionCreators) + 1 ]] <<- labelGenerator
+    allLabelFunctionCreators[[length(allLabelFunctionCreators) + 1]] <<- labelGenerator
     labelGenerator
   }
   creatorFun
@@ -37,7 +37,7 @@ labelFunctionCreator <- labelFunctionMetaCreator()
 
 resetLabelFunctionCreators <- function() {
   allLabelFunctionCreators <- environment(labelFunctionCreator)$allLabelFunctionCreators
-  for(i in allLabelFunctionCreators) {
+  for (i in allLabelFunctionCreators) {
     i(reset = TRUE)
   }
 }
@@ -61,28 +61,31 @@ modelLabelCreator <- labelFunctionCreator("model")
 Rname2CppName <- function(rName, colonsOK = TRUE) {
   ## This will serve to replace and combine our former Rname2CppName and nameMashupFromExpr
   ## which were largely redundant
-  if (!is.character(rName))
+  if (!is.character(rName)) {
     rName <- deparse(rName)
-
-  if( colonsOK) {
-    # Substitute single colons but preserve double colons.
-    rName <- gsub('::', '_DOUBLE_COLON_', rName)
-    rName <- gsub(':', 'to', rName)  # replace colons with 'to'
-    rName <- gsub('_DOUBLE_COLON_', '::', rName)
-  } else if(any(grepl(':', rName))) {
-    stop(paste0('trying to do name mashup on expression with colon (\':\') from ',
-                paste(rName[grepl(':', rName)], collapse=', ')))
   }
-  rName <- gsub(' ', '', rName)
-  rName <- gsub('\\.', '_dot_', rName)
+
+  if (colonsOK) {
+    # Substitute single colons but preserve double colons.
+    rName <- gsub("::", "_DOUBLE_COLON_", rName)
+    rName <- gsub(":", "to", rName) # replace colons with 'to'
+    rName <- gsub("_DOUBLE_COLON_", "::", rName)
+  } else if (any(grepl(":", rName))) {
+    stop(paste0(
+      "trying to do name mashup on expression with colon (':') from ",
+      paste(rName[grepl(":", rName)], collapse = ", ")
+    ))
+  }
+  rName <- gsub(" ", "", rName)
+  rName <- gsub("\\.", "_dot_", rName)
   rName <- gsub("\"", "_quote_", rName)
-  rName <- gsub(',', '_comma_', rName)
-  rName <- gsub("`", "_backtick_" , rName)
-  rName <- gsub('\\[', '_oB', rName)
-  rName <- gsub('\\]', '_cB', rName)
-  rName <- gsub('\\(', '_oP', rName)
-  rName <- gsub('\\)', '_cP', rName)
-  rName <- gsub("\\$", "_" , rName)
+  rName <- gsub(",", "_comma_", rName)
+  rName <- gsub("`", "_backtick_", rName)
+  rName <- gsub("\\[", "_oB", rName)
+  rName <- gsub("\\]", "_cB", rName)
+  rName <- gsub("\\(", "_oP", rName)
+  rName <- gsub("\\)", "_cP", rName)
+  rName <- gsub("\\$", "_", rName)
   rName <- gsub(">=", "_gte_", rName)
   rName <- gsub("<=", "_lte_", rName)
   rName <- gsub("<=", "_eq_", rName)
@@ -96,15 +99,15 @@ Rname2CppName <- function(rName, colonsOK = TRUE) {
   rName <- gsub("&", "_and_", rName)
   rName <- gsub("%%", "_mod_", rName)
   rName <- gsub("%\\*%", "_matmult_", rName)
-  rName <- gsub("=", "_eq_" , rName)
-  rName <- gsub("\\(", "_" , rName)
-  rName <- gsub("\\+", "_plus_" , rName)
-  rName <- gsub("-", "_minus_" , rName)
-  rName <- gsub("\\*", "_times_" , rName)
-  rName <- gsub("/", "_over_" , rName)
-  rName <- gsub('\\^', '_tothe_', rName)
-  rName <- gsub('^_+', '', rName) # remove leading underscores.  can arise from (a+b), for example
-  rName <- gsub('^([[:digit:]])', 'd\\1', rName)    # if begins with a digit, add 'd' in front
+  rName <- gsub("=", "_eq_", rName)
+  rName <- gsub("\\(", "_", rName)
+  rName <- gsub("\\+", "_plus_", rName)
+  rName <- gsub("-", "_minus_", rName)
+  rName <- gsub("\\*", "_times_", rName)
+  rName <- gsub("/", "_over_", rName)
+  rName <- gsub("\\^", "_tothe_", rName)
+  rName <- gsub("^_+", "", rName) # remove leading underscores.  can arise from (a+b), for example
+  rName <- gsub("^([[:digit:]])", "d\\1", rName) # if begins with a digit, add 'd' in front
   rName
 }
 
@@ -128,17 +131,27 @@ codeSubstitute <- function(code, subList) {
   eval(substitute(substitute(code, subList), list(code = code)))
 }
 
-makeSpaces <- function(num) paste(rep(' ', num), collapse = '')
+makeSpaces <- function(num) paste(rep(" ", num), collapse = "")
 
-pasteSemicolon <- function(x, indent = '') {
-  if(is.numeric(indent)) indent <- makeSpaces(indent)
-  if(is.character(x)) return(paste0(indent, x, ';'))
-  if(is.list(x)) return(lapply(x, function(ix) paste0(indent, ix, ';')))
-  if(is.null(x)) return(character())
-  stop(paste0('Error, pasteSemicolon called for object of class ',
-              class(x),
-              '. Must be character or list.'),
-       call. = FALSE)
+pasteSemicolon <- function(x, indent = "") {
+  if (is.numeric(indent)) indent <- makeSpaces(indent)
+  if (is.character(x)) {
+    return(paste0(indent, x, ";"))
+  }
+  if (is.list(x)) {
+    return(lapply(x, function(ix) paste0(indent, ix, ";")))
+  }
+  if (is.null(x)) {
+    return(character())
+  }
+  stop(
+    paste0(
+      "Error, pasteSemicolon called for object of class ",
+      class(x),
+      ". Must be character or list."
+    ),
+    call. = FALSE
+  )
 }
 
 #' Write unlisted code generated from nCompiler cpp definitions.
@@ -175,16 +188,20 @@ writeCode <- function(x, ...) writeLines(unlist(x), ...)
 #'
 #' @export
 nDim <- function(obj) {
-  if(is.null(dim(obj))) return(length(obj))
+  if (is.null(dim(obj))) {
+    return(length(obj))
+  }
   return(dim(obj))
 }
 
 is.blank <- function(arg) {
-  if(is.null(arg)) return(FALSE)
+  if (is.null(arg)) {
+    return(FALSE)
+  }
   # better approach borrowed from rlang::is_missing
-  return(identical(arg, quote(expr =)))
+  return(identical(arg, quote(expr = )))
   # old approach
-  #return(identical(arg, quote(x[])[[3]]))
+  # return(identical(arg, quote(x[])[[3]]))
 }
 
 
@@ -195,7 +212,7 @@ is.blank <- function(arg) {
 # I think "niceNames" does that, possibly  "showAttributes" too.
 deparse <- function(...) {
   control <- c("keepNA", "keepInteger", "niceNames", "showAttributes", "digits17")
-  if("width.cutoff" %in% names(list(...))) {
+  if ("width.cutoff" %in% names(list(...))) {
     base::deparse(..., control = control)
   } else {
     base::deparse(..., width.cutoff = 500L, control = control)
@@ -207,13 +224,17 @@ deparse <- function(...) {
 ## are cases where not modifying the nlines behavior may be best.
 safeDeparse <- function(..., warn = FALSE) {
   out <- deparse(...)
-  if(isTRUE(get_nOption('useSafeDeparse'))) {
+  if (isTRUE(get_nOption("useSafeDeparse"))) {
     dotArgs <- list(...)
-    if("nlines" %in% names(dotArgs))
-      nlines <- dotArgs$nlines else nlines <- 1L
-    if(nlines != -1L && length(out) > nlines) {
-      if(warn)
-        message("  [Note] safeDeparse: truncating deparse output to ", nlines, " line", if(nlines>1) "s" else "")
+    if ("nlines" %in% names(dotArgs)) {
+      nlines <- dotArgs$nlines
+    } else {
+      nlines <- 1L
+    }
+    if (nlines != -1L && length(out) > nlines) {
+      if (warn) {
+        message("  [Note] safeDeparse: truncating deparse output to ", nlines, " line", if (nlines > 1) "s" else "")
+      }
       out <- out[1:nlines]
     }
   }
@@ -221,8 +242,12 @@ safeDeparse <- function(..., warn = FALSE) {
 }
 
 dimOrLength <- function(obj, scalarize = FALSE) {
-  if(scalarize) if(length(obj) == 1) return(numeric(0))
-  if(is.null(dim(obj))) return(length(obj))
+  if (scalarize) if (length(obj) == 1) {
+    return(numeric(0))
+  }
+  if (is.null(dim(obj))) {
+    return(length(obj))
+  }
   return(dim(obj))
 }
 

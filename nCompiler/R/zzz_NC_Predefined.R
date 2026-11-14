@@ -18,7 +18,7 @@ test_predefined <- PDdevel %||% nClass(
   predefined = "test_predefined_pkg",
   classname = "test_predefined",
   Cpublic = list(
-    a = 'numericScalar'
+    a = "numericScalar"
   )
 )
 
@@ -31,12 +31,12 @@ test_predefined <- PDdevel %||% nClass(
 #' @export
 derivClass <- PDdevel %||% nClass(
   classname = "derivClass",
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("derivClass")),
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("derivClass")),
   Cpublic = list(
-      value = 'numericVector',
-      gradient = 'numericMatrix',
-      hessian = 'numericArray(nDim = 3)'
+    value = "numericVector",
+    gradient = "numericMatrix",
+    hessian = "numericArray(nDim = 3)"
   )
 )
 
@@ -49,27 +49,27 @@ EigenDecomp <- PDdevel %||% nClass(
   # manually insert:
   # "#include <nCompiler/ET_ext/post_Rcpp/tensorOperations_Eigen.h>"
   # in the hContent file AFTER the EigenDecomp class declaration
-  classname = 'EigenDecomp',
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("EigenDecomp")),
+  classname = "EigenDecomp",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("EigenDecomp")),
   Cpublic = list(
-    values = 'numericVector',
-    vectors = 'numericMatrix'
+    values = "numericVector",
+    vectors = "numericMatrix"
   )
 )
 
 #' @export
 SVDDecomp <- PDdevel %||% nClass(
   # manually insert:
-  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_SVD.h>
+  # include <nCompiler/ET_ext/post_Rcpp/tensorOperations_SVD.h>
   # in the hContent file AFTER the SVDDecomp class declaration
-  classname = 'SVDDecomp',
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("SVDDecomp")),
+  classname = "SVDDecomp",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("SVDDecomp")),
   Cpublic = list(
-    d = 'numericVector',
-    v = 'numericMatrix',
-    u = 'numericMatrix'
+    d = "numericVector",
+    v = "numericMatrix",
+    u = "numericMatrix"
   )
 )
 
@@ -80,27 +80,27 @@ SVDDecomp <- PDdevel %||% nClass(
 NULL
 
 OptimControlList <- PDdevel %||% nClass(
-  classname = 'OptimControlList',
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("OptimControlList")),
+  classname = "OptimControlList",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("OptimControlList")),
   Cpublic = list(
-    trace = 'integer',
-    fnscale = 'double',
-    parscale = 'numericVector',
-    ndeps = 'numericVector',
-    maxit = 'integer',
-    abstol = 'double',
-    reltol = 'double',
-    alpha = 'double',
-    beta = 'double',
-    gamma = 'double',
-    REPORT = 'integer',
-    type = 'integer',
-    lmm = 'integer',
-    factr = 'double',
-    pgtol = 'double',
-    tmax = 'integer',
-    temp = 'double',
+    trace = "integer",
+    fnscale = "double",
+    parscale = "numericVector",
+    ndeps = "numericVector",
+    maxit = "integer",
+    abstol = "double",
+    reltol = "double",
+    alpha = "double",
+    beta = "double",
+    gamma = "double",
+    REPORT = "integer",
+    type = "integer",
+    lmm = "integer",
+    factr = "double",
+    pgtol = "double",
+    tmax = "integer",
+    temp = "double",
     # method to set members to default values
     initToDefaults = nFunction(
       fun = function() {
@@ -109,8 +109,8 @@ OptimControlList <- PDdevel %||% nClass(
         parscale <- nNumeric(length = 1, value = 1.0)
         ndeps <- nNumeric(length = 1, value = 1e-3)
         abstol <- -Inf
-        cppLiteral('reltol = std::sqrt(std::numeric_limits<double>::epsilon());')
-        cppLiteral('maxit = NA_INTEGER;')
+        cppLiteral("reltol = std::sqrt(std::numeric_limits<double>::epsilon());")
+        cppLiteral("maxit = NA_INTEGER;")
         alpha <- 1.0
         beta <- 0.5
         gamma <- 2.0
@@ -129,44 +129,43 @@ OptimControlList <- PDdevel %||% nClass(
 
 #' @export
 OptimResultList <- PDdevel %||% nClass(
-  classname = 'OptimResultList',
-  predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("OptimResultList")),
+  classname = "OptimResultList",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("OptimResultList")),
   Cpublic = list(
-    par = 'numericVector',
-    value = 'double',
-    hessian = 'numericMatrix',
-    counts = 'integerVector',
-    convergence = 'integer',
-    message = 'RcppCharacterVector'
+    par = "numericVector",
+    value = "double",
+    hessian = "numericMatrix",
+    counts = "integerVector",
+    convergence = "integer",
+    message = "RcppCharacterVector"
   )
 )
 
 #' @export
 sparseCholFactor <- nClass(
   # manually insert:
-  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_sparseChol.h>
+  # include <nCompiler/ET_ext/post_Rcpp/tensorOperations_sparseChol.h>
   # in the hContent file AFTER the sparseCholFactor class declaration
-    classname = 'sparseCholFactor',
-    predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("sparseCholFactor_nC")),
-    Cpublic = list(
-        llt = 'simplicialLLT'
-    ) 
+  classname = "sparseCholFactor",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("sparseCholFactor_nC")),
+  Cpublic = list(
+    llt = "simplicialLLT"
+  )
 )
 
 #' @export
 denseCholFactor <- nClass(
   # manually insert:
-  #include <nCompiler/ET_ext/post_Rcpp/tensorOperations_denseChol.h>
+  # include <nCompiler/ET_ext/post_Rcpp/tensorOperations_denseChol.h>
   # in the hContent file AFTER the denseCholFactor class declaration
-    classname = 'denseCholFactor',
-    predefined = quote(system.file(file.path("include","nCompiler", "predef"), package="nCompiler") |>
-                       file.path("denseCholFactor_nC")),
-    Cpublic = list(
-        llt = 'LLT'
-    ) 
+  classname = "denseCholFactor",
+  predefined = quote(system.file(file.path("include", "nCompiler", "predef"), package = "nCompiler") |>
+    file.path("denseCholFactor_nC")),
+  Cpublic = list(
+    llt = "LLT"
+  )
 )
 
 rm(PDdevel)
-

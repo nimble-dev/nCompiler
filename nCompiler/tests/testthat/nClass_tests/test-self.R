@@ -18,15 +18,23 @@ test_that("self$method() works in a plain nClass", {
   nc <- nClass(
     classname = "nc_self_method",
     Cpublic = list(
-      x = 'numericScalar',
+      x = "numericScalar",
       double_x = nFunction(
-        function() { return(x * 2); returnType('numericScalar') }
+        function() {
+          return(x * 2)
+          returnType("numericScalar")
+        }
       ),
       set_x_via_self = nFunction(
-        function(x_ = 'numericScalar') {self$x <- x_}
+        function(x_ = "numericScalar") {
+          self$x <- x_
+        }
       ),
       get_double_x_via_self = nFunction(
-        function() { return(self$double_x()); returnType('numericScalar') }
+        function() {
+          return(self$double_x())
+          returnType("numericScalar")
+        }
       )
     )
   )
@@ -36,13 +44,14 @@ test_that("self$method() works in a plain nClass", {
   obj$set_x_via_self(5)
   expect_equal(obj$get_double_x_via_self(), 10)
 
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(nc, package = package)
     Cobj <- comp$new()
     Cobj$x <- 3
     Cobj$set_x_via_self(5)
     expect_equal(Cobj$get_double_x_via_self(), 10)
-    rm(Cobj); gc()
+    rm(Cobj)
+    gc()
   }
 })
 
@@ -50,9 +59,12 @@ test_that("self as return value works in a plain nClass", {
   nc <- nClass(
     classname = "nc_self_return",
     Cpublic = list(
-      x = 'numericScalar',
+      x = "numericScalar",
       get_self = nFunction(
-        function() { return(self); returnType('nc') }
+        function() {
+          return(self)
+          returnType("nc")
+        }
       )
     )
   )
@@ -62,14 +74,15 @@ test_that("self as return value works in a plain nClass", {
   s <- obj$get_self()
   expect_equal(s$x, 42)
 
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(nc, package = package)
     Cobj <- comp$new()
     Cobj$x <- 42
     Cs <- Cobj$get_self()
     expect_true(inherits(Cs, "nc_self_return"))
     expect_equal(Cs$x, 42)
-    rm(Cobj, Cs); gc()
+    rm(Cobj, Cs)
+    gc()
   }
 })
 
@@ -77,14 +90,18 @@ test_that("self as argument works in a plain nClass", {
   nc <- nClass(
     classname = "nc_self_arg",
     Cpublic = list(
-      x = 'numericScalar',
+      x = "numericScalar",
       get_x_from = nFunction(
-        function(other = 'nc') {
-          return(other$x); returnType('numericScalar')
+        function(other = "nc") {
+          return(other$x)
+          returnType("numericScalar")
         }
       ),
       get_my_x_via_self = nFunction(
-        function() { return(self$get_x_from(self)); returnType('numericScalar') }
+        function() {
+          return(self$get_x_from(self))
+          returnType("numericScalar")
+        }
       )
     )
   )
@@ -93,12 +110,13 @@ test_that("self as argument works in a plain nClass", {
   obj$x <- 7
   expect_equal(obj$get_my_x_via_self(), 7)
 
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(nc, package = package)
     Cobj <- comp$new()
     Cobj$x <- 7
     expect_equal(Cobj$get_my_x_via_self(), 7)
-    rm(Cobj); gc()
+    rm(Cobj)
+    gc()
   }
 })
 
@@ -110,15 +128,20 @@ test_that("self$method() works in a derived nClass", {
   ncBase <- nClass(
     classname = "nc_self_hier_base1",
     Cpublic = list(
-      x = 'numericScalar',
+      x = "numericScalar",
       double_x = nFunction(
-        function() { return(x * 2); returnType('numericScalar') },
+        function() {
+          return(x * 2)
+          returnType("numericScalar")
+        },
         compileInfo = list(virtual = TRUE)
       )
     ),
-    compileInfo = list(interface = "generic", createFromR = FALSE,
-                       exportName = "ncBase_export",
-                       packageNames = c(uncompiled = "ncBase"))
+    compileInfo = list(
+      interface = "generic", createFromR = FALSE,
+      exportName = "ncBase_export",
+      packageNames = c(uncompiled = "ncBase")
+    )
   )
 
   ncDer <- nClass(
@@ -126,13 +149,22 @@ test_that("self$method() works in a derived nClass", {
     inherit = ncBase,
     Cpublic = list(
       get_double_x_via_self = nFunction(
-        function() { return(self$double_x()); returnType('numericScalar') }
+        function() {
+          return(self$double_x())
+          returnType("numericScalar")
+        }
       ),
       triple_x = nFunction(
-        function() {return(x*3); returnType('numericScalar')}
+        function() {
+          return(x * 3)
+          returnType("numericScalar")
+        }
       ),
       get_triple_x_via_self = nFunction(
-        function() {return(self$triple_x()); returnType('numericScalar')}
+        function() {
+          return(self$triple_x())
+          returnType("numericScalar")
+        }
       )
     )
   )
@@ -142,13 +174,14 @@ test_that("self$method() works in a derived nClass", {
   expect_equal(obj$get_double_x_via_self(), 10)
   expect_equal(obj$get_triple_x_via_self(), 15)
 
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(ncBase, ncDer, package = package)
     Cobj <- comp$ncDer$new()
     Cobj$x <- 5
     expect_equal(Cobj$get_double_x_via_self(), 10)
     expect_equal(Cobj$get_triple_x_via_self(), 15)
-    rm(Cobj); gc()
+    rm(Cobj)
+    gc()
   }
 })
 
@@ -156,20 +189,25 @@ test_that("self as return value works in a derived nClass", {
   ncBase <- nClass(
     classname = "nc_self_hier_base2",
     Cpublic = list(
-      x = 'numericScalar'
+      x = "numericScalar"
     ),
-    compileInfo = list(interface = "generic", createFromR = FALSE,
-                       exportName = "ncBase_export",
-                       packageNames = c(uncompiled = "ncBase"))
+    compileInfo = list(
+      interface = "generic", createFromR = FALSE,
+      exportName = "ncBase_export",
+      packageNames = c(uncompiled = "ncBase")
+    )
   )
 
   ncDer <- nClass(
     classname = "nc_self_hier_der2",
     inherit = ncBase,
     Cpublic = list(
-      y = 'numericScalar',
+      y = "numericScalar",
       get_self = nFunction(
-        function() { return(self); returnType('ncDer') }
+        function() {
+          return(self)
+          returnType("ncDer")
+        }
       )
     )
   )
@@ -181,7 +219,7 @@ test_that("self as return value works in a derived nClass", {
   expect_equal(s$x, 10)
   expect_equal(s$y, 20)
 
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(ncBase, ncDer, package = package)
     Cobj <- comp$ncDer$new()
     Cobj$x <- 10
@@ -189,7 +227,8 @@ test_that("self as return value works in a derived nClass", {
     Cs <- Cobj$get_self()
     expect_equal(Cs$x, 10)
     expect_equal(Cs$y, 20)
-    rm(Cobj, Cs); gc()
+    rm(Cobj, Cs)
+    gc()
   }
 })
 
@@ -197,11 +236,13 @@ test_that("self as argument works in a derived nClass", {
   ncBase <- nClass(
     classname = "nc_self_hier_base3",
     Cpublic = list(
-      x = 'numericScalar'
+      x = "numericScalar"
     ),
-    compileInfo = list(interface = "generic", createFromR = FALSE,
-                       exportName = "ncBase_export",
-                       packageNames = c(uncompiled = "ncBase"))
+    compileInfo = list(
+      interface = "generic", createFromR = FALSE,
+      exportName = "ncBase_export",
+      packageNames = c(uncompiled = "ncBase")
+    )
   )
 
   ncDer <- nClass(
@@ -209,12 +250,16 @@ test_that("self as argument works in a derived nClass", {
     inherit = ncBase,
     Cpublic = list(
       get_x_from = nFunction(
-        function(other = 'ncDer') {
-          return(other$x); returnType('numericScalar')
+        function(other = "ncDer") {
+          return(other$x)
+          returnType("numericScalar")
         }
       ),
       get_my_x_via_self = nFunction(
-        function() { return(self$get_x_from(self)); returnType('numericScalar') }
+        function() {
+          return(self$get_x_from(self))
+          returnType("numericScalar")
+        }
       )
     )
   )
@@ -222,11 +267,12 @@ test_that("self as argument works in a derived nClass", {
   obj <- ncDer$new()
   obj$x <- 99
   expect_equal(obj$get_my_x_via_self(), 99)
-  for(package in c(FALSE, TRUE)) {
+  for (package in c(FALSE, TRUE)) {
     comp <- nCompile(ncBase, ncDer, package = package)
     Cobj <- comp$ncDer$new()
     Cobj$x <- 99
     expect_equal(Cobj$get_my_x_via_self(), 99)
-    rm(Cobj); gc()
+    rm(Cobj)
+    gc()
   }
 })

@@ -21,60 +21,68 @@ compile_processAD <- function(code,
                               # and more safely avoids having residual information left around.
                               ## It is unclear if workEnv will be needed.
                               workEnv = new.env()) {
-  nErrorEnv$stateInfo <- paste0("handling processAD for ",
-                                code$name,
-                                ".")
+  nErrorEnv$stateInfo <- paste0(
+    "handling processAD for ",
+    code$name,
+    "."
+  )
   setupExprs <- list()
-  if(code$isLiteral) {
+  if (code$isLiteral) {
     return(list())
   }
-  if(code$isName) {
+  if (code$isName) {
     return(list())
   }
-  if(code$isCall) {
-    if(code$name == '{') {
-      for(i in seq_along(code$args)) {
+  if (code$isCall) {
+    if (code$name == "{") {
+      for (i in seq_along(code$args)) {
         compile_processAD(code$args[[i]],
-                          symTab,
-                          auxEnv,
-                          workEnv = new.env()) ## a new line
+          symTab,
+          auxEnv,
+          workEnv = new.env()
+        ) ## a new line
       }
       return(invisible(NULL))
     }
-    if(code$name == 'for') {
+    if (code$name == "for") {
       compile_processAD(code$args[[3]], symTab, auxEnv)
       return(invisible(NULL))
     }
-    if(code$name %in% ifOrWhile) {
+    if (code$name %in% ifOrWhile) {
       compile_processAD(code$args[[2]], symTab, auxEnv)
-      if(length(code$args)==3)
+      if (length(code$args) == 3) {
         compile_processAD(code$args[[3]], symTab, auxEnv)
+      }
       return(invisible(NULL))
     }
 
-    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    opInfo <- check_cachedOpInfo(code, where = auxEnv$where, update = TRUE)
     handlingInfo <- getOperatorField(opInfo$opDef, "processAD")
-#    handlingInfo <- getOperatorDef(code$name, "processAD")
+    #    handlingInfo <- getOperatorDef(code$name, "processAD")
     # opInfo <- operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["processAD"]]
-      if(!is.null(handlingInfo)) {
-        beforeHandler <- handlingInfo[['beforeHandler']]
-        if(!is.null(beforeHandler)) {
-          eval(call(beforeHandler,
-                    code,
-                    symTab,
-                    auxEnv,
-                    workEnv,
-                    handlingInfo),
-               envir = processADEnv)
-        }
+    if (!is.null(handlingInfo)) {
+      beforeHandler <- handlingInfo[["beforeHandler"]]
+      if (!is.null(beforeHandler)) {
+        eval(
+          call(
+            beforeHandler,
+            code,
+            symTab,
+            auxEnv,
+            workEnv,
+            handlingInfo
+          ),
+          envir = processADEnv
+        )
       }
+    }
     # }
 
     iArgs <- seq_along(code$args)
-    for(i in iArgs) {
-      if(inherits(code$args[[i]], 'exprClass')) {
+    for (i in iArgs) {
+      if (inherits(code$args[[i]], "exprClass")) {
         compile_processAD(code$args[[i]], symTab, auxEnv, workEnv)
       }
     }
@@ -82,18 +90,22 @@ compile_processAD <- function(code,
     ## finally, call any special handlers
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[["processAD"]]
-      if(!is.null(handlingInfo)) {
-        handler <- handlingInfo[['handler']]
-        if(!is.null(handler)) {
-          eval(call(handler,
-                    code,
-                    symTab,
-                    auxEnv,
-                    workEnv,
-                    handlingInfo),
-               envir = processADEnv)
-        }
+    if (!is.null(handlingInfo)) {
+      handler <- handlingInfo[["handler"]]
+      if (!is.null(handler)) {
+        eval(
+          call(
+            handler,
+            code,
+            symTab,
+            auxEnv,
+            workEnv,
+            handlingInfo
+          ),
+          envir = processADEnv
+        )
       }
+    }
     # }
   }
   invisible(NULL)
@@ -104,12 +116,14 @@ inProcessADEnv(
     function(code, symTab, auxEnv, handlingInfo,
              useArgs = rep(TRUE, length(code$args))) {
       ## won't be here unless code is a call.  It will not be a {
-      for(i in seq_along(code$args)) {
-        if(useArgs[i]) {
-          if(inherits(code$args[[i]], 'exprClass')) {
-            compile_processAD(code$args[[i]],
-                              symTab,
-                              auxEnv)
+      for (i in seq_along(code$args)) {
+        if (useArgs[i]) {
+          if (inherits(code$args[[i]], "exprClass")) {
+            compile_processAD(
+              code$args[[i]],
+              symTab,
+              auxEnv
+            )
           }
         }
       }
@@ -142,35 +156,47 @@ inProcessADEnv(
       call_code <- code$args[[1]]
       method_name <- call_code$args[[1]]$name
       ADmgrName <- ADtapeMgrLabelCreator(envName = "foo")
-      ptrToMethod <- paste0("&", cpp_classname, "::",  method_name)
-      rolesExpr <- code$args[['roles']]
-      if(is.null(rolesExpr)) ADhandlingTypes <- c("RETURN", "WRT") # dummy starter
-      else ADhandlingTypes <- eval(nDeparse(rolesExpr))
-      ADhandlingTypes <- paste0(ADhandlingTypes, collapse=",")
+      ptrToMethod <- paste0("&", cpp_classname, "::", method_name)
+      rolesExpr <- code$args[["roles"]]
+      if (is.null(rolesExpr)) {
+        ADhandlingTypes <- c("RETURN", "WRT")
+      } # dummy starter
+      else {
+        ADhandlingTypes <- eval(nDeparse(rolesExpr))
+      }
+      ADhandlingTypes <- paste0(ADhandlingTypes, collapse = ",")
       ADhandlingExpr <- paste0("ADhandling<", ADhandlingTypes, "> ")
-      ADmgrVar <- cppVarFullClass$new(name = ADmgrName,
-                                      baseType = "nDerivsMgrClass",
-                                      templateArgs = list(paste0("METHOD_TYPES(",ptrToMethod,")"),
-                                                          ADhandlingExpr))
-      ADconstructorInit <- paste0(ADmgrName,"(", ptrToMethod, ", this)")
+      ADmgrVar <- cppVarFullClass$new(
+        name = ADmgrName,
+        baseType = "nDerivsMgrClass",
+        templateArgs = list(
+          paste0("METHOD_TYPES(", ptrToMethod, ")"),
+          ADhandlingExpr
+        )
+      )
+      ADconstructorInit <- paste0(ADmgrName, "(", ptrToMethod, ", this)")
       ADconstructorInit <- nParse(substitute(cppLiteral(CODE), list(CODE = ADconstructorInit)))
-      if(is.null(auxEnv$derivsContent$ADconstructorInits))
+      if (is.null(auxEnv$derivsContent$ADconstructorInits)) {
         auxEnv$derivsContent$ADconstructorInits <- list()
+      }
       auxEnv$derivsContent$ADconstructorInits[[ADmgrName]] <- ADconstructorInit
 
-      if(is.null(auxEnv$derivsContent$ADtapeMgrSymbols))
+      if (is.null(auxEnv$derivsContent$ADtapeMgrSymbols)) {
         auxEnv$derivsContent$ADtapeMgrSymbols <- list()
+      }
       auxEnv$derivsContent$ADtapeMgrSymbols[[ADmgrName]] <- ADmgrVar
 
-      newCode <- substitute(.method(ADMGRNAME, nDerivs),
-                            list(ADMGRNAME = as.name(ADmgrName)))
+      newCode <- substitute(
+        .method(ADMGRNAME, nDerivs),
+        list(ADMGRNAME = as.name(ADmgrName))
+      )
       newCode <- nParse(newCode)
       # We could set up names for newCode$args if necessary.
       insertArg(newCode, 3, code$args[["update"]])
       insertArg(newCode, 4, code$args[["reset"]])
-      for(i in seq_along(call_code$args)) {
-        if(i == 1) next # first is the name of the method, which isn't needed.
-        insertArg(newCode, 4+i-1, call_code$args[[i]])
+      for (i in seq_along(call_code$args)) {
+        if (i == 1) next # first is the name of the method, which isn't needed.
+        insertArg(newCode, 4 + i - 1, call_code$args[[i]])
       }
       replaceArgInCaller(code, newCode)
       NULL

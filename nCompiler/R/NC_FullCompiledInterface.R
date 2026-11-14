@@ -65,34 +65,40 @@ build_compiled_nClasses <- function(units,
   numUnits <- length(units)
   ans <- vector("list", numUnits)
   inherit_indices <- vector("list", numUnits)
-  for(i in seq_along(units)) {
-    if(unitTypes[i]=="nCgen") {
-      if(isTRUE(interfaces[[i]]%in%c("full", "generic"))) {
-# Find inheritance
+  for (i in seq_along(units)) {
+    if (unitTypes[i] == "nCgen") {
+      if (isTRUE(interfaces[[i]] %in% c("full", "generic"))) {
+        # Find inheritance
         NCgenerator <- units[[i]]
         inherit_NCgen <- NCgenerator$get_inherit()
         match <- rep(FALSE, numUnits)
         inherit_returnName <- NULL
         inherit_indices[[i]] <- integer()
-        if(identical(inherit_NCgen, nCompiler::nClassClass)) # devtools::document() problem if we use :: instead of :::
+        if (identical(inherit_NCgen, nCompiler::nClassClass)) { # devtools::document() problem if we use :: instead of :::
           inherit_NCgen <- NULL
-        else {
-          for(j in seq_along(units)) {
-            if(identical(units[[j]], inherit_NCgen)) match[j] <- TRUE
+        } else {
+          for (j in seq_along(units)) {
+            if (identical(units[[j]], inherit_NCgen)) match[j] <- TRUE
           }
-          if(sum(match)>1)
+          if (sum(match) > 1) {
             stop("When building compiled interface for ", exportNames[i], ", there were multiple matches for inherited nClass generator.")
+          }
           inherit_indices[[i]] <- which(match)
-          inherit_returnName <- if(!package) "NOT_USED"
-                                else packageNames[[inherit_indices[[i]] ]]["compiled"]
+          inherit_returnName <- if (!package) {
+            "NOT_USED"
+          } else {
+            packageNames[[inherit_indices[[i]]]]["compiled"]
+          }
         }
 
-        ans[[i]] <- try(build_compiled_nClass(NCgenerator = units[[i]],
-                                        newCobjFun = if(is.null(newCobjFuns)) NULL else newCobjFuns[[i]],
-                                        inherit_NCgen = inherit_NCgen,
-                                        inherit_returnName = inherit_returnName,
-                                        package = package))
-        if(inherits(ans[[i]], "try-error")) {
+        ans[[i]] <- try(build_compiled_nClass(
+          NCgenerator = units[[i]],
+          newCobjFun = if (is.null(newCobjFuns)) NULL else newCobjFuns[[i]],
+          inherit_NCgen = inherit_NCgen,
+          inherit_returnName = inherit_returnName,
+          package = package
+        ))
+        if (inherits(ans[[i]], "try-error")) {
           warning(paste0("There was a problem building a full nClass interface for ", exportNames[i], "."))
           ans[[i]] <- NULL
         }
@@ -100,12 +106,14 @@ build_compiled_nClasses <- function(units,
     }
   }
 
-  if(package) return(ans)
+  if (package) {
+    return(ans)
+  }
 
-  for(i in seq_along(units)) {
-    if(length(inherit_indices[[i]])==0) next
+  for (i in seq_along(units)) {
+    if (length(inherit_indices[[i]]) == 0) next
     Cpub_class <- ans[[i]]$parent_env$.Cpub_class
-    Cpub_class$parent_env$.Cpub_base_class <- ans[[inherit_indices[[i]] ]]$parent_env$.Cpub_class
+    Cpub_class$parent_env$.Cpub_base_class <- ans[[inherit_indices[[i]]]]$parent_env$.Cpub_class
   }
   ans
 }
@@ -116,8 +124,6 @@ build_compiled_nClass <- function(NCgenerator,
                                   inherit_NCgen = NULL,
                                   inherit_returnName = NULL,
                                   package = FALSE) {
-
-
   compiled_Cpub_class_code <- make_compiled_Cpub_class_code(
     NCgenerator = NCgenerator,
     inheritName = inherit_returnName,
@@ -127,8 +133,12 @@ build_compiled_nClass <- function(NCgenerator,
 
   CnCgenerator_code <- make_compiled_nClass_code(NCgenerator)
 
-  if(package) return(list(CncGen_code = CnCgenerator_code,
-                          Cpub_comp_code = compiled_Cpub_class_code))
+  if (package) {
+    return(list(
+      CncGen_code = CnCgenerator_code,
+      Cpub_comp_code = compiled_Cpub_class_code
+    ))
+  }
 
   CnCgenerator <- eval(CnCgenerator_code)
   Cpub_comp_generator <- eval(compiled_Cpub_class_code)
@@ -139,7 +149,7 @@ build_compiled_nClass <- function(NCgenerator,
   # new_env$.Cpub_class$parent_env == new_env
   # I don't think it's a problem
 
-  if(!missing(newCobjFun) && !is.null(newCobjFun)) {
+  if (!missing(newCobjFun) && !is.null(newCobjFun)) {
     # Similar to .internals in nClass,
     # we put newCobjFun in two places:
     # 1. In the generator
@@ -159,7 +169,7 @@ build_compiled_nClass <- function(NCgenerator,
 }
 
 # buildActiveBinding_for_compiled_nClass <- function(NCI, fieldNames) {
-  #fieldNames <- NCI$fieldNames
+# fieldNames <- NCI$fieldNames
 #   symTab <- NCI$symbolTable
 #   activeBindings <- list()
 #   newFields <- list()
@@ -190,8 +200,9 @@ make_compiled_nClass_code <- function(NCgenerator) {
   substitute(
     R6::R6Class(
       classname = CLASSNAME,
-      public =list(isCompiled = \() TRUE,
-                   initializeCpp = \(CppObj) private$Cpublic_obj$initializeCpp(CppObj)
+      public = list(
+        isCompiled = \() TRUE,
+        initializeCpp = \(CppObj) private$Cpublic_obj$initializeCpp(CppObj)
       ),
       portable = FALSE,
       inherit = INHERIT,
@@ -207,8 +218,7 @@ make_compiled_nClass_code <- function(NCgenerator) {
 make_compiled_Cpub_class_code <- function(NCgenerator,
                                           inheritName = NULL,
                                           package = FALSE,
-                                          newCobjFun = NULL
-                                          ) {
+                                          newCobjFun = NULL) {
   classname <- NCgenerator$classname
   Cpub_classname <- paste0(classname, "_Cpub_compiled")
 
@@ -217,9 +227,9 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
 
   CfieldNames <- NCI$fieldNames
   symTab <- NCI$symbolTable
-  for(name in CfieldNames) {
+  for (name in CfieldNames) {
     sym <- symTab$getSymbol(name)
-    if(is.null(sym)) {
+    if (is.null(sym)) {
       warning(paste0("Could not find a way to build active binding for field ", name, "."))
       CfieldNames <- setdiff(CfieldNames, name)
     }
@@ -232,81 +242,109 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
 
   Rmethods_code_list[["initializeCpp"]] <- substitute(
     function(CppObj) {
-      if(missing(CppObj)) {
+      if (missing(CppObj)) {
         newCobjFun <- NEWCOBJFUN
-        if(is.null(newCobjFun))
+        if (is.null(newCobjFun)) {
           stop("Cannot create a nClass full interface object without a newCobjFun or a CppObj argument.")
+        }
         CppObj <- newCobjFun()
       } else {
-        if(nCompiler::isCNC(CppObj)) { # Might be called from a different namespace.
+        if (nCompiler::isCNC(CppObj)) { # Might be called from a different namespace.
           CppObj <- CppObj$private$Cpublic_obj$private$CppObj
         }
       }
-      if(!nCompiler:::is.loadedObjectEnv(CppObj))
+      if (!nCompiler:::is.loadedObjectEnv(CppObj)) {
         stop("in initializeCpp: CppObj should be a loadedObjectEnv")
+      }
       private$CppObj <- CppObj
       private$DLLenv <- nCompiler:::get_DLLenv(CppObj)
     },
     list(
-      NEWCOBJFUN = if(package) as.name(newCobjFun)
-                   else quote(parent.env(parent.env(self))$.newCobjFun)
+      NEWCOBJFUN = if (package) {
+        as.name(newCobjFun)
+      } else {
+        quote(parent.env(parent.env(self))$.newCobjFun)
+      }
     )
   )
 
   Rmethods_code_list[["isCompiled"]] <- quote(\() TRUE)
 
   initialize_fun <- NC_get_Cpub_class(NCgenerator)$public_methods[["initialize"]]
-  if(is.null(initialize_fun)) {
-    if(!omit_automatic_Cpp_construction) {
+  if (is.null(initialize_fun)) {
+    if (!omit_automatic_Cpp_construction) {
       # The ... argument to initialize is important because it will be called
       # with ... from the outer R6generator, which might have other arguments embedded in the ...
       Rmethods_code_list[["initialize"]] <- quote(
-        function(CppObj, ...) {self$initializeCpp(CppObj)}
+        function(CppObj, ...) {
+          self$initializeCpp(CppObj)
+        }
       )
     }
   } else {
-    parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
+    parsedcopy <- \(f) {
+      ans <- substitute(\() BODY, list(BODY = body(f))) |> removeSource()
+      if (!is.null(formals(f))) ans[[2]] <- formals(f)
+      ans
+    }
     new_init_code <- substitute(
-      {if(is.null(private$CppObj)) self$initializeCpp() # when this is inherited, the derived class should have populated private$CppObj
-          OLDBODY},
-         list(OLDBODY = body(initialize_fun))
+      {
+        if (is.null(private$CppObj)) self$initializeCpp() # when this is inherited, the derived class should have populated private$CppObj
+        OLDBODY
+      },
+      list(OLDBODY = body(initialize_fun))
     ) |> removeSource()
-    if(!is.null(formals(initialize_fun))) new_init_code[[2]] <- formals(initialize_fun)
+    if (!is.null(formals(initialize_fun))) new_init_code[[2]] <- formals(initialize_fun)
     Rmethods_code_list[["initialize"]] <- new_init_code
   }
 
-  Rmethods_code <- do.call("call", c("list",
-                            Rmethods_code_list))
+  Rmethods_code <- do.call("call", c(
+    "list",
+    Rmethods_code_list
+  ))
 
   activeBindings_code_list <- list()
-  for(name in CfieldNames) {
+  for (name in CfieldNames) {
     ABcode <- substitute(
-    \(value) {
-      if(missing(value))
-        private$DLLenv$get_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME)
-      else
-        private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
-    },
-    list(NAME = name)
+      \(value) {
+        if (missing(value)) {
+          private$DLLenv$get_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME)
+        } else {
+          private$DLLenv$set_value(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, value)
+        }
+      },
+      list(NAME = name)
     ) |> removeSource()
     activeBindings_code_list[[name]] <- ABcode
   }
-  activeBindings_code <- do.call("call", c("list",
-                            activeBindings_code_list))
+  activeBindings_code <- do.call("call", c(
+    "list",
+    activeBindings_code_list
+  ))
 
 
-  CinterfaceMethods_code_list <-  mapply(make_method_code_for_compiled_nClass,
-                                        Cmethods,
-                                        CmethodNames)
-  CinterfaceMethods_code <- do.call("call", c("list",
-                            CinterfaceMethods_code_list))
+  CinterfaceMethods_code_list <- mapply(
+    make_method_code_for_compiled_nClass,
+    Cmethods,
+    CmethodNames
+  )
+  CinterfaceMethods_code <- do.call("call", c(
+    "list",
+    CinterfaceMethods_code_list
+  ))
 
-  Cpub_inherit_arg <- if(package) {
-    if(is.null(inheritName)) quote(nCompiler::CpubClass)
-    else substitute(IRN$parent_env$.Cpub_class, list(IRN=as.name(inheritName)))#as.name(paste0(inheritName, "_compiled"))))
+  Cpub_inherit_arg <- if (package) {
+    if (is.null(inheritName)) {
+      quote(nCompiler::CpubClass)
+    } else {
+      substitute(IRN$parent_env$.Cpub_class, list(IRN = as.name(inheritName)))
+    } # as.name(paste0(inheritName, "_compiled"))))
   } else {
-    if(is.null(inheritName)) quote(nCompiler::CpubClass)
-    else quote(.Cpub_base_class)
+    if (is.null(inheritName)) {
+      quote(nCompiler::CpubClass)
+    } else {
+      quote(.Cpub_base_class)
+    }
   }
 
   Cpub_comp_code <- substitute(
@@ -318,7 +356,8 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
       ),
       public = c(
         RMETHODS,
-        CINTERFACE),
+        CINTERFACE
+      ),
       active = ACTIVEBINDINGS,
       portable = FALSE,
       inherit = INHERIT, # Default. May be updated at next pass,
@@ -335,8 +374,10 @@ make_compiled_Cpub_class_code <- function(NCgenerator,
 }
 
 make_method_code_for_compiled_nClass <- function(fun, name) {
-  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  if(!NFinternals(fun)$compileInfo$callFromR) {
+  if (is.null(fun)) {
+    return(NULL)
+  } ## convenient for how this is used from mapply
+  if (!NFinternals(fun)$compileInfo$callFromR) {
     ans <- substitute(
       function(...) {
         stop("method ", NAME, " cannot be called directly from R.")
@@ -347,14 +388,21 @@ make_method_code_for_compiled_nClass <- function(fun, name) {
   }
   argNames <- names(formals(fun))
 
-  parsedcopy <- \(f) {ans <- substitute(\() BODY, list(BODY=body(f))) |> removeSource(); if(!is.null(formals(f))) ans[[2]] <- formals(f); ans}
+  parsedcopy <- \(f) {
+    ans <- substitute(\() BODY, list(BODY = body(f))) |> removeSource()
+    if (!is.null(formals(f))) ans[[2]] <- formals(f)
+    ans
+  }
   listcode <- quote(list())
-  for(i in seq_along(argNames))
-    listcode[[i+1]] <- as.name(argNames[i])
+  for (i in seq_along(argNames)) {
+    listcode[[i + 1]] <- as.name(argNames[i])
+  }
   body_ans <- substitute(
     private$DLLenv$call_method(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, LISTCODE),
-    list(NAME = name,
-         LISTCODE = listcode)
+    list(
+      NAME = name,
+      LISTCODE = listcode
+    )
   )
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
@@ -363,13 +411,15 @@ make_method_code_for_compiled_nClass <- function(fun, name) {
     \() BODY,
     list(BODY = body_ans)
   ) |> removeSource()
-  if(!is.null(formals(fun))) ans[[2]] <- formals(fun)
+  if (!is.null(formals(fun))) ans[[2]] <- formals(fun)
   ans
 }
 
 buildMethod_for_compiled_nClass <- function(fun, name) {
-  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  if(!NFinternals(fun)$compileInfo$callFromR) {
+  if (is.null(fun)) {
+    return(NULL)
+  } ## convenient for how this is used from mapply
+  if (!NFinternals(fun)$compileInfo$callFromR) {
     ans <- function(...) {}
     environment(ans) <- new.env()
     body(ans) <- substitute(
@@ -406,12 +456,15 @@ buildMethod_for_compiled_nClass <- function(fun, name) {
   ## place a method-specific function in the CnClass_env.##
   ##
   listcode <- quote(list())
-  for(i in seq_along(argNames))
-    listcode[[i+1]] <- as.name(argNames[i])
+  for (i in seq_along(argNames)) {
+    listcode[[i + 1]] <- as.name(argNames[i])
+  }
   body_ans <- substitute(
     private$DLLenv$call_method(`:::`("nCompiler", "getExtptr")(private$CppObj), NAME, LISTCODE),
-    list(NAME = name,
-         LISTCODE = listcode)
+    list(
+      NAME = name,
+      LISTCODE = listcode
+    )
   )
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
@@ -426,18 +479,22 @@ build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
   CmethodNames <- NCI$methodNames
   recurse_make_Cmethods <- function(NCgenerator, CmethodNames,
                                     derivedNames = character()) {
-    interfaceFns <-  mapply(build_generic_fn_for_compiled_nClass_method,
-                                NC_get_Cpub_class(NCgenerator)$public_methods[CmethodNames],
-                                CmethodNames)
+    interfaceFns <- mapply(
+      build_generic_fn_for_compiled_nClass_method,
+      NC_get_Cpub_class(NCgenerator)$public_methods[CmethodNames],
+      CmethodNames
+    )
     inherit_obj <- NCgenerator$get_inherit()
-    if(isNCgenerator(inherit_obj)) {
+    if (isNCgenerator(inherit_obj)) {
       derivedNames <- c(derivedNames, CmethodNames)
       baseNCgen <- inherit_obj
       baseCmethodNames <- NCinternals(baseNCgen)$methodNames
       baseCmethodNames <- setdiff(baseCmethodNames, derivedNames)
-      baseInterfaceFns <- recurse_make_Cmethods(baseNCgen,
-                                                baseCmethodNames,
-                                                derivedNames)
+      baseInterfaceFns <- recurse_make_Cmethods(
+        baseNCgen,
+        baseCmethodNames,
+        derivedNames
+      )
       interfaceFns <- c(interfaceFns, baseInterfaceFns)
     }
     interfaceFns
@@ -447,8 +504,10 @@ build_generic_fns_for_compiled_nClass <- function(NCgenerator) {
 }
 
 build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
-  if(is.null(fun)) return(NULL) ## convenient for how this is used from mapply
-  if(!NFinternals(fun)$compileInfo$callFromR) {
+  if (is.null(fun)) {
+    return(NULL)
+  } ## convenient for how this is used from mapply
+  if (!NFinternals(fun)$compileInfo$callFromR) {
     ans <- function(...) {}
     environment(ans) <- new.env()
     body(ans) <- substitute(
@@ -462,21 +521,23 @@ build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
   ans <- fun
   environment(ans) <- new.env() # will be reset later to the CnClass_env
   listcode <- quote(list())
-  for(i in seq_along(argNames))
-    listcode[[i+1]] <- as.name(argNames[i])
+  for (i in seq_along(argNames)) {
+    listcode[[i + 1]] <- as.name(argNames[i])
+  }
   body_ans <- substitute(
     call_method(`:::`("nCompiler", "getExtptr")(CppObj_), NAME, LISTCODE),
-    list(NAME = name,
-         LISTCODE = listcode)
+    list(
+      NAME = name,
+      LISTCODE = listcode
+    )
   )
   # The generic method() will give a copy of the function a new closure
   # and put CppObj_ in it.
   # We used to instead have method return a function that call the generic
   # function, but this did not work for ref and blockRef argument passing.
-  formals(ans) <- formals(fun) #c(formals(function(CppObj_){}), formals(fun))
+  formals(ans) <- formals(fun) # c(formals(function(CppObj_){}), formals(fun))
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
   body(ans) <- passByReferenceIntoC(body_ans, refArgs, blockRefArgs)
   ans
-
 }

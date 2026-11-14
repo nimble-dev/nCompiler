@@ -4,11 +4,15 @@ library(testthat)
 test_that("nSwitch works", {
   foo <- nFunction(
     function(opt = integerScalar()) {
-      x <- 0;
-      switch(opt, 1:2, x<-1, x<-2)
+      x <- 0
+      switch(opt,
+        1:2,
+        x <- 1,
+        x <- 2
+      )
       return(x)
     },
-    returnType = 'numericScalar'
+    returnType = "numericScalar"
   )
   # check that my_IDs is found by scoping
   # and that an option can give a {} set of code
@@ -16,11 +20,18 @@ test_that("nSwitch works", {
     my_IDs <- 5:6
     foo2 <- nFunction(
       function(opt = integerScalar()) {
-        x <- 0;
-        switch(opt, my_IDs, {x<-x+1; x<-x+4}, x<-6)
+        x <- 0
+        switch(opt,
+          my_IDs,
+          {
+            x <- x + 1
+            x <- x + 4
+          },
+          x <- 6
+        )
         return(x)
       },
-      returnType = 'numericScalar'
+      returnType = "numericScalar"
     )
     foo2
   }
@@ -40,11 +51,15 @@ test_that("nSwitch works", {
   foo_error1 <-
     foo <- nFunction(
       function(opt = integerScalar()) {
-        x <- 0;
-        switch(opt, 1:3, x<-1, x<-2)
+        x <- 0
+        switch(opt,
+          1:3,
+          x <- 1,
+          x <- 2
+        )
         return(x)
       },
-      returnType = 'numericScalar'
+      returnType = "numericScalar"
     )
   cat("expecting two error messages about number of IDs for nSwitch not matching number of options:")
   expect_error(nCompile(foo_error1))

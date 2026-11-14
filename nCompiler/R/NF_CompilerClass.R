@@ -1,7 +1,7 @@
-nFunctionIDMaker <- labelFunctionCreator('NFID')
+nFunctionIDMaker <- labelFunctionCreator("NFID")
 
 NF_CompilerClass <- R6::R6Class(
-  'NF_CompilerClass',
+  "NF_CompilerClass",
   portable = FALSE,
   public = list(
     cppDef = NULL,
@@ -11,7 +11,7 @@ NF_CompilerClass <- R6::R6Class(
     # compileInfo should contain: isVirtual, isAbstract, isConst
     #  callFromR, and depends. (C_fun will be removed by here even if provided.)
     NFinternals = NULL,
-    stageCompleted = 'start',
+    stageCompleted = "start",
     nameSubList = NULL,
     origRcode = NULL,
     newRcode = NULL,
@@ -19,11 +19,11 @@ NF_CompilerClass <- R6::R6Class(
     returnSymbol = NULL,
     code = NULL,
     auxEnv = NULL,
-    ##... to here
+    ## ... to here
     ## const = NULL,
     isAD = FALSE,
-#    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
-#    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
+    #    needed_nFunctions = list(), #Each list element will be a list with (name, env), so that nGet(name, env) returns the nFunction
+    #    needed_nClasses = list(), #Each list element will be an NCgenerator (returned by nClass). Populated only from "$new()" usags.
     derivsContent = list(),
     initialTypeInferenceDone = FALSE,
     initialize = function(f = NULL,
@@ -34,35 +34,40 @@ NF_CompilerClass <- R6::R6Class(
       # We can't put this in publc list as "auxEnv = new.env()" because then
       # all objects would end up with the same auxEnv. See help(R6Class)
       self$compileInfo <- compileInfo # may be replaced below
-      if(!is.null(f)) {
-        isNFinternals <- inherits(f, 'NF_InternalsClass')
-        if(!(isNF(f) || isNFinternals)) {
-          stop('Attempt to compile something is neither an nFunction nor an object of class NF_InternalsClass')
+      if (!is.null(f)) {
+        isNFinternals <- inherits(f, "NF_InternalsClass")
+        if (!(isNF(f) || isNFinternals)) {
+          stop("Attempt to compile something is neither an nFunction nor an object of class NF_InternalsClass")
         }
-        if(isNFinternals) {
+        if (isNFinternals) {
           self$NFinternals <- f
         } else {
           self$NFinternals <- NFinternals(f)
         }
         self$origName <- NFinternals$uniqueName2
-        if(!is.null(name)) {
+        if (!is.null(name)) {
           self$name <- name
         } else {
-          if (useUniqueNameInCpp) self$name <- NFinternals$uniqueName2
-          # NB If this is a method of a nClass, its cpp_code_name may be intercepted later but will not be changed here.
-          else self$name <- NFinternals$cpp_code_name
+          if (useUniqueNameInCpp) {
+            self$name <- NFinternals$uniqueName2
+          } # NB If this is a method of a nClass, its cpp_code_name may be intercepted later but will not be changed here.
+          else {
+            self$name <- NFinternals$cpp_code_name
+          }
         }
         self$origRcode <- NFinternals$code
         self$newRcode <- NFinternals$code
         self$isAD <- NFinternals$isAD
-        if(is.null(compileInfo))
+        if (is.null(compileInfo)) {
           self$compileInfo <- NFinternals$compileInfo
+        }
       }
-      if(length(compileInfo$exportName) == 0) # should this be self$compileInfo$exportName?
+      if (length(compileInfo$exportName) == 0) { # should this be self$compileInfo$exportName?
         self$compileInfo$exportName <- name
+      }
       # possibly swap const and compileInfo$isConst, keeping the latter only
-      ##self$const <- const || isTRUE(compileInfo$isConst)
-      ##self$compileInfo$isConst <- NULL
+      ## self$const <- const || isTRUE(compileInfo$isConst)
+      ## self$compileInfo$isConst <- NULL
     },
     showCpp = function() {
       writeCode(
@@ -72,20 +77,22 @@ NF_CompilerClass <- R6::R6Class(
     setupSymbolTable = function(parentSymbolTable = NULL) {
       argNames <- NFinternals$argSymTab$getSymbolNames()
       symbolTable <<- NFinternals$argSymTab$clone(deep = TRUE)
-      mangledArgumentNames <- mangleArgumentNames( argNames )
+      mangledArgumentNames <- mangleArgumentNames(argNames)
       symbolTable$setSymbolNames(mangledArgumentNames)
 
-      nameSubList <<- lapply(mangledArgumentNames,
-                             as.name)
+      nameSubList <<- lapply(
+        mangledArgumentNames,
+        as.name
+      )
       names(nameSubList) <<- argNames
 
-      if(!is.null(parentSymbolTable)) {
+      if (!is.null(parentSymbolTable)) {
         symbolTable$setParentST(parentSymbolTable)
       }
 
       returnSymbol <<- NFinternals$returnSym$clone(deep = TRUE)
     },
-    ##Rwrapper = NULL,
+    ## Rwrapper = NULL,
     ## process = function(...) {
     ##   if(is.null(symbolTable)) {
     ##     setupSymbolTable()
@@ -99,15 +106,18 @@ NF_CompilerClass <- R6::R6Class(
       ## When the function is a class method, the NC_CompilerClass
       ## object manages these steps by calling process() and createCppInternal().
       controlFull <- updateDefaults(
-        get_nOption('compilerOptions'),
+        get_nOption("compilerOptions"),
         control
       )
-      process(control = controlFull,
-              sourceObj = sourceObj,
-              class_env = class_env,
-              project_env = project_env)
-      if(NFcompilerMaybeStopAfter(self$stageCompleted, controlFull))
+      process(
+        control = controlFull,
+        sourceObj = sourceObj,
+        class_env = class_env,
+        project_env = project_env
+      )
+      if (NFcompilerMaybeStopAfter(self$stageCompleted, controlFull)) {
         return(invisible(NULL))
+      }
       createCppInternal()
     },
     createCppInternal = function() {
@@ -118,14 +128,14 @@ NF_CompilerClass <- R6::R6Class(
       ## It would be nice if self were not stored in cppDef
       ## but for now it is.
       cppDef$buildFunction(self)
-      ##cppDef$buildSEXPwrapper()
-      ##Rwrapper <<- cppDef$buildRwrapper()
+      ## cppDef$buildSEXPwrapper()
+      ## Rwrapper <<- cppDef$buildRwrapper()
       invisible(NULL)
     },
     process = function(control = list(),
                        sourceObj = NULL,
                        doKeywords = TRUE, ## deprecated?
-                       class_env = new.env(), 
+                       class_env = new.env(),
                        project_env = new.env(),
                        initialTypeInferenceOnly = FALSE) { ## deprecated?
       ## Do all steps of manipulating the abstract syntax tree
@@ -137,24 +147,30 @@ NF_CompilerClass <- R6::R6Class(
       ## }
 
       controlFull <- updateDefaults(
-        get_nOption('compilerOptions'),
+        get_nOption("compilerOptions"),
         control
       )
-      processNFstages(NFcompiler = self,
-                      control = controlFull,
-                      sourceObj = sourceObj,
-                      doKeywords = doKeywords,
-                      class_env = class_env,
-                      project_env = project_env,
-                      initialTypeInferenceOnly = initialTypeInferenceOnly)
+      processNFstages(
+        NFcompiler = self,
+        control = controlFull,
+        sourceObj = sourceObj,
+        doKeywords = doKeywords,
+        class_env = class_env,
+        project_env = project_env,
+        initialTypeInferenceOnly = initialTypeInferenceOnly
+      )
     },
     gather_needed_units = function(project_env = new.env()) {
       compileInfo_needed_units <- nCompile_process_manual_needed_units(self$NFinternals, project_env = project_env)
       list(
-        needed_nClasses = c(self$gather_needed_nClasses(), 
-                           compileInfo_needed_units$needed_nClasses),
-        needed_nFunctions = c(self$gather_needed_nFunctions(),
-                              compileInfo_needed_units$needed_nFunctions)
+        needed_nClasses = c(
+          self$gather_needed_nClasses(),
+          compileInfo_needed_units$needed_nClasses
+        ),
+        needed_nFunctions = c(
+          self$gather_needed_nFunctions(),
+          compileInfo_needed_units$needed_nFunctions
+        )
       )
     },
     gather_needed_nClasses = function() {
@@ -168,9 +184,12 @@ NF_CompilerClass <- R6::R6Class(
 
 nCompile_gather_needed_nFunctions <- function(cppDef,
                                               NF_Compiler) {
-  lapply(NF_Compiler$auxEnv$needed_nFunctions,
-         function(x)
-           nGet(x[[1]], where = x[[2]])) |> unique()
+  lapply(
+    NF_Compiler$auxEnv$needed_nFunctions,
+    function(x) {
+      nGet(x[[1]], where = x[[2]])
+    }
+  ) |> unique()
 }
 
 processNFstages <- function(NFcompiler,
@@ -183,7 +202,7 @@ processNFstages <- function(NFcompiler,
   ## Do all steps of manipulating the abstract syntax tree
   ## to the point where it is ready to be used for C++ generation.
   controlFull <- updateDefaults(
-    get_nOption('compilerOptions'),
+    get_nOption("compilerOptions"),
     control
   )
   debug <- controlFull$debug
@@ -195,14 +214,14 @@ processNFstages <- function(NFcompiler,
   endStage <- controlFull$endStage
   use_nCompiler_error_handling <- controlFull$use_nCompiler_error_handling
 
-  if(debug) browser()
+  if (debug) browser()
 
   nameMsg <- paste0("(for method or nFunction ", NFcompiler$origName, ")")
 
-  if (logging)
+  if (logging) {
     nDebugEnv$compilerLog <- c(
       nDebugEnv$compilerLog,
-      paste("---- Begin compilation log", nameMsg, '----\n'),
+      paste("---- Begin compilation log", nameMsg, "----\n"),
       "Original R code", "--------",
       capture.output(NFcompiler$origRcode), "--------\n",
       "Argument Symbol Table", "--------",
@@ -211,106 +230,129 @@ processNFstages <- function(NFcompiler,
       capture.output(NFcompiler$NFinternals$returnSym),
       "--------\n"
     )
+  }
 
   ### SET INPUT AND OUTPUT TYPES
-  stageName <- 'setInputOutputTypes'
+  stageName <- "setInputOutputTypes"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      if(!NFcompiler$initialTypeInferenceDone) {
-        if(doKeywords) {
-          ## NEW: possibly implement these steps
-          ##      using the exprClass code, not the R code
-          ## matchKeywords()
-          ## processKeywords()
+    NFtry(
+      {
+        if (!NFcompiler$initialTypeInferenceDone) {
+          if (doKeywords) {
+            ## NEW: possibly implement these steps
+            ##      using the exprClass code, not the R code
+            ## matchKeywords()
+            ## processKeywords()
+          }
+          ## If this function is a class, method, its symbolTable
+          ## may have already been created by the NC_CompilerClass object
+          ## calling setupSymbolTable()
+          if (is.null(NFcompiler$symbolTable)) {
+            NFcompiler$setupSymbolTable()
+          }
+          NFcompiler$initialTypeInferenceDone <- TRUE
         }
-        ## If this function is a class, method, its symbolTable
-        ## may have already been created by the NC_CompilerClass object
-        ## calling setupSymbolTable()
-        if(is.null(NFcompiler$symbolTable)) {
-          NFcompiler$setupSymbolTable()
-        }
-        NFcompiler$initialTypeInferenceDone <- TRUE
-      }
 
-      if(initialTypeInferenceOnly)
-        return(NULL)
-    },
-    stageName,
-    use_nCompiler_error_handling)
+        if (initialTypeInferenceOnly) {
+          return(NULL)
+        }
+      },
+      stageName,
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) logAfterStage(stageName)
   }
   ### SET MANGLED ARGUMENT NAMES (e.g. x -> ARG1_X_)
-  stageName <- 'substituteMangledArgumentNames'
+  stageName <- "substituteMangledArgumentNames"
   if (logging) logBeforeStage(stageName)
   ## simple substitution of the mangled argument names
   ## whereever they are used.
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     NFtry(
       compilerStage_substituteMangledArgumentNames(
         NFcompiler,
         NFcompiler$nameSubList,
-        debug),
+        debug
+      ),
       stageName,
-      use_nCompiler_error_handling)
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
   }
   ## INITIALIZE CODE
-  stageName <- 'initializeCode'
+  stageName <- "initializeCode"
   if (logging) logBeforeStage(stageName)
   ## set up abstract syntax tree (exprClass objects)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     NFtry(
       compilerStage_initializeCode(
         NFcompiler,
-        debug),
+        debug
+      ),
       stageName,
-      use_nCompiler_error_handling)
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
 
     if (logging) {
-      logAST(NFcompiler$code, 'AST initialized:',
-             showType = FALSE, showImpl = FALSE)
+      logAST(NFcompiler$code, "AST initialized:",
+        showType = FALSE, showImpl = FALSE
+      )
       logAfterStage(stageName)
     }
 
     ## Initialize initializerList if present (only for constructors)
-    if(!is.null(NFcompiler$NFinternals$aux)) {
-      if(!is.null(NFcompiler$NFinternals$aux$initializerList)) {
+    if (!is.null(NFcompiler$NFinternals$aux)) {
+      if (!is.null(NFcompiler$NFinternals$aux$initializerList)) {
         NFcompiler$NFinternals$aux$initializerList_exprClasses <-
           lapply(NFcompiler$NFinternals$aux$initializerList, nParse)
       }
     }
   }
 
-  stageName <- 'initializeAuxiliaryEnvironment'
+  stageName <- "initializeAuxiliaryEnvironment"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      compilerStage_initializeAuxEnv(NFcompiler = NFcompiler,
-                                     sourceObj = sourceObj,
-                                     class_env = class_env,
-                                     project_env = project_env,
-                                     debug = debug)
-    },
-    stageName,
-    use_nCompiler_error_handling)
+    NFtry(
+      {
+        compilerStage_initializeAuxEnv(
+          NFcompiler = NFcompiler,
+          sourceObj = sourceObj,
+          class_env = class_env,
+          project_env = project_env,
+          debug = debug
+        )
+      },
+      stageName,
+      use_nCompiler_error_handling
+    )
     resolveTBDsymbols(NFcompiler$symbolTable,
-                      env = NFcompiler$auxEnv[['where']],
-                      project_env = project_env)
+      env = NFcompiler$auxEnv[["where"]],
+      project_env = project_env
+    )
     NFcompiler$returnSymbol <- resolveOneTBDsymbol(NFcompiler$returnSymbol,
-                                                   env = NFcompiler$auxEnv[['where']],
-                                                   project_env = project_env)
-    if(inherits(NFcompiler$returnSymbol, "symbolNC")) {
+      env = NFcompiler$auxEnv[["where"]],
+      project_env = project_env
+    )
+    if (inherits(NFcompiler$returnSymbol, "symbolNC")) {
       NFcompiler$auxEnv$needed_nClasses <- c(NFcompiler$auxEnv$needed_nClasses, NFcompiler$returnSymbol$NCgenerator)
     }
     NFcompiler$stageCompleted <- stageName
@@ -318,18 +360,22 @@ processNFstages <- function(NFcompiler,
   }
 
   ## NORMALIZE CALLS
-  stageName <- 'normalizeCalls'
+  stageName <- "normalizeCalls"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     ## Make modifications that do not need size processing
     NFtry(
       compilerStage_normalizeCalls(
         NFcompiler,
-        debug),
+        debug
+      ),
       stageName,
-      use_nCompiler_error_handling)
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
@@ -338,18 +384,22 @@ processNFstages <- function(NFcompiler,
   }
 
   ## SIMPLE TRANSFORMATIONS (e.g. name changes)
-  stageName <- 'simpleTransformations'
+  stageName <- "simpleTransformations"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     ## Make modifications that do not need abstract type information
     NFtry(
       compilerStage_simpleTransformations(
         NFcompiler,
-        debug),
+        debug
+      ),
       stageName,
-      use_nCompiler_error_handling)
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
@@ -359,17 +409,23 @@ processNFstages <- function(NFcompiler,
 
   ## build intermediate variables:
   ## Currently this only affects eigen, chol, and run.time
-  stageName <- 'simpleIntermediates'
+  stageName <- "simpleIntermediates"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      compilerStage_simpleIntermediates(NFcompiler,
-                                        debug)
-    },
-    stageName,
-    use_nCompiler_error_handling)
+    NFtry(
+      {
+        compilerStage_simpleIntermediates(
+          NFcompiler,
+          debug
+        )
+      },
+      stageName,
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code, showType = FALSE, showImpl = FALSE)
@@ -378,28 +434,34 @@ processNFstages <- function(NFcompiler,
   }
 
   ## annotate sizes and types
-  stageName <- 'labelAbstractTypes'
+  stageName <- "labelAbstractTypes"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      compilerStage_labelAbstractTypes(NFcompiler,
-                                       debug)
+    NFtry(
+      {
+        compilerStage_labelAbstractTypes(
+          NFcompiler,
+          debug
+        )
 
-      # This will only collect nClasses from classGenerator$new()
-      # Other nClasses will end up in the symbolTable and be
-      # collected later.
-      ## NFcompiler$needed_nClasses <-
-      ##   c(NFcompiler$needed_nClasses,
-      ##     NFcompiler$auxEnv[['needed_nClasses']])
+        # This will only collect nClasses from classGenerator$new()
+        # Other nClasses will end up in the symbolTable and be
+        # collected later.
+        ## NFcompiler$needed_nClasses <-
+        ##   c(NFcompiler$needed_nClasses,
+        ##     NFcompiler$auxEnv[['needed_nClasses']])
 
-      ## NFcompiler$needed_nFunctions <-
-      ##   c(NFcompiler$needed_nFunctions,
-      ##     NFcompiler$auxEnv[['needed_nFunctions']])
-    },
-    paste(stageName, nameMsg),
-    use_nCompiler_error_handling)
+        ## NFcompiler$needed_nFunctions <-
+        ##   c(NFcompiler$needed_nFunctions,
+        ##     NFcompiler$auxEnv[['needed_nFunctions']])
+      },
+      paste(stageName, nameMsg),
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code, showImpl = FALSE)
@@ -409,22 +471,28 @@ processNFstages <- function(NFcompiler,
 
 
   ## annotate sizes and types
-  stageName <- 'processAD'
+  stageName <- "processAD"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      compilerStage_processAD(NFcompiler,
-                              debug)
-      # This will only collect nClasses from classGenerator$new()
-      # Other nClasses will end up in the symbolTable and be
-                                        # collected later.
-      NFcompiler$derivsContent <-
-        NFcompiler$auxEnv$derivsContent
-    },
-    paste(stageName, nameMsg),
-    use_nCompiler_error_handling)
+    NFtry(
+      {
+        compilerStage_processAD(
+          NFcompiler,
+          debug
+        )
+        # This will only collect nClasses from classGenerator$new()
+        # Other nClasses will end up in the symbolTable and be
+        # collected later.
+        NFcompiler$derivsContent <-
+          NFcompiler$auxEnv$derivsContent
+      },
+      paste(stageName, nameMsg),
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code, showImpl = FALSE)
@@ -433,17 +501,23 @@ processNFstages <- function(NFcompiler,
   }
 
   ## insert new lines created by size processing
-  stageName <- 'addInsertions'
+  stageName <- "addInsertions"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      compileInfo_insertAssertions(NFcompiler,
-                                   debug)
-    },
-    stageName,
-    use_nCompiler_error_handling)
+    NFtry(
+      {
+        compileInfo_insertAssertions(
+          NFcompiler,
+          debug
+        )
+      },
+      stageName,
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) {
       logAST(NFcompiler$code)
@@ -452,39 +526,52 @@ processNFstages <- function(NFcompiler,
   }
 
   ## create symbol table of Eigen implementation types from symbol table of abstract types
-  stageName <- 'setImplementation'
+  stageName <- "setImplementation"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
-    NFtry({
-      symbolTable_setImplementation(NFcompiler$symbolTable,
-                                    "Eigen")
-    },
-    stageName,
-    use_nCompiler_error_handling)
+    NFtry(
+      {
+        symbolTable_setImplementation(
+          NFcompiler$symbolTable,
+          "Eigen"
+        )
+      },
+      stageName,
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
     if (logging) logAfterStage(stageName)
   }
 
   ## modify code either for Eigen or Tensorflow back-end
-  stageName <- 'doImplementation'
+  stageName <- "doImplementation"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(!NFcompilerMaybeSkip(stageName, controlFull)) {
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (!NFcompilerMaybeSkip(stageName, controlFull)) {
     eval(NFcompilerMaybeDebug(stageName, controlFull))
     NFtry(
-      compileInfo_eigenize(NFcompiler,
-                           debug),
+      compileInfo_eigenize(
+        NFcompiler,
+        debug
+      ),
       stageName,
-      use_nCompiler_error_handling)
+      use_nCompiler_error_handling
+    )
     NFcompiler$stageCompleted <- stageName
   }
   ## place Eigen maps in code
   ## This step may be moot in the new design
-  exprClasses_liftMaps(NFcompiler$code,
-                       NFcompiler$symbolTable,
-                       NFcompiler$auxEnv)
+  exprClasses_liftMaps(
+    NFcompiler$code,
+    NFcompiler$symbolTable,
+    NFcompiler$auxEnv
+  )
   NFcompiler$stageCompleted <- stageName
 
   if (logging) {
@@ -494,30 +581,38 @@ processNFstages <- function(NFcompiler,
 
   ## Expand into fully-fledged stage: finalTransformations
   NFtry(
-    compilerStage_finalTransformations(NFcompiler,
-                                       debug),
+    compilerStage_finalTransformations(
+      NFcompiler,
+      debug
+    ),
     "finalTransformations",
-    use_nCompiler_error_handling)
+    use_nCompiler_error_handling
+  )
 
-  stageName <- 'addDebugging'
+  stageName <- "addDebugging"
   if (logging) logBeforeStage(stageName)
-  if(NFcompilerMaybeStop(stageName, controlFull)) return(invisible(NULL))
-  if(cppStacktrace) {
-    if(debug) writeLines('*** Inserting debugging')
+  if (NFcompilerMaybeStop(stageName, controlFull)) {
+    return(invisible(NULL))
+  }
+  if (cppStacktrace) {
+    if (debug) writeLines("*** Inserting debugging")
     NFtry(
       compilerStage_addDebug(NFcompiler, debug),
       stageName,
       use_nCompiler_error_handling
     )
   }
-  if(debug & debugCpp) {
+  if (debug & debugCpp) {
     writeCode(
-      compile_generateCpp(NFcompiler$code,
-                          NFcompiler$symbolTable)
+      compile_generateCpp(
+        NFcompiler$code,
+        NFcompiler$symbolTable
+      )
     )
   }
   NFcompiler$stageCompleted <- stageName
 
-  if (logging)
+  if (logging) {
     logAfterStage(stageName)
+  }
 }

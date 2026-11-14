@@ -1,4 +1,4 @@
-#library(nCompiler)
+# library(nCompiler)
 library(testthat)
 library(Matrix)
 
@@ -94,68 +94,68 @@ diagC <- function(ncol) {
 
 nDiagXRCv <- nFunction(
   fun = diagXRC,
-  argTypes = list(x = 'numericVector', nrow = 'integer', ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "numericVector", nrow = "integer", ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXRC <- nFunction(
   fun = diagXRC,
-  argTypes = list(x = 'double', nrow = 'integer', ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "double", nrow = "integer", ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXRv <- nFunction(
   fun = diagXR,
-  argTypes = list(x = 'numericVector', nrow = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "numericVector", nrow = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXR <- nFunction(
   fun = diagXR,
-  argTypes = list(x = 'double', nrow = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "double", nrow = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXCv <- nFunction(
   fun = diagXC,
-  argTypes = list(x = 'numericVector', ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "numericVector", ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXC <- nFunction(
   fun = diagXC,
-  argTypes = list(x = 'double', ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "double", ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagRC <- nFunction(
   fun = diagRC,
-  argTypes = list(nrow = 'integer', ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(nrow = "integer", ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagXv <- nFunction(
   fun = diagX,
-  argTypes = list(x = 'numericVector'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "numericVector"),
+  returnType = "nMatrix"
 )
 
 nDiagX <- nFunction(
   fun = diagX,
-  argTypes = list(x = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagR <- nFunction(
   fun = diagR,
-  argTypes = list(nrow = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(nrow = "integer"),
+  returnType = "nMatrix"
 )
 
 nDiagC <- nFunction(
   fun = diagC,
-  argTypes = list(ncol = 'integer'),
-  returnType = 'nMatrix'
+  argTypes = list(ncol = "integer"),
+  returnType = "nMatrix"
 )
 
 cDiagXRCv <- nCompile(nDiagXRCv)
@@ -182,12 +182,16 @@ cDiagR <- nCompile(nDiagR)
 #
 
 expect_error(nCompile(nDiagC)) # don't support behavior R doesn't support
-expect_identical(diag(x = xv, nrow = nr, ncol = nc),
-                 cDiagXRCv(x = xv, nrow = nr, ncol = nc))
+expect_identical(
+  diag(x = xv, nrow = nr, ncol = nc),
+  cDiagXRCv(x = xv, nrow = nr, ncol = nc)
+)
 expect_error(cDiagXRCv(x = 4, nrow = nr, ncol = nc))
 expect_error(cDiagXRCv(x = runif(nr), nrow = nr, ncol = nc))
-expect_identical(cDiagXRC(x = 3, nrow = nr, ncol = nc),
-                 diag(x = 3, nrow = nr, ncol = nc))
+expect_identical(
+  cDiagXRC(x = 3, nrow = nr, ncol = nc),
+  diag(x = 3, nrow = nr, ncol = nc)
+)
 expect_identical(cDiagXRv(x = xv_nr, nrow = nr), diag(x = xv_nr, nrow = nr))
 expect_error(cDiagXRv(x = xv, nrow = nr))
 expect_identical(cDiagXR(x = 3, nrow = nr), diag(x = 3, nrow = nr))
@@ -239,68 +243,68 @@ diagC <- function(ncol) {
 
 nSpDiagXRCv <- nFunction(
   fun = diagXRC,
-  argTypes = list(x = 'numericVector', nrow = 'integer', ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "numericVector", nrow = "integer", ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXRC <- nFunction(
   fun = diagXRC,
-  argTypes = list(x = 'double', nrow = 'integer', ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "double", nrow = "integer", ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXRv <- nFunction(
   fun = diagXR,
-  argTypes = list(x = 'numericVector', nrow = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "numericVector", nrow = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXR <- nFunction(
   fun = diagXR,
-  argTypes = list(x = 'double', nrow = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "double", nrow = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXCv <- nFunction(
   fun = diagXC,
-  argTypes = list(x = 'numericVector', ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "numericVector", ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXC <- nFunction(
   fun = diagXC,
-  argTypes = list(x = 'double', ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "double", ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagRC <- nFunction(
   fun = diagRC,
-  argTypes = list(nrow = 'integer', ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(nrow = "integer", ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagXv <- nFunction(
   fun = diagX,
-  argTypes = list(x = 'numericVector'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "numericVector"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagX <- nFunction(
   fun = diagX,
-  argTypes = list(x = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagR <- nFunction(
   fun = diagR,
-  argTypes = list(nrow = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(nrow = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagC <- nFunction(
   fun = diagC,
-  argTypes = list(ncol = 'integer'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(ncol = "integer"),
+  returnType = "nSparseMatrix"
 )
 
 cSpDiagXRCv <- nCompile(nSpDiagXRCv)
@@ -310,35 +314,55 @@ cSpDiagXR <- nCompile(nSpDiagXR)
 cSpDiagXCv <- nCompile(nSpDiagXCv)
 cSpDiagXC <- nCompile(nSpDiagXC)
 cSpDiagRC <- nCompile(nSpDiagRC)
-cat ("SOME tensorOps_accessors TESTS ARE COMMEND OUT FOR FIXING.\n")
+cat("SOME tensorOps_accessors TESTS ARE COMMEND OUT FOR FIXING.\n")
 cSpDiagXv <- nCompile(nSpDiagXv)
 cSpDiagX <- nCompile(nSpDiagX)
 cSpDiagR <- nCompile(nSpDiagR)
 
 expect_error(nCompile(nSpDiagC)) # don't support behavior R doesn't support
-expect_identical(as(diag(x = xv, nrow = nr, ncol = nc), 'dgCMatrix'),
-                 cSpDiagXRCv(x = xv, nrow = nr, ncol = nc))
+expect_identical(
+  as(diag(x = xv, nrow = nr, ncol = nc), "dgCMatrix"),
+  cSpDiagXRCv(x = xv, nrow = nr, ncol = nc)
+)
 expect_error(cSpDiagXRCv(x = 4, nrow = nr, ncol = nc))
 expect_error(cSpDiagXRCv(x = runif(nr), nrow = nr, ncol = nc))
-expect_identical(cSpDiagXRC(x = 3, nrow = nr, ncol = nc),
-                 as(diag(x = 3, nrow = nr, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXRv(x = xv_nr, nrow = nr),
-                 as(diag(x = xv_nr, nrow = nr), 'dgCMatrix'))
+expect_identical(
+  cSpDiagXRC(x = 3, nrow = nr, ncol = nc),
+  as(diag(x = 3, nrow = nr, ncol = nc), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagXRv(x = xv_nr, nrow = nr),
+  as(diag(x = xv_nr, nrow = nr), "dgCMatrix")
+)
 expect_error(cSpDiagXRv(x = xv, nrow = nr))
-expect_identical(cSpDiagXR(x = 3, nrow = nr),
-                 as(diag(x = 3, nrow = nr), 'dgCMatrix'))
-expect_identical(cSpDiagXCv(x = 3, ncol = nc),
-                 as(diag(x = 3, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXC(x = 3, ncol = nc),
-                 as(diag(x = 3, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagRC(nrow = nr, ncol = nc),
-                 as(diag(nrow = nr, ncol = nc), 'dgCMatrix'))
-expect_identical(cSpDiagXv(x = xv),
-                  as(diag(x = xv), 'dgCMatrix'))
-expect_identical(cSpDiagX(x = 3),
-                 as(diag(x = 3), 'dgCMatrix'))
-expect_identical(cSpDiagR(nrow = nr),
-                 as(diag(nrow = nr), 'dgCMatrix'))
+expect_identical(
+  cSpDiagXR(x = 3, nrow = nr),
+  as(diag(x = 3, nrow = nr), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagXCv(x = 3, ncol = nc),
+  as(diag(x = 3, ncol = nc), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagXC(x = 3, ncol = nc),
+  as(diag(x = 3, ncol = nc), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagRC(nrow = nr, ncol = nc),
+  as(diag(nrow = nr, ncol = nc), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagXv(x = xv),
+  as(diag(x = xv), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagX(x = 3),
+  as(diag(x = 3), "dgCMatrix")
+)
+expect_identical(
+  cSpDiagR(nrow = nr),
+  as(diag(nrow = nr), "dgCMatrix")
+)
 
 
 #
@@ -357,20 +381,20 @@ diagAccessor <- function(x) {
 
 nDiagAccessor <- nFunction(
   fun = diagAccessor,
-  argTypes = list(x = 'nMatrix'),
-  returnType = 'numericVector'
+  argTypes = list(x = "nMatrix"),
+  returnType = "numericVector"
 )
 
 nDiagExprAccessor <- nFunction(
   fun = diagExprAccessor,
-  argTypes = list(x = 'nMatrix', y = 'nMatrix'),
-  returnType = 'numericVector'
+  argTypes = list(x = "nMatrix", y = "nMatrix"),
+  returnType = "numericVector"
 )
 
 nDiagAccessorSp <- nFunction(
   fun = diagAccessor,
-  argTypes = list(x = 'nSparseMatrix'),
-  returnType = 'numericVector'
+  argTypes = list(x = "nSparseMatrix"),
+  returnType = "numericVector"
 )
 
 cDiagAccessor <- nCompile(nDiagAccessor)
@@ -403,38 +427,38 @@ diagAssignment <- function(x, y) {
 
 nDiagExprAssignment <- nFunction(
   fun = diagExprAssignment,
-  argTypes = list(x = 'nMatrix', y = 'numericVector', z = 'numericVector'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "nMatrix", y = "numericVector", z = "numericVector"),
+  returnType = "nMatrix"
 )
 
 nSpDiagExprAssignment <- nFunction(
   fun = diagExprAssignment,
-  argTypes = list(x = 'nSparseMatrix', y = 'numericVector', z = 'numericVector'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "nSparseMatrix", y = "numericVector", z = "numericVector"),
+  returnType = "nSparseMatrix"
 )
 
 nDiagAssignmentv <- nFunction(
   fun = diagAssignment,
-  argTypes = list(x = 'nMatrix', y = 'numericVector'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "nMatrix", y = "numericVector"),
+  returnType = "nMatrix"
 )
 
 nDiagAssignment <- nFunction(
   fun = diagAssignment,
-  argTypes = list(x = 'nMatrix', y = 'double'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "nMatrix", y = "double"),
+  returnType = "nMatrix"
 )
 
 nSpDiagAssignmentv <- nFunction(
   fun = diagAssignment,
-  argTypes = list(x = 'nSparseMatrix', y = 'numericVector'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "nSparseMatrix", y = "numericVector"),
+  returnType = "nSparseMatrix"
 )
 
 nSpDiagAssignment <- nFunction(
   fun = diagAssignment,
-  argTypes = list(x = 'nSparseMatrix', y = 'double'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "nSparseMatrix", y = "double"),
+  returnType = "nSparseMatrix"
 )
 
 cDiagExprAssignment <- nCompile(nDiagExprAssignment)
@@ -465,13 +489,13 @@ expect_identical(X1, cDiagAssignment(x = X2, y = pi))
 # sparse assignment to vector
 X1 <- Xsp
 X2 <- Xsp
-diag(X1) = 1:nrow(X1)
+diag(X1) <- 1:nrow(X1)
 expect_identical(X1, cSpDiagAssignmentv(x = X2, y = 1:nrow(X1)))
 
 # sparse assignment to constant
 X1 <- Xsp
 X2 <- Xsp
-diag(X1) = pi
+diag(X1) <- pi
 expect_identical(X1, cSpDiagAssignment(x = X2, y = pi))
 
 # sparse assignment via an expression
@@ -495,18 +519,18 @@ d2Sp <- function(x) {
 
 nD2 <- nFunction(
   fun = d2,
-  argTypes = list(x = 'integer'),
-  returnType = 'numericVector'
+  argTypes = list(x = "integer"),
+  returnType = "numericVector"
 )
 
 nD2Sp <- nFunction(
   fun = d2Sp,
-  argTypes = list(x = 'integer'),
-  returnType = 'numericVector'
+  argTypes = list(x = "integer"),
+  returnType = "numericVector"
 )
 
 cD2 <- nCompile(nD2)
 cD2Sp <- nCompile(nD2Sp)
 
-expect_equivalent(cD2(x = 5), rep(1,5))
-expect_equivalent(cD2Sp(x = 5), rep(1,5))
+expect_equivalent(cD2(x = 5), rep(1, 5))
+expect_equivalent(cD2Sp(x = 5), rep(1, 5))

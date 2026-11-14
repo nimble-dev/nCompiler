@@ -4,48 +4,51 @@ library(testthat)
 test_that("ETaccessor type works", {
   nc <- nClass(
     Cpublic = list(
-      s = 'numericScalar',
-      v = 'numericVector',
-      m = 'numericMatrix',
+      s = "numericScalar",
+      v = "numericVector",
+      m = "numericMatrix",
       get_s = nFunction(
         function() {
           ans <- ETaccess(s)
           return(ans)
-          returnType('ETaccessor')
+          returnType("ETaccessor")
         }
       ),
       get_inner = nFunction(
-        function(vn = 'string') {
+        function(vn = "string") {
           ans <- self[[vn]]
           return(ans)
-          returnType('ETaccessor')
+          returnType("ETaccessor")
         }
       ),
       use = nFunction(
-        function(acc = 'ETaccessor') {
+        function(acc = "ETaccessor") {
           return(as(acc, "numericMatrix"))
           returnType("numericMatrix")
         }
       ),
       get = nFunction(
-        function(i = 'integerScalar', vn = 'string') {
-          nSwitch(i, 1:4,
-                  eta <- get_s(),
-                  eta <- get_inner(vn),
-                  eta <- self[[vn]],
-                  {
-                    eta <- self[[vn]]
-                    res <- use(eta)
-                  }
-                  )
-          if(i < 4)
+        function(i = "integerScalar", vn = "string") {
+          nSwitch(
+            i,
+            1:4,
+            eta <- get_s(),
+            eta <- get_inner(vn),
+            eta <- self[[vn]],
+            {
+              eta <- self[[vn]]
+              res <- use(eta)
+            }
+          )
+          if (i < 4) {
             res <- as(eta, "numericMatrix")
+          }
           return(res)
           returnType("numericMatrix")
         }
       )
     ),
-    compileInfo=list(interfaceInclude = c("s","v","m", "get"))
+    compileInfo = list(interfaceInclude = c("s", "v", "m", "get"))
   )
 
   cnc <- nCompile(nc)
@@ -57,7 +60,8 @@ test_that("ETaccessor type works", {
   expect_equal(obj$get(2, "v"), matrix(obj$v))
   expect_equal(obj$get(3, "m"), obj$m)
   expect_equal(obj$get(4, "v"), matrix(obj$v))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 ## This test is disabled because we have for now
@@ -105,67 +109,69 @@ test_that("ETaccessor type works", {
 test_that("obj[[var_name]] works", {
   nc <- nClass(
     Cpublic = list(
-      x = 'numericVector'
+      x = "numericVector"
     )
   )
   nc2 <- nClass(
     Cpublic = list(
       nf = nFunction(
-        function(obj = 'nc', var_name = 'string') {
+        function(obj = "nc", var_name = "string") {
           ETacc <- obj[[var_name]]
-          v <- as(ETacc, 'numericVector')
+          v <- as(ETacc, "numericVector")
           return(v)
-          returnType('numericVector')
+          returnType("numericVector")
         }
       )
     )
   )
-  for(mode in c("R","non-pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non-pkg", "pkg")) {
+    if (mode == "R") {
       obj <- nc$new()
       obj2 <- nc2$new()
     } else {
-      package <- mode=="pkg"
+      package <- mode == "pkg"
       comp <- nCompile(nc, nc2, package = package)
       obj <- comp$nc$new()
       obj2 <- comp$nc2$new()
     }
     obj$x <- c(1.2, 2.3)
     expect_equal(obj2$nf(obj, "x"), obj$x)
-    rm(obj); gc()
+    rm(obj)
+    gc()
   }
 })
 
 test_that("as(obj[[var_name]], type) works", {
   nc <- nClass(
     Cpublic = list(
-      x = 'numericVector'
+      x = "numericVector"
     )
   )
   nc2 <- nClass(
     Cpublic = list(
       nf = nFunction(
-        function(obj = 'nc', var_name = 'string') {
-          v <- as(obj[[var_name]], 'numericVector')
+        function(obj = "nc", var_name = "string") {
+          v <- as(obj[[var_name]], "numericVector")
           return(v)
-          returnType('numericVector')
+          returnType("numericVector")
         }
       )
     )
   )
-  for(mode in c("R","non-pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non-pkg", "pkg")) {
+    if (mode == "R") {
       obj <- nc$new()
       obj2 <- nc2$new()
     } else {
-      package <- mode=="pkg"
+      package <- mode == "pkg"
       comp <- nCompile(nc, nc2, package = package)
       obj <- comp$nc$new()
       obj2 <- comp$nc2$new()
     }
     obj$x <- c(1.2, 2.3)
     expect_equal(obj2$nf(obj, "x"), obj$x)
-    rm(obj); gc()
+    rm(obj)
+    gc()
   }
 })
 
@@ -173,20 +179,20 @@ test_that("ETaccess(expr, copy = TRUE) works for tensor expressions", {
   # An expression such as a slice or a sum is evaluated into a tensor that the accessor owns.
   nc <- nClass(
     Cpublic = list(
-      v = 'numericVector',
-      m = 'numericMatrix',
+      v = "numericVector",
+      m = "numericMatrix",
       get_slice = nFunction(
         function() {
           ans <- ETaccess(v[2:3], copy = TRUE)
           return(ans)
-          returnType('ETaccessor')
+          returnType("ETaccessor")
         }
       ),
       get_sum = nFunction(
         function() {
           ans <- ETaccess(m + 1, copy = TRUE)
           return(ans)
-          returnType('ETaccessor')
+          returnType("ETaccessor")
         }
       ),
       use_slice = nFunction(
@@ -206,5 +212,6 @@ test_that("ETaccess(expr, copy = TRUE) works for tensor expressions", {
   expect_equal(obj$get_slice(), c(2.5, 3.5))
   expect_equal(obj$get_sum(), matrix(1:6, nrow = 2) + 1)
   expect_equal(obj$use_slice(), c(2.5, 3.5))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })

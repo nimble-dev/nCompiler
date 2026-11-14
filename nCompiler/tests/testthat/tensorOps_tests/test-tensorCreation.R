@@ -2,7 +2,7 @@ message("Need to add a test of creating a tensor initialized from a refBlock (St
 
 test_that("tensor creation C++ implementation works", {
   library(Rcpp)
-  cppfile <- system.file(file.path('tests', 'testthat', 'cpp', 'tensorCreation_tests.cpp'), package = 'nCompiler')
+  cppfile <- system.file(file.path("tests", "testthat", "cpp", "tensorCreation_tests.cpp"), package = "nCompiler")
   test <- nCompiler:::QuietSourceCpp(cppfile)
   expect_equivalent(tensorCreation1(1, 10), rep(1, 10))
   expect_equal(tensorCreation2(1:6), matrix(1:6, 2))
@@ -25,16 +25,16 @@ test_that("data initialization working: nNumeric, nInteger, nLogical", {
           returnType(numericVector)
         }
       ),
-    nf2 = nFunction(
-      function(x = "numericVector",
-               y = "integerVector",
-               z = "logicalVector") {
-        ans <- numeric(value = x, length = 4) + exp(integer(value = y, length = 4)) *
-          logical(value = z, length = 4)
-        return(ans)
-        returnType("numericVector")
-      }
-    ),
+      nf2 = nFunction(
+        function(x = "numericVector",
+                 y = "integerVector",
+                 z = "logicalVector") {
+          ans <- numeric(value = x, length = 4) + exp(integer(value = y, length = 4)) *
+            logical(value = z, length = 4)
+          return(ans)
+          returnType("numericVector")
+        }
+      ),
       nf3 = nFunction(
         function() {
           ans <- numeric(length = 7) + exp(integer(length = 7)) -
@@ -68,16 +68,16 @@ test_that("data initialization working: nMatrix", {
       ),
       nf2 = nFunction(
         function() {
-          ans <- exp(nMatrix(type = 'logical', nrow = 3, ncol = 7)) +
-            nMatrix(type = 'double', nrow = 3, ncol = 7) -
-            nMatrix(type = 'integer', nrow = 3, ncol = 7)
+          ans <- exp(nMatrix(type = "logical", nrow = 3, ncol = 7)) +
+            nMatrix(type = "double", nrow = 3, ncol = 7) -
+            nMatrix(type = "integer", nrow = 3, ncol = 7)
           return(ans)
           returnType(numericMatrix)
         }
       ),
       nf3 = nFunction(
         function(x = integerVector) {
-          ans <- nMatrix(type = 'integer', nrow = 7, ncol = 2, value = x)
+          ans <- nMatrix(type = "integer", nrow = 7, ncol = 2, value = x)
           return(ans)
           returnType(integerMatrix)
         }
@@ -90,7 +90,8 @@ test_that("data initialization working: nMatrix", {
   expect_equivalent(nc_obj$nf1(), Robj$nf1())
   expect_equivalent(nc_obj$nf2(), Robj$nf2())
   expect_equivalent(nc_obj$nf3(1:14), Robj$nf3(1:14))
-  rm(nc_obj); gc()
+  rm(nc_obj)
+  gc()
 })
 
 test_that("data initialization working: nArray", {
@@ -102,37 +103,33 @@ test_that("data initialization working: nArray", {
           return(ans)
           returnType(numericArray(nDim = 2))
         }
-      )
-      ,
+      ),
       nf2 = nFunction(
         function() {
-          ans <- nArray(type = 'logical', dim = c(2, 4, 3)) +
-            nArray(type = 'double', dim = c(2, 4, 3)) -
-            exp(nArray(type = 'integer', dim = c(2, 4, 3)))
+          ans <- nArray(type = "logical", dim = c(2, 4, 3)) +
+            nArray(type = "double", dim = c(2, 4, 3)) -
+            exp(nArray(type = "integer", dim = c(2, 4, 3)))
           return(ans)
           returnType(numericArray(nDim = 3))
         }
-      )
-      ,
+      ),
       nf3 = nFunction(
         function(x = integerVector) {
-          ans <- nArray(type = 'integer', dim = x, nDim = 4)
+          ans <- nArray(type = "integer", dim = x, nDim = 4)
           return(ans)
           returnType(integerArray(nDim = 4))
         }
-      )
-      ,
+      ),
       nf4 = nFunction(
         function(x = integerVector()) {
-          ans <- nArray(type = 'integer', value = x, dim = c(3, 2L, 5)) # challenge by mixing scalar types in dim
+          ans <- nArray(type = "integer", value = x, dim = c(3, 2L, 5)) # challenge by mixing scalar types in dim
           return(ans)
           returnType(integerArray(nDim = 3))
         }
-      )
-      ,
+      ),
       nf5 = nFunction(
         function(x = integerVector, y = integerVector) {
-          ans <- nArray(type = 'integer', value = x, dim = y, nDim = 4)
+          ans <- nArray(type = "integer", value = x, dim = y, nDim = 4)
           return(ans)
           returnType(integerArray(nDim = 4))
         }
@@ -147,8 +144,9 @@ test_that("data initialization working: nArray", {
   expect_equivalent(nc_obj$nf3(1:4), Robj$nf3(1:4))
   expect_equivalent(nc_obj$nf4(1:30), Robj$nf4(1:30))
   expect_equivalent(
-    nc_obj$nf5(1:168, c(2,4,3,7)),
-    Robj$nf5(1:168, c(2,4,3,7))
+    nc_obj$nf5(1:168, c(2, 4, 3, 7)),
+    Robj$nf5(1:168, c(2, 4, 3, 7))
   )
-  rm(nc_obj, Robj); gc()
+  rm(nc_obj, Robj)
+  gc()
 })

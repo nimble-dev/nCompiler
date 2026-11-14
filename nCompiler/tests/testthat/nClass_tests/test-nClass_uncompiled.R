@@ -1,27 +1,27 @@
 # works
 
-test_that("nClass basics",
-{
-
+test_that("nClass basics", {
   nc1 <- nClass(
     Rpublic = list(
       Rv = NULL,
-      Rfoo = function(x) x+1
+      Rfoo = function(x) x + 1
     ),
     Cpublic = list(
-      Cv = 'numericScalar',
+      Cv = "numericScalar",
       Cfoo = nFunction(
         fun = function(x) {
-          return(x+1)
+          return(x + 1)
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar'),
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      ),
       Cbreak = nFunction(
         fun = function(x) {
           return(Rfoo(x)) # should give an error
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      )
     )
   )
   expect_true(isNCgenerator(nc1))
@@ -32,8 +32,8 @@ test_that("nClass basics",
 
   expect_true(inherits(my.nc1, "nClass"))
   expect_true(inherits(my.nc1, "R6"))
-  expect_true(inherits(my.nc1$private$Cpublic_obj$Cfoo, 'nFunction'))
-  expect_true(inherits(my.nc1$Cfoo, 'function'))
+  expect_true(inherits(my.nc1$private$Cpublic_obj$Cfoo, "nFunction"))
+  expect_true(inherits(my.nc1$Cfoo, "function"))
   expect_equal(my.nc1$Cfoo(2), 3)
   expect_equal(my.nc1$Rfoo(2), 3)
   expect_true(inherits(nc1$.nCompiler$symbolTable, "symbolTableClass"))
@@ -42,25 +42,25 @@ test_that("nClass basics",
   expect_true(isNCgenerator(nc1))
   expect_error(inherits(NCinternals(my_nc1), "NC_InternalsClass"))
   expect_true(inherits(NCinternals(nc1), "NC_InternalsClass"))
-  expect_equal(NCinternals(nc1)$methodNames, c('Cfoo','Cbreak'))
-}
-)
+  expect_equal(NCinternals(nc1)$methodNames, c("Cfoo", "Cbreak"))
+})
 
 test_that("nClass inheritance basics", {
   nc1 <- nClass(
     classname = "surprise",
     Rpublic = list(
       Rv = NULL,
-      Rfoo = function(x) x+1
+      Rfoo = function(x) x + 1
     ),
     Cpublic = list(
-      Cv = 'numericScalar',
+      Cv = "numericScalar",
       Cfoo = nFunction(
         fun = function(x) {
-          return(x+1)
+          return(x + 1)
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      )
     )
   )
 
@@ -70,13 +70,14 @@ test_that("nClass inheritance basics", {
       Rfoo2 = function(x) Rfoo(x)
     ),
     Cpublic = list(
-      Cv2 = 'numericVector',
+      Cv2 = "numericVector",
       Cfoo2 = nFunction(
         fun = function(x) {
           return(Cfoo(x))
         },
-        argTypes = list(x = 'numericScalar'),
-        returnType = 'numericScalar')
+        argTypes = list(x = "numericScalar"),
+        returnType = "numericScalar"
+      )
     )
   )
 
