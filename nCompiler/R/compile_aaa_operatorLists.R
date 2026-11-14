@@ -899,18 +899,18 @@ assignOperatorDef(
 )
 
 assignOperatorDef(
-  c('any_na', 'any_nan'),
+  c("any_na", "any_nan"),
   list(
-    help = 'Example help entry',
+    help = "Example help entry",
     labelAbstractTypes = list(
-      handler = 'UnaryReduction',
+      handler = "UnaryReduction",
       returnTypeCode = returnTypeCodes$logical
     )
   )
 )
 
 assignOperatorDef(
-  c('all', 'any'),
+  c("all", "any"),
   list(
     help = "Example help entry",
     labelAbstractTypes = list(
@@ -966,11 +966,13 @@ updateOperatorDef("cube", "eigenImpl", "scalarCall", "nc_cube")
 updateOperatorDef("square", "eigenImpl", "scalarCall", "nc_square")
 
 assignOperatorDef(
-  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
-    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
-    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'gamma', 'lgamma',
-    'loggam', 'log1p', 'factorial', 'lfactorial', 'logfact', 'cosh', 'sinh',
-    'nStep', 'nIs_na', 'nIs_nan'),
+  c(
+    "sin", "cos", "tan", "asin", "acos", "atan", "asinh", "acosh", "atanh",
+    "logit", "ilogit", "expit", "probit", "iprobit", "phi", "cloglog",
+    "icloglog", "ceiling", "floor", "round", "trunc", "gamma", "lgamma",
+    "loggam", "log1p", "factorial", "lfactorial", "logfact", "cosh", "sinh",
+    "nStep", "nIs_na", "nIs_nan"
+  ),
   list(
     help = "cWiseUnary operators implemented via Tensor.unaryExpr",
     labelAbstractTypes = list(
@@ -990,17 +992,17 @@ updateOperatorDef(
   "nStep", "labelAbstractTypes", "returnTypeCode", returnTypeCodes$integer
 )
 updateOperatorDef(
-  c('nIs_na', 'nIs_nan'), 'labelAbstractTypes', 'returnTypeCode', returnTypeCodes$logical
+  c("nIs_na", "nIs_nan"), "labelAbstractTypes", "returnTypeCode", returnTypeCodes$logical
 )
-updateOperatorDef('expit', 'eigenImpl', 'nameReplacement', 'ilogit')
-updateOperatorDef('phi', 'eigenImpl', 'nameReplacement', 'iprobit')
-updateOperatorDef('ceiling', 'eigenImpl', 'nameReplacement', 'ceil')
-updateOperatorDef('round', 'eigenImpl', 'nameReplacement', 'nRound')
-updateOperatorDef('trunc', 'eigenImpl', 'nameReplacement', 'nTrunc')
-updateOperatorDef('gamma', 'eigenImpl', 'nameReplacement', 'gammafn')
-updateOperatorDef('lgamma', 'eigenImpl', 'nameReplacement', 'lgammafn')
-updateOperatorDef('loggam', 'eigenImpl', 'nameReplacement', 'lgammafn')
-updateOperatorDef('logfact', 'eigenImpl', 'nameReplacement', 'lfactorial')
+updateOperatorDef("expit", "eigenImpl", "nameReplacement", "ilogit")
+updateOperatorDef("phi", "eigenImpl", "nameReplacement", "iprobit")
+updateOperatorDef("ceiling", "eigenImpl", "nameReplacement", "ceil")
+updateOperatorDef("round", "eigenImpl", "nameReplacement", "nRound")
+updateOperatorDef("trunc", "eigenImpl", "nameReplacement", "nTrunc")
+updateOperatorDef("gamma", "eigenImpl", "nameReplacement", "gammafn")
+updateOperatorDef("lgamma", "eigenImpl", "nameReplacement", "lgammafn")
+updateOperatorDef("loggam", "eigenImpl", "nameReplacement", "lgammafn")
+updateOperatorDef("logfact", "eigenImpl", "nameReplacement", "lfactorial")
 
 
 ## binaryMidLogicalOperatorsComparison
@@ -1945,22 +1947,22 @@ assignOperatorDef(
 ## )
 
 specificCallReplacements <- list(
-
-    '^' = 'pow', # previously commented and changed instead at cppOutput. Was there a problem?
-    '%%' = 'nc_mod', # ditto
-#    length = 'size',
-    is.na = 'nIs_na',
-    is.nan = 'nIs_nan',
-#    lgamma = 'lgammafn',
-#    logfact = 'lfactorial',
-#    loggam = 'lgammafn',
-#    gamma = 'gammafn',
-#    expit = 'ilogit',
-#    phi = 'iprobit',
-#    ceiling = 'ceil',
-#    trunc = 'ftrunc',
-    nDim = 'dim',
-    checkInterrupt = 'R_CheckUserInterrupt')
+  "^" = "pow", # previously commented and changed instead at cppOutput. Was there a problem?
+  "%%" = "nc_mod", # ditto
+  #    length = 'size',
+  is.na = "nIs_na",
+  is.nan = "nIs_nan",
+  #    lgamma = 'lgammafn',
+  #    logfact = 'lfactorial',
+  #    loggam = 'lgammafn',
+  #    gamma = 'gammafn',
+  #    expit = 'ilogit',
+  #    phi = 'iprobit',
+  #    ceiling = 'ceil',
+  #    trunc = 'ftrunc',
+  nDim = "dim",
+  checkInterrupt = "R_CheckUserInterrupt"
+)
 
 for (op in names(specificCallReplacements)) {
   assignOperatorDef(

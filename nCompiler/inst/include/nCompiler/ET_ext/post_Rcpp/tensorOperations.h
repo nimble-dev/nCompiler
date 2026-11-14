@@ -1844,16 +1844,4 @@ bool any_nan(const XprType & x) {
     return false;
 }
 
-/*
-template<typename Scalar, int nDim>
-bool any_na(const Eigen::Tensor<Scalar, nDim>& x) {
-    const Scalar* data = x.data();
-    const Eigen::Index n = x.size();
-    for (Eigen::index i = 0; i < n; ++i) {
-        if (is_na(data[i])) return true;
-    }
-    return false;
-}
-*/
-
 #endif

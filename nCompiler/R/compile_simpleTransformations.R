@@ -273,6 +273,6 @@ inSimpleTransformationsEnv(
   any_na <-
     function(code, symTab, auxEnv, info) {
       code$name <- sub("any_", "is_", code$name)
-      wrapInExprClass(code, 'any')
+      wrapInExprClass(code, "any")
     }
 )

@@ -893,4 +893,3 @@ any_na <- function(x) any(is.na(x))
 #' @rdname any_na
 #' @export
 any_nan <- function(x) any(is.nan(x))
-
