@@ -1821,6 +1821,7 @@ Eigen::Tensor<double, 2> nInverse(const Xpr & x) {
     auto resMap = matmap(res);
     resMap = xmap.inverse();
     return res;
+}
 
 template<typename XprType>
 bool any_na(const XprType & x) {
