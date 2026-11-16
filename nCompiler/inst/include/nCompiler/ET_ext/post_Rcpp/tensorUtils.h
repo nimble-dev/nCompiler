@@ -2,6 +2,7 @@
 #define __TENSOR_UTILS
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <string>
 
 template<typename other>
 long nDimTraits2_size(const other& x);
@@ -85,6 +86,11 @@ namespace Eigen {
   struct nDimTraits2<bool> {
     static const  std::size_t NumDimensions = 0;
     typedef bool Scalar;
+  };
+  template<>
+  struct nDimTraits2<std::string> {
+    static const  std::size_t NumDimensions = 0;
+    typedef std::string Scalar;
   };
 
 // This is used in one place, generated code for Rep.

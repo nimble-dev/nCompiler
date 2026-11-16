@@ -19,8 +19,9 @@ inline void nCout_(const std::ostringstream &output) {
   Rcpp::Rcout << output.str();
 }
 
-inline void nStop_(const std::ostringstream &output) {
+[[noreturn]] inline void nStop_(const std::ostringstream &output) {
   // Rcpp::stop throws a C++ exception, so destructors run and the cppStacktrace error trap can catch it.
+  // Rcpp::stop does not return, so neither does nStop_.
   Rcpp::stop(output.str());
 }
 

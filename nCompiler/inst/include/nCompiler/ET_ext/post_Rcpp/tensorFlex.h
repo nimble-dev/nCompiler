@@ -2,29 +2,44 @@
 #define __TENSOR_FLEX
 
 // This file supports code like
-// flex_(x) = y
+// flex_(y) = x
 // where flex_ creates a class with an overloaded operator=
-// that can do smart things to accept assignment from y.
-// The purposes is to simplify code-generation from nCompiler and
+// that can do smart things to accept assignment from x.
+// The purpose is to simplify code-generation from nCompiler and
 // also to handle decisions that can only be made at run-time.
+// The underlying assignment is done by smartAssign, which is tag-dispatched
+// based on the LHS (y).
 //
-// This system represents a first draft, and a more general system
-// is envisioned.
+// There are three kinds of LHS (y):
+// 1. A true scalar (double, int, bool, long, std::string, CppAD::AD<double>).
+//    x must have exactly one element (any nDim).
+// 2. A whole Eigen::Tensor, which can be resized by the assignment.
+//    - If x has the same nDim, y = x.
+//    - If x has a different nDim, the extents of x other than 1s are used in order for y.
+//      Any spare dimensions of y keep the leftmost 1s of x that come before its last non-1
+//      extent, and then y is padded with trailing 1s. E.g. a 10x1 matrix becomes a length-10
+//      vector, a length-10 vector becomes a 10x1 matrix, and a 1x10 matrix becomes a 1x10x1 array.
+//    - If x is zero-dimensional (a true scalar or a 0-dimensional Eigen object),
+//      y is resized to all extents of 1.
+// 3. A fixed-size LHS, such as y[1:10] (an Eigen op that can be assigned to but not resized).
+//    - The extents of x other than 1s must match the extents of y other than 1s, in order.
+//      E.g. a 1x10 or 10x1 matrix can be assigned to y[1:10].
+//    - If x is zero-dimensional, all elements of y are set to its value.
+// "Smart" assignment does not flatten or reshape otherwise: extents must match apart from 1s.
+// Mismatched extents are an error.
+// Scalar types are cast as needed, except that character objects are never cast to or from
+// other types.
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <type_traits>
 #include <string>
+#include <sstream>
 #include "tensorUtils.h"
-// Want to support flex_(y) = x;
+#include <nCompiler/utils.h> // nStop_
 
 // These structs are used for tag dispatch.
 // A function can take an argument of one of these types that is never used but
 // serves to determine which over-loaded function definition should be used.
-struct same {};
-struct less {};
-struct more {};
-struct zeroDim {};
-struct nonZeroDim {};
 struct trueScalar {};
 struct eigenOp {};
 struct eigenTensor {};
@@ -32,161 +47,361 @@ struct eigenTensor {};
 // type_category<SomeType>::type will be either trueScalar (for double, long, int, bool,
 // std::string, and CppAD::AD<double> in tensorFlex_CppAD.h),
 // eigenTensor (for Eigen::Tensor< > ), or eigenOp (default for anything else).
-// Uses of trueScalar that cast must not cast to or from std::string (see flex_string_cast_v).
-  template<typename T>
-  struct type_category {
-    typedef eigenOp type; // default
-  };
-  
-  template<typename ScalarType, int nDim>
-  struct type_category<Eigen::Tensor<ScalarType, nDim> > {
-    typedef eigenTensor type;
-  };
-  
-  template<>
-  struct type_category<double> {
-    typedef trueScalar type;
-  };
-  template<>
-  struct type_category<long> {
-    typedef trueScalar type;
-  };
-  template<>
-  struct type_category<int> {
-    typedef trueScalar type;
-  };
-  template<>
-  struct type_category<bool> {
-    typedef trueScalar type;
-  };
-  template<>
-  struct type_category<std::string> {
-    typedef trueScalar type;
-  };
+// Uses of trueScalar that cast must not cast to or from std::string (see flex_cast_allowed_v).
+template<typename T>
+struct type_category {
+  typedef eigenOp type; // default
+};
 
-// This was added much later than initial development of this file,
-// so it is has not been propagated into use.
+template<typename ScalarType, int nDim>
+struct type_category<Eigen::Tensor<ScalarType, nDim> > {
+  typedef eigenTensor type;
+};
+
+template<>
+struct type_category<double> {
+  typedef trueScalar type;
+};
+template<>
+struct type_category<long> {
+  typedef trueScalar type;
+};
+template<>
+struct type_category<int> {
+  typedef trueScalar type;
+};
+template<>
+struct type_category<bool> {
+  typedef trueScalar type;
+};
+template<>
+struct type_category<std::string> {
+  typedef trueScalar type;
+};
+
 template <typename T>
 using type_category_t = typename type_category<T>::type;
 
-#define FLEX_STRING_TYPE_ERROR "flex_: a character (std::string) object can only be assigned from a character value. No casting is done to or from character."
+#define FLEX_STRING_TYPE_ERROR "C++ COMPILATION ERROR: a character variable can only be assigned from a character value."
 
-// True if a cast between scalar types A and B would have std::string on only one side.
+// True if a cast between scalar types A and B is allowed, i.e. unless std::string is on only one side.
 // Character objects are never cast to or from other scalar types.
 template<typename A, typename B>
-constexpr bool flex_string_cast_v =
-  std::is_same<typename std::remove_cv<A>::type, std::string>::value !=
+constexpr bool flex_cast_allowed_v =
+  std::is_same<typename std::remove_cv<A>::type, std::string>::value ==
   std::is_same<typename std::remove_cv<B>::type, std::string>::value;
 
-// checkDimsAllOne returns true if all dimensions are 1s, false otherwise
-template<int Ndim>
-bool checkDimsAllOne(const Eigen::array<long, Ndim> &dims) {
-    typedef typename Eigen::array<long, Ndim>::const_iterator iterType;
-  iterType iDims(dims.begin());
-  for(; iDims != dims.end();) {
-    if(*iDims++ != 1)
-      return false;
-  }
-  return true;
-}
+// The scalar type and number of dimensions of a true scalar or Eigen object, from Eigen::nDimTraits2.
+template<typename XprType>
+using flex_scalar_t = typename std::remove_const<typename Eigen::nDimTraits2<XprType>::Scalar>::type;
 
-// This function would be used for an assignment where the sizes of the LHS can't change.
+template<typename XprType>
+constexpr int flex_nDim_v = static_cast<int>(Eigen::nDimTraits2<XprType>::NumDimensions);
+
+// checkDims is used for an assignment where the sizes of the LHS can't change.
 // example: If we have A[1:10] <- B, where B is a matrix or array with nDim > 1,
 // then the assignment is valid if all dimensions of B have size 1 except for one dimension
-// that has size 10.  This function checks returns true if that is the case.
+// that has size 10.  This function returns true if that is the case.
+// More generally, it returns true if the extents other than 1s of the two arguments
+// are the same, in the same order, so the order of the arguments does not matter.
 // Note that we may have a case like: A[1:10, 1, drop = FALSE] <- B, where B is a 3D array.
 // B needs to have one dimension that is 10 and then be assigned to A as a 10x1 2D array.
-template<int LessNdim, int MoreNdim>
-  bool checkDims(const Eigen::array<long, LessNdim> &LessDims,
-		 const Eigen::array<long, MoreNdim> &MoreDims) {
-  // std::cout<<"In checkDims with LessNdim = "<<LessNdim<<" and MoreNdim = "<<MoreNdim<<std::endl;
-  //  for(size_t i = 0; i < LessNdim; ++i) std::cout<<LessDims[i]<<" "; std::cout<<std::endl;
-  //  for(size_t i = 0; i < MoreNdim; ++i) std::cout<<MoreDims[i]<<" "; std::cout<<std::endl;
-  // Check that non-1 dimensions match
-  typedef typename Eigen::array<long, LessNdim>::const_iterator LessDimsIterator;
-  typedef typename Eigen::array<long, MoreNdim>::const_iterator MoreDimsIterator;
-
-  LessDimsIterator iLess(LessDims.begin());
-  // Move to the first non-1 dimension of LessDims
-  while(*iLess == 1 & iLess != LessDims.end()) {
+// The dimensions arguments can be any array-like type (e.g. Eigen::DSizes or Eigen::array).
+template<int LessNdim, int MoreNdim, typename LessDimsType, typename MoreDimsType>
+bool checkDims(const LessDimsType &LessDims,
+               const MoreDimsType &MoreDims) {
+  int iLess = 0;
+  // iterate through dimensions of the larger one.
+  for(int iMore = 0; iMore < MoreNdim; ++iMore) {
+    if(MoreDims[iMore] == 1) continue;
+    // Move to the next non-1 dimension of LessDims
+    while(iLess < LessNdim && LessDims[iLess] == 1) ++iLess;
+    if(iLess == LessNdim) return false; // No more non-1 dimensions of LessDims: Fail
+    if(LessDims[iLess] != MoreDims[iMore]) return false; // Non-1 dimensions don't match: Fail
     ++iLess;
   }
-  // iterate through dimensions of the larger one.
-  // there should be exactly as many non-1 dimensions as the size of the shorter 1's non-1 dimensions.
-  for(MoreDimsIterator iMore = MoreDims.begin();
-      iMore != MoreDims.end();
-      ++iMore) {
-    if(*iMore != 1) { // If we found a non-1 dimension of MoreDims
-      if(iLess == LessDims.end())  // If there are no more non-1 dimensions of LessDims: Fail
-	return false;
-      if(*iMore != *iLess) { // If the current non-1 dimensions don't match: Fail
-	return false;
-      }
-      ++iLess; // Definitely increment iLess at least once.
-      while(*iLess == 1 & iLess != LessDims.end()) { // Keep incrementing to the next non-1 dimension or the end
-	++iLess;
-      }
-    }
-  }
   // check that any remaining LessDims are all 1
-  for( ; iLess != LessDims.end(); ++iLess) {
-    if(*iLess != 1)
-      return false;
+  for( ; iLess < LessNdim; ++iLess) {
+    if(LessDims[iLess] != 1) return false;
   }
   return true;
 }
 
-// This function would be used for an assignment where the sizes of the LHS can change.
-// example: If we have A <- X %*% b, where A is a vector and X %*% b returns a 10x1 vector at run-time.
+// checkAndSetupDims is used for an assignment where the sizes of the LHS can change.
+// example: If we have A <- X %*% b, where A is a vector and X %*% b returns a 10x1 matrix at run-time.
 // This function checks that the number of non-1 dimensions on the RHS is <= nDim of A.
-// If the RHS has *fewer* non-1 dimensions that nDim of A, then dimensions of size 1 will be padded on.
+// If the RHS has *fewer* non-1 dimensions than nDim of A, the spare LHS dimensions keep
+// the leftmost 1s of the RHS that come before its last non-1 dimension (leading or interior 1s),
+// and any still remaining are padded on as trailing 1s.
+// E.g. for a 3D LHS, RHS extents (5, 1, 6, 1) give (5, 1, 6), and (1, 5) gives (1, 5, 1).
 // This function populates values of LhsDims so it can be an argument to reshape on the RHS.
-template<int LhsNdim, int RhsNdim>
-  bool checkAndSetupDims(Eigen::array<long, LhsNdim> &LhsDims,
-			 const Eigen::array<long, RhsNdim> &RhsDims) {
-    typedef typename Eigen::array<long, LhsNdim>::iterator LhsDimsIterator;
-    typedef typename Eigen::array<long, RhsNdim>::const_iterator RhsDimsIterator;
-    LhsDimsIterator iLhs(LhsDims.begin());
-    for(RhsDimsIterator iRhs = RhsDims.begin();
-        iRhs != RhsDims.end();
-        ++iRhs) {
-      if(*iRhs != 1) { // found a non-1 dimension
-        if(iLhs == LhsDims.end()) // Ran out of Lhs dimensions: fail
-          return false;
-        *iLhs++ = *iRhs;
-      }
+template<int LhsNdim, int RhsNdim, typename LhsDimsType, typename RhsDimsType>
+bool checkAndSetupDims(LhsDimsType &LhsDims,
+                       const RhsDimsType &RhsDims) {
+  // First pass: count the non-1 dimensions and find the last one.
+  int nNon1 = 0;
+  int iLastNon1 = -1;
+  for(int iRhs = 0; iRhs < RhsNdim; ++iRhs) {
+    if(RhsDims[iRhs] != 1) {
+      ++nNon1;
+      iLastNon1 = iRhs;
     }
-    // fill any remaining Lhs dimensions with ones
-    for( ; iLhs != LhsDims.end(); ) {
-      *iLhs++ = 1;
+  }
+  if(nNon1 > LhsNdim) return false; // Not enough LHS dimensions: fail
+  int nSpare = LhsNdim - nNon1; // number of 1s from the RHS that can be kept
+  // Second pass: copy the non-1 dimensions, and 1s while there are spare LHS dimensions.
+  int iLhs = 0;
+  for(int iRhs = 0; iRhs <= iLastNon1; ++iRhs) {
+    if(RhsDims[iRhs] != 1) {
+      LhsDims[iLhs++] = RhsDims[iRhs];
+    } else if(nSpare > 0) {
+      LhsDims[iLhs++] = 1;
+      --nSpare;
     }
-    return true;
+  }
+  // fill any remaining LHS dimensions with ones
+  for( ; iLhs < LhsNdim; ++iLhs) LhsDims[iLhs] = 1;
+  return true;
 }
 
-// template<typename XprType>
-// struct nDimTraits2 {
-//   typedef Eigen::internal::remove_all<typename XprType::Nested>::type cleaned_type;
-//   typedef Eigen::TensorEvaluator<cleanedType, Eigen::DefaultDevice> EvaluatorType;
-//   static EvaluatorType  getEvaluator(const XprType &x) {
-//     const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x);
-//     // careful: m_impl might go out of scope
-//     return EvaluatorType(x_removed,
-// 			 Eigen::DefaultDevice());
-//   }
-//   // We previously experimented with a getDimensions function here, but then the evaluator
-//   // is instantiated here, so the dimensions can't be returned by reference.
-//   // Hence it seems better to return an evalautor to the calling function, where it
-//   // will stay in scope for use of a reference returned by its .dimensions()
-//   /* static const Dimensions getDimensions(const XprType &x) { */
-//   /*   const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x); */
-//   /*   // careful: m_impl might go out of scope */
-//   /*   Eigen::TensorEvaluator<XprType, Eigen::DefaultDevice> m_impl( */
-//   /* 								 x_removed, */
-//   /* 								 Eigen::DefaultDevice()); */
-//   /*   return m_impl.dimensions(); */
-//   /* } */
-// };
+template<int Ndim, typename DimsType>
+std::string flex_dims_string(const DimsType &dims) {
+  std::ostringstream os;
+  os << "(";
+  for(int i = 0; i < Ndim; ++i) os << (i ? ", " : "") << dims[i];
+  os << ")";
+  return os.str();
+}
 
+// The error for extents that can't be assigned.
+// LhsDescription describes the LHS, e.g. "a scalar" or "an object with extents (10)".
+template<int RhsNdim, typename RhsDimsType>
+[[noreturn]] void flex_dims_error(const std::string &LhsDescription, const RhsDimsType &RhsDims) {
+  std::ostringstream os;
+  os << "Cannot assign an object with extents " << flex_dims_string<RhsNdim>(RhsDims)
+     << " to " << LhsDescription << ". Extents must match except for extents of 1.";
+  nStop_(os);
+}
+
+// scalar_cast_ casts an object with exactly one element to a scalar type.
+// The object can be a true scalar, a 0-dimensional Eigen object (e.g. from many reduction operators),
+// or a non-scalar Eigen object, which is checked at run-time to have exactly one element.
+// syntax will be scalar_cast_<int>::cast(x);
+template<typename TargetT, typename T>
+TargetT do_scalar_cast(const T &x, trueScalar) {
+  static_assert(flex_cast_allowed_v<TargetT, T>, FLEX_STRING_TYPE_ERROR);
+  return static_cast<TargetT>(x);
+}
+
+template<typename TargetT, typename ETtype>
+TargetT do_scalar_cast(const ETtype &x, eigenTensor) {
+  static_assert(flex_cast_allowed_v<TargetT, flex_scalar_t<ETtype> >, FLEX_STRING_TYPE_ERROR);
+  static constexpr int nDim = flex_nDim_v<ETtype>;
+  if constexpr (nDim == 0) {
+    return static_cast<TargetT>(x());
+  } else {
+    if(x.size() != 1) flex_dims_error<nDim>("a scalar", x.dimensions());
+    return static_cast<TargetT>(x.data()[0]);
+  }
+}
+
+template<typename TargetT, typename XprType>
+TargetT do_scalar_cast(const XprType &x, eigenOp) {
+  typedef flex_scalar_t<XprType> XprScalar;
+  static_assert(flex_cast_allowed_v<TargetT, XprScalar>, FLEX_STRING_TYPE_ERROR);
+  static constexpr int nDim = flex_nDim_v<XprType>;
+  if constexpr (nDim != 0) {
+    // Check before evaluating.
+    auto dims = nDimTraits2_dimensions(x);
+    if(Eigen::internal::array_prod(dims) != 1) flex_dims_error<nDim>("a scalar", dims);
+  }
+  Eigen::Tensor<XprScalar, nDim> ans = x;
+  return static_cast<TargetT>(ans.data()[0]);
+}
+
+template<typename ScalarOutput>
+struct scalar_cast_ {
+  template<typename XprType>
+  static ScalarOutput cast(const XprType &x) {
+    return do_scalar_cast<ScalarOutput, XprType>(x,
+                                                 typename type_category<XprType>::type());
+  }
+};
+
+// flex_cast is the generic casting system that handles scalars and Eigen objects appropriately.
+// syntax will be flex_cast<double>(x), or flex_cast<double, true>(x) if an eigen op (x) should be evaluated to a concrete tensor.
+// With eval = false, if no cast is needed, the result is x itself (by const reference).
+// flex_cast<...>(x) should be used within
+// the statement where it is created, since it may refer to x.
+template<typename TargetT, typename T, bool eval>
+TargetT do_flex_cast(const T &x, trueScalar) {
+  static_assert(flex_cast_allowed_v<TargetT, T>, FLEX_STRING_TYPE_ERROR);
+  return static_cast<TargetT>(x);
+}
+
+template<typename TargetScalarT, typename ETtype, bool eval>
+decltype(auto) do_flex_cast(const ETtype &x, eigenTensor) {
+  static_assert(flex_cast_allowed_v<TargetScalarT, flex_scalar_t<ETtype> >, FLEX_STRING_TYPE_ERROR);
+  using TargetTensor = Eigen::Tensor<TargetScalarT, Eigen::internal::traits<ETtype>::NumDimensions>;
+  if constexpr (eval) {
+    // eval=true gives a concrete tensor. Note that Eigen's .eval() does NOT do that:
+    // it returns a lazy TensorForcedEvalOp that is evaluated into a raw temporary buffer,
+    // which skips destructors of non-arithmetic scalars (e.g. std::string) and adds a copy.
+    // Hence we do not use .eval() here, but instead construct a concrete tensor directly.
+    if constexpr (std::is_same_v<TargetScalarT, typename ETtype::Scalar>) {
+      return x;
+    } else {
+      // Cast and materialize
+      return TargetTensor(x.template cast<TargetScalarT>());
+    }
+  } else {
+    // Return lazy expression when eval=false
+    if constexpr (std::is_same_v<TargetScalarT, typename ETtype::Scalar>) {
+      return x;
+    } else {
+      // Return lazy cast expression
+      return x.template cast<TargetScalarT>();
+    }
+  }
+}
+
+template<typename TargetScalarT, typename XprType, bool eval>
+decltype(auto) do_flex_cast(const XprType &x, eigenOp) {
+  static_assert(flex_cast_allowed_v<TargetScalarT, flex_scalar_t<XprType> >, FLEX_STRING_TYPE_ERROR);
+  using TargetTensor = Eigen::Tensor<TargetScalarT, Eigen::internal::traits<XprType>::NumDimensions>;
+  if constexpr (eval) {
+    // eval=true gives a concrete tensor (see note in the eigenTensor case above).
+    if constexpr (std::is_same_v<TargetScalarT, typename Eigen::internal::traits<XprType>::Scalar>) {
+      // materialize the op
+      return TargetTensor(x);
+    } else {
+      // cast and materialize
+      return TargetTensor(x.template cast<TargetScalarT>());
+    }
+  } else {
+    // Return lazy expression when eval=false
+    if constexpr (std::is_same_v<TargetScalarT, typename Eigen::internal::traits<XprType>::Scalar>) {
+      return x;
+    } else {
+      return x.template cast<TargetScalarT>();
+    }
+  }
+}
+
+// decltype(auto) passes through a const reference from do_flex_cast, so a concrete tensor
+// that needs no cast is not copied.
+template<typename TargetT, bool eval=false>
+struct flex_cast_ {
+  template<typename XprType>
+  static decltype(auto) cast(const XprType &x) {
+    return do_flex_cast<TargetT, XprType, eval>(x, typename type_category<XprType>::type());
+  }
+};
+
+// Convenience function for easier syntax: flex_cast<double>(x) instead of flex_cast_<double>::cast(x)
+template<typename TargetT, bool eval=false, typename XprType>
+decltype(auto) flex_cast(const XprType &x) {
+  return flex_cast_<TargetT, eval>::cast(x);
+}
+
+namespace nCompiler {
+
+// smartAssign is tag-dispatched based on the LHS.
+
+template<typename TargetT, typename RhsXprType>
+void smartAssign(TargetT &Lhs, const RhsXprType &Rhs, trueScalar) {
+  Lhs = scalar_cast_<TargetT>::cast(Rhs);
+}
+
+// smartAssign for a whole Eigen::Tensor LHS, which can be resized (formerly smartAssignWholeObject).
+template<typename TargetScalarT, int LhsNdim, typename RhsXprType>
+void smartAssign(Eigen::Tensor<TargetScalarT, LhsNdim> &Lhs, const RhsXprType &Rhs, eigenTensor) {
+  static constexpr int RhsNdim = flex_nDim_v<RhsXprType>;
+  if constexpr (RhsNdim == 0) {
+    // Get the value before resizing, in case RHS refers to LHS.
+    TargetScalarT value = scalar_cast_<TargetScalarT>::cast(Rhs);
+    if constexpr (LhsNdim > 0) {
+      Eigen::DSizes<Eigen::Index, LhsNdim> NewLhsDims;
+      for(int i = 0; i < LhsNdim; ++i) NewLhsDims[i] = 1;
+      Lhs.resize(NewLhsDims);
+    }
+    Lhs.setConstant(value);
+  } else if constexpr (LhsNdim == RhsNdim) {
+    Lhs = flex_cast<TargetScalarT>(Rhs);
+  } else {
+    auto RhsDims = nDimTraits2_dimensions(Rhs);
+    Eigen::DSizes<Eigen::Index, LhsNdim> NewLhsDims;
+    if(!checkAndSetupDims<LhsNdim, RhsNdim>(NewLhsDims, RhsDims))
+      flex_dims_error<RhsNdim>("an object with " + std::to_string(LhsNdim) + " dimension(s)", RhsDims);
+    Lhs = flex_cast<TargetScalarT>(Rhs).reshape(NewLhsDims);
+  }
+}
+
+// smartAssign for a fixed-size LHS, which can't be resized (formerly smartAssignFixedSize).
+template<typename LhsXprType, typename RhsXprType>
+void smartAssign(LhsXprType &Lhs, const RhsXprType &Rhs, eigenOp) {
+  typedef flex_scalar_t<LhsXprType> ScalarType;
+  static constexpr int LhsNdim = flex_nDim_v<LhsXprType>;
+  static constexpr int RhsNdim = flex_nDim_v<RhsXprType>;
+  if constexpr (RhsNdim == 0) {
+    Lhs.setConstant(scalar_cast_<ScalarType>::cast(Rhs));
+  } else {
+    auto LhsDims = nDimTraits2_dimensions(Lhs);
+    auto RhsDims = nDimTraits2_dimensions(Rhs);
+    // Shortcut for identical extents, which need no reshape. Otherwise checkDims is still
+    // needed: e.g. LHS (3, 1) and RHS (1, 3) have the same nDim and are compatible. They will
+    // result in sameDims == false, but checkDims will return true.
+    if constexpr (LhsNdim == RhsNdim) {
+      bool sameDims = true;
+      for(int i = 0; i < LhsNdim; ++i) sameDims = sameDims && (LhsDims[i] == RhsDims[i]);
+      if(sameDims) {
+        Lhs = flex_cast<ScalarType>(Rhs);
+        return;
+      }
+    }
+    bool ok = LhsNdim <= RhsNdim ?
+      checkDims<LhsNdim, RhsNdim>(LhsDims, RhsDims) :
+      checkDims<RhsNdim, LhsNdim>(RhsDims, LhsDims);
+    if(!ok)
+      flex_dims_error<RhsNdim>("an object with extents " + flex_dims_string<LhsNdim>(LhsDims), RhsDims);
+    Lhs = flex_cast<ScalarType>(Rhs).reshape(LhsDims);
+  }
+}
+
+} // namespace nCompiler
+
+// flex__ is the key class.
+// Usage is flex_(x) = expr.
+// Note that flex_(x) returns a flex__<type of x> object, which holds a reference to x.
+// x may be a temporary (such as y[1:10], an Eigen op), which lives (only) until the end of the statement.
+template<typename xType>
+class flex__ {
+public:
+  xType &x;
+  explicit flex__(xType &x_) : x(x_) {}
+  explicit flex__(xType &&x_) : x(x_) {}
+  template<typename oType>
+  xType& operator=(const oType &other) {
+    if constexpr (std::is_same<xType, std::string>::value &&
+                  std::is_convertible<const oType&, std::string>::value) {
+      // std::string, string literals (char[N]) and const char* are assigned directly.
+      x = other;
+    } else {
+      nCompiler::smartAssign(x, other, typename type_category<xType>::type());
+    }
+    return x;
+  }
+};
+
+// The flex_ function captures the type of x and returns a flex__<type of x> object, which does the magic via operator=.
+// This means we can code flex_(x) = foo(y);
+template<typename xType>
+flex__<typename std::remove_reference<xType>::type > flex_(xType &&x_)
+{return flex__<typename std::remove_reference<xType>::type >(std::forward<xType>(x_));}
+
+// DEPRECATED: use Eigen::nDimTraits2 (tensorUtils.h) instead.
+// nDimTraits is no longer used by flex_ but is still used in tensorIndexingOps.h.
+//   At some point when that is cleaned up, we will remove nDimTraits (and potentially rename nDimTraits2 to nDimTraits).
 // nDimTraits<SomeEigenType>::NumDimensions will give the number of dimensions of SomeEigenType
 // nDimTraits<SomeEigenType>::Dimensions will give a valid type for dimensions.
 // nDimTraits<SomeEigenType>::EvaluatorType give the type returned by:
@@ -196,27 +411,14 @@ template<typename XprType>
 struct nDimTraits {
   static const int NumDimensions = Eigen::internal::traits<XprType>::NumDimensions;
   typedef Eigen::TensorEvaluator<const XprType, Eigen::DefaultDevice> EvaluatorType;
-  //typedef typename EvaluatorType::Dimensions Dimensions;
   typedef Eigen::array<long, NumDimensions> Dimensions;
 
   static const EvaluatorType getEvaluator(const XprType &x) {
     const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x);
     // careful: m_impl might go out of scope
     return EvaluatorType(x_removed,
-			 Eigen::DefaultDevice());
+                         Eigen::DefaultDevice());
   }
-  // We previously experimented with a getDimensions function here, but then the evaluator
-  // is instantiated here, so the dimensions can't be returned by reference.
-  // Hence it seems better to return an evalautor to the calling function, where it
-  // will stay in scope for use of a reference returned by its .dimensions()
-  /* static const Dimensions getDimensions(const XprType &x) { */
-  /*   const typename Eigen::internal::remove_all<typename XprType::Nested>::type x_removed(x); */
-  /*   // careful: m_impl might go out of scope */
-  /*   Eigen::TensorEvaluator<XprType, Eigen::DefaultDevice> m_impl( */
-  /* 								 x_removed, */
-  /* 								 Eigen::DefaultDevice()); */
-  /*   return m_impl.dimensions(); */
-  /* } */
 };
 
 template<>
@@ -235,502 +437,5 @@ template<>
 struct nDimTraits<bool> {
   static const int NumDimensions = 0;
 };
-
-// compare_nDim<SomeEigenType1,  SomeEigenType2>::type will be either less, same, or more,
-// depending on whether LHSnDim is <, ==, or > than RHSnDim.
-template<typename Xpr1, typename Xpr2>
-  struct compare_nDim {
-    static const int nDim1 = Eigen::nDimTraits2<Xpr1>::NumDimensions;
-    static const int nDim2 = Eigen::nDimTraits2<Xpr2>::NumDimensions;
-    typedef typename std::conditional<nDim1 == nDim2, 
-      same, 
-      typename std::conditional<nDim1 <= nDim2,
-      less,
-      more>::type >::type type;
- };
-
-// is_zeroDim<SomeEigenType>::type will be zeroDim or nonZeroDim depending on whether
-// someEigenType is 0-dimensional.
-// This is used for tag dispatch, whereas nDimTraits<>::NumDimensions is used
-// when the number of dimensions is needed as a template argument or actual value.
-template<typename Xpr1>
-struct is_zeroDim {
-  static const int nDim1 = nDimTraits<Xpr1>::NumDimensions;
-  typedef typename std::conditional<nDim1 == 0, 
-                                    zeroDim,
-                                    nonZeroDim>::type type;
-};
-template<>
-struct is_zeroDim<double> {
-  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
-  // but nevertheless we need this template to evaluate correctly.
-};
-template<>
-struct is_zeroDim<long> {
-  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
-  // but nevertheless we need this template to evaluate correctly.
-};
-template<>
-struct is_zeroDim<int> {
-  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
-  // but nevertheless we need this template to evaluate correctly.
-};
-template<>
-struct is_zeroDim<bool> {
-  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
-  // but nevertheless we need this template to evaluate correctly.
-};
-template<>
-struct is_zeroDim<std::string> {
-  typedef zeroDim type; // This will be over-ridden by true_scalar in the next tag argument
-  // but nevertheless we need this template to evaluate correctly.
-};
-
-// smartAssignFixedSize functions handle cases where the sizes
-// of the LHS can't change.  It is tag dispatched on whether
-// the nDim of the LHS is <, ==, or > the nDim of the RHS.
-// Lhs has fewer dimensions than Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, less) {
-  std::cout<<"smartAssignWholeObject less"<<std::endl;
-  static const int LhsNumDim = Eigen::nDimTraits2<LhsXprType>::NumDimensions;
-  static const int RhsNumDim = Eigen::nDimTraits2<RhsXprType>::NumDimensions;
-  auto LhsDims = nDimTraits2_dimensions(Lhs);
-  auto RhsDims = nDimTraits2_dimensions(Rhs);
-  bool ok = checkDims<LhsNumDim, RhsNumDim>(LhsDims, RhsDims);
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Lhs = Rhs.reshape(LhsDims);
-  return Lhs;
-}
-
-// Lhs has same number of dimensions as Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignFixedSize(LhsXprType &&Lhs, const RhsXprType &Rhs, same) {
-  Lhs = Rhs;
-  return Lhs;
-}
-
-// Lhs has more dimensions than Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignFixedSize(LhsXprType &Lhs, const RhsXprType &Rhs, more) {
-  std::cout<<"more case need to be done"<<std::endl;
-  return smartAssignFixedSize(Lhs, Rhs, less()) ;
-}
-
-// flex__ is the key class.
-// Usage is flex_(x) = expr.
-// Note that flex_(x) returns a flex__<type of x> object.
-// This case is for fixed-size Lhs
-template<typename xType>
-class flex__ {
-public:
-  xType &x;
-  explicit flex__(xType &&x_) : x(x_) {
-    //  std::cout<<"building flex__ for fixed-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  xType& operator=(const oType &other) {
-    std::cout<<"In flex__ op case operator="<<std::endl;
-    // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-
-    return smartAssignFixedSize(x, other,
-                                typename compare_nDim<xType, oType>::type());
-  }
-};
-
-template<typename ScalarType, typename XprType>
-ScalarType do_scalar_cast(const XprType &x, trueScalar) {
-  static_assert(!flex_string_cast_v<ScalarType, XprType>, FLEX_STRING_TYPE_ERROR);
-  return static_cast<ScalarType>(x);
-}
-
-template<typename ScalarType, typename XprType>
-ScalarType do_scalar_cast(const XprType &x, eigenTensor) {return static_cast<ScalarType>(x());}
-
-template<typename ScalarType, typename XprType>
-ScalarType do_scalar_cast(const XprType &x, eigenOp) {
-  Eigen::Tensor<ScalarType, 0> ans = x.template cast<ScalarType>();
-  return ans();
-}
-
-//
-// syntax will be scalar_cast_<int>::cast(x);
-template<typename ScalarOutput>
-struct scalar_cast_ {
-  template<typename XprType>
-  static ScalarOutput cast(const XprType &x) {
-    return do_scalar_cast<ScalarOutput, XprType>(x,
-                                                 typename type_category<XprType>::type());
-  }
-};
-
-// Generic casting system that handles scalars and Eigen objects appropriately
-template<typename TargetType, typename XprType, bool eval>
-TargetType do_flex_cast(const XprType &x, trueScalar) {
-  // Rcpp::Rcout << "Debug flex_cast: casting trueScalar to " << typeid(TargetType).name() << std::endl;
-  static_assert(!flex_string_cast_v<TargetType, XprType>, FLEX_STRING_TYPE_ERROR);
-  return static_cast<TargetType>(x);
-}
-
-template<typename TargetType, typename XprType, bool eval>
-decltype(auto) do_flex_cast(const XprType &x, eigenTensor) {
-  using TargetTensor = Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions>;
-  // Rcpp::Rcout << "Debug flex_cast: casting eigenTensor to " << typeid(TargetType).name() << std::endl;
-  // Rcpp::Rcout <<" eval = "<<eval<<std::endl;
-  if constexpr (eval) {
-    // eval=true gives a concrete tensor. Note that Eigen's .eval() does NOT do that:
-    // it returns a lazy TensorForcedEvalOp that is evaluated into a raw temporary buffer,
-    // which skips destructors of non-arithmetic scalars (e.g. std::string) and adds a copy.
-    if constexpr (std::is_same_v<TargetType, typename XprType::Scalar>) {
-      // No casting needed, input is already concrete tensor with correct type.
-      // Return it by const reference (decltype(auto) of an id-expression) to avoid a copy.
-      return x;
-    } else {
-      // Cast and materialize
-      return TargetTensor(x.template cast<TargetType>());
-    }
-  } else {
-    // Return lazy expression when eval=false
-    if constexpr (std::is_same_v<TargetType, typename XprType::Scalar>) {
-      // No casting needed, return as-is
-      return x;
-    } else {
-      // Return lazy cast expression
-      return x.template cast<TargetType>();
-    }
-  }
-}
-
-template<typename TargetType, typename XprType, bool eval>
-decltype(auto) do_flex_cast(const XprType &x, eigenOp) {
-  using TargetTensor = Eigen::Tensor<TargetType, Eigen::internal::traits<XprType>::NumDimensions>;
-  // Rcpp::Rcout << "Debug flex_cast: casting eigenOp to " << typeid(TargetType).name() << std::endl;
-  if constexpr (eval) {
-    // eval=true gives a concrete tensor (see note in the eigenTensor case above).
-    if constexpr (std::is_same_v<TargetType, typename Eigen::internal::traits<XprType>::Scalar>) {
-      // Same type but need to materialize the lazy expression
-      return TargetTensor(x);
-    } else {
-      // Different type and need to materialize
-      return TargetTensor(x.template cast<TargetType>());
-    }
-  } else {
-    // Return lazy expression when eval=false
-    if constexpr (std::is_same_v<TargetType, typename Eigen::internal::traits<XprType>::Scalar>) {
-      // No casting needed, return lazy expression as-is
-      return x;
-    } else {
-      // Return lazy cast expression
-      return x.template cast<TargetType>();
-    }
-  }
-}
-
-//
-// syntax will be flex_cast<double>(x);
-template<typename TargetType, bool eval=false>
-struct flex_cast_ {
-  template<typename XprType>
-  static auto cast(const XprType &x) {
-    return do_flex_cast<TargetType, XprType, eval>(x, typename type_category<XprType>::type());
-  }
-};
-
-// Convenience function for easier syntax: flex_cast<double>(x) instead of flex_cast_<double>::cast(x)
-template<typename TargetType, bool eval=false, typename XprType>
-auto flex_cast(const XprType &x) {
-  return flex_cast_<TargetType, eval>::cast(x);
-}
-
-// smartAssignWholeObject handles assignment when the sizes of the LHS
-// can be changed because the entire object is assigned to.
-// This is tag dispatched similarly to smartAssignFixedSize
-// Lhs has fewer dimensions than Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, less) {
-  std::cout<<"smartAssignWholeObject less"<<std::endl;
-  static const int LhsNumDim = Eigen::nDimTraits2<LhsXprType>::NumDimensions;
-  static const int RhsNumDim = Eigen::nDimTraits2<RhsXprType>::NumDimensions;
-  typedef typename Eigen::nDimTraits2<LhsXprType>::Dimensions LhsDimensions;
-  LhsDimensions NewLhsDims;
-  auto RhsDims = nDimTraits2_dimensions(Rhs);
-  bool ok = checkAndSetupDims<LhsNumDim, RhsNumDim>(NewLhsDims, RhsDims);
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Lhs = Rhs.reshape(NewLhsDims);
-  return Lhs;
-}
-// Lhs has same number of dimensions as Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, same) {
-  Lhs = Rhs;
-  return Lhs;
-}
-
-// Lhs has more dimensions than Rhs
-template<typename LhsXprType, typename RhsXprType>
-LhsXprType& smartAssignWholeObject(LhsXprType &Lhs, const RhsXprType &Rhs, more) {
-  std::cout<<"more case need to be done"<<std::endl;
-  return smartAssignWholeObject(Lhs, Rhs, less());
-}
-
-//smartAssignToScalar handles cases like A  <- B where A is a true scalar (e.g. double),
-// and at run-time we need to see if a potentially non-scalar B does in fact have size of 1.
-// This is tag dispatched on two arguments: whether B is inherently zero-dimensional, such as
-// what is returned from many Eigen::Tensor reduction operators, and a tag for the type_category of B,
-// either eigenTensor, eigenOp, or trueScalar.
-template<typename ScalarType, typename RhsXprType>
-ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, trueScalar) {
-  // std::cout<<"In smartAssignToScalar zeroDim trueScalar"<<std::endl;
-  Lhs = static_cast<ScalarType>(Rhs);
-  return Lhs;
-}
-template<typename ScalarType, typename RhsXprType>
-ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, eigenTensor) {
-  // std::cout<<"In smartAssignToScalar zeroDim eigenTensor"<<std::endl;
-  Lhs = Rhs().template cast<ScalarType>();
-  return Lhs;
-}
-
-template<typename ScalarType, typename RhsXprType>
-ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, zeroDim, eigenOp) {
-  // std::cout<<"In smartAssignToScalar zeroDim eigenOp"<<std::endl;
-  Eigen::Tensor<ScalarType, 0> ans = Rhs.template cast<ScalarType>();
-  Lhs = ans();
-  return Lhs;
-}
-
-template<typename ScalarType, typename RhsXprType>
-ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenOp) {
-  static const int RhsNumDim = Eigen::nDimTraits2<const RhsXprType>::NumDimensions;
-
-  // typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  // typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  // RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  // const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-
-  // auto RhsDimensions = nDimTraits2_dimensions(Rhs);
-
-  //  std::cout<<"In smartAssignToScalar nonzeroDim eigenOp"<<std::endl;
-
-//  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
-  bool ok = nDimTraits2_size(Rhs) == 1;
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Eigen::Tensor<ScalarType, RhsNumDim> temp = Rhs.template cast<ScalarType>();
-  Lhs = temp(0);
-  return Lhs;
-}
-
-template<typename ScalarType, typename RhsXprType>
-ScalarType& smartAssignToScalar(ScalarType &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenTensor) {
-  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-
-  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-
-  //  std::cout<<"In smartAssignToScalar nonzeroDim eigenTensor (GET INFO MORE DIRECTLY)"<<std::endl;
-
-  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Lhs = static_cast<ScalarType>(Rhs(0));
-  return Lhs;
-}
-
-// smartAssignToScalar cases for a std::string Lhs.
-// Character objects are never cast to or from other scalar types,
-// so these require the Rhs scalar type to be std::string (checked at compile time)
-// and otherwise mirror the cases above without casting.
-// Because the Lhs parameter is std::string& rather than a template ScalarType&,
-// these are more specialized than the general versions and are chosen by overload resolution.
-template<typename T>
-struct flex_always_false : std::false_type {};
-
-template<typename XprType>
-constexpr bool flex_has_string_scalar_v =
-  std::is_same<typename std::remove_const<typename Eigen::internal::traits<XprType>::Scalar>::type,
-               std::string>::value;
-
-// FLEX_STRING_TYPE_ERROR is defined near type_category above.
-
-// Non-character true scalar (e.g. double). std::string itself and string literals
-// are assigned directly in flex__<std::string> and never reach here.
-template<typename RhsXprType>
-std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, trueScalar) {
-  static_assert(flex_always_false<RhsXprType>::value, FLEX_STRING_TYPE_ERROR);
-  return Lhs;
-}
-
-template<typename RhsXprType>
-std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, eigenTensor) {
-  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
-  Lhs = Rhs();
-  return Lhs;
-}
-
-template<typename RhsXprType>
-std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, zeroDim, eigenOp) {
-  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
-  Eigen::Tensor<std::string, 0> ans = Rhs;
-  Lhs = ans();
-  return Lhs;
-}
-
-template<typename RhsXprType>
-std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenOp) {
-  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
-  static const int RhsNumDim = Eigen::nDimTraits2<const RhsXprType>::NumDimensions;
-  bool ok = nDimTraits2_size(Rhs) == 1;
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Eigen::Tensor<std::string, RhsNumDim> temp = Rhs;
-  Lhs = temp(0);
-  return Lhs;
-}
-
-template<typename RhsXprType>
-std::string& smartAssignToScalar(std::string &Lhs, const RhsXprType &Rhs, nonZeroDim, eigenTensor) {
-  static_assert(flex_has_string_scalar_v<RhsXprType>, FLEX_STRING_TYPE_ERROR);
-  static const int RhsNumDim = nDimTraits<RhsXprType>::NumDimensions;
-
-  typedef typename nDimTraits<RhsXprType>::EvaluatorType RhsEvaluatorType;
-  typedef typename nDimTraits<RhsXprType>::Dimensions RhsDimensions;
-  RhsEvaluatorType RhsEvaluator( nDimTraits<RhsXprType>::getEvaluator(Rhs) );
-  const RhsDimensions &RhsDims = RhsEvaluator.dimensions();
-
-  bool ok = checkDimsAllOne<RhsNumDim>(RhsDims);
-  if(!ok) {
-    std::cout<<"Error: dimension mismatch\n"<<std::endl;
-    return Lhs;
-  }
-  Lhs = Rhs(0);
-  return Lhs;
-}
-
-// Specialization of flex_ to whole Eigen objects
-template<typename ScalarType, int nDim>
-class flex__<Eigen::Tensor<ScalarType, nDim> > {
-public:
-  typedef Eigen::Tensor<ScalarType, nDim> xType;
-  xType &x;
-  explicit flex__(xType &x_) : x(x_) {
-    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  xType& operator=(const oType &other) {
-    // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
-    // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-    // smartAssignWholeObject does not cast, so character objects work as long as
-    // both sides are character.
-    if constexpr (std::is_same<ScalarType, std::string>::value) {
-      static_assert(flex_has_string_scalar_v<oType>, FLEX_STRING_TYPE_ERROR);
-    }
-    return smartAssignWholeObject(x, other,
-                       typename compare_nDim<xType, oType>::type());
-  }
-};
-
-// // Specialization of flex_ to scalar cases for double, int and bool.
-// There should be a nice way to do this (like make flex_ use a get_flex_type struct), but for now I'm doing it directly:
-template<>
-class flex__<double> {
-public:
-  typedef double ScalarType;
-  ScalarType &x;
-  explicit flex__(ScalarType &x_) : x(x_) {
-    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  ScalarType& operator=(const oType &other) {
-    // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
-    // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-    return smartAssignToScalar(x, other, 
-                               typename is_zeroDim<oType>::type(),
-                               typename type_category<oType>::type());
-  }
-};
-
-template<>
-class flex__<int> {
-public:
-  typedef int ScalarType;
-  ScalarType &x;
-  explicit flex__(ScalarType &x_) : x(x_) {
-    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  ScalarType& operator=(const oType &other) {
-    //std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
-    // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-   return smartAssignToScalar(x, other, 
-                               typename is_zeroDim<oType>::type(),
-                               typename type_category<oType>::type());
-  }
-};
-
-template<>
-class flex__<bool> {
-public:
-  typedef bool ScalarType;
-  ScalarType &x;
-  explicit flex__(ScalarType &x_) : x(x_) {
-    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  ScalarType& operator=(const oType &other) {
-    // std::cout<<"RHS NumDims = "<< nDimTraits<oType>::NumDimensions <<std::endl;
-    // For now, assume nDim(oType) > nDim(xType). Figure out dispatching later.
-   return smartAssignToScalar(x, other,
-                               typename is_zeroDim<oType>::type(),
-                               typename type_category<oType>::type());
-  }
-};
-template<>
-class flex__<std::string> {
-public:
-  typedef std::string ScalarType;
-  ScalarType &x;
-  explicit flex__(ScalarType &x_) : x(x_) {
-    //  std::cout<<"building flex__ for flexible-size Lhs"<<std::endl;
-  }
-  template<typename oType>
-  ScalarType& operator=(const oType &other) {
-    // std::string, string literals (char[N]) and const char* are assigned directly.
-    // Checking this first also avoids needing nDimTraits or type_category for those types.
-    if constexpr (std::is_convertible<const oType&, std::string>::value) {
-      x = other;
-      return x;
-    } else {
-      return smartAssignToScalar(x, other,
-                                 typename is_zeroDim<oType>::type(),
-                                 typename type_category<oType>::type());
-    }
-  }
-};
-
-// Notes and ideas:
-// maybe try using decltype, constexpr
-// maybe make constexpr on condition of LHSNumDim vs. RHSNumDim and dispatch on that.
-
-// It is difficult to explicity name all Eigen types when creating a flex_.
-// The following templated function can deduce type easily.
-// This means we can code flex_(x) = foo(y);
-template<typename xType>
-flex__<typename std::remove_reference<xType>::type > flex_(xType &&x_)
-{return flex__<typename std::remove_reference<xType>::type >(std::forward<xType>(x_));}
 
 #endif
