@@ -393,10 +393,7 @@ inEigenizeEnv(
         promoteArgTypes(code, assignment=TRUE)
       }
     ##
-    ## Right now this is done in generateCpp$MidOperator, and for scalars only
-    ## if(isTRUE(get_nOption("use_flexible_assignment"))) {
-    ##   insertExprClassLayer(code, 1, 'flex_')
-    ## }
+    ## Use of flex_(LHS) is decided in genCppEnv$MidOperator 
     if(isTRUE(workEnv$aliasRisk)) {
       use_eval <- TRUE
       if(!inherits(code$args[[2]]$type, 'symbolBasic')) use_eval <- FALSE
