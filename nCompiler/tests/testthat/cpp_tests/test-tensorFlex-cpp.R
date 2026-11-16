@@ -169,6 +169,29 @@ flexFuns <- list(
     })
 )
 
+## Non-Eigen LHS (like DiagIO): flex_ passes through to the LHS type's own operator=.
+## DoubleIt is a small proxy whose operator= writes twice the value(s) into y.
+nonEigenProxy <- 'struct DoubleIt {
+                    Eigen::Tensor<double, 1> &y;
+                    DoubleIt(Eigen::Tensor<double, 1> &y_) : y(y_) {}
+                    DoubleIt& operator=(double a) { y.setConstant(2.0 * a); return *this; }
+                    DoubleIt& operator=(const Eigen::Tensor<double, 1> &v) { y = v * 2.0; return *this; }
+                  };'
+flexFuns$proxy_from_scalar <- nFunction(
+  function(a = 'numericScalar') {
+    cppLiteral(paste(nonEigenProxy, 'y = Eigen::Tensor<double, 1>(3); flex_(DoubleIt(y)) = a;'),
+               types = list(y = 'numericVector'))
+    cppLiteral('return y;')
+    returnType('numericVector')
+  })
+flexFuns$proxy_from_vector <- nFunction(
+  function(x = 'numericVector') {
+    cppLiteral(paste(nonEigenProxy, 'flex_(DoubleIt(y)) = x;'),
+               types = list(y = 'numericVector'))
+    cppLiteral('return y;')
+    returnType('numericVector')
+  })
+
 cFlexFuns <- do.call(nCompile, flexFuns)
 
 test_that("flex_ assigns to a scalar from objects with one element", {
@@ -226,4 +249,9 @@ test_that("flex_ fills fixed-size targets from scalars", {
   colResult <- function(v) { M <- matrix(0, 3, 3); M[, 2] <- v; M }
   expect_equal(cFlexFuns$column_from_scalar(7), colResult(7))
   expect_equal(cFlexFuns$column_from_reduction(1:3), colResult(6))
+})
+
+test_that("flex_ passes non-Eigen LHS types through to their own operator=", {
+  expect_equal(cFlexFuns$proxy_from_scalar(1.5), c(3, 3, 3))
+  expect_equal(cFlexFuns$proxy_from_vector(1:4), 2 * (1:4))
 })

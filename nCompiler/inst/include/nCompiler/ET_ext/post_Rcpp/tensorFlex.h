@@ -25,6 +25,7 @@
 //    - The extents of x other than 1s must match the extents of y other than 1s, in order.
 //      E.g. a 1x10 or 10x1 matrix can be assigned to y[1:10].
 //    - If x is zero-dimensional, all elements of y are set to its value.
+// 4. Any other (non-Eigen) LHS type, such as DiagIO from diag(x) <- v, is assigned with its own operator=.
 // "Smart" assignment does not flatten or reshape otherwise: extents must match apart from 1s.
 // Mismatched extents are an error.
 // Scalar types are cast as needed, except that character objects are never cast to or from
@@ -32,6 +33,7 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <type_traits>
+#include <utility> // std::declval
 #include <string>
 #include <sstream>
 #include "tensorUtils.h"
@@ -81,6 +83,24 @@ struct type_category<std::string> {
 
 template <typename T>
 using type_category_t = typename type_category<T>::type;
+
+// True if T is an Eigen tensor object or op, i.e. derived from Eigen::TensorBase.
+// Every tensor type has TensorBase<Derived, ReadOnlyAccessors> as a base (directly, or via
+// TensorBase<Derived, WriteAccessors>), so testing for that one base avoids ambiguous deduction.
+// This is used so that flex_ passes other (non-Eigen) LHS types, such as DiagIO
+// (tensorOperations.h), through to their own operator=.
+template<typename T>
+struct is_tensor_xpr {
+private:
+  template<typename Derived>
+  static std::true_type test(const Eigen::TensorBase<Derived, Eigen::ReadOnlyAccessors>*);
+  static std::false_type test(...);
+public:
+  static constexpr bool value = decltype(test(std::declval<T*>()))::value;
+};
+
+template<typename T>
+constexpr bool is_tensor_xpr_v = is_tensor_xpr<T>::value;
 
 #define FLEX_STRING_TYPE_ERROR "C++ COMPILATION ERROR: a character variable can only be assigned from a character value."
 
@@ -385,6 +405,10 @@ public:
     if constexpr (std::is_same<xType, std::string>::value &&
                   std::is_convertible<const oType&, std::string>::value) {
       // std::string, string literals (char[N]) and const char* are assigned directly.
+      x = other;
+    } else if constexpr (std::is_same<type_category_t<xType>, eigenOp>::value &&
+                         !is_tensor_xpr_v<xType>) {
+      // Not an Eigen object (e.g. DiagIO): use its own operator=.
       x = other;
     } else {
       nCompiler::smartAssign(x, other, typename type_category<xType>::type());
