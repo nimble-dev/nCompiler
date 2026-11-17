@@ -634,6 +634,24 @@ inLabelAbstractTypesEnv(
         )
       }
       code$type <- returnSym$clone() ## clone is needed because we might resolve a TBD symbol and we don't want to change the original returnSym
+      ## Passing a scalar to a non-scalar parameter is not supported yet.
+      ## (For a copy parameter it would compile, via the Eigen::Tensor size constructor, to the wrong result.)
+      for (i in seq_along(code$args)) {
+        paramSym <- nFunctionCallParamSymbol(code, i)
+        argType <- code$args[[i]]$type
+        if (inherits(paramSym, "symbolBasic") && inherits(argType, "symbolBasic") &&
+          isTRUE(paramSym$nDim > 0) && identical(argType$nDim, 0)) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code, paste0(
+                "Argument '", paramSym$name, "' of ", code$name,
+                " is non-scalar, but a scalar was passed. This is not supported yet."
+              )
+            ),
+            call. = FALSE
+          )
+        }
+      }
       inserts
     }
 )

@@ -635,61 +635,146 @@ test_that("pass by blockRef with same ref in multiple args works except R->C++",
   expect_false(identical(v, c(1, (2:3) + 3)))
 })
 
-message("Uncomment an argumentPassing test when nested STM / ISEQS_ issues are fixed")
+test_that("nested pass by blockRef works", {
+  foo1 <- nFunction(
+    fun = function(x = double(1)) {
+      x <- x + 1
+    },
+    blockRefArgs = "x"
+  )
+  foo2 <- nFunction(
+    fun = function(x = double(1)) {
+      foo1(x[1:2])
+    },
+    blockRefArgs = "x"
+  )
+  foo3 <- nFunction(
+    fun = function(x = double(1)) {
+      x <- x + 1
+      foo1(x[1:2])
+    },
+    blockRefArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo1(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo2(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  foo3(x)
+  expect_equal(x, 3:4)
 
-## This fails to compile due to ISEQS_ issues
-## test_that("nested pass by blockRef works", {
-##   foo1 <- nFunction(
-##     fun=function(x=double(1)) {
-##       x <- x+1
-##     },
-##     blockRefArgs = "x"
-##   )
-##   foo2 <- nFunction(
-##     fun=function(x=double(1)) {
-##       foo1(x[1:2])
-##     },
-##     blockRefArgs = "x"
-##   )
-##   foo3 <- nFunction(
-##     fun=function(x=double(1)) {
-##       x <- x + 1
-##       foo1(x[1:2])
-##     },
-##     blockRefArgs = "x"
-##   )
-##   x <- as.numeric(1:2)
-##   foo1(x)
-##   expect_equal(x, 2:3)
-##   x <- as.numeric(1:2)
-##   foo2(x)
-##   expect_equal(x, 2:3)
-##   x <- as.numeric(1:2)
-##   foo3(x)
-##   expect_equal(x, 3:4)
+  C <- nCompile(foo1, foo2, foo3)
+  x <- as.numeric(1:2)
+  C$foo1(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo2(x)
+  expect_equal(x, 2:3)
+  x <- as.numeric(1:2)
+  C$foo3(x)
+  expect_equal(x, 3:4)
+  # Inner block is a strict subset of the outer object
+  x <- as.numeric(1:3)
+  C$foo2(x)
+  expect_equal(x, c(2, 3, 3))
+  x <- as.numeric(1:3)
+  C$foo3(x)
+  expect_equal(x, c(3, 4, 4))
+  # Outer block has an offset, so the inner block is a block of a block
+  x <- as.numeric(1:4)
+  C$foo2(x[2:4])
+  expect_equal(x, c(1, 3, 4, 4))
 
-##   C <- nCompile(foo1, foo2, foo3)
-##   x <- as.numeric(1:2)
-##   C$foo1(x)
-##   expect_equal(x, 2:3)
-##   x <- as.numeric(1:2)
-##   foo2(x)
-##   expect_equal(x, 2:3)
-##   x <- as.numeric(1:2)
-##   foo3(x)
-##   expect_equal(x, 3:4)
+  foo4 <- nFunction(
+    fun = function(x = double(1)) {
+      C$foo3(x)
+    },
+    blockRefArgs = "x"
+  )
+  x <- as.numeric(1:2)
+  foo4(x)
+  expect_equal(x, 3:4)
+})
 
-##   foo4 <- nFunction(
-##     fun=function(x=double(1)) {
-##       C$foo3(x)
-##     },
-##     blockRefArgs = "x"
-##   )
-##   x <- as.numeric(1:2)
-##   foo4(x)
-##   expect_equal(x, 3:4)
+test_that("pass indexed and dimension-changing arguments by blockRef (C++ to C++)", {
+  foo1 <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  # Indexed arguments become StridedTensorMaps
+  foo2 <- nFunction(
+    fun = function(v = double(1), M = double(2)) {
+      s1 <- foo1(v[2:3])
+      s2 <- foo1(M[, 2])
+      s3 <- foo1(M[1:2, 1])
+      return(c(s1, s2, s3))
+      returnType(double(1))
+    },
+    blockRefArgs = c("v", "M")
+  )
+  # Whole objects with extra singleton dimensions
+  foo3 <- nFunction(
+    fun = function(M = double(2), A = double(3)) {
+      s1 <- foo1(M)
+      s2 <- foo1(A)
+      return(c(s1, s2))
+      returnType(double(1))
+    },
+    blockRefArgs = c("M", "A")
+  )
+  C <- nCompile(foo1, foo2, foo3)
+  v <- as.numeric(1:3)
+  M <- matrix(as.numeric(1:6), nrow = 3)
+  ans <- C$foo2(v, M)
+  expect_equal(ans, c(102 + 3, 104 + 5 + 6, 101 + 2))
+  expect_equal(v, c(1, 102, 3))
+  expect_equal(M, matrix(c(101, 2, 3, 104, 5, 6), nrow = 3))
 
-## })
+  M <- matrix(as.numeric(1:3), nrow = 3)
+  A <- array(as.numeric(1:3), dim = c(1, 3, 1))
+  ans <- C$foo3(M, A)
+  expect_equal(ans, c(101 + 2 + 3, 101 + 2 + 3))
+  expect_equal(M, matrix(c(101, 2, 3), nrow = 3))
+  expect_equal(A, array(c(101, 2, 3), dim = c(1, 3, 1)))
+})
+
+test_that("unsupported argument passing cases give compile-time errors", {
+  foo1 <- nFunction(
+    fun = function(x = double(1)) {
+      return(sum(x))
+      returnType(double())
+    }
+  )
+  foo1bref <- nFunction(
+    fun = function(x = double(1)) {
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  # Scalar to non-scalar parameter (not supported yet)
+  foo2 <- nFunction(
+    fun = function(a = double()) {
+      return(foo1(a))
+      returnType(double())
+    }
+  )
+  expect_error(nCompile(foo1, foo2), "scalar was passed")
+  # A non-strided index can't be passed by blockRef
+  foo3 <- nFunction(
+    fun = function(x = double(1)) {
+      return(foo1bref(x[c(1, 3)]))
+      returnType(double())
+    }
+  )
+  expect_error(nCompile(foo1bref, foo3), "only use empty, scalar, or `:` indices")
+})
 
 
 ## It seems like this test should give an error because we are assigning

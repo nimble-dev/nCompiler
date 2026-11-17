@@ -493,6 +493,30 @@ checkFlexAssignment <- function(LHS, RHS) {
   !isTRUE(LHS$isName) && isTRUE(get_nOption("check_sizes_on_assignment"))
 }
 
+# This gets the declared argument type of an nFunction or nClass method,
+#  by argument name or order.
+# Note that arguments of code have been ordered and named by normalizeCalls.
+# argID can be a name or placement order.
+# Failures return NULL so they can be understood by the caller.
+nFunctionCallParamSymbol <- function(code, argID) {
+  cachedOpInfo <- code$aux$cachedOpInfo
+  if (is.null(cachedOpInfo) || !isTRUE(cachedOpInfo$case %in% c("nFunction", "nClass method"))) {
+    return(NULL)
+  }
+  argSymTab <- cachedOpInfo$obj_internals$argSymTab
+  if (is.null(argSymTab)) {
+    return(NULL)
+  }
+  argName <- names(code$args)[argID]
+  if (is.null(argName) || is.na(argName) || argName == "") {
+    argName <- argSymTab$getSymbolNames()[argID]
+  }
+  if (is.null(argName) || is.na(argName)) {
+    return(NULL)
+  }
+  argSymTab$getSymbol(argName)
+}
+
 newAssignmentExpression <- function() {
   exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = "<-")
 }

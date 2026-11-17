@@ -45,7 +45,8 @@ void createSubTensorInfoGeneral(const ss_type &ss,
   //  long currentOutputDimStop(0);
   Index currentOutputStride(1);
   bool onLeadingSingletons(false);
-  Index currentExtent(0);
+  bool dim0Done(false); // true if output dim 0 was finished in the loop (input dim 0 not single)
+  Index currentExtent(1); // product of extents of the non-single input dims merged into the current output dim
   size_t i;
   int input_nDim = input_sizes.size();
   for(size_t ip1 = input_nDim; ip1 > 0; --ip1) {
@@ -56,9 +57,9 @@ void createSubTensorInfoGeneral(const ss_type &ss,
       currentOutputDimStart *= input_sizes[i];
       currentOutputDimStart += ss[i].start();
       if(ss[i].isEmpty())
-        currentExtent = input_sizes[i];
+        currentExtent *= input_sizes[i];
       else
-        currentExtent = ss[i].extent();
+        currentExtent *= ss[i].extent();
       // finish this outputDim:
       if(currentOutputDim > 0 || i == 0) {
         if(currentOutputDim < output_nDim) { // if it was decremented below 0 (which should never happen anyway), it will actually be MAX_INT or something like that, so this is really ">= 0"
@@ -66,10 +67,12 @@ void createSubTensorInfoGeneral(const ss_type &ss,
           output_startIndices[currentOutputDim] = currentOutputDimStart;
           output_stopIndices[currentOutputDim] = currentOutputDimStart + currentExtent;
           output_strides[currentOutputDim] = currentOutputStride;
+          if(i == 0) dim0Done = true;
           --currentOutputDim;
           currentOutputDimSize = 1;
           currentOutputDimStart = 0;
           currentOutputStride = 1;
+          currentExtent = 1;
         }
       } else {
         onLeadingSingletons = true;
@@ -83,7 +86,8 @@ void createSubTensorInfoGeneral(const ss_type &ss,
       }
     }
   }
-  if(onLeadingSingletons) {
+  // If input dim 0 is single, output dim 0 was not finished in the loop, so finish it here.
+  if(onLeadingSingletons && !dim0Done) {
     output_sizes[0] = currentOutputDimSize;
     output_startIndices[0] = currentOutputDimStart;
     output_stopIndices[0] = currentOutputDimStart + currentExtent * currentOutputStride;

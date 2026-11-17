@@ -994,16 +994,28 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Bracket_to_StridedTensorMap <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
-
-    ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
-    drop <- code$args$drop$name
-    ## remove the drop arg from AST
-    code$args$drop <- NULL
+    ## drop is a compileArg of `[`, so it is in aux, not in the AST.
+    drop <- isTRUE(code$aux$compileArgs$drop)
 
     ## the labelAbstractTypes IndexingBracket handler ensures that index_args
     ## is not just the empty argument ""
     index_args <- code$args[-1]
+    ## A strided view supports only empty, scalar, or `:` indices.
+    for (i in seq_along(index_args)) {
+      ok <- index_args[[i]]$name == "" ||
+        (isTRUE(index_args[[i]]$isCall) && index_args[[i]]$name %in% c(":", "nSeqFromTo")) ||
+        identical(index_args[[i]]$type$nDim, 0)
+      if (!ok) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "An indexed argument for assignment or passing can only use empty, scalar, or `:` indices."
+          ),
+          call. = FALSE
+        )
+      }
+    }
+    code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
     code$args[-1] <- NULL ## clear indexing args from AST
 
     blocks_expr <- setArg(
@@ -1021,7 +1033,7 @@ inEigenizeEnv(
         isName = FALSE, isCall = TRUE
       )
 
-      if (index_args[[i]]$isCall && index_args[[i]]$name == ":") {
+      if (index_args[[i]]$isCall && index_args[[i]]$name %in% c(":", "nSeqFromTo")) {
         ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
         setArg(b_expr, 1, index_args[[i]]$args[[1]])
         setArg(b_expr, 2, index_args[[i]]$args[[2]])
@@ -1156,7 +1168,9 @@ nCompiler:::inEigenizeEnv(
       }
       return(invisible(NULL))
     }
-    if (code$caller$name == "nFunction") {
+    ## An indexed argument to a blockRef parameter becomes a StridedTensorMap.
+    if (!isAssign && !is.null(code$caller) &&
+      isTRUE(nFunctionCallParamSymbol(code$caller, code$callerArgID)$isBlockRef)) {
       return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
     }
     ## Work: new handling here
@@ -1170,7 +1184,7 @@ nCompiler:::inEigenizeEnv(
       warning("Problem determining whether to drop dimensions.")
     }
 
-    if (isTRUE(nOptions("nimble") || isTRUE(nOptions("dropSingleSizes")))) {
+    if (isTRUE(nOptions("nimble")) || isTRUE(nOptions("dropSingleSizes"))) {
       ## Here we imitate nimble's blockIndexInfo to determine
       ## scalar indices from ":" or c() (or possibly other?) cases
       ## but here what we do is replace the argument right now and
@@ -1200,7 +1214,7 @@ nCompiler:::inEigenizeEnv(
     # The clone() method calls in this block of code produce broken exprClass ASTs
     # because the caller and callerArgID fields are not set. We do have a copyExprClass
     # function that could be used (and we could consider making a proper clone method).
-    # But for not it works to allow broken ASTs here because the next step is generating C++.
+    # But for now it works to allow broken ASTs here because the next step is generating C++.
     for (argInd in iArgs) {
       ind <- argInd - 1
       isBlank <- code$args[[argInd]]$isName & code$args[[argInd]]$name == ""
