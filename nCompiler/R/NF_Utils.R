@@ -2,7 +2,7 @@
 #' @param x Object to be checked.
 #' @return \code{TRUE} or \code{FALSE}
 #' @export
-isNF <- function(x) inherits(x, 'nFunction')
+isNF <- function(x) inherits(x, "nFunction")
 
 #' Get or set internals of a nFunction (advanced use only).
 #'
@@ -22,9 +22,15 @@ NFinternals <- function(NF) {
 }
 
 isConstructor <- function(NF) {
-  if(!isNF(NF)) return(FALSE)
-  if(is.null(NFinternals(NF)$aux)) return(FALSE)
-  if(is.null(NFinternals(NF)$aux$initializerList)) return(FALSE)
+  if (!isNF(NF)) {
+    return(FALSE)
+  }
+  if (is.null(NFinternals(NF)$aux)) {
+    return(FALSE)
+  }
+  if (is.null(NFinternals(NF)$aux$initializerList)) {
+    return(FALSE)
+  }
   TRUE
 }
 
@@ -52,23 +58,26 @@ isConstructor <- function(NF) {
 ## an nClass generator or nClassBuilder.
 nGet <- function(name, where, project_env = NULL) {
   scoped <- nGet_scoped(name, where)
-  if(isNCgenerator(scoped) || inherits(scoped, "nClassBuilder"))
+  if (isNCgenerator(scoped) || inherits(scoped, "nClassBuilder")) {
     return(scoped)
-  if(!is.null(project_env)) {
+  }
+  if (!is.null(project_env)) {
     obj <- project_env$known_nClasses[[name]]
-    if(!is.null(obj)) {
+    if (!is.null(obj)) {
       obj <- obj$NCgenerator
-      if(!is.null(obj))
+      if (!is.null(obj)) {
         return(obj)
+      }
     }
   }
   scoped
 }
 
 nGet_scoped <- function(name, where) {
-  if(inherits(where, "R6ClassGenerator")) {
-    if(exists(name, envir = where, inherits = FALSE))
+  if (inherits(where, "R6ClassGenerator")) {
+    if (exists(name, envir = where, inherits = FALSE)) {
       return(get(name, envir = where, inherits = FALSE))
+    }
     ## If not found in the class generator,
     ## switch where to be the generator's parent_env
     where <- where$parent_env
@@ -77,24 +86,27 @@ nGet_scoped <- function(name, where) {
 }
 
 NF_types_match <- function(f1, f2) {
-  if(!isNF(f1) || !isNF(f2)) stop("Arguments to NF_types_match must be nFunctions")
+  if (!isNF(f1) || !isNF(f2)) stop("Arguments to NF_types_match must be nFunctions")
   match <- TRUE
   NFint1 <- NFinternals(f1)
   NFint2 <- NFinternals(f2)
 
-  if(match) {
-   match <- isTRUE(all.equal(NFint1$returnSym, NFint2$returnSym))
+  if (match) {
+    match <- isTRUE(all.equal(NFint1$returnSym, NFint2$returnSym))
   }
-  if(match) {
+  if (match) {
     NF1args <- NFint1$argSymTab$getSymbolNames()
     NF2args <- NFint2$argSymTab$getSymbolNames()
     match <- isTRUE(all.equal(NF1args, NF2args))
   }
-  if(match) {
-    for(symName in NF1args) {
-      if(match)
-        match <- isTRUE(all.equal(NFint1$argSymTab$getSymbol(symName),
-                                 NFint2$argSymTab$getSymbol(symName)))
+  if (match) {
+    for (symName in NF1args) {
+      if (match) {
+        match <- isTRUE(all.equal(
+          NFint1$argSymTab$getSymbol(symName),
+          NFint2$argSymTab$getSymbol(symName)
+        ))
+      }
     }
   }
   match

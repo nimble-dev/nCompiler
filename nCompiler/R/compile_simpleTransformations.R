@@ -11,34 +11,40 @@ compile_simpleTransformations <- function(code,
                                           opInfoName = "simpleTransformations",
                                           handlerEnv = simpleTransformationsEnv) {
   nErrorEnv$stateInfo <- paste0("handling ", opInfoName, " for ", code$name, ".")
-  if(code$isName) return(invisible())
-  if(code$isCall) {
-    for(i in seq_along(code$args)) {
-      if(inherits(code$args[[i]], 'exprClass')) {
-        compile_simpleTransformations(code$args[[i]],
-                                      symTab,
-                                      auxEnv,
-                                      opInfoName,
-                                      handlerEnv)
+  if (code$isName) {
+    return(invisible())
+  }
+  if (code$isCall) {
+    for (i in seq_along(code$args)) {
+      if (inherits(code$args[[i]], "exprClass")) {
+        compile_simpleTransformations(
+          code$args[[i]],
+          symTab,
+          auxEnv,
+          opInfoName,
+          handlerEnv
+        )
       }
     }
-    
-    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE, allowFail = TRUE)
+
+    opInfo <- check_cachedOpInfo(code, where = auxEnv$where, update = TRUE, allowFail = TRUE)
     handlingInfo <- getOperatorField(opInfo$opDef, opInfoName)
     # handlingInfo <- getOperatorDef(code$name, opInfoName)
     # opInfo <- getOperatorDef(code$name) #operatorDefEnv[[code$name]]
     # if(!is.null(opInfo)) {
     #   handlingInfo <- opInfo[[opInfoName]]
-      if(!is.null(handlingInfo)) {
-        handler <- handlingInfo[['handler']]
-        if(!is.null(handler))
-          if(is.function(handler)) {
-            handler(code, symTab, auxEnv, handlingInfo)
-          } else {
-            eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                 envir = handlerEnv)
-          }
+    if (!is.null(handlingInfo)) {
+      handler <- handlingInfo[["handler"]]
+      if (!is.null(handler)) {
+        if (is.function(handler)) {
+          handler(code, symTab, auxEnv, handlingInfo)
+        } else {
+          eval(call(handler, code, symTab, auxEnv, handlingInfo),
+            envir = handlerEnv
+          )
+        }
       }
+    }
     # }
   }
   nErrorEnv$stateInfo <- character()
@@ -58,17 +64,18 @@ inSimpleTransformationsEnv(
     function(code, symTab, auxEnv, info) {
       rate_missing <- isTRUE("rate" %in% code$aux$provided_as_missing)
       scale_missing <- isTRUE("scale" %in% code$aux$provided_as_missing)
-      if(!rate_missing && !scale_missing) {
+      if (!rate_missing && !scale_missing) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'Distribution must have either rate or scale argument, not both.'
+          "Distribution must have either rate or scale argument, not both."
         ), call. = FALSE)
       }
       # If neither is provided, both are 1, so use whichever parameterization
       # avoids an inversion on the C++ side (given in info$default).
-      if(rate_missing && scale_missing)
+      if (rate_missing && scale_missing) {
         rate_missing <- !identical(info$default, "rate")
-      if(!rate_missing) {
+      }
+      if (!rate_missing) {
         code$name <- paste0(code$name, "_rate")
         removeArg(code, "scale", allow_missing = TRUE)
       } else {
@@ -82,7 +89,7 @@ inSimpleTransformationsEnv(
 inSimpleTransformationsEnv(
   minMax <-
     function(code, symTab, auxEnv, info) {
-      if(length(code$args) == 2) code$name <- paste0('pair',code$name)
+      if (length(code$args) == 2) code$name <- paste0("pair", code$name)
     }
 )
 
@@ -98,10 +105,15 @@ inSimpleTransformationsEnv(
   replace <-
     function(code, symTab, auxEnv, info) {
       repl <- info$replacement
-      if(is.null(repl))
-        stop(paste0("No valid replacement for ",
-                    code$name),
-             call. = FALSE)
+      if (is.null(repl)) {
+        stop(
+          paste0(
+            "No valid replacement for ",
+            code$name
+          ),
+          call. = FALSE
+        )
+      }
       code$name <- repl
     }
 )
@@ -110,10 +122,15 @@ inSimpleTransformationsEnv(
   replaceAndNormalize <-
     function(code, symTab, auxEnv, info) {
       repl <- info$replacement
-      if(is.null(repl))
-        stop(paste0("No valid replacement for ",
-                    code$name),
-             call. = FALSE)
+      if (is.null(repl)) {
+        stop(
+          paste0(
+            "No valid replacement for ",
+            code$name
+          ),
+          call. = FALSE
+        )
+      }
       code$name <- repl
       compile_normalizeCalls(code, symTab, auxEnv)
     }
@@ -122,7 +139,7 @@ inSimpleTransformationsEnv(
 inSimpleTransformationsEnv(
   Literal <-
     function(code, symTab, auxEnv, info) {
-      if(!is.null(code$aux$compileArgs$text)) {
+      if (!is.null(code$aux$compileArgs$text)) {
         code$aux$compileArgs$text <- eval(code$aux$compileArgs$text, envir = auxEnv$closure)
       }
     }
@@ -131,11 +148,13 @@ inSimpleTransformationsEnv(
   CheckOpAssignment <-
     function(code, symTab, auxEnv, info) {
       arg1 <- code$args[[1]]
-      arg1_opInfo <- check_cachedOpInfo(arg1, where=auxEnv$where, update=TRUE, allowFail = TRUE)
+      arg1_opInfo <- check_cachedOpInfo(arg1, where = auxEnv$where, update = TRUE, allowFail = TRUE)
       arg1_useOpAssign <- isTRUE(arg1_opInfo$opDef$useOpAssign)
-      if(!arg1_useOpAssign) return(invisible(NULL))
+      if (!arg1_useOpAssign) {
+        return(invisible(NULL))
+      }
 
-      if(isTRUE(arg1$isCall)) {
+      if (isTRUE(arg1$isCall)) {
         # change `<-`(length(x), 5) to `length<-`(x, 5)
         name <- arg1$name
 
@@ -145,12 +164,12 @@ inSimpleTransformationsEnv(
         arg2 <- code$args[[2]]
         arg1names <- names(arg1$args)
         code$args <- list() # rebuild from scratch
-        for(i in seq_along(arg1$args)) {
+        for (i in seq_along(arg1$args)) {
           insertArg(code, i, arg1$args[[i]], arg1names[i])
         }
         insertArg(code, length(code$args) + 1, arg2, "value")
         compile_normalizeCalls(code, symTab, auxEnv)
-      } 
+      }
     }
 )
 
@@ -171,20 +190,23 @@ inSimpleTransformationsEnv(
 
 inSimpleTransformationsEnv(
   Switch <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) < 2) stop("nSwitch must have at least 2 arguments: the value to check and at least one option.")
+    if (length(code$args) < 2) stop("nSwitch must have at least 2 arguments: the value to check and at least one option.")
     IDs <- code$aux$compileArgs$IDs
-    if(is.null(IDs)) IDs <- 1:(length(code$args) - 1)
-    else IDs <- eval(IDs, envir = auxEnv$where)
-    if(!is.numeric(IDs)) stop("IDs for nSwitch must be numeric.")
-    if(length(IDs) != length(code$args) - 1) stop("Number of IDs for nSwitch must match the number of options.")
+    if (is.null(IDs)) {
+      IDs <- 1:(length(code$args) - 1)
+    } else {
+      IDs <- eval(IDs, envir = auxEnv$where)
+    }
+    if (!is.numeric(IDs)) stop("IDs for nSwitch must be numeric.")
+    if (length(IDs) != length(code$args) - 1) stop("Number of IDs for nSwitch must match the number of options.")
     code$aux$compileArgs$IDs <- IDs
-    if(code$caller$name != "{") stop("nSwitch can not be used within an expression. It does not return anything.")
+    if (code$caller$name != "{") stop("nSwitch can not be used within an expression. It does not return anything.")
   }
 )
 
 inSimpleTransformationsEnv(
   EvalCompileArgs <- function(code, symTab, auxEnv, info) {
-    for(argname in names(code$aux$compileArgs)) {
+    for (argname in names(code$aux$compileArgs)) {
       evaled_arg <- eval(code$aux$compileArgs[[argname]], envir = auxEnv$where)
       code$aux$compileArgs[[argname]] <- evaled_arg
     }
@@ -194,46 +216,45 @@ inSimpleTransformationsEnv(
 inSimpleTransformationsEnv(
   SetSize <- function(code, symTab, auxEnv, handlingInfo) {
     iDotsArgs <- which(names(code$args) == "")
-    if(length(iDotsArgs) == 0) {
+    if (length(iDotsArgs) == 0) {
       stop(exprClassProcessingErrorMsg(
         code,
         'setSize is missing size argument(s), which should be provided in "...".'
       ), call. = FALSE)
     }
-    if(length(iDotsArgs) == 1) {
+    if (length(iDotsArgs) == 1) {
       names(code$args)[iDotsArgs] <- "size"
-    }
-    else if(length(iDotsArgs) > 1) {
+    } else if (length(iDotsArgs) > 1) {
       newExpr <- nParse(quote(nC()))
-      for(i in seq_along(iDotsArgs)) {
+      for (i in seq_along(iDotsArgs)) {
         insertArg(newExpr, ID = i, value = code$args[[iDotsArgs[i]]])
       }
       setArg(code, ID = iDotsArgs[1], value = newExpr)
       names(code$args)[iDotsArgs[1]] <- "size"
-      for(i in length(iDotsArgs):2) {
+      for (i in length(iDotsArgs):2) {
         removeArg(code, ID = iDotsArgs[i])
       }
     }
     # fill over-rides fillZeros (which is for backward compatibility)
     # if fill is missing, replace it will fillZeros (which has a default).
-    if(isTRUE("fill" %in% code$aux$provided_as_missing)) {
+    if (isTRUE("fill" %in% code$aux$provided_as_missing)) {
       setArg(code, "fill", code$args$fillZeros, add = TRUE)
     }
     removeArg(code, "fillZeros", allow_missing = TRUE)
     # obj over-rides numObj (which is for backward compatibility)
     # if obj is missing, replace it will numObj.
-    if(isTRUE("obj" %in% code$aux$provided_as_missing)) {
-      if(isTRUE("numObj" %in% code$aux$provided_as_missing)) {
+    if (isTRUE("obj" %in% code$aux$provided_as_missing)) {
+      if (isTRUE("numObj" %in% code$aux$provided_as_missing)) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'setSize is missing required obj argument'
+          "setSize is missing required obj argument"
         ), call. = FALSE)
       }
       setArg(code, "obj", code$args$numObj, add = TRUE)
     }
     removeArg(code, "numObj", allow_missing = TRUE)
     # presence of value sets fill to TRUE.
-    if(!isTRUE("value" %in% code$aux$provided_as_missing)) {
+    if (!isTRUE("value" %in% code$aux$provided_as_missing)) {
       code$args$fill <- literalLogicalExpr(TRUE)
     }
     # If this final processed order is ever changed,
@@ -245,4 +266,13 @@ inSimpleTransformationsEnv(
       insertDefaults = FALSE
     )
   }
+)
+
+# Not used, as we have custom `is_na{,n}` for early stopping efficiency.
+inSimpleTransformationsEnv(
+  any_na <-
+    function(code, symTab, auxEnv, info) {
+      code$name <- sub("any_", "is_", code$name)
+      wrapInExprClass(code, "any")
+    }
 )

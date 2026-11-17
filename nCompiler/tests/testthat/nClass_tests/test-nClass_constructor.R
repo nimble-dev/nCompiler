@@ -1,4 +1,4 @@
-#library(nCompiler)
+# library(nCompiler)
 library(testthat)
 
 test_that("nClass constructor works", {
@@ -6,23 +6,29 @@ test_that("nClass constructor works", {
   nc <- nClass(
     classname = "ctor_test",
     Cpublic = list(
-      v = 'numericScalar',
-      w = 'numericScalar',
-      hw = nFunction(function() {nCpp('Rprintf("hello world\\n");')}),
-      ctor1 = nFunction(function(v_ = 'numericScalar',
-                                 w_ = 'numericScalar') {
-        v <- v_;
-      },
-      compileInfo = list(constructor=TRUE,
-                         initializers = list('w(w_)')))
+      v = "numericScalar",
+      w = "numericScalar",
+      hw = nFunction(function() {
+        nCpp('Rprintf("hello world\\n");')
+      }),
+      ctor1 = nFunction(
+        function(v_ = "numericScalar",
+                 w_ = "numericScalar") {
+          v <- v_
+        },
+        compileInfo = list(
+          constructor = TRUE,
+          initializers = list("w(w_)")
+        )
+      )
     )
   )
-  cppDef <- nCompile(nc, control=list(return_cppDefs=TRUE))
+  cppDef <- nCompile(nc, control = list(return_cppDefs = TRUE))
   out <- capture.output(writeCode(cppDef[[1]]$generate(TRUE)))
-  expect_true(sum(grepl(" ctor_test \\( double", out))==1)
+  expect_true(sum(grepl(" ctor_test \\( double", out)) == 1)
   out <- capture.output(writeCode(cppDef[[1]]$generate()))
-  expect_true(sum(grepl("ctor_test::ctor_test \\( double", out))==1)
-  expect_true(sum(grepl("w\\(w_\\)", out))==1)
+  expect_true(sum(grepl("ctor_test::ctor_test \\( double", out)) == 1)
+  expect_true(sum(grepl("w\\(w_\\)", out)) == 1)
   expect_no_error(test <- nCompile(nc))
   obj <- test$new()
   rm(obj)
@@ -35,42 +41,50 @@ test_that("nClass replacing default constructor works", {
   nc <- nClass(
     classname = "ctor_test",
     Cpublic = list(
-      v = 'numericScalar',
-      w = 'numericScalar',
-      hw = nFunction(function() {nCpp('Rprintf("hello world\\n");')}),
+      v = "numericScalar",
+      w = "numericScalar",
+      hw = nFunction(function() {
+        nCpp('Rprintf("hello world\\n");')
+      }),
       # same name as class indicates this will replace default
-      ctor_test = nFunction(function(v_ = 'numericScalar',
-                                 w_ = 'numericScalar') {
-        v <- v_;
-      },
-      compileInfo = list(constructor=TRUE,
-                         initializers = list('w(w_)'))
-    )),
+      ctor_test = nFunction(
+        function(v_ = "numericScalar",
+                 w_ = "numericScalar") {
+          v <- v_
+        },
+        compileInfo = list(
+          constructor = TRUE,
+          initializers = list("w(w_)")
+        )
+      )
+    ),
     compileInfo = list(createFromR = FALSE) # will error if TRUE b/c we are replacing default ctor
   )
   nc2 <- nClass(
     classname = "simple",
     Cpublic = list(
-      hw = nFunction(function() {nCpp('Rprintf("hello world from simple\\n");')})
+      hw = nFunction(function() {
+        nCpp('Rprintf("hello world from simple\\n");')
+      })
     ),
-    compileInfo = list(interface = "generic", createFromR=FALSE)
+    compileInfo = list(interface = "generic", createFromR = FALSE)
   )
-  #debug(nCompiler:::nCompile_finish_nonpackage)
+  # debug(nCompiler:::nCompile_finish_nonpackage)
   expect_no_error(Cnc2 <- nCompile(nc2))
   expect_true(is.null(Cnc2))
 
-  cppDef <- nCompile(nc, control=list(return_cppDefs=TRUE))
+  cppDef <- nCompile(nc, control = list(return_cppDefs = TRUE))
   out <- capture.output(writeCode(cppDef[[1]]$generate(TRUE)))
-  expect_true(sum(grepl(" ctor_test \\( double", out))==1)
+  expect_true(sum(grepl(" ctor_test \\( double", out)) == 1)
   out <- capture.output(writeCode(cppDef[[1]]$generate()))
-  expect_true(sum(grepl("ctor_test::ctor_test \\( double", out))==1)
-  expect_true(sum(grepl("w\\(w_\\)", out))==1)
-  #debug(nCompiler:::nCompile_finish_nonpackage)
-  #test <- nCompile(nc)
+  expect_true(sum(grepl("ctor_test::ctor_test \\( double", out)) == 1)
+  expect_true(sum(grepl("w\\(w_\\)", out)) == 1)
+  # debug(nCompiler:::nCompile_finish_nonpackage)
+  # test <- nCompile(nc)
   expect_no_error(test <- nCompile(nc))
   expect_true(is.null(test))
-#  rm(obj)
-#  gc()
+  #  rm(obj)
+  #  gc()
 })
 
 test_that("manual initialize works and Cpp ctor call is made", {
@@ -94,13 +108,13 @@ test_that("manual initialize works and Cpp ctor call is made", {
       }
     ),
     Cpublic = list(
-      Ca = 'numericScalar',
+      Ca = "numericScalar",
       methods_test = nFunction(
         function() {
           nCpp('Rprintf("calling c++ constructor\\n")')
           Ca <- 2
         },
-        compileInfo = list(constructor=TRUE)
+        compileInfo = list(constructor = TRUE)
       )
     )
   )
@@ -108,8 +122,8 @@ test_that("manual initialize works and Cpp ctor call is made", {
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
-  #obj$Ca
-  #obj$get_Ca()
+  # obj$Ca
+  # obj$get_Ca()
   # Need initialization of uncompiled Cpublic variables?
 
   Cnc <- nCompile(nc)
@@ -121,7 +135,8 @@ test_that("manual initialize works and Cpp ctor call is made", {
   expect_equal(Cobj$get_Ra(), 1)
   expect_equal(Cobj$Ca, 2)
   expect_equal(Cobj$get_Ca(), 2)
-  rm(Cobj); gc()
+  rm(Cobj)
+  gc()
 })
 
 
@@ -137,7 +152,7 @@ test_that("manual initialize with hand-coded Cpublic initialization works", {
       initialize = function() {
         print("calling initialize")
         initialize_Cpublic() # step 1, for uncompiled or compiled
-        if(isCompiled()) initializeCpp() # step 2, only for compiled
+        if (isCompiled()) initializeCpp() # step 2, only for compiled
         self$Ra <- 1
       },
       get_Ra = function() {
@@ -148,16 +163,16 @@ test_that("manual initialize with hand-coded Cpublic initialization works", {
       }
     ),
     Cpublic = list(
-      Ca = 'numericScalar',
+      Ca = "numericScalar",
       methods_test = nFunction(
         function() {
           nCpp('Rprintf("calling c++ constructor\\n")')
           Ca <- 2
         },
-        compileInfo = list(constructor=TRUE)
+        compileInfo = list(constructor = TRUE)
       )
     ),
-    compileInfo=list(omit_automatic_Cpp_construction=TRUE)
+    compileInfo = list(omit_automatic_Cpp_construction = TRUE)
   )
 
   obj <- nc$new()
@@ -165,8 +180,8 @@ test_that("manual initialize with hand-coded Cpublic initialization works", {
   expect_equal(obj$get_Ra(), 1)
   expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
-  #obj$Ca
-  #obj$get_Ca()
+  # obj$Ca
+  # obj$get_Ca()
   # Need initialization of uncompiled Cpublic variables?
 
   Cnc <- nCompile(nc)
@@ -178,7 +193,8 @@ test_that("manual initialize with hand-coded Cpublic initialization works", {
   expect_equal(Cobj$get_Ra(), 1)
   expect_equal(Cobj$Ca, 2)
   expect_equal(Cobj$get_Ca(), 2)
-  rm(Cobj); gc()
+  rm(Cobj)
+  gc()
 })
 
 
@@ -194,7 +210,7 @@ test_that("warning issued when Rpublic initialize lacks super$initialize or init
         Ra = 0
       ),
       Cpublic = list(
-        Ca = 'numericScalar'
+        Ca = "numericScalar"
       )
     ),
     "super\\$initialize"
@@ -212,7 +228,7 @@ test_that("warning issued when Rpublic initialize lacks super$initialize or init
         Ra = 0
       ),
       Cpublic = list(
-        Ca = 'numericScalar'
+        Ca = "numericScalar"
       )
     )
   )
@@ -224,13 +240,13 @@ test_that("warning issued when Rpublic initialize lacks super$initialize or init
       Rpublic = list(
         initialize = function() {
           initialize_Cpublic()
-          if(isCompiled()) initializeCpp()
+          if (isCompiled()) initializeCpp()
           self$Ra <- 1
         },
         Ra = 0
       ),
       Cpublic = list(
-        Ca = 'numericScalar'
+        Ca = "numericScalar"
       ),
       compileInfo = list(omit_automatic_Cpp_construction = TRUE)
     )
@@ -241,7 +257,7 @@ test_that("warning issued when Rpublic initialize lacks super$initialize or init
     nClass(
       classname = "no_warn_no_init",
       Rpublic = list(Ra = 0),
-      Cpublic = list(Ca = 'numericScalar')
+      Cpublic = list(Ca = "numericScalar")
     )
   )
 })
@@ -265,16 +281,16 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
       }
     ),
     Cpublic = list(
-      Ca = 'numericScalar',
+      Ca = "numericScalar",
       methods_test = nFunction(
         function() {
           nCpp('Rprintf("calling c++ constructor\\n")')
           Ca <- 2
         },
-        compileInfo = list(constructor=TRUE)
+        compileInfo = list(constructor = TRUE)
       )
     ),
-    compileInfo=list(omit_automatic_Cpp_construction=TRUE)
+    compileInfo = list(omit_automatic_Cpp_construction = TRUE)
   )
 
   obj <- nc$new()
@@ -282,14 +298,14 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   expect_equal(obj$get_Ra(), 1)
   expect_equal(obj$Ca, "numericScalar")
   expect_true(isFALSE(obj$isCompiled()))
-  #obj$Ca
-  #obj$get_Ca()
+  # obj$Ca
+  # obj$get_Ca()
   # Need initialization of uncompiled Cpublic variables?
 
   Cnc <- nCompile(nc)
   out <- capture_output(Cobj <- Cnc$new())
   # the C++ initializer output should now appear AFTER the R initializer msg
-  expect_true(regexpr("constructor", out)==-1)
+  expect_true(regexpr("constructor", out) == -1)
   expect_true(isTRUE(Cobj$isCompiled()))
   expect_equal(Cobj$Ra, 1)
   expect_equal(Cobj$get_Ra(), 1)
@@ -297,14 +313,15 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   expect_error(Cobj$get_Ca())
 
   out2 <- capture_output(Cobj$initializeCpp())
-  expect_true(regexpr("constructor", out2)>0)
+  expect_true(regexpr("constructor", out2) > 0)
   expect_true(isTRUE(Cobj$isCompiled()))
   expect_equal(Cobj$Ra, 1)
   expect_equal(Cobj$get_Ra(), 1)
   expect_equal(Cobj$Ca, 2)
   expect_equal(Cobj$get_Ca(), 2)
 
-  rm(Cobj); gc()
+  rm(Cobj)
+  gc()
 })
 
 test_that("nClass returned from nFunction connects to correct C++ object when initialize has args before ...", {
@@ -316,12 +333,12 @@ test_that("nClass returned from nFunction connects to correct C++ object when in
     Rpublic = list(
       Ra = 0,
       initialize = function(Ra_init = 0, ...) {
-        super$initialize(...)   # CppObj = LOE flows through ... when returning from nFunction
+        super$initialize(...) # CppObj = LOE flows through ... when returning from nFunction
         self$Ra <- Ra_init
       }
     ),
     Cpublic = list(
-      Ca = 'numericScalar'
+      Ca = "numericScalar"
     )
   )
 
@@ -331,17 +348,17 @@ test_that("nClass returned from nFunction connects to correct C++ object when in
       obj$Ca <- 42
       return(obj)
     },
-    returnType = 'nc'
+    returnType = "nc"
   )
 
   # check uncompiled
   user_obj <- nc$new(Ra_init = 7)
   expect_equal(user_obj$Ra, 7)
-  
+
   # former bug:
   user_obj <- nc$new(Ra_init = 7, junk = 0) # extra arg for ... previously threw an error
   expect_equal(user_obj$Ra, 7)
-  
+
   Cnc <- nCompile(nc, nf)
   # Normal user-facing construction: Ra_init is used, no expectation for Ca since C++ scalars are not initialized.
   user_obj <- Cnc$nc$new(Ra_init = 7)
@@ -353,5 +370,6 @@ test_that("nClass returned from nFunction connects to correct C++ object when in
   returned_obj <- Cnc$nf()
   expect_equal(returned_obj$Ca, 42)
 
-  rm(user_obj, returned_obj); gc()
+  rm(user_obj, returned_obj)
+  gc()
 })

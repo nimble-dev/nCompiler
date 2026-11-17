@@ -1,5 +1,3 @@
-
-
 nf <- nimbleFunction(
   run = function(x = double(1)) {
     ans <- silly(x, billy$new(), c$d) + 1

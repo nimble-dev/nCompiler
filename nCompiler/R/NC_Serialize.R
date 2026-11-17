@@ -19,54 +19,63 @@ nSerialize <- function(obj) {
     # is not serializing them.
     # Then R's serialize will call the refhook again with the externalptr
     # which we WILL serialize.
-    if(isTRUE(is.loadedObjectEnv(ref_obj))) {
+    if (isTRUE(is.loadedObjectEnv(ref_obj))) {
       # First time that we get a loadedObjectEnv, we'll use it for the DLLenv
       # to get the serialization-related calls to C++.
       # Future extension: Allow multiple DLLenvs in one nSerialize call.
-      if(is.null(ser_mgr)) {
+      if (is.null(ser_mgr)) {
         DLLenv <<- get_DLLenv(ref_obj)
         new_smgr_fn <- DLLenv$new_serialization_mgr
-        if(!is.function(new_smgr_fn)) stop("nCompiler serialization manager not found.")
+        if (!is.function(new_smgr_fn)) stop("nCompiler serialization manager not found.")
         ser_mgr <<- new_smgr_fn()
         # add_extptr will be used on subsequent calls to refhook for an externalptr
-        add_extptr <<- function(extptr)
+        add_extptr <<- function(extptr) {
           DLLenv$call_method(ser_mgr$extptr, "add_extptr", list(extptr))
-        find_extptr <<- function(ref_obj)
+        }
+        find_extptr <<- function(ref_obj) {
           DLLenv$call_method(ser_mgr$extptr, "find_extptr", list(ref_obj))
+        }
       }
-      if(is.null(packageName)) {
+      if (is.null(packageName)) {
         packageName <<- DLLpackageName(ref_obj)
       }
       ID <- add_extptr(ref_obj$extptr)
       NULL # must return NULL to say we are not serializing the environment
-    } else if("externalptr" %in% class(ref_obj)) {
-      if(is.null(ser_mgr))
+    } else if ("externalptr" %in% class(ref_obj)) {
+      if (is.null(ser_mgr)) {
         stop("encountered an externalptr before serialization manager set up.")
+      }
       ID <- find_extptr(ref_obj)
-      if(is.null(ID)) NULL # return NULL if we are not serializing this
-      else as.character(ID) # this is the returned object for R's serialize if we are,
+      if (is.null(ID)) {
+        NULL
+      } # return NULL if we are not serializing this
+      else {
+        as.character(ID)
+      } # this is the returned object for R's serialize if we are,
       # which requires a string
-    } else
-      NULL # This tell's R's serialize that we don't want to handle ref_obj
+    } else {
+      NULL
+    } # This tell's R's serialize that we don't want to handle ref_obj
   }
   # The steps are:
   # 1. Serialize the object, using the refhook to end up with a
   #    C++ serialization_mgr object that contains smart pointers to any
   #    C++ objects.
-  Rside <- serialize(obj, connection=NULL, refhook = refhook)
+  Rside <- serialize(obj, connection = NULL, refhook = refhook)
   CPPside <- NULL
-  if(!is.null(DLLenv)) {
+  if (!is.null(DLLenv)) {
     # 2a. If there were any C++ objects,
     #     serialize the serialization_mgr, which will include the pointed-to objects
     ser_fn <- DLLenv$nComp_serialize_
-    if(!is.function(ser_fn)) stop("nCompiler serialization function not found")
+    if (!is.function(ser_fn)) stop("nCompiler serialization function not found")
     CPPside <- ser_fn(getExtptr(ser_mgr))
     # 2b. Clear the serialization_mgr of its pointers (underlying objects are still fine)
     (\() DLLenv$call_method(ser_mgr$extptr, "clear", list()))()
   }
   # 3. We need one serialization result, so now serialized the two pieces together.
-  combined <- serialize(list(Rside=Rside, CPPside=CPPside, packageName = packageName),
-                        connection=NULL)
+  combined <- serialize(list(Rside = Rside, CPPside = CPPside, packageName = packageName),
+    connection = NULL
+  )
   # 4. Delete the serialization manager (will be finalized when R's gc() next runs)
   rm(ser_mgr)
   combined
@@ -82,17 +91,20 @@ nUnserialize <- function(obj, pkgName, lib = NULL) {
 
   combined <- unserialize(obj)
 
-  if(missing(pkgName)) {
+  if (missing(pkgName)) {
     pkgName <- combined$packageName
   }
-  if(is.environment(pkgName)) DLLenv <- pkgName
-  else {
-    if(!is.character(pkgName) || (length(pkgName)>1))
+  if (is.environment(pkgName)) {
+    DLLenv <- pkgName
+  } else {
+    if (!is.character(pkgName) || (length(pkgName) > 1)) {
       stop("pkgName must be an environment or one character string.")
-    if(!isNamespaceLoaded(pkgName)) {
-      load_ok <- requireNamespace(pkgName, quietly=TRUE)
-      if(!load_ok)
+    }
+    if (!isNamespaceLoaded(pkgName)) {
+      load_ok <- requireNamespace(pkgName, quietly = TRUE)
+      if (!load_ok) {
         stop("Namespace ", pkgName, " was not already loaded and couldn't be found and loaded.")
+      }
     }
     DLLenv <- getNamespace(pkgName)
     ## pkgString <- pkgName
@@ -106,9 +118,10 @@ nUnserialize <- function(obj, pkgName, lib = NULL) {
     ## DLLenv <- as.environment(pkgString)
   }
   unser_fn <- DLLenv$nComp_deserialize_
-  if(!is.function(unser_fn))
+  if (!is.function(unser_fn)) {
     stop("Could not find 'nComp_deserialize_' function in pkgName environment or package namespace.")
-  if(!is.null(combined$CPPside)) {
+  }
+  if (!is.null(combined$CPPside)) {
     # 2. If there was anything on the C++ side, make a serialization_mgr
     ser_mgr <- unser_fn(combined$CPPside)
     # get_extptr will be used in refhook, when called by R's serialize()

@@ -3,15 +3,15 @@ library(nCompiler)
 
 test_that("diag(dim(m)[1]) works", {
   foo <- nFunction(
-    function(m = 'numericMatrix') {
-      #D <- DEBUG_EIGEN(diag(dim(m)[1]))
+    function(m = "numericMatrix") {
+      # D <- DEBUG_EIGEN(diag(dim(m)[1]))
       D <- diag(dim(m)[1])
       return(D)
-      returnType('numericMatrix')
+      returnType("numericMatrix")
     }
   )
 
-  #undebug(nCompiler:::compile_eigenize)
+  # undebug(nCompiler:::compile_eigenize)
   expect_no_error(cfoo <- nCompile(foo))
   m <- matrix(rnorm(9), nrow = 3)
   expect_equal(cfoo(m), diag(3))
@@ -20,7 +20,7 @@ test_that("diag(dim(m)[1]) works", {
 
 test_that("length() works for names, slices and other expressions", {
   foo <- nFunction(
-    function(x = 'numericVector', m = 'numericMatrix') {
+    function(x = "numericVector", m = "numericMatrix") {
       a <- length(x)
       b <- length(x[2:3]) # a slice has no size() method in Eigen
       c <- length(m[1:2, ])
@@ -28,7 +28,7 @@ test_that("length() works for names, slices and other expressions", {
       e <- length(3)
       ans <- 10000 * a + 1000 * b + 100 * c + 10 * d + e
       return(ans)
-      returnType('numericScalar')
+      returnType("numericScalar")
     }
   )
   cfoo <- nCompile(foo)

@@ -2,14 +2,16 @@
 
 global_serialization_cppDef <-
   cppManualClass$new(
-    Hpreamble = c(#nCompiler_plugin()$includes,
+    Hpreamble = c( # nCompiler_plugin()$includes,
       "#define NCOMPILER_USES_CEREAL",
       "#define NCOMPILER_USES_NCLASS_INTERFACE",
-      "#define USES_NCOMPILER"),
-    CPPpreamble = c(#nCompiler_plugin()$includes,
+      "#define USES_NCOMPILER"
+    ),
+    CPPpreamble = c( # nCompiler_plugin()$includes,
       "#define NCOMPILER_USES_CEREAL",
       "#define NCOMPILER_USES_NCLASS_INTERFACE",
-      "#define USES_NCOMPILER"),
+      "#define USES_NCOMPILER"
+    ),
     ## Hincludes = c("<Rinternals.h>",
     ##           nCompilerIncludeFile("nCompiler_class_interface.h"),
     ##           nCompilerIncludeFile("nCompiler_loadedObjectsHook.h"),
@@ -18,12 +20,15 @@ global_serialization_cppDef <-
     #
     # This is done here because it must be done once and only once to avoid
     # duplicate symbols when compiling as a package.
-    CPPincludes = c(#nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
-                    nCompilerIncludeFile("nC_cereal/post_Rcpp/serialization_mgr.h")),
-    CPPusings = c("using namespace Rcpp;",
-                  "// [[Rcpp::plugins(nCompiler_plugin)]]",
-                  "// [[Rcpp::depends(nCompiler)]]",
-                  "// [[Rcpp::depends(Rcereal)]]"),
+    CPPincludes = c( # nCompilerIncludeFile("nCompiler_omnibus_first_cpp.h"),
+      nCompilerIncludeFile("nC_cereal/post_Rcpp/serialization_mgr.h")
+    ),
+    CPPusings = c(
+      "using namespace Rcpp;",
+      "// [[Rcpp::plugins(nCompiler_plugin)]]",
+      "// [[Rcpp::depends(nCompiler)]]",
+      "// [[Rcpp::depends(Rcereal)]]"
+    ),
     cppContent = paste0(
       "// [[Rcpp::export]]\n",
       "SEXP new_serialization_mgr ( ) {\n",
@@ -76,8 +81,8 @@ get_serialization_cppDef <- function() {
 }
 
 # This is called from cppClassClass$addSerialization
-addSerialization_impl <- function(self) { #},
-                                  # include_DLL_funs = FALSE) {
+addSerialization_impl <- function(self) { # },
+  # include_DLL_funs = FALSE) {
   ## This function adds a C++ method like:
   ##   template<class Archive>
   ##   void _SERIALIZE_(Archive & archive) {
@@ -85,68 +90,76 @@ addSerialization_impl <- function(self) { #},
   ##           CEREAL_NVP(x),
   ##           CEREAL_NVP(y));
   ## }
-  self$Hpreamble = c(self$Hpreamble,
-                     "#define NCOMPILER_USES_CEREAL",
-                     "#define USES_NCOMPILER")
-  self$CPPpreamble = c(self$CPPpreamble,
-                       "#define NCOMPILER_USES_CEREAL",
-                       "#define USES_NCOMPILER")
+  self$Hpreamble <- c(
+    self$Hpreamble,
+    "#define NCOMPILER_USES_CEREAL",
+    "#define USES_NCOMPILER"
+  )
+  self$CPPpreamble <- c(
+    self$CPPpreamble,
+    "#define NCOMPILER_USES_CEREAL",
+    "#define USES_NCOMPILER"
+  )
 
   ## construct the central call to archive:
   ## namesToArchive <- self$symbolTable$getSymbolNames()
   namesToArchive <- NCinternals(self$Compiler$NCgenerator)$cppSymbolNames
   codeText <- paste0(
-    "archive(\ncereal::base_class<genericInterfaceC<",self$name,"> >(this),\n",
+    "archive(\ncereal::base_class<genericInterfaceC<", self$name, "> >(this),\n",
     paste0("CEREAL_NVP(", namesToArchive, ")", collapse = ",\n"),
     "\n);\n"
   )
   allCodeList <-
     list(
-      substitute(cppLiteral(CODETEXT),
-                 list(CODETEXT = as.character(codeText)))
+      substitute(
+        cppLiteral(CODETEXT),
+        list(CODETEXT = as.character(codeText))
+      )
     )
   allCode <- putCodeLinesInBrackets(allCodeList)
   allCode <- nParse(allCode)
 
   ## construct a cppFunctionClass
   serialize_method <- cppFunctionClass$new(
-    name = "_SERIALIZE_"
-  , template = cppTemplateDeclaration("Archive")
-  , args = symbolTableClass$new(
-    symbols = list(
-      archive = cppVarClass$new(
-        name = "archive",
-        baseType = "Archive",
-        ref = TRUE
+    name = "_SERIALIZE_",
+    template = cppTemplateDeclaration("Archive"),
+    args = symbolTableClass$new(
+      symbols = list(
+        archive = cppVarClass$new(
+          name = "archive",
+          baseType = "Archive",
+          ref = TRUE
+        )
       )
-    )
+    ),
+    code = cppCodeBlockClass$new(
+      code = allCode,
+      symbolTable = symbolTableClass$new(),
+      skipBrackets = TRUE
+    ),
+    returnType = cppVoid()
   )
-, code = cppCodeBlockClass$new(
-  code = allCode,
-  symbolTable = symbolTableClass$new(),
-  skipBrackets = TRUE
-)
-, returnType = cppVoid()
-)
   self$memberCppDefs[["_SERIALIZE_"]] <- serialize_method
 
   ##
-  inner_code <- substitute(cppLiteral(MSG),
-                           list(MSG = paste0(
-                                  "RETURN_THIS_NCOMP_OBJECT(",self$name,");\n"
-                                )))
+  inner_code <- substitute(
+    cppLiteral(MSG),
+    list(MSG = paste0(
+      "RETURN_THIS_NCOMP_OBJECT(", self$name, ");\n"
+    ))
+  )
   make_deserialized_return_SEXP_method <- cppFunctionClass$new(
-    name = "make_deserialized_return_SEXP"
-  , args = symbolTableClass$new()
-   , code = cppCodeBlockClass$new(
-     code = nParse(inner_code),
-     symbolTable = symbolTableClass$new(),
-     skipBrackets = TRUE
-   )
-   , returnType = cppSEXP()
+    name = "make_deserialized_return_SEXP",
+    args = symbolTableClass$new(),
+    code = cppCodeBlockClass$new(
+      code = nParse(inner_code),
+      symbolTable = symbolTableClass$new(),
+      skipBrackets = TRUE
+    ),
+    returnType = cppSEXP()
   )
   self$memberCppDefs[["make_deserialized_return_SEXP"]] <- make_deserialized_return_SEXP_method
-  
+
   ## The next code creates lines to force the needed specializations of the
   ## template methods above.  These lines will look like:
   ## template void fooC::_SERIALIZE_(cereal::BinaryOutputArchive &archive);
@@ -155,11 +168,12 @@ addSerialization_impl <- function(self) { #},
     cppManualClass$new(
       hContent =
         paste0("template void ",
-               self$name,
-               "::_SERIALIZE_(cereal::",
-               c("BinaryOutputArchive", "BinaryInputArchive"),
-               " &archive);",
-               collapse = "\n")
+          self$name,
+          "::_SERIALIZE_(cereal::",
+          c("BinaryOutputArchive", "BinaryInputArchive"),
+          " &archive);",
+          collapse = "\n"
+        )
     )
   self$internalCppDefs[["cereal_template_instantiations"]] <-
     cereal_template_instantiations
@@ -168,11 +182,13 @@ addSerialization_impl <- function(self) { #},
   ## CEREAL_REGISTER_TYPE(fooC)
   cereal_register_type_macro <-
     cppManualClass$new(
-      cppContent = paste0("CEREAL_REGISTER_TYPE(", self$name, ")\n",
-                          "CEREAL_REGISTER_TYPE(shared_ptr_holder<",self$name,">)\n",
-                          "CEREAL_REGISTER_TYPE(genericInterfaceC<",self$name,">)\n",
-                          "CEREAL_REGISTER_TYPE(loadedObjectHookC<",self$name,">)\n")
+      cppContent = paste0(
+        "CEREAL_REGISTER_TYPE(", self$name, ")\n",
+        "CEREAL_REGISTER_TYPE(shared_ptr_holder<", self$name, ">)\n",
+        "CEREAL_REGISTER_TYPE(genericInterfaceC<", self$name, ">)\n",
+        "CEREAL_REGISTER_TYPE(loadedObjectHookC<", self$name, ">)\n"
       )
+    )
   self$internalCppDefs[["cereal_register_type_macro"]] <- cereal_register_type_macro
 
   ## Lines to force dynamic initialization
@@ -184,14 +200,14 @@ addSerialization_impl <- function(self) { #},
   self$internalCppDefs[["cereal_dynamic_init"]] <- cereal_dynamic_init
 
   self$Hpreamble <- c(self$Hpreamble, "#define _INCLUDE_SERIALIZE_AND_DESERIALIZE_FUNCTIONS\n")
-  
+
   cleanname <- Rname2CppName(self$name)
-  # if (!identical(cleanname, self$name)) 
+  # if (!identical(cleanname, self$name))
   #   warning("When serializing nClass ", self$name, " name for serialization ",
   #           " functions was changed to ", cleanname)
   # if(include_DLL_funs)
   self$externalCppDefs[["cereal_serialize_deserialize"]] <- get_serialization_cppDef()
-  
+
   ## Was this a test or a way to avoid a possibly empty class?
   dummy <-
     cppManualClass$new(
@@ -199,5 +215,5 @@ addSerialization_impl <- function(self) { #},
       hContent = paste0("extern int dummy;\n")
     )
   self$internalCppDefs[["dummy"]] <- dummy
-  invisible(NULL) 
+  invisible(NULL)
 }

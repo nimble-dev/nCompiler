@@ -20,7 +20,7 @@ test_that("user type works", {
     inherit = nCompiler:::symbolBase,
     public = list(
       initialize = function(...) {
-        super$initialize(type = 'mySymbolClass', ...)
+        super$initialize(type = "mySymbolClass", ...)
         self$overloadDefs <- list(
           "[" = list(
             labelAbstractTypes = list(
@@ -39,10 +39,12 @@ test_that("user type works", {
       uniqueID = function() "mySymbolClass",
       print = function() writeLines(paste0(self$name, ": mySymbolClass")),
       genCppVar = function() {
-        nCompiler:::cppVarFullClass$new(baseType = "double",
-                                        name = self$name,
-                                        ptr = TRUE,
-                                        ref = FALSE)
+        nCompiler:::cppVarFullClass$new(
+          baseType = "double",
+          name = self$name,
+          ptr = TRUE,
+          ref = FALSE
+        )
       }
     )
   )
@@ -61,7 +63,7 @@ test_that("user type works", {
   expect_true(R6::is.R6(obj))
 
   foo <- nFunction(
-    function(x = 'numericVector') {
+    function(x = "numericVector") {
       nCpp("xptr = &x[0];", type = list(xptr = "mySym"))
       x2 <- xptr[2] + 2
       return(x2)
@@ -82,7 +84,7 @@ test_that("user type works", {
 
   # provide the type as a symbol
   foo2 <- nFunction(
-    function(x = 'numericVector') {
+    function(x = "numericVector") {
       nCpp("xptr = &x[0];", type = list(xptr = mySymbolClass$new()))
       x2 <- xptr[2] + 2
       return(x2)
@@ -99,7 +101,7 @@ test_that("user type works", {
   # provide the type as a symbol in two steps
   mySymType <- mySymbolClass$new()
   foo3 <- nFunction(
-    function(x = 'numericVector') {
+    function(x = "numericVector") {
       nCpp("xptr = &x[0];", type = list(xptr = "T(mySymType)"))
       x2 <- xptr[2] + 2
       return(x2)

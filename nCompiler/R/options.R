@@ -9,12 +9,12 @@ updateDefaults <- function(defaults, control) {
 .nOptions <- as.environment(
   list(
     enableSaving = TRUE,
-    check_nFunction = TRUE,  ## check syntax of nFunction fun
+    check_nFunction = TRUE, ## check syntax of nFunction fun
     NCwarn = TRUE, ## issue warnings from issues when creating an nClass
     showCompilerOutput = FALSE,
     use_nCompLocal = FALSE,
-#    debugTypeProcessing = FALSE,
-    serialize = FALSE,           # if TRUE, include serialization code in generated C++
+    #    debugTypeProcessing = FALSE,
+    serialize = FALSE, # if TRUE, include serialization code in generated C++
     enableDerivs = FALSE,
     allow_method_overloading = FALSE,
     allow_inherited_field_duplicates = FALSE,
@@ -33,10 +33,10 @@ updateDefaults <- function(defaults, control) {
       cppStacktrace = FALSE,
       throwEigenErrors = TRUE,
       logging = FALSE,
-      startStage = 'start',
-      endStage = 'end',
-      startDebugStage = 'end',
-      endDebugStage = 'end',
+      startStage = "start",
+      endStage = "end",
+      startDebugStage = "end",
+      endDebugStage = "end",
       writeCpp = TRUE,
       compileCpp = TRUE,
       useUniqueNameInCode = FALSE,
@@ -50,7 +50,7 @@ updateDefaults <- function(defaults, control) {
     # localDLLdir = "nCompLocalLibrary", # directory to be used from the working directory if localDLL needs to be locally built.
     # showLocalDLLoutput = FALSE,
     error_recover = FALSE, # if TRUE, attempt to recover into a browser() after errors caught by nComp's error trapping, similarly to options(error = recover)
-    pause_after_writing_files = FALSE, #if TRUE, enter browser() after generated code files have been written but before the C++ compiler has been called.
+    pause_after_writing_files = FALSE, # if TRUE, enter browser() after generated code files have been written but before the C++ compiler has been called.
     verbose = FALSE,
     sourceCpp_verbose = FALSE,
     nimble = FALSE, ## ensure all backward compatibility
@@ -76,12 +76,13 @@ updateDefaults <- function(defaults, control) {
 #' @export
 #' @return \code{value}
 set_nOption <- function(x, value, listName = NULL) {
-  if (is.null(listName))
+  if (is.null(listName)) {
     .nOptions[[x]] <- value
-  else {
+  } else {
     thisList <- .nOptions[[listName]]
-    if (!is.list(thisList))
-      .nOptions[[listName]] <- list() # overwrite any existing object
+    if (!is.list(thisList)) {
+      .nOptions[[listName]] <- list()
+    } # overwrite any existing object
     .nOptions[[listName]][[x]] <- value
   }
   invisible(value)
@@ -118,15 +119,20 @@ nOptions <- function(...) {
     args <- unlist(args)
   } else {
     # Set some nCompiler options.
-    for(i in seq_along(args)) {
+    for (i in seq_along(args)) {
       set_nOption(names(args)[[i]], args[[i]])
     }
     args <- names(args)
     invisibleReturn <- TRUE
   }
   out <- structure(lapply(args, get_nOption),
-                   names = args)
-  ##out <- as.list(nOptions)[args]
-  if(length(out) == 1) out <- out[[1]]
-  if(invisibleReturn) return(invisible(out)) else return(out)
+    names = args
+  )
+  ## out <- as.list(nOptions)[args]
+  if (length(out) == 1) out <- out[[1]]
+  if (invisibleReturn) {
+    return(invisible(out))
+  } else {
+    return(out)
+  }
 }

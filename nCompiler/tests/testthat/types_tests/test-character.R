@@ -25,7 +25,7 @@ test_that("character tensors work", {
           w <- c(x[2], "raw", x[1])
           z <- c(x[2], "raw", x[1])
           a <- z[2:3]
-          setSize(y, 3) #setSize but not `length<-` is consistent uncompiled vs compiled, for new values
+          setSize(y, 3) # setSize but not `length<-` is consistent uncompiled vs compiled, for new values
           y[1:2] <- z[2:3]
           y[2] <- "yay"
           self$cv <- y
@@ -98,14 +98,15 @@ test_that("character tensors work", {
   expect_equal(Cobj$cm, cm2)
   expect_equal(obj$cm, cm2)
 
-  ca <- array(LETTERS[1:(2*3*4)], dim = c(2, 3, 4))
+  ca <- array(LETTERS[1:(2 * 3 * 4)], dim = c(2, 3, 4))
   ca2 <- nArray(type = "character", dim = c(2, 3, 4))
   ca2[1, 2:3, 3:4] <- ca[2, 1:2, 2:3]
-  ca2[2,2,2] <- "yay"
+  ca2[2, 2, 2] <- "yay"
   expect_equal(obj$test_ca(ca), ca2)
   expect_equal(Cobj$test_ca(ca), ca2)
   expect_equal(obj$ca, ca2)
   expect_equal(Cobj$ca, ca2)
 
-  rm(obj, Cobj); gc()
+  rm(obj, Cobj)
+  gc()
 })

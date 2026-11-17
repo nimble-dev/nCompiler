@@ -147,9 +147,6 @@
 #
 
 
-
-
-
 ###############
 #
 # foo <- function(a1) {
@@ -215,7 +212,7 @@ test_that("type handling with quosures: basics", {
   }
   foo2 <- function(a2) {
     a2t <- nCaptureType(a2)
-    foo({{a2t}})
+    foo({{ a2t }})
   }
   t1 <- foo("numericVector")
   t2 <- foo2("numericVector")
@@ -223,8 +220,8 @@ test_that("type handling with quosures: basics", {
   expect_identical(nCompiler:::nTypeSpec(t1), nCompiler:::nTypeSpec(t2))
 
   tt <- nType("numericVector")
-  t1 <- foo({{tt}})
-  t2 <- foo2({{tt}})
+  t1 <- foo({{ tt }})
+  t2 <- foo2({{ tt }})
   expect_identical(t1, t2)
   expect_identical(nCompiler:::nTypeSpec(t1), nCompiler:::nTypeSpec(t2))
 
@@ -247,10 +244,10 @@ test_that("type handling with quosures: basics", {
   t2 <- foo("numericVector()")
   t3 <- foo(numericVector())
   t4 <- foo(numericVector)
-  ts1 <- nCompiler:::nTypeSpec(t1)[c('funName', 'args')]
-  ts2 <- nCompiler:::nTypeSpec(t2)[c('funName', 'args')]
-  ts3 <- nCompiler:::nTypeSpec(t3)[c('funName', 'args')]
-  ts4 <- nCompiler:::nTypeSpec(t4)[c('funName', 'args')]
+  ts1 <- nCompiler:::nTypeSpec(t1)[c("funName", "args")]
+  ts2 <- nCompiler:::nTypeSpec(t2)[c("funName", "args")]
+  ts3 <- nCompiler:::nTypeSpec(t3)[c("funName", "args")]
+  ts4 <- nCompiler:::nTypeSpec(t4)[c("funName", "args")]
   expect_identical(ts1, ts2)
   expect_identical(ts1, ts3)
   expect_identical(ts1, ts4)
@@ -258,14 +255,13 @@ test_that("type handling with quosures: basics", {
 
 #################################
 # older tests, updated to look at uniqueID() and cpp_typename().
-test_that("numericVector(5)",
-{
+test_that("numericVector(5)", {
   ## as if `a = numericVector(5)` declared in function argument
   a <- quote(numericVector(5))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE)
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE)
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -275,14 +271,13 @@ test_that("numericVector(5)",
   expect_identical(aSym$cpp_typename(), "Eigen::Tensor<double, 1>")
 })
 
-test_that("ref(numericVector(5))",
-{
+test_that("ref(numericVector(5))", {
   ## as if `a = ref(numericVector(5))` declared in function-argument
   a <- quote(ref(numericVector(5)))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE)
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE)
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -292,16 +287,15 @@ test_that("ref(numericVector(5))",
   expect_identical(aSym$cpp_typename(), "Eigen::Tensor<double, 1> &")
 })
 
-test_that("numericVector(5) isRef=TRUE",
-{
+test_that("numericVector(5) isRef=TRUE", {
   ## as if `a = numericVector(5)` declared in function-argument
   ## and isRef=TRUE used to indicate reference
   a <- quote(numericVector(5))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE,
-                                     isRef = TRUE)
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE,
+    isRef = TRUE)
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -309,18 +303,17 @@ test_that("numericVector(5) isRef=TRUE",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("ref(numericVector(5) via explicitType)",
-{
+test_that("ref(numericVector(5) via explicitType)", {
   ## as if `a` declared in function-argument,
   ## with argType = `ref(numericVector(5))`
   a <- NULL
   aExplicit <- quote(ref(numericVector(5)))
 
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE,
-                                     explicitType = {{aExplicit}})
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE,
+    explicitType = {{ aExplicit }})
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -328,17 +321,16 @@ test_that("ref(numericVector(5) via explicitType)",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("numericVector(5) via explicitType",
-{
+test_that("numericVector(5) via explicitType", {
   ## as if `a` declared in function-argument,
   ## with argType = `numericVector(5)`
   a <- NULL
   aExplicit <- quote(numericVector(5))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE,
-                                     explicitType = {{aExplicit}})
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE,
+    explicitType = {{ aExplicit }})
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -346,18 +338,17 @@ test_that("numericVector(5) via explicitType",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("numericVector(5) isRef = TRUE via explicitType",
-{
+test_that("numericVector(5) isRef = TRUE via explicitType", {
   ## as if `a` declared in function-argument,
   ## with argType = `numericVector(5)`
   a <- NULL
   aExplicit <- quote(numericVector(5))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE,
-                                     isRef = TRUE,
-                                     explicitType = {{aExplicit}})
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE,
+    isRef = TRUE,
+    explicitType = {{ aExplicit }})
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -365,17 +356,16 @@ test_that("numericVector(5) isRef = TRUE via explicitType",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("ref(numericVector(5)) via explicitType with default value to ignore",
-{
+test_that("ref(numericVector(5)) via explicitType with default value to ignore", {
   ## as if `a` declared in function-argument with default and
   ## with argType = `ref(numericVector(5))`
   a <- quote(rnorm(5)) ## ignored
   aExplicit <- quote(ref(numericVector(5)))
-  aSym <- `:::`("nCompiler", "type2symbol")({{a}},
-                                     name = "a",
-                                     origName = "orig_a",
-                                     isArg = TRUE,
-                                     explicitType = {{aExplicit}})
+  aSym <- `:::`("nCompiler", "type2symbol")({{ a }},
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE,
+    explicitType = {{ aExplicit }})
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
   expect_identical(aSym$nDim, 1)
@@ -383,8 +373,7 @@ test_that("ref(numericVector(5)) via explicitType with default value to ignore",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("infer type from evaluating default",
-{
+test_that("infer type from evaluating default", {
   ## infer type of `a` from default
 
   # This commented code is curious.
@@ -401,9 +390,9 @@ test_that("infer type from evaluating default",
 
   a <- quote(rnorm(5))
   aSym <- `:::`("nCompiler", "type2symbol")(O(!!a),
-                                            name = "a",
-                                            origName = "orig_a",
-                                            isArg = TRUE
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE
   )
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
@@ -412,9 +401,9 @@ test_that("infer type from evaluating default",
   expect_identical(aSym$isArg, TRUE)
 
   aSym <- `:::`("nCompiler", "type2symbol")(O(rnorm(5)),
-                                            name = "a",
-                                            origName = "orig_a",
-                                            isArg = TRUE
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE
   )
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
@@ -424,9 +413,9 @@ test_that("infer type from evaluating default",
 
   at <- nType(O(rnorm(5)))
   aSym <- `:::`("nCompiler", "type2symbol")(T(at),
-                                            name = "a",
-                                            origName = "orig_a",
-                                            isArg = TRUE
+    name = "a",
+    origName = "orig_a",
+    isArg = TRUE
   )
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
@@ -435,18 +424,17 @@ test_that("infer type from evaluating default",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("infer type from evaluating default, with scoping needed",
-{
+test_that("infer type from evaluating default, with scoping needed", {
   ## infer type of `a` from default with scoping needed to
   ## evaluate the default expression.
   fun1 <- function() {
     fun2 <- function(n) rnorm(n)
     a <- quote(fun2(5))
     aSym <- `:::`("nCompiler", "type2symbol")(O(!!a),
-                                       name = "a",
-                                       origName = "orig_a",
-                                       isArg = TRUE
-                                       )
+      name = "a",
+      origName = "orig_a",
+      isArg = TRUE
+    )
     aSym
   }
   aSym <- fun1()
@@ -457,18 +445,17 @@ test_that("infer type from evaluating default, with scoping needed",
   expect_identical(aSym$isArg, TRUE)
 })
 
-test_that("Trap error from duplicate setting of isRef. (This should show a warning.)",
-{
+test_that("Trap error from duplicate setting of isRef. (This should show a warning.)", {
   ## Error-trapping:
   ## Duplicate setting of ref
   a <- quote(ref(numericVector(5)))
   cat("expecting an error:\n")
   expect_error(
     `:::`("nCompiler", "type2symbol")(O(!!a),
-                               name = "a",
-                               origName = "orig_a",
-                               isArg = TRUE,
-                               isRef = TRUE)
+      name = "a",
+      origName = "orig_a",
+      isArg = TRUE,
+      isRef = TRUE)
   )
 
   ## Error-trapping
@@ -478,26 +465,27 @@ test_that("Trap error from duplicate setting of isRef. (This should show a warni
   cat("expecting an error:\n")
   expect_error(suppressWarnings( # this gives a warning and an error, so for testing we suppress the warning
     `:::`("nCompiler", "type2symbol")(O(!!a),
-                               name = "a",
-                               origName = "orig_a",
-                               isArg = TRUE,
-                               explicitType = {{aExplicit}})
+      name = "a",
+      origName = "orig_a",
+      isArg = TRUE,
+      explicitType = {{ aExplicit }})
   ))
 })
 
-test_that("nMatrix(type = \"integer\")",
-{
+test_that("nMatrix(type = \"integer\")", {
   ## Type constructed from object
-  cat('\nTo do: test of using nType object to define type\n')
+  cat("\nTo do: test of using nType object to define type\n")
 
   ## some other basic types
-  b <- quote(nMatrix(type = "integer",
-                     nrow = 3,
-                     ncol = 5))
+  b <- quote(nMatrix(
+    type = "integer",
+    nrow = 3,
+    ncol = 5
+  ))
   bSym <- `:::`("nCompiler", "type2symbol")(O(!!b),
-                                     name = "b",
-                                     origName = "orig_b",
-                                     isArg = TRUE)
+    name = "b",
+    origName = "orig_b",
+    isArg = TRUE)
   expect_identical(bSym$name, "b")
   expect_identical(bSym$type, "integer")
   expect_equal(bSym$nDim, 2)
@@ -505,8 +493,7 @@ test_that("nMatrix(type = \"integer\")",
   expect_identical(bSym$isArg, TRUE)
 })
 
-test_that("list type works",
-{
+test_that("list type works", {
   l <- "RcppList"
   lSym <- `:::`("nCompiler", "type2symbol")(!!l, name = "l", isArg = TRUE)
   expect_identical(lSym$name, "l")
@@ -515,23 +502,26 @@ test_that("list type works",
   expect_identical(lSym$isArg, TRUE)
 })
 
-test_that("list arguments handled correctly",
-{
+test_that("list arguments handled correctly", {
   ## working from a list
   a <- quote(numericMatrix())
   b <- NULL
-  bExplicit = quote(nMatrix(type = "integer"))
+  bExplicit <- quote(nMatrix(type = "integer"))
   aRef <- TRUE
   bRef <- FALSE
   symTab <- `:::`("nCompiler", "typeList2symbolTable")(
-    typeList = list(a = a,
-                       b = b),
+    typeList = list(
+      a = a,
+      b = b
+    ),
     origNames = c("orig_a", "orig_b"),
     isRef = list(a = aRef, b = bRef),
-    explicitTypeList = list(b = {{bExplicit}})
+    explicitTypeList = list(b = {{ bExplicit }})
   )
-  expect_identical(symTab$getSymbolNames(),
-                   c("a","b"))
+  expect_identical(
+    symTab$getSymbolNames(),
+    c("a", "b")
+  )
   aSym <- symTab$getSymbol("a")
   expect_identical(aSym$name, "a")
   expect_identical(aSym$type, "double")
@@ -549,41 +539,44 @@ test_that("list arguments handled correctly",
   ## void() (return type default)
   vSym <- `:::`("nCompiler", "type2symbol")(quote(void()))
   expect_identical(vSym$type, "void")
-#  expect_identical(vSym$nDim, 0)
+  #  expect_identical(vSym$nDim, 0)
 })
 
-test_that("symbolTBD works",
-{
+test_that("symbolTBD works", {
   ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   nc1 <- nClass(
-    Cpublic = list(a = 'numericScalar')
+    Cpublic = list(a = "numericScalar")
   )
-  sym_nc1 <- nCompiler:::type2symbol('nc1', 'nc1obj')
+  sym_nc1 <- nCompiler:::type2symbol("nc1", "nc1obj")
   symTab <- nCompiler:::symbolTableClass$new()
   symTab$addSymbol(sym_nc1)
   nCompiler:::resolveTBDsymbols(symTab)
-  expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
-               paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj"))
+  expect_equal(
+    symTab$getSymbol("nc1obj")$genCppVar()$generate(),
+    paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj")
+  )
 
   ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   nc1 <- nClass(
-      Cpublic = list(a = 'numericScalar')
+    Cpublic = list(a = "numericScalar")
   )
-  sym_nc1 <- nCompiler:::type2symbol('nc1', 'nc1obj')
+  sym_nc1 <- nCompiler:::type2symbol("nc1", "nc1obj")
   symTab <- nCompiler:::symbolTableClass$new()
   symTab$addSymbol(sym_nc1)
   project_env <- new.env()
   project_env$known_nClasses <- new.env()
   nCompiler:::resolveTBDsymbols(symTab, project_env = project_env)
-  expect_equal(symTab$getSymbol("nc1obj")$genCppVar()$generate(),
-               paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj"))
+  expect_equal(
+    symTab$getSymbol("nc1obj")$genCppVar()$generate(),
+    paste0("std::shared_ptr<", NCinternals(nc1)$cpp_classname, "> nc1obj")
+  )
 })
 
 test_that("symbolTBD works with a function from a call", {
   ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   myenv <- new.env()
   myenv$nc1 <- nClass(
-    Cpublic = list(a = 'numericScalar')
+    Cpublic = list(a = "numericScalar")
   )
   sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
   res <- sym_nc1$resolveSym()
@@ -593,7 +586,7 @@ test_that("symbolTBD works with a function from a call", {
   ## nCompiler:::resetLabelFunctionCreators() # Not needed, and it causes later nCompile calls to reuse .cpp file names, so Rcpp unloads DLLs that live objects may still use.
   myenv <- new.env()
   myenv$nc1 <- nClass(
-      Cpublic = list(a = 'numericScalar')
+    Cpublic = list(a = "numericScalar")
   )
   sym_nc1 <- nCompiler:::type2symbol("myenv$nc1()", "nc1obj")
   project_env <- new.env()
@@ -614,11 +607,11 @@ test_that("types as objects works using {{ }}", {
   make_nf <- function() {
     my_type <- nType(integerVector())
     nf <- nFunction(
-      fun = function(ivec = {{my_type}}) {
+      fun = function(ivec = {{ my_type }}) {
         # x <- 1L
         nCpp("x = ivec+1;", types = list(x = quote(T(my_type))))
-        return(x+1L);
-        returnType({{my_type}})
+        return(x + 1L)
+        returnType({{ my_type }})
       }
     )
   }
@@ -634,7 +627,7 @@ test_that("types as objects works using T()", {
       fun = function(ivec = T(my_type)) {
         # x <- 1L
         nCpp("x = ivec+1;", types = list(x = quote(T(my_type))))
-        return(x+1L);
+        return(x + 1L)
         returnType(T(my_type))
       }
     )
@@ -653,7 +646,7 @@ test_that("types as objects work with an nClass", {
     nf <- nFunction(
       fun = function(ivec = T(my_type)) {
         nCpp("x = ivec.cast<double>()+1.2;", types = list(x = quote(T(my_type))))
-        return(ivec+1L);
+        return(ivec + 1L)
         returnType(T(my_type))
       }
     )
@@ -663,9 +656,10 @@ test_that("types as objects work with an nClass", {
   myenv$my_type <- nType(numericVector())
   nc <- nClass(
     Cpublic = list(
-      cust = quote(nCpp('double')),
+      cust = quote(nCpp("double")),
       v = quote(T(my_type)),
-      nf = nf),
+      nf = nf
+    ),
     env = myenv
   )
   ncC <- nCompile(nc)
@@ -675,11 +669,11 @@ test_that("types as objects work with an nClass", {
 })
 
 test_that("string type works in nFunctions", {
-    foo <- nFunction(
-        fun=function(mystr = 'string'){
-            return(mystr)
-        }, returnType = 'string'
-    )
-    cfoo <- nCompile(foo)
-    expect_identical(cfoo("hw"),"hw")
+  foo <- nFunction(
+    fun = function(mystr = "string") {
+      return(mystr)
+    }, returnType = "string"
+  )
+  cfoo <- nCompile(foo)
+  expect_identical(cfoo("hw"), "hw")
 })

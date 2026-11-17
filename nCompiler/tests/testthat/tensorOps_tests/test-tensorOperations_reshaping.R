@@ -9,10 +9,9 @@
 
 # wrapper to "nCompile" the operation x "op" y given input and return types
 nCompileOp <- function(xType, yType, retType, op) {
-
   # R-based operation
   nOp <- eval(parse(text = gsub(
-    pattern = 'op',
+    pattern = "op",
     replacement = op,
     x = "function(x, y) {
           ans <- x op y
@@ -32,14 +31,13 @@ nCompileOp <- function(xType, yType, retType, op) {
 
 # wrapper to "nCompile" the nested operations given input and return types
 nCompileTwoOp <- function(xType, yType, zType, retType, op1, op2) {
-
   # R-based operation
 
   nOp <- eval(parse(text = gsub(
-    pattern = 'op2',
+    pattern = "op2",
     replacement = op2,
     x = gsub(
-      pattern = 'op1',
+      pattern = "op1",
       replacement = op1,
       x = "function(x, y, z) {
           ans <- (x op1 y) op2 z
@@ -73,51 +71,51 @@ A4 <- array(as.numeric(sample(1:100, size = 6)), dim = c(1, 3, 2))
 
 
 # %*% is not supported b/c it requires more specific reshaping rules
-logical_optypes <- c('<=', '>=', '<', '>', '&', '|', '==', '!=')
-optypes <- c('+', '-', '*', '/', logical_optypes)
+logical_optypes <- c("<=", ">=", "<", ">", "&", "|", "==", "!=")
+optypes <- c("+", "-", "*", "/", logical_optypes)
 
 test_that("tensorOperations with re-shaping for single ops", {
   # testing single operations
-  for(o in optypes) {
-
-    message(paste('testing:', 'A', o, 'B'))
+  for (o in optypes) {
+    message(paste("testing:", "A", o, "B"))
 
     #
     # nCompiler units
     #
 
     # return types
-    retMatrix <- ifelse(o %in% logical_optypes, 'logicalMatrix', 'numericMatrix')
+    retMatrix <- ifelse(o %in% logical_optypes, "logicalMatrix", "numericMatrix")
     retArray <- ifelse(o %in% logical_optypes,
-                       'logicalArray(nDim = 3)',
-                       'numericArray(nDim = 3)')
+      "logicalArray(nDim = 3)",
+      "numericArray(nDim = 3)"
+    )
 
     # vector first, then matrix
     op_v_m <- nCompileOp(
-      xType = 'numericVector',
-      yType = 'numericMatrix',
+      xType = "numericVector",
+      yType = "numericMatrix",
       retType = retMatrix,
       op = o
     )
 
     # reverse order of previous arguments
     op_m_v <- nCompileOp(
-      xType = 'numericMatrix',
-      yType = 'numericVector',
+      xType = "numericMatrix",
+      yType = "numericVector",
       retType = retMatrix,
       op = o
     )
 
     op_m_m <- nCompileOp(
-      xType = 'numericMatrix',
-      yType = 'numericMatrix',
+      xType = "numericMatrix",
+      yType = "numericMatrix",
       retType = retMatrix,
       op = o
     )
 
     op_v_a3 <- nCompileOp(
-      xType = 'numericVector',
-      yType = 'numericArray(nDim = 3)',
+      xType = "numericVector",
+      yType = "numericArray(nDim = 3)",
       retType = retArray,
       op = o
     )
@@ -125,8 +123,8 @@ test_that("tensorOperations with re-shaping for single ops", {
     # nCompiler will not support ops for non-conformable arrays
     expect_error(
       op_a2_a3 <- nCompileOp(
-        xType = 'numericArray(nDim = 2)',
-        yType = 'numericArray(nDim = 3)',
+        xType = "numericArray(nDim = 2)",
+        yType = "numericArray(nDim = 3)",
         retType = retArray,
         op = o
       )
@@ -135,8 +133,8 @@ test_that("tensorOperations with re-shaping for single ops", {
     # nCompiler will not support ops for non-conformable arrays
     expect_error(
       op_m_a3 <- nCompileOp(
-        xType = 'numericMatrix',
-        yType = 'numericArray(nDim = 3)',
+        xType = "numericMatrix",
+        yType = "numericArray(nDim = 3)",
         retType = retArray,
         op = o
       )
@@ -146,7 +144,7 @@ test_that("tensorOperations with re-shaping for single ops", {
     # Demos
     #
 
-    opfun = match.fun(o)
+    opfun <- match.fun(o)
 
     # nCompiler supports R-like matrix-vector behavior
     expect_identical(opfun(M1, V1), op_m_v(x = M1, y = V1))
@@ -174,55 +172,50 @@ test_that("tensorOperations with re-shaping for single ops", {
     # # Issues: These should throw errors, but don't. Are runtime args validated?
     # op_v_m(x = V1, y = A3)  # essentially returns V1 "op" A3[1:3]
     # op_v_a3(x = V1, y = M1) # crashes R
-
   }
 })
 
 test_that("tensorOperations with re-shaping with composition of ops", {
-# testing compositions of operations
-for(o in optypes) {
+  # testing compositions of operations
+  for (o in optypes) {
+    opfun <- match.fun(o)
 
-  opfun = match.fun(o)
+    for (o2 in optypes) {
+      message(paste("testing:", "(A", o, "B)", o2, "C"))
 
-  for(o2 in optypes) {
+      retMatrix <- ifelse(
+        o2 %in% logical_optypes, "logicalMatrix", "numericMatrix"
+      )
 
-    message(paste('testing:', '(A', o, 'B)', o2, 'C'))
+      op_m_v_v <- nCompileTwoOp(
+        xType = "numericMatrix",
+        yType = "numericVector",
+        zType = "numericVector",
+        retType = retMatrix,
+        op1 = o,
+        op2 = o2
+      )
 
-    retMatrix <- ifelse(
-      o2 %in% logical_optypes, 'logicalMatrix', 'numericMatrix'
-    )
+      op_v_v_m <- nCompileTwoOp(
+        xType = "numericVector",
+        yType = "numericVector",
+        zType = "numericMatrix",
+        retType = retMatrix,
+        op1 = o,
+        op2 = o2
+      )
 
-    op_m_v_v <- nCompileTwoOp(
-      xType = 'numericMatrix',
-      yType = 'numericVector',
-      zType = 'numericVector',
-      retType = retMatrix,
-      op1 = o,
-      op2 = o2
-    )
+      opfun2 <- match.fun(o2)
 
-    op_v_v_m <- nCompileTwoOp(
-      xType = 'numericVector',
-      yType = 'numericVector',
-      zType = 'numericMatrix',
-      retType = retMatrix,
-      op1 = o,
-      op2 = o2
-    )
-
-    opfun2 = match.fun(o2)
-
-    # nCompiler supports composition of R-like matrix-vector behavior
-    expect_identical(
-      opfun2(opfun(M1, V1), V2),
-      op_m_v_v(x = M1, y = V1, z = V2)
-    )
-    expect_identical(
-      opfun2(opfun(V1, V2), M1),
-      op_v_v_m(x = V1, y = V2, z = M1)
-    )
-
+      # nCompiler supports composition of R-like matrix-vector behavior
+      expect_identical(
+        opfun2(opfun(M1, V1), V2),
+        op_m_v_v(x = M1, y = V1, z = V2)
+      )
+      expect_identical(
+        opfun2(opfun(V1, V2), M1),
+        op_v_v_m(x = V1, y = V2, z = M1)
+      )
+    }
   }
-
-}
 })

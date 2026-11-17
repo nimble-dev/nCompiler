@@ -4,65 +4,77 @@ labelAbstractTypesEnv$.debug <- FALSE
 compile_labelAbstractTypes <- function(code,
                                        symTab,
                                        auxEnv) {
-  nErrorEnv$stateInfo <- paste0("handling labelAbstractTypes for ",
-                                code$name,
-                                ".")
+  nErrorEnv$stateInfo <- paste0(
+    "handling labelAbstractTypes for ",
+    code$name,
+    "."
+  )
 
-  logging <- get_nOption('compilerOptions')[['logging']]
-  if (logging) appendToLog(paste('###', nErrorEnv$stateInfo, '###'))
+  logging <- get_nOption("compilerOptions")[["logging"]]
+  if (logging) appendToLog(paste("###", nErrorEnv$stateInfo, "###"))
 
-  if(isTRUE(auxEnv$onLHS)) code$aux$onLHS <- TRUE
+  if (isTRUE(auxEnv$onLHS)) code$aux$onLHS <- TRUE
 
-  if(code$isLiteral) {
-    if(is.numeric(code$name)) {
-      if(is.integer(code$name)) {
-        code$type <- symbolBasic$new(name = 'NONAME',
-                                     type = 'integer',
-                                     nDim = 0)
+  if (code$isLiteral) {
+    if (is.numeric(code$name)) {
+      if (is.integer(code$name)) {
+        code$type <- symbolBasic$new(
+          name = "NONAME",
+          type = "integer",
+          nDim = 0
+        )
         return(NULL)
       } else {
-        code$type <- symbolBasic$new(name = 'NONAME',
-                                     type = 'double',
-                                     nDim = 0)
+        code$type <- symbolBasic$new(
+          name = "NONAME",
+          type = "double",
+          nDim = 0
+        )
         return(NULL)
       }
-    } else if(is.logical(code$name)) {
-      code$type <- symbolBasic$new(name = 'NONAME',
-                                   type = 'logical',
-                                   nDim = 0)
+    } else if (is.logical(code$name)) {
+      code$type <- symbolBasic$new(
+        name = "NONAME",
+        type = "logical",
+        nDim = 0
+      )
       return(NULL)
-    } else if(is.character(code$name)) {
-      code$type <- symbolBasicString$new(name = 'NONAME',
-                                         nDim = 0)
+    } else if (is.character(code$name)) {
+      code$type <- symbolBasicString$new(
+        name = "NONAME",
+        nDim = 0
+      )
       return(NULL)
     }
   }
 
-  if(code$isName) {
+  if (code$isName) {
     ## If it doesn't exist and must exist, stop
-    if(code$name != "") { ## e.g. In A[i,], second index gives name==""
-      if(symTab$symbolExists(code$name, TRUE)) {
+    if (code$name != "") { ## e.g. In A[i,], second index gives name==""
+      if (symTab$symbolExists(code$name, TRUE)) {
         thisSymbolObject <- symTab$getSymbol(code$name, TRUE)
-        ##code$typeName <- class(thisSymbolObject)[1]
+        ## code$typeName <- class(thisSymbolObject)[1]
         code$type <- thisSymbolObject
       } else {
         ## Look up NCgenerators
         obj <- nGet(code$name, where = auxEnv$where, project_env = auxEnv$project_env)
-        if(!is.null(obj)) {
-          if(isNCgenerator(obj)) {
+        if (!is.null(obj)) {
+          if (isNCgenerator(obj)) {
             register_known_nClass(obj, project_env = auxEnv$project_env)
-            newSym <- symbolNCgenerator$new(name = code$name,
-                                            type = code$name,
-                                            NCgenerator = obj)
+            newSym <- symbolNCgenerator$new(
+              name = code$name,
+              type = code$name,
+              NCgenerator = obj
+            )
             code$type <- newSym
             auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, obj)
             return(NULL)
           }
         }
         # see if code$name is a method of current nClass
-        if(is.null(obj) & isNCgenerator(auxEnv$where)) {
+        if (is.null(obj) & isNCgenerator(auxEnv$where)) {
           found_method <- NC_find_method(auxEnv$where, code$name, inherits = TRUE)
-          if(!is.null(found_method)) {
+          if (!is.null(found_method)) {
             # code$name is as a reference to the member function as an object
             labelAbstractTypesEnv$reference_nFunction_or_method_AST(
               code, auxEnv$where
@@ -70,90 +82,102 @@ compile_labelAbstractTypes <- function(code,
             return(NULL)
           }
         }
-        if(!auxEnv$.AllowUnknowns)
-          if(identical(code$name, 'pi')) {
+        if (!auxEnv$.AllowUnknowns) {
+          if (identical(code$name, "pi")) {
             ## unique because it may be encountered anew on a LHS
             ## and be valid as a new variable name, or on the RHS
             ## and be a constant if it's not yet a variable
-            newSymbol <- symbolBasic$new(name = 'pi',
-                                         type = 'double',
-                                         nDim = 0)
+            newSymbol <- symbolBasic$new(
+              name = "pi",
+              type = "double",
+              nDim = 0
+            )
             symTab$addSymbol(newSymbol)
             code$type <- newSymbol
             # code$nDim <- 0
-            ##code$typeName <- 'double'
+            ## code$typeName <- 'double'
           } else {
-            stop(paste0("variable '",
-                        code$name,
-                        "' has not been created yet."),
-                 call.=FALSE)
+            stop(
+              paste0(
+                "variable '",
+                code$name,
+                "' has not been created yet."
+              ),
+              call. = FALSE
+            )
           }
+        }
       }
     }
     return(NULL)
   }
 
-  if(code$isCall) {
-    if(code$name == '{') {
+  if (code$isCall) {
+    if (code$name == "{") {
       ## recurse over lines
-      for(i in seq_along(code$args)) {
+      for (i in seq_along(code$args)) {
         newInsertions <-
           compile_labelAbstractTypes(code$args[[i]], symTab, auxEnv)
         code$args[[i]]$insertions <-
-          if(is.null(newInsertions)) list() else newInsertions
+          if (is.null(newInsertions)) list() else newInsertions
       }
       return(invisible(NULL))
     }
 
-    opInfo <- check_cachedOpInfo(code, where=auxEnv$where, update=TRUE)
+    opInfo <- check_cachedOpInfo(code, where = auxEnv$where, update = TRUE)
     isGeneric <- isTRUE(opInfo$opDef$isGeneric)
     handler <- NULL
     handlingInfo <- NULL
-    if(isGeneric) {
-      if(length(code$args) > 0) {
+    if (isGeneric) {
+      if (length(code$args) > 0) {
         arg1 <- code$args[[1]]
         inserts <- labelAbstractTypesEnv$recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                              handlingInfo, useArgs = c(TRUE, rep(FALSE, length(code$args)-1)))
+          handlingInfo,
+          useArgs = c(TRUE, rep(FALSE, length(code$args) - 1))
+        )
         inserts <- NULL # highlighting that currently these are thrown out -- possibly a problem.
-        handlingInfo <- symbol_find_overload(arg1$type, code$name, "labelAbstractTypes", inherits=TRUE)
-        if(!is.null(handlingInfo)) {
-          handler <- handlingInfo[['handler']]
+        handlingInfo <- symbol_find_overload(arg1$type, code$name, "labelAbstractTypes", inherits = TRUE)
+        if (!is.null(handlingInfo)) {
+          handler <- handlingInfo[["handler"]]
         }
       }
     }
-    if(is.null(handlingInfo)) {
+    if (is.null(handlingInfo)) {
       handlingInfo <- getOperatorField(opInfo$opDef, "labelAbstractTypes")
-      if(!is.null(handlingInfo))
-        handler <- handlingInfo[['handler']]
+      if (!is.null(handlingInfo)) {
+        handler <- handlingInfo[["handler"]]
+      }
     }
 
     # if(!is.null(handlingInfo)) {
     #   handler <- handlingInfo[['handler']]
-      if(!is.null(handler)) {
-        debug_handlers <- isTRUE(get_nOption('compilerOptions')$debug_labelAbstractTypes)
-        if (logging)
-          appendToLog(paste('Calling handler', handler, 'for', code$name))
+    if (!is.null(handler)) {
+      debug_handlers <- isTRUE(get_nOption("compilerOptions")$debug_labelAbstractTypes)
+      if (logging) {
+        appendToLog(paste("Calling handler", handler, "for", code$name))
+      }
 
-        if(is.function(handler)) {
-          if(debug_handlers) debugonce(handler)
-          ans <- handler(code, symTab,  auxEnv, handlingInfo)
-        } else {
-          if(debug_handlers) debugonce(get(handler, envir = labelAbstractTypesEnv, inherit = FALSE))
-          ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
-                      envir = labelAbstractTypesEnv)
+      if (is.function(handler)) {
+        if (debug_handlers) debugonce(handler)
+        ans <- handler(code, symTab, auxEnv, handlingInfo)
+      } else {
+        if (debug_handlers) debugonce(get(handler, envir = labelAbstractTypesEnv, inherit = FALSE))
+        ans <- eval(call(handler, code, symTab, auxEnv, handlingInfo),
+          envir = labelAbstractTypesEnv
+        )
+      }
+      # A returnSym from another function or method could be a symbolTBD, so we resolve:
+      if (!is.null(code$type)) {
+        if (inherits(code$type, "symbolTBD")) {
+          code$type <- resolveOneTBDsymbol(code$type, project_env = auxEnv$project_env)
         }
-        # A returnSym from another function or method could be a symbolTBD, so we resolve:
-        if(!is.null(code$type)) {
-          if(inherits(code$type, "symbolTBD")) {
-            code$type <- resolveOneTBDsymbol(code$type, project_env = auxEnv$project_env)
-          }
-        }
-        nErrorEnv$stateInfo <- character()
-        if (logging) {
-          appendToLog(paste('Finished handling', handler, 'for', code$name))
-          logAST(code, paste('Resulting AST for', code$name), showImpl = FALSE)
-        }
-        return(ans)
+      }
+      nErrorEnv$stateInfo <- character()
+      if (logging) {
+        appendToLog(paste("Finished handling", handler, "for", code$name))
+        logAST(code, paste("Resulting AST for", code$name), showImpl = FALSE)
+      }
+      return(ans)
     }
     # }
   }
@@ -172,54 +196,71 @@ inLabelAbstractTypesEnv(
              useArgs = rep(TRUE, length(code$args))) {
       ## won't be here unless code is a call.  It will not be a {
       inserts <- list()
-      for(i in seq_along(code$args)) {
-        if(useArgs[i]) {
-          if(inherits(code$args[[i]], 'exprClass')) {
-            inserts <- c(inserts,
-                         compile_labelAbstractTypes(code$args[[i]],
-                                                    symTab,
-                                                    auxEnv))
+      for (i in seq_along(code$args)) {
+        if (useArgs[i]) {
+          if (inherits(code$args[[i]], "exprClass")) {
+            inserts <- c(
+              inserts,
+              compile_labelAbstractTypes(
+                code$args[[i]],
+                symTab,
+                auxEnv
+              )
+            )
           }
         }
       }
-      if(length(inserts)==0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
 inLabelAbstractTypesEnv(
   setReturnType <- function(handlingInfo, argType) {
-    returnTypeCode <- handlingInfo[['returnTypeCode']]
-    if(is.null(returnTypeCode)) return('double')
-    switch(
-      returnTypeCode,
-      'AD', ##1
-      'double', ##2
-      'integer', ##3
-      'logical', ##4
-      argType, ##5
-      if(argType == 'AD') 'AD' else 'double', ## 6
-      if(argType == 'logical') 'integer' else argType, ##7
-      'character', ##8
-      if(argType == "character") "character" else {
+    returnTypeCode <- handlingInfo[["returnTypeCode"]]
+    if (is.null(returnTypeCode)) {
+      return("double")
+    }
+    switch(returnTypeCode,
+      "AD", ## 1
+      "double", ## 2
+      "integer", ## 3
+      "logical", ## 4
+      argType, ## 5
+      if (argType == "AD") "AD" else "double", ## 6
+      if (argType == "logical") "integer" else argType, ## 7
+      "character", ## 8
+      if (argType == "character") {
+        "character"
+      } else {
         argType # This logic reduces to argType, but is shown for clarity
-      }, ##9: characterOrPromote
-      if(argType == "character") "character" else {
-        if(argType == 'AD') 'AD' else 'double'
-      }, ##10: characterOrPromoteToDoubleOrAD
-      if(argType == "character") "character" else {
-        if(argType == 'logical') 'integer' else argType
-      }, ##11: characterOrPromoteNoLogical
-      stop(paste0("In setReturnType: unrecognized returnTypeCode: ",
-                  returnTypeCode),
-           call. = FALSE)
+      }, ## 9: characterOrPromote
+      if (argType == "character") {
+        "character"
+      } else {
+        if (argType == "AD") "AD" else "double"
+      }, ## 10: characterOrPromoteToDoubleOrAD
+      if (argType == "character") {
+        "character"
+      } else {
+        if (argType == "logical") "integer" else argType
+      }, ## 11: characterOrPromoteNoLogical
+      stop(
+        paste0(
+          "In setReturnType: unrecognized returnTypeCode: ",
+          returnTypeCode
+        ),
+        call. = FALSE
+      )
     )
   }
 )
 
 inLabelAbstractTypesEnv(
   setReturn_nDim <- function(handlingInfo, arg_nDim) {
-    return_nDim <- handlingInfo[['return_nDim']]
-    if (is.null(return_nDim)) return(arg_nDim)
+    return_nDim <- handlingInfo[["return_nDim"]]
+    if (is.null(return_nDim)) {
+      return(arg_nDim)
+    }
     return_nDim
   }
 )
@@ -229,8 +270,10 @@ inLabelAbstractTypesEnv(
     # update to evalCompileArg()
     type <- eval(code$aux$compileArgs$type, envir = auxEnv$where)
     sym <- type2symbol(type)
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo)
+    inserts <- recurse_labelAbstractTypes(
+      code, symTab, auxEnv,
+      handlingInfo
+    )
     code$args[["value"]]$type <- sym
     removeExprClassLayer(code, "value")
   }
@@ -239,11 +282,11 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   As <- function(code, symTab, auxEnv, handlingInfo) {
     inner_type <- nType(expr = code$aux$compileArgs$type, env = auxEnv$where)
-    sym <- type2symbol({{inner_type}}, where = auxEnv$where)
+    sym <- type2symbol({{ inner_type }}, where = auxEnv$where)
     sym <- resolveOneTBDsymbol(sym, env = auxEnv$where, project_env = auxEnv$project_env)
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     code$type <- sym
-    if(length(inserts) == 0) NULL else inserts
+    if (length(inserts) == 0) NULL else inserts
   }
 )
 
@@ -261,15 +304,18 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   ChainedCall <-
     function(code, symTab, auxEnv, handlingInfo) {
-      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo)
-      if(!inherits(code$args[[1]]$type, "symbolNF"))
+      inserts <- recurse_labelAbstractTypes(
+        code, symTab, auxEnv,
+        handlingInfo
+      )
+      if (!inherits(code$args[[1]]$type, "symbolNF")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'trying to make a function call from something that is not an nFunction.'
+          "trying to make a function call from something that is not an nFunction."
         ), call. = FALSE)
+      }
       code$type <- code$args[[1]]$type$returnSym$clone(deep = TRUE)
-      if(length(inserts) == 0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
@@ -278,47 +324,55 @@ inLabelAbstractTypesEnv(
 ## MethodCall handler:
 ## Recurse on A only. Expect nClass object (or generator for $new).
 ## Then set aux$myNCgen to A's NCgenerator.
-## Then look up the opDef for foo in that nClass, 
-##.   normalize its arguments, and label it.
+## Then look up the opDef for foo in that nClass,
+## .   normalize its arguments, and label it.
 ## The C++ name of the method is stored in aux$cpp_method_name.
 inLabelAbstractTypesEnv(
   MethodCall <-
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo,
-                                            useArgs = c(TRUE, FALSE))
+        handlingInfo,
+        useArgs = c(TRUE, FALSE)
+      )
       objType <- code$args[[1]]$type
       methodCode <- code$args[[2]]
-      if(inherits(objType, "symbolNCgenerator")) {
+      if (inherits(objType, "symbolNCgenerator")) {
         ## Gen$new(args) becomes construct_new_nClass(args)
-        if(methodCode$name != "new")
+        if (methodCode$name != "new") {
           stop(exprClassProcessingErrorMsg(
             code,
-            'the only method that can be called from an nClass generator is `new`.'
+            "the only method that can be called from an nClass generator is `new`."
           ), call. = FALSE)
+        }
         NCgen <- objType$NCgenerator
         NC_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
-        returnSym <- symbolNC$new(name = '',
-                                  type = objType$name,
-                                  isArg = FALSE,
-                                  overloadDefs = NC_info$inheritInfo$overloadDefs,
-                                  NCgenerator = NCgen)
+        returnSym <- symbolNC$new(
+          name = "",
+          type = objType$name,
+          isArg = FALSE,
+          overloadDefs = NC_info$inheritInfo$overloadDefs,
+          NCgenerator = NCgen
+        )
         newArgs <- methodCode$args
-        code$name <- 'construct_new_nClass'
+        code$name <- "construct_new_nClass"
         code$args <- list()
-        for(i in seq_along(newArgs))
+        for (i in seq_along(newArgs)) {
           insertArg(code, i, newArgs[[i]], name = names(newArgs)[i])
+        }
         code$aux$cpp_classname <- NCinternals(NCgen)$cpp_classname
-        inserts <- c(inserts,
-                     recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo))
+        inserts <- c(
+          inserts,
+          recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+        )
         code$type <- returnSym
-        return(if(length(inserts) == 0) NULL else inserts)
+        return(if (length(inserts) == 0) NULL else inserts)
       }
-      if(!inherits(objType, "symbolNC"))
+      if (!inherits(objType, "symbolNC")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'left-hand-side of `$` is not an nClass object.'
+          "left-hand-side of `$` is not an nClass object."
         ), call. = FALSE)
+      }
       NCgen <- objType$NCgenerator
       nClass_info <- register_known_nClass(NCgen, project_env = auxEnv$project_env)
       methodCode$aux$myNCgen <- NCgen
@@ -327,42 +381,50 @@ inLabelAbstractTypesEnv(
       ## This will be NULL for an nClass-level opDef that has no corresponding method.
       methodCode$aux$cpp_method_name <-
         nClass_info$inheritInfo$all_methodName_to_cpp_code_name[[methodCode$name]]
-      inserts <- c(inserts,
-                   compile_labelAbstractTypes(methodCode, symTab, auxEnv))
+      inserts <- c(
+        inserts,
+        compile_labelAbstractTypes(methodCode, symTab, auxEnv)
+      )
       code$type <- methodCode$type
-      if(length(inserts) == 0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
 inLabelAbstractTypesEnv(
   nCppVec <- function(code, symTab, auxEnv, handlingInfo) {
     inner_type <- nType(expr = code$aux$compileArgs$type, env = auxEnv$where)
-    sym <- type2symbol({{inner_type}}, where = auxEnv$where)
+    sym <- type2symbol({{ inner_type }}, where = auxEnv$where)
     sym <- resolveOneTBDsymbol(sym, env = auxEnv$where, project_env = auxEnv$project_env)
     code$type <- symbolNcppVec$new(elementSym = sym)
-    removeArg(code, "type", allow_missing=TRUE)
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo)
+    removeArg(code, "type", allow_missing = TRUE)
+    inserts <- recurse_labelAbstractTypes(
+      code, symTab, auxEnv,
+      handlingInfo
+    )
     auxEnv$uses_nCppVec <- TRUE
-    if(length(inserts) == 0) NULL else inserts
+    if (length(inserts) == 0) NULL else inserts
   }
 )
 
 inLabelAbstractTypesEnv(
   Switch <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo)
+    inserts <- recurse_labelAbstractTypes(
+      code, symTab, auxEnv,
+      handlingInfo
+    )
     code$type <- "NA" # should never be looked at because Switch has no return type
-    if(length(inserts) == 0) NULL else inserts
+    if (length(inserts) == 0) NULL else inserts
   }
 )
 
 inLabelAbstractTypesEnv(
   ETaccess <- function(code, symTab, auxEnv, handlingInfo) {
-    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo)
-    code$type <- symbolETaccBase$new(name = '') # should never be looked at because ETaccess has no return type
-    if(length(inserts) == 0) NULL else inserts
+    inserts <- recurse_labelAbstractTypes(
+      code, symTab, auxEnv,
+      handlingInfo
+    )
+    code$type <- symbolETaccBase$new(name = "") # should never be looked at because ETaccess has no return type
+    if (length(inserts) == 0) NULL else inserts
   }
 )
 
@@ -374,8 +436,10 @@ nCompiler:::inLabelAbstractTypesEnv(
     useArgs <- rep(TRUE, length(code$args))
     useArgs[1] <- FALSE # already processed
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                          handlingInfo, useArgs = useArgs)
-    if(inherits(code$args[[1]]$type, "symbolNC")) {
+      handlingInfo,
+      useArgs = useArgs
+    )
+    if (inherits(code$args[[1]]$type, "symbolNC")) {
       # if(isTRUE(code$args[[2]]$isLiteral)) {
       #   # This case is from the end of DollarSign (could be combined)
       #   innerName <- as.character(code$args[[2]]$name)
@@ -389,18 +453,20 @@ nCompiler:::inLabelAbstractTypesEnv(
       #   code$name <- '->member'
       # } else {
       {
-        code$type <- symbolETaccBase$new(name = '')
-        code$name <- '->method'
-        insertArg(code, 2, exprClass$new(name = 'access', isName = TRUE, isCall = FALSE,
-                                         isLiteral = FALSE, isAssign = FALSE))
+        code$type <- symbolETaccBase$new(name = "")
+        code$name <- "->method"
+        insertArg(code, 2, exprClass$new(
+          name = "access", isName = TRUE, isCall = FALSE,
+          isLiteral = FALSE, isAssign = FALSE
+        ))
       }
-      return(if(length(inserts) == 0) NULL else inserts)
+      return(if (length(inserts) == 0) NULL else inserts)
     }
     # return type of x[[i]] is the element type of x
     # and return type of `[[<-`(x, i, value) is the type of value,
-    #.  which is also the element type of x, so both cases have same return type
+    # .  which is also the element type of x, so both cases have same return type
     code$type <- code$args[[1]]$type$elementSym$clone()
-    if(length(inserts) == 0) NULL else inserts
+    if (length(inserts) == 0) NULL else inserts
   }
 )
 
@@ -415,42 +481,50 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       ## TO-DO: Check for exactly 2 arguments
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo,
-                                            useArgs = c(TRUE, FALSE))
-      if(inherits(code$args[[1]]$type, "symbolNCgenerator"))
+        handlingInfo,
+        useArgs = c(TRUE, FALSE)
+      )
+      if (inherits(code$args[[1]]$type, "symbolNCgenerator")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'the only use of `$` on an nClass generator is to call `$new( )`.'
+          "the only use of `$` on an nClass generator is to call `$new( )`."
         ), call. = FALSE)
-      if(!inherits(code$args[[1]]$type, 'symbolNC'))
+      }
+      if (!inherits(code$args[[1]]$type, "symbolNC")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'left-hand-side of `$` is not an nClass object.'
+          "left-hand-side of `$` is not an nClass object."
         ), call. = FALSE)
-      if(!code$args[[2]]$isName)
+      }
+      if (!code$args[[2]]$isName) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'right-hand-side of `$` is not a name.'
+          "right-hand-side of `$` is not a name."
         ), call. = FALSE)
+      }
 
       innerName <- code$args[[2]]$name
-      if(!is.null(NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits=TRUE)))
+      if (!is.null(NC_find_method(code$args[[1]]$type$NCgenerator, innerName, inherits = TRUE))) {
         stop(exprClassProcessingErrorMsg(
           code,
-          paste0('method ', innerName, ' is used without being called. ',
-                 'Using a method of another object as a value is not supported.')
+          paste0(
+            "method ", innerName, " is used without being called. ",
+            "Using a method of another object as a value is not supported."
+          )
         ), call. = FALSE)
+      }
       nClass_info <- register_known_nClass(code$args[[1]]$type$NCgenerator, project_env = auxEnv$project_env)
       obj_symbolTable <- nClass_info$symbolTable
-      symbol <- obj_symbolTable$getSymbol(innerName, inherits=TRUE)
-      if(is.null(symbol))
+      symbol <- obj_symbolTable$getSymbol(innerName, inherits = TRUE)
+      if (is.null(symbol)) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'right-hand-side of `$` could not be found.'
+          "right-hand-side of `$` could not be found."
         ), call. = FALSE)
+      }
       code$type <- symbol$clone(deep = TRUE)
-      code$name <- '->member'
-      if(length(inserts) == 0) NULL else inserts
+      code$name <- "->member"
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
@@ -461,25 +535,28 @@ inLabelAbstractTypesEnv(
 ## I think this could be moved to the normalizeCalls compile stage
 inLabelAbstractTypesEnv(
   reference_nFunction_or_method_AST <- function(code, obj) {
-
-    if(isFALSE(code$isName)) {
+    if (isFALSE(code$isName)) {
       stop(exprClassProcessingErrorMsg(
-        code, paste('In reference_nFunction_or_method_AST: the nFunction ',
-                    code$name, ' is not used as an object', sep = '')
+        code, paste("In reference_nFunction_or_method_AST: the nFunction ",
+          code$name, " is not used as an object",
+          sep = ""
+        )
       ))
     }
 
     # access nFunction
-    tgt <- NC_find_method(obj, code$name, inherits=TRUE)
-    if(is.null(tgt)) {
+    tgt <- NC_find_method(obj, code$name, inherits = TRUE)
+    if (is.null(tgt)) {
       stop(exprClassProcessingErrorMsg(
-        code, paste('In reference_nFunction_or_method_AST: the nFunction ',
-                    code$name, ' is not a method for nClass "obj"', sep = '')
+        code, paste("In reference_nFunction_or_method_AST: the nFunction ",
+          code$name, ' is not a method for nClass "obj"',
+          sep = ""
+        )
       ))
     }
 
     # wrap the nFunction usage
-    wrapExprClassOperator(code = code, funName = 'nFunctionRef')
+    wrapExprClassOperator(code = code, funName = "nFunctionRef")
 
     # name substitution
     # cpp_code_name <- tgt$cpp_code_name
@@ -498,52 +575,64 @@ inLabelAbstractTypesEnv(
 
     ## TO-DO: Add error-trapping of argument types
     returnSym <- tgt$returnSym
-    if(is.null(returnSym))
+    if (is.null(returnSym)) {
       stop(
         exprClassProcessingErrorMsg(
-          code, paste('In reference_nFunction_or_method_AST: the nFunction (or method) ',
-                      code$name,
-                      ' does not have a valid returnType.')
-        ), call. = FALSE
+          code, paste(
+            "In reference_nFunction_or_method_AST: the nFunction (or method) ",
+            code$name,
+            " does not have a valid returnType."
+          )
+        ),
+        call. = FALSE
       )
+    }
     code$type <- symbolNF$new(name = cpp_code_name, returnSym = tgt$returnSym)
     code$caller$type <- code$type$clone()
     invisible(NULL)
-    }
+  }
 )
 
 nCompiler:::inLabelAbstractTypesEnv(
   custom_call <-
     function(code, symTab, auxEnv, handlingInfo) {
-      recurse <- isTRUE(handlingInfo[['recurse']])
-      if(recurse) {
-        inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                              handlingInfo)
+      recurse <- isTRUE(handlingInfo[["recurse"]])
+      if (recurse) {
+        inserts <- recurse_labelAbstractTypes(
+          code, symTab, auxEnv,
+          handlingInfo
+        )
       }
-      HIreturnType <- handlingInfo[['returnType']]
+      HIreturnType <- handlingInfo[["returnType"]]
       returnType <- type2symbol(!!HIreturnType, where = auxEnv$where)
       code$type <- returnType # returnType$clone(deep = TRUE)
-      if(length(inserts) == 0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
 inLabelAbstractTypesEnv(
   nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {
-      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo)
+      inserts <- recurse_labelAbstractTypes(
+        code, symTab, auxEnv,
+        handlingInfo
+      )
       obj_internals <- code$aux$cachedOpInfo$obj_internals
-#      nFunctionName <- obj_internals$nFunctionName
-#      code$aux$symbolNF <- symbolNF$new(name = nFunctionName)
+      #      nFunctionName <- obj_internals$nFunctionName
+      #      code$aux$symbolNF <- symbolNF$new(name = nFunctionName)
       returnSym <- obj_internals$returnSym
-      if(is.null(returnSym))
+      if (is.null(returnSym)) {
         stop(
           exprClassProcessingErrorMsg(
-            code, paste('In nFunction_or_method_call: the nFunction (or method) ',
-                        code$name,
-                        ' does not have a valid returnType.')
-          ), call. = FALSE
+            code, paste(
+              "In nFunction_or_method_call: the nFunction (or method) ",
+              code$name,
+              " does not have a valid returnType."
+            )
+          ),
+          call. = FALSE
         )
+      }
       code$type <- returnSym$clone() ## clone is needed because we might resolve a TBD symbol and we don't want to change the original returnSym
       inserts
     }
@@ -587,33 +676,35 @@ inLabelAbstractTypesEnv(
 
 
 inLabelAbstractTypesEnv(
-    nC <- function(code, symTab, auxEnv, handlingInfo) {
+  nC <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     type <- setReturnType(handlingInfo, code$args[[1]]$type$type)
     nDim <- setReturn_nDim(handlingInfo, code$args[[1]]$type$nDim)
     anyCharacter <- type == "character"
     allCharacter <- anyCharacter
-    if(length(code$args) > 1) {
-      for(i in 2:length(code$args)) {
+    if (length(code$args) > 1) {
+      for (i in 2:length(code$args)) {
         nextType <- code$args[[i]]$type$type
-        if(nextType == "character") {
+        if (nextType == "character") {
           anyCharacter <- TRUE
         } else {
           allCharacter <- FALSE
         }
-        if(anyCharacter && !allCharacter) {
+        if (anyCharacter && !allCharacter) {
           stop(
             exprClassProcessingErrorMsg(
               code,
               paste("In labelAbstractTypes handler nC: For character arguments, all arguments must be character.")
-            ), call. = FALSE
+            ),
+            call. = FALSE
           )
         }
-        if(!anyCharacter)
+        if (!anyCharacter) {
           type <- arithmeticOutputType(type, nextType)
+        }
       }
     }
-    if(type == "character") {
+    if (type == "character") {
       code$type <- symbolBasicString$new(nDim = nDim)
     } else {
       code$type <- symbolBasic$new(type = type, nDim = nDim)
@@ -621,31 +712,32 @@ inLabelAbstractTypesEnv(
     # For nimble backward compatibility, set knownSize to 1
     # if it is contains a single scalar
     # could put behind if(isTRUE(nOptions("nimble")))
-    if(length(code$args)==1 && !is.null(code$args[[1]]$type$nDim)
-       && code$args[[1]]$type$nDim==0) {
+    if (length(code$args) == 1 && !is.null(code$args[[1]]$type$nDim) &&
+      code$args[[1]]$type$nDim == 0) {
       code$type$knownSize <- 1
     }
     # wrap scalar args to length-1 vectors for implementation compatibility
-      for(arg in code$args) {
-        if(arg$type$nDim == 0) {
-          # wrap the scalar in a vector
-          funName <- switch(arg$type$type,
-                            double = "nNumeric",
-                            integer = "nInteger",
-                            logical = "nLogical",
-                            character = "nCharacter")
-          newExpr <- wrapExprClassOperator(
-            code = arg,
-            funName = funName,
-            type = arg$type# typeDeclarationEnv$nNumeric()
-          )
-          # set vector length
-          insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
-          # name arguments
-          names(newExpr$args) = c('value', 'length')
-          inserts <- c(inserts, compile_labelAbstractTypes(newExpr, symTab, auxEnv))
-        }
+    for (arg in code$args) {
+      if (arg$type$nDim == 0) {
+        # wrap the scalar in a vector
+        funName <- switch(arg$type$type,
+          double = "nNumeric",
+          integer = "nInteger",
+          logical = "nLogical",
+          character = "nCharacter"
+        )
+        newExpr <- wrapExprClassOperator(
+          code = arg,
+          funName = funName,
+          type = arg$type # typeDeclarationEnv$nNumeric()
+        )
+        # set vector length
+        insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
+        # name arguments
+        names(newExpr$args) <- c("value", "length")
+        inserts <- c(inserts, compile_labelAbstractTypes(newExpr, symTab, auxEnv))
       }
+    }
     invisible(inserts)
   }
 )
@@ -653,20 +745,21 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   Cholesky <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['A']]$type
-    if(code$args[['A']]$type$nDim != 2)
+    argType <- code$args[["A"]]$type
+    if (code$args[["A"]]$type$nDim != 2) {
       stop(exprClassProcessingErrorMsg(
         code,
-           "Cholesky decomposition of a vector is not possible"
+        "Cholesky decomposition of a vector is not possible"
       ), call. = FALSE)
-    if(inherits(argType, 'symbolSparse')) {
+    }
+    if (inherits(argType, "symbolSparse")) {
       code$type <- symbolNC$new(
-        name = code$name, type = 'sparseCholFactor', NCgenerator = sparseCholFactor, isArg = FALSE
+        name = code$name, type = "sparseCholFactor", NCgenerator = sparseCholFactor, isArg = FALSE
       )
       auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, sparseCholFactor) # To handle cases like nSolve(Cholesky(X),y).
     } else {
-        code$type <- symbolNC$new(
-          name = code$name, type = 'denseCholFactor', NCgenerator = denseCholFactor, isArg = FALSE
+      code$type <- symbolNC$new(
+        name = code$name, type = "denseCholFactor", NCgenerator = denseCholFactor, isArg = FALSE
       )
       auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, denseCholFactor) # To handle cases like nSolve(Cholesky(X),y).
     }
@@ -682,8 +775,10 @@ inLabelAbstractTypesEnv(
   # return_nDim = 1)` on the latter's operatorDef.
   MVDist <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- symbolBasic$new(type = 'double',
-                                  nDim = setReturn_nDim(handlingInfo, 0))
+    code$type <- symbolBasic$new(
+      type = "double",
+      nDim = setReturn_nDim(handlingInfo, 0)
+    )
     invisible(inserts)
   }
 )
@@ -692,16 +787,17 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nChol <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['x']]$type
-    if(code$args[['x']]$type$nDim != 2)
+    argType <- code$args[["x"]]$type
+    if (code$args[["x"]]$type$nDim != 2) {
       stop(exprClassProcessingErrorMsg(
         code,
-           "Cholesky decomposition of a vector is not possible"
+        "Cholesky decomposition of a vector is not possible"
       ), call. = FALSE)
-    if(inherits(argType, 'symbolSparse')) {
+    }
+    if (inherits(argType, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'direct Cholesky decomposition via `nChol` is not supported for sparse matrices; use `Cholesky`.'
+        "direct Cholesky decomposition via `nChol` is not supported for sparse matrices; use `Cholesky`."
       ), call. = FALSE)
     } else {
       # Cholesky factor of a dense matrix is a dense matrix (i.e., same type)
@@ -719,89 +815,107 @@ inLabelAbstractTypesEnv(
     ## n{Numeric|Integer|Logical}(length = 0, value = 0, init = TRUE)
     ## nMatrix(value = 0, nrow = 1, ncol = 1, init = TRUE, type = 'double')
     ## nArray(value = 0, dim = c(1, 1), init = TRUE, type = 'double')
-    if (code$name %in% c('nNumeric', 'nInteger', 'nLogical', 'nCharacter')) {
+    if (code$name %in% c("nNumeric", "nInteger", "nLogical", "nCharacter")) {
       # inserts <- RecurseAndLabel(code, symTab, auxEnv, handlingInfo)
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       # get return type from handlingInfo$returnTypeCode, fall back to value type.
       type <- setReturnType(handlingInfo, code$args[["value"]]$type$type)
       # Get nDim from handlingInfo$return_nDim (default) or fall back to nDim of value.
       nDim <- setReturn_nDim(handlingInfo, code$args[["value"]]$type$nDim)
-      if(type == "character") {
+      if (type == "character") {
         code$type <- symbolBasicString$new(nDim = nDim)
-      } else
-        code$type <- symbolBasic$new(type = type, nDim = nDim)
-      invisible(inserts)
-    }
-    else if (code$name %in% c('nMatrix', 'nArray')) {
-      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-      if ('type' %in% names(code$aux$compileArgs)) {
-        # update to evalComileArg()
-        thisType <- eval(code$aux$compileArgs[['type']], envir = auxEnv$where)
-        if(thisType == 'character')
-          code$type <- symbolBasicString$new()
-        else
-          code$type <- symbolBasic$new(type = thisType)
-      } else if ('value' %in% names(code$args)) {
-        thisType <- code$args[['value']]$type$type
-        if(thisType == 'character')
-          code$type <- symbolBasicString$new()
-        else
-          code$type <- symbolBasic$new(type = thisType)
       } else {
-        code$type <- symbolBasic$new(type = 'double')
+        code$type <- symbolBasic$new(type = type, nDim = nDim)
       }
-      if (code$name == 'nMatrix') code$type$nDim <- 2
-      else {
-        dim_provided <- 'dim' %in% names(code$args)
-        nDim_provided <- 'nDim' %in% names(code$aux$compileArgs)
-        if (!(dim_provided || nDim_provided))
-          code$type$nDim <- 2 ## default is a 1x1 array
+      invisible(inserts)
+    } else if (code$name %in% c("nMatrix", "nArray")) {
+      inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+      if ("type" %in% names(code$aux$compileArgs)) {
+        # update to evalComileArg()
+        thisType <- eval(code$aux$compileArgs[["type"]], envir = auxEnv$where)
+        if (thisType == "character") {
+          code$type <- symbolBasicString$new()
+        } else {
+          code$type <- symbolBasic$new(type = thisType)
+        }
+      } else if ("value" %in% names(code$args)) {
+        thisType <- code$args[["value"]]$type$type
+        if (thisType == "character") {
+          code$type <- symbolBasicString$new()
+        } else {
+          code$type <- symbolBasic$new(type = thisType)
+        }
+      } else {
+        code$type <- symbolBasic$new(type = "double")
+      }
+      if (code$name == "nMatrix") {
+        code$type$nDim <- 2
+      } else {
+        dim_provided <- "dim" %in% names(code$args)
+        nDim_provided <- "nDim" %in% names(code$aux$compileArgs)
+        if (!(dim_provided || nDim_provided)) {
+          code$type$nDim <- 2
+        } ## default is a 1x1 array
         else {
           if (dim_provided) {
-            if (inherits(code$args[['dim']], 'exprClass') &&
-                  code$args[['dim']]$isCall && code$args[['dim']]$name == 'nC') {
+            if (inherits(code$args[["dim"]], "exprClass") &&
+              code$args[["dim"]]$isCall && code$args[["dim"]]$name == "nC") {
               # N2FIXME: This should check that each argument of nC is a literal or scalar.
-              nDim_from_dim <- length(code$args[['dim']]$args)
+              nDim_from_dim <- length(code$args[["dim"]]$args)
               ## 'dim' must be of type integer
-              code$args[['dim']]$type$type <- 'integer'
+              code$args[["dim"]]$type$type <- "integer"
             } else {
-              dim_nDim <- code$args[['dim']]$type$nDim
-              if (dim_nDim > 1)
+              dim_nDim <- code$args[["dim"]]$type$nDim
+              if (dim_nDim > 1) {
                 stop(
                   exprClassProcessingErrorMsg(
                     code,
-                    paste("In labelAbstractTypes handler InitData: 'dim'",
-                          "argument must be scalar- or vector-valued.")
-                  ), call. = FALSE
+                    paste(
+                      "In labelAbstractTypes handler InitData: 'dim'",
+                      "argument must be scalar- or vector-valued."
+                    )
+                  ),
+                  call. = FALSE
                 )
-              if (dim_nDim != 0 && !nDim_provided)
+              }
+              if (dim_nDim != 0 && !nDim_provided) {
                 stop(
                   exprClassProcessingErrorMsg(
                     code,
-                    paste("In labelAbstractTypes handler InitData: if 'nDim'",
-                          "argument is not provided, 'dim' argument must",
-                          "be a scalar-valued expression or a call to nC().",
-                          "nDim is a compile-time argument so should usually be provided.")
-                  ), call. = FALSE
+                    paste(
+                      "In labelAbstractTypes handler InitData: if 'nDim'",
+                      "argument is not provided, 'dim' argument must",
+                      "be a scalar-valued expression or a call to nC().",
+                      "nDim is a compile-time argument so should usually be provided."
+                    )
+                  ),
+                  call. = FALSE
                 )
+              }
               nDim_from_dim <- if (dim_nDim == 0) 1 else -1
             }
           }
           if (nDim_provided) {
             # update to evalCompileArg()
-            nDim <- eval(code$aux$compileArgs[['nDim']], envir = auxEnv$where)
-            if (!is.numeric(nDim))
+            nDim <- eval(code$aux$compileArgs[["nDim"]], envir = auxEnv$where)
+            if (!is.numeric(nDim)) {
               stop(
                 exprClassProcessingErrorMsg(
                   code,
-                  paste('In labelAbstractTypes handler InitData:',
-                        "'nDim' argument must be numeric.")
-                ), call. = FALSE
+                  paste(
+                    "In labelAbstractTypes handler InitData:",
+                    "'nDim' argument must be numeric."
+                  )
+                ),
+                call. = FALSE
               )
+            }
             if (dim_provided && nDim_from_dim != -1 && nDim != nDim_from_dim) {
-              warning("In labelAbstractTypes handler InitData: both 'nDim' ",
-                      "and 'dim' provided as args to '", code$name,
-                      "' but they do not match. Using 'dim'.")
+              warning(
+                "In labelAbstractTypes handler InitData: both 'nDim' ",
+                "and 'dim' provided as args to '", code$name,
+                "' but they do not match. Using 'dim'."
+              )
               nDim <- nDim_from_dim
             }
             code$type$nDim <- nDim
@@ -821,26 +935,36 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       auxEnv$.AllowUnknowns <- FALSE
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                            handlingInfo,
-                                            useArgs = c(FALSE, TRUE))
+        handlingInfo,
+        useArgs = c(FALSE, TRUE)
+      )
       auxEnv$.AllowUnknowns <- TRUE
-      if(length(code$args) > 2) {
-        inserts <- c(inserts,
-                     compile_labelAbstractTypes(code, symTab, auxEnv))
-      }
-      else{
+      if (length(code$args) > 2) {
+        inserts <- c(
+          inserts,
+          compile_labelAbstractTypes(code, symTab, auxEnv)
+        )
+      } else {
         auxEnv$onLHS <- TRUE
-        inserts <- c(inserts,
-                     recurse_labelAbstractTypes(code, symTab, auxEnv,
-                                                handlingInfo, useArgs = c(TRUE, FALSE)))
+        inserts <- c(
+          inserts,
+          recurse_labelAbstractTypes(code, symTab, auxEnv,
+            handlingInfo,
+            useArgs = c(TRUE, FALSE)
+          )
+        )
         auxEnv$onLHS <- FALSE
         # auxEnv[['.ensureNimbleBlocks']] <- FALSE ## may have been true from RHS of rmnorm etc.
-        inserts <- c(inserts,
-                     AssignAfterRecursing(code, symTab, auxEnv,
-                                          handlingInfo))
+        inserts <- c(
+          inserts,
+          AssignAfterRecursing(
+            code, symTab, auxEnv,
+            handlingInfo
+          )
+        )
       }
       auxEnv$.AllowUnknowns <- FALSE
-      if(length(inserts) == 0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
@@ -850,14 +974,15 @@ inLabelAbstractTypesEnv(
       LHS <- code$args[[1]]
       RHS <- code$args[[2]]
       RHStype <- RHS$type
-      if(LHS$isName) {
-        if(!symTab$symbolExists(LHS$name, TRUE)) {
+      if (LHS$isName) {
+        if (!symTab$symbolExists(LHS$name, TRUE)) {
           newSym <- RHStype$clone()
           newSym$isArg <- FALSE
           # Assignment from a reference (could be a refArg) or a blockRef (blockRefArg) should be a plain type
           newSym$isRef <- FALSE
-          if(!is.null(newSym$isBlockRef))
+          if (!is.null(newSym$isBlockRef)) {
             newSym$isBlockRef <- FALSE
+          }
           newSym$name <- LHS$name
           symTab$addSymbol(newSym)
           LHS$type <- newSym
@@ -870,59 +995,88 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   Which <- function(code, symTab, auxEnv, handlingInfo) {
-    if (length(code$args) != 1)
+    if (length(code$args) != 1) {
       stop(
         exprClassProcessingErrorMsg(
-          code, paste("In labelAbstractTypes handler Which: 'arr.ind' and",
-                      "'useNames' args are not implemented for 'which'.")
-        ), call. = FALSE)
+          code, paste(
+            "In labelAbstractTypes handler Which: 'arr.ind' and",
+            "'useNames' args are not implemented for 'which'."
+          )
+        ),
+        call. = FALSE
+      )
+    }
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    if (code$args[[1]]$type$type != 'logical')
+    if (code$args[[1]]$type$type != "logical") {
       stop(
         exprClassProcessingErrorMsg(
-          code, paste0("In labelAbstractTypes handler Which: The argument to ",
-                       "'which' must be logical, but got",
-                       code$args[[1]]$type$type, '.')
-        ), call. = FALSE)
+          code, paste0(
+            "In labelAbstractTypes handler Which: The argument to ",
+            "'which' must be logical, but got",
+            code$args[[1]]$type$type, "."
+          )
+        ),
+        call. = FALSE
+      )
+    }
     ## TODO: remove the nDim restriction
-    if (code$args[[1]]$type$nDim > 1)
+    if (code$args[[1]]$type$nDim > 1) {
       stop(
         exprClassProcessingErrorMsg(
           code,
-          paste0("In labelAbstractTypes handler Which: handling of arg",
-                 "with dimension greater than 1 not yet implemented.")
-        ), call. = FALSE)
-    code$type <- symbolBasic$new(name = code$args[[1]]$name,
-                                 nDim = 1, type = 'integer')
+          paste0(
+            "In labelAbstractTypes handler Which: handling of arg",
+            "with dimension greater than 1 not yet implemented."
+          )
+        ),
+        call. = FALSE
+      )
+    }
+    code$type <- symbolBasic$new(
+      name = code$args[[1]]$name,
+      nDim = 1, type = "integer"
+    )
     invisible(inserts)
   }
 )
 
 inLabelAbstractTypesEnv(
   For <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 3)
+    if (length(code$args) != 3) {
       stop(exprClassProcessingErrorMsg(
         code,
-        paste('In labelAbstractTypes handler For:',
-              'expected 3 arguments to a for-loop')), call. = FALSE)
+        paste(
+          "In labelAbstractTypes handler For:",
+          "expected 3 arguments to a for-loop"
+        )
+      ), call. = FALSE)
+    }
     ## first handle type of the indexing variable
-    if(!inherits(code$args[[2]], 'exprClass'))
+    if (!inherits(code$args[[2]], "exprClass")) {
       stop(
         exprClassProcessingErrorMsg(
-          code, paste('In labelAbstractTypes handler For: expected the index',
-                      'range to be an expression (exprClass).')
-        ), call. = FALSE
+          code, paste(
+            "In labelAbstractTypes handler For: expected the index",
+            "range to be an expression (exprClass)."
+          )
+        ),
+        call. = FALSE
       )
+    }
 
     inserts <- compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv)
 
     code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[2]]$type$type)
+      symbolBasic$new(
+        name = code$args[[1]]$name,
+        nDim = 0, type = code$args[[2]]$type$type
+      )
 
-    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
-      if (TRUE)
+    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE)) {
+      if (TRUE) {
         symTab$addSymbol(code$args[[1]]$type)
+      }
+    }
 
     ## Now the 3rd arg, the body of the loop, can be processed
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
@@ -933,30 +1087,42 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelFor <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 5)
+    if (length(code$args) != 5) {
       stop(exprClassProcessingErrorMsg(
         code,
-        paste('In labelAbstractTypes handler ParallelFor:',
-              'expected 5 arguments to a parallel_for-loop')), call. = FALSE)
+        paste(
+          "In labelAbstractTypes handler ParallelFor:",
+          "expected 5 arguments to a parallel_for-loop"
+        )
+      ), call. = FALSE)
+    }
     ## first handle type of the indexing variable
-    if(!inherits(code$args[[2]], 'exprClass'))
+    if (!inherits(code$args[[2]], "exprClass")) {
       stop(
         exprClassProcessingErrorMsg(
-          code, paste('In labelAbstractTypes handler ParallelFor: expected the index',
-                      'range to be an expression (exprClass).')
-        ), call. = FALSE
+          code, paste(
+            "In labelAbstractTypes handler ParallelFor: expected the index",
+            "range to be an expression (exprClass)."
+          )
+        ),
+        call. = FALSE
       )
+    }
 
     inserts <- compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv)
 
     code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[2]]$type$type)
+      symbolBasic$new(
+        name = code$args[[1]]$name,
+        nDim = 0, type = code$args[[2]]$type$type
+      )
 
     ## If index is unknown, create it in typeEnv and in the symTab (old nimble comment)
-    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE))
-      if (TRUE)
+    if (!symTab$symbolExists(code$args[[1]]$name, inherits = TRUE)) {
+      if (TRUE) {
         symTab$addSymbol(code$args[[1]]$type)
+      }
+    }
 
     ## Now the 3rd arg, the body of the loop, can be processed
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv))
@@ -970,55 +1136,89 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   ParallelReduce <- function(code, symTab, auxEnv, handlingInfo) {
-    if (length(code$args) != 3)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected 3 arguments but got', length(code$args))),
-        call. = FALSE)
+    if (length(code$args) != 3) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste(
+            "In labelAbstractTypes handler ParallelReduce:",
+            "expected 3 arguments but got", length(code$args)
+          )
+        ),
+        call. = FALSE
+      )
+    }
     ## process the initial value
     inserts <- compile_labelAbstractTypes(code$args[[3]], symTab, auxEnv)
-    if (code$args[[3]]$type$nDim != 0)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'initial value for parallel_reduce should be scalar but got',
-              ' nDim = ', code$args[[3]]$type$nDim)),
-        call. = FALSE)
-    if (isFALSE(code$args[[3]]$isLiteral))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'initial value for parallel_reduce must be a literal')),
-        call. = FALSE)
+    if (code$args[[3]]$type$nDim != 0) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste(
+            "In labelAbstractTypes handler ParallelReduce:",
+            "initial value for parallel_reduce should be scalar but got",
+            " nDim = ", code$args[[3]]$type$nDim
+          )
+        ),
+        call. = FALSE
+      )
+    }
+    if (isFALSE(code$args[[3]]$isLiteral)) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste(
+            "In labelAbstractTypes handler ParallelReduce:",
+            "initial value for parallel_reduce must be a literal"
+          )
+        ),
+        call. = FALSE
+      )
+    }
     ## process the reduce operator
     if (isTRUE(code$args[[1]]$isLiteral)) {
-      if (!is.character(code$args[[1]]$name))
-        stop(exprClassProcessingErrorMsg(
-          code,
-          paste('In labelAbstractTypes handler ParallelReduce:',
-                'do not know how to use a reduce operator of type',
-                typeof(code$args[[1]]$name))),
-          call. = FALSE)
+      if (!is.character(code$args[[1]]$name)) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            paste(
+              "In labelAbstractTypes handler ParallelReduce:",
+              "do not know how to use a reduce operator of type",
+              typeof(code$args[[1]]$name)
+            )
+          ),
+          call. = FALSE
+        )
+      }
       code$args[[1]]$isLiteral <- FALSE
       code$args[[1]]$isCall <- TRUE
     }
     ## give reduce operator the same return type as the initial value
     ## TODO: Maybe symbolNF is the right type for the reduction op.
     code$args[[1]]$type <-
-      symbolBasic$new(name = code$args[[1]]$name,
-                      nDim = 0, type = code$args[[3]]$type$type)
+      symbolBasic$new(
+        name = code$args[[1]]$name,
+        nDim = 0, type = code$args[[3]]$type$type
+      )
     ## finish by processing the vector arg
     inserts <- c(inserts, compile_labelAbstractTypes(code$args[[2]], symTab, auxEnv))
-    if (code$args[[2]]$type$nDim != 1)
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste('In labelAbstractTypes handler ParallelReduce:',
-              'expected the second argument to be a vector but got nDim = ',
-              code$args[[2]]$type$nDim)),
-        call. = FALSE)
-    code$type <- symbolBasic$new(name = code$name, nDim = 0,
-                                 type = code$args[[3]]$type$type)
+    if (code$args[[2]]$type$nDim != 1) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste(
+            "In labelAbstractTypes handler ParallelReduce:",
+            "expected the second argument to be a vector but got nDim = ",
+            code$args[[2]]$type$nDim
+          )
+        ),
+        call. = FALSE
+      )
+    }
+    code$type <- symbolBasic$new(
+      name = code$name, nDim = 0,
+      type = code$args[[3]]$type$type
+    )
 
     auxEnv$uses_TBB <- TRUE
     nCompiler_pluginEnv$uses_TBB <- TRUE
@@ -1033,29 +1233,34 @@ inLabelAbstractTypesEnv(
     # when inside '['.
     # That used to be the case.  It might not be any more.
     # For now, for defensive purposes, we're keeping it separate.
-    if (length(code$args) != 2)
+    if (length(code$args) != 2) {
       stop(
         exprClassProcessingErrorMsg(
           code, paste(
             "In sizeCgetColonOperator: Problem determining ",
             "size for ':' without two arguments."
           )
-        ), call. = FALSE
+        ),
+        call. = FALSE
       )
+    }
 
     # Check: Is recurse=FALSE ever used.  Why was this here?
     inserts <-
-      if (recurse)
+      if (recurse) {
         recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    else list()
+      } else {
+        list()
+      }
 
     # Imitate the (from, to) case from Seq
     fromType <- code$args[[1]]$type$type
-    code_type <- if (fromType == 'logical') 'integer' else fromType
+    code_type <- if (fromType == "logical") "integer" else fromType
     code$type <- symbolBasic$new(nDim = 1, type = code_type)
     # For backward compatibility cases with nimble:
-    if(code$args[[1]]$isLiteral && code$args[[2]]$isLiteral)
+    if (code$args[[1]]$isLiteral && code$args[[2]]$isLiteral) {
       code$type$knownSize <- code$args[[2]]$name - code$args[[1]]$name + 1
+    }
     invisible(inserts)
   }
 )
@@ -1065,64 +1270,77 @@ inLabelAbstractTypesEnv(
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     code_type <- NULL
     if (length(code$args) == 0 ||
-          ## seq(by = x) always returns 1
-        (length(code$args) == 1 && any(c('from','to','length.out') %in% names(code$args)))) {
+      ## seq(by = x) always returns 1
+      (length(code$args) == 1 && any(c("from", "to", "length.out") %in% names(code$args)))) {
       # These cases always return scalars, but we define seq to always return a vector.
- #     code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+      #     code$type <- symbolBasic$new(nDim = 1, type = 'integer')
       code_type <- "integer"
-    } else if(length(code$args) == 1 && ('by' %in% names(code$args))) {
-#      code$type <- symbolBasic$new(nDim = 1, type = 'double')
+    } else if (length(code$args) == 1 && ("by" %in% names(code$args))) {
+      #      code$type <- symbolBasic$new(nDim = 1, type = 'double')
       code_type <- "double"
     } else {
-      fromProvided <- 'from' %in% names(code$args)
-      toProvided <- 'to' %in% names(code$args)
-      byProvided <- 'by' %in% names(code$args)
-      lengthProvided <- 'length.out' %in% names(code$args)
+      fromProvided <- "from" %in% names(code$args)
+      toProvided <- "to" %in% names(code$args)
+      byProvided <- "by" %in% names(code$args)
+      lengthProvided <- "length.out" %in% names(code$args)
 
-      promoteLogical <- function(x)
-        if(x=="logical") "integer" else x
+      promoteLogical <- function(x) {
+        if (x == "logical") "integer" else x
+      }
 
-      fromType <- if(fromProvided)
-                    promoteLogical(code$args[['from']]$type$type) else NULL
-      toType <- if(toProvided)
-                  promoteLogical(code$args[['to']]$type$type) else NULL
-      byType <- if(byProvided)
-                  promoteLogical(code$args[['by']]$type$type) else NULL
-      lengthType <- if(lengthProvided)
-                      promoteLogical(code$args[['length.out']]$type$type) else NULL
+      fromType <- if (fromProvided) {
+        promoteLogical(code$args[["from"]]$type$type)
+      } else {
+        NULL
+      }
+      toType <- if (toProvided) {
+        promoteLogical(code$args[["to"]]$type$type)
+      } else {
+        NULL
+      }
+      byType <- if (byProvided) {
+        promoteLogical(code$args[["by"]]$type$type)
+      } else {
+        NULL
+      }
+      lengthType <- if (lengthProvided) {
+        promoteLogical(code$args[["length.out"]]$type$type)
+      } else {
+        NULL
+      }
 
-      if(length(code$args)==2) {
-        if(fromProvided && toProvided) {
-  #        code$type <- symbolBasic$new(nDim = 1, type = fromType)
+      if (length(code$args) == 2) {
+        if (fromProvided && toProvided) {
+          #        code$type <- symbolBasic$new(nDim = 1, type = fromType)
           code_type <- fromType
-#          return(invisible(NULL))
-        } else if((fromProvided && byProvided) ||
-                    (toProvided && byProvided) ||
-                    (byProvided && lengthProvided)) {
-   #       code$type <- symbolBasic$new(nDim = 1, type = "double")
+          #          return(invisible(NULL))
+        } else if ((fromProvided && byProvided) ||
+          (toProvided && byProvided) ||
+          (byProvided && lengthProvided)) {
+          #       code$type <- symbolBasic$new(nDim = 1, type = "double")
           code_type <- "double"
-#          return(invisible(NULL))
-        } else if(fromProvided && lengthProvided) {
+          #          return(invisible(NULL))
+        } else if (fromProvided && lengthProvided) {
           code_type <- arithmeticOutputType(fromType, lengthType, returnTypeCodes$promoteNoLogical)
-#          return(invisible(NULL))
-        } else if(toProvided && lengthProvided) {
+          #          return(invisible(NULL))
+        } else if (toProvided && lengthProvided) {
           code_type <- arithmeticOutputType(toType, lengthType, returnTypeCodes$promoteNoLogical)
-#$          return(invisible(NULL))
+          # $          return(invisible(NULL))
         }
-      } else if(length(code$args) == 3) {
-        if(lengthProvided) {
-          if(fromProvided && toProvided) {
+      } else if (length(code$args) == 3) {
+        if (lengthProvided) {
+          if (fromProvided && toProvided) {
             code$type <- symbolBasic$new(nDim = 1, type = "double")
             code_type <- "double"
-#            return(invisible(NULL))
-          } else if(fromProvided && byProvided) {
+            #            return(invisible(NULL))
+          } else if (fromProvided && byProvided) {
             code_type <- arithmeticOutputType(fromType, byType, returnTypeCodes$promoteNoLogical)
-            #return(invisible(NULL))
-          } else if(toProvided && byProvided) {
+            # return(invisible(NULL))
+          } else if (toProvided && byProvided) {
             code_type <- arithmeticOutputType(toType, byType, returnTypeCodes$promoteNoLogical)
             ##            return(invisible(NULL))
           }
-        } else if(byProvided) {
+        } else if (byProvided) {
           # from, to, by
           code_type <- arithmeticOutputType(fromType, toType, returnTypeCodes$promoteNoLogical)
           code_type <- arithmeticOutputType(code_type, byType, returnTypeCodes$promoteNoLogical)
@@ -1130,11 +1348,15 @@ inLabelAbstractTypesEnv(
       }
     }
 
-    if(is.null(code_type))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste0('In labelAbstractTypes for seq: something is wrong.')),
-        call. = FALSE)
+    if (is.null(code_type)) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste0("In labelAbstractTypes for seq: something is wrong.")
+        ),
+        call. = FALSE
+      )
+    }
 
     code$type <- symbolBasic$new(nDim = 1, type = code_type)
 
@@ -1155,14 +1377,19 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   BinaryUnaryCwise <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) == 1)
+      if (length(code$args) == 1) {
         return(UnaryCwise(code, symTab, auxEnv, handlingInfo))
-      if(length(code$args) == 2)
+      }
+      if (length(code$args) == 2) {
         return(BinaryCwise(code, symTab, auxEnv, handlingInfo))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        paste0('In sizeBinaryUnarycWise: Length of arguments is not 1 or 2.')),
-        call. = FALSE)
+      }
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          paste0("In sizeBinaryUnarycWise: Length of arguments is not 1 or 2.")
+        ),
+        call. = FALSE
+      )
     }
 )
 
@@ -1170,12 +1397,15 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   UnaryCwise <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) != 1)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'sizeUnaryCwise called with argument length != 1.'
-        ),
-        call. = FALSE)
+      if (length(code$args) != 1) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "sizeUnaryCwise called with argument length != 1."
+          ),
+          call. = FALSE
+        )
+      }
 
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
@@ -1184,21 +1414,26 @@ inLabelAbstractTypesEnv(
 
       argType <- arg$type
 
-      if(argType$type %in% c('denseCholFactor', 'sparseCholFactor'))
+      if (argType$type %in% c("denseCholFactor", "sparseCholFactor")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          paste0('Most mathematical operations with the result of `Cholesky` (which gives the Cholesky decomposition as an internal object) are not supported.\n',
-          'For a dense matrix X, you can use chol(X) to get the Cholesky decomposition as a dense matrix and do math with that.')
+          paste0(
+            "Most mathematical operations with the result of `Cholesky` (which gives the Cholesky decomposition as an internal object) are not supported.\n",
+            "For a dense matrix X, you can use chol(X) to get the Cholesky decomposition as a dense matrix and do math with that."
+          )
         ), call. = FALSE)
+      }
       resultScalarType <- arithmeticOutputType(
-        argType$type, returnTypeCode = handlingInfo$returnTypeCode
+        argType$type,
+        returnTypeCode = handlingInfo$returnTypeCode
       )
       resultSymbolType <- arithmeticOutputSymbol(arg)
-      resultType <- resultSymbolType$new(nDim = argType$nDim,
-                                         type = resultScalarType)
+      resultType <- resultSymbolType$new(
+        nDim = argType$nDim,
+        type = resultScalarType
+      )
       code$type <- resultType
       invisible(NULL)
-
     }
 )
 
@@ -1206,12 +1441,15 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   BinaryCwise <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) != 2)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'sizeBinaryCwise called with argument length != 2.'
-        ),
-        call. = FALSE)
+      if (length(code$args) != 2) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "sizeBinaryCwise called with argument length != 2."
+          ),
+          call. = FALSE
+        )
+      }
 
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       ## sizes of arguments must have already been set
@@ -1223,24 +1461,29 @@ inLabelAbstractTypesEnv(
       a1Type <- a1$type
       a2Type <- a2$type
 
-      if(a1Type$type %in% c('denseCholFactor', 'sparseCholFactor') ||
-         a2Type$type %in% c('denseCholFactor', 'sparseCholFactor'))
-          stop(exprClassProcessingErrorMsg(
-            code,
-            'Most mathematical operations with the result of `Cholesky` are not supported'
-          ), call. = FALSE)
+      if (a1Type$type %in% c("denseCholFactor", "sparseCholFactor") ||
+        a2Type$type %in% c("denseCholFactor", "sparseCholFactor")) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          "Most mathematical operations with the result of `Cholesky` are not supported"
+        ), call. = FALSE)
+      }
 
       nDim <- max(a1Type$nDim, a2Type$nDim)
 
       # except for matrix-vector like ops, tensor args must have same nDims
-      if(all(c(a1Type$nDim, a2Type$nDim) > 1)) {
-        if(a1Type$nDim != a2Type$nDim) {
-          stop(exprClassProcessingErrorMsg(
-            code,
-            paste('sizeBinaryCwise called with non-conformable tensors with ',
-                  'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
-          ),
-          call. = FALSE)
+      if (all(c(a1Type$nDim, a2Type$nDim) > 1)) {
+        if (a1Type$nDim != a2Type$nDim) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste("sizeBinaryCwise called with non-conformable tensors with ",
+                "dimensions ", a1Type$nDim, ", ", a2Type$nDim, ".",
+                sep = ""
+              )
+            ),
+            call. = FALSE
+          )
         }
       }
 
@@ -1248,10 +1491,12 @@ inLabelAbstractTypesEnv(
         a1Type$type, a2Type$type, handlingInfo$returnTypeCode
       )
       resultSymbolType <- arithmeticOutputSymbol(a1, a2)
-      resultType <- resultSymbolType$new(nDim = nDim,
-                                         type = resultScalarType)
+      resultType <- resultSymbolType$new(
+        nDim = nDim,
+        type = resultScalarType
+      )
       code$type <- resultType
-      ##code$typeName <- class(resultType)[1]
+      ## code$typeName <- class(resultType)[1]
       invisible(NULL)
     }
 )
@@ -1260,7 +1505,7 @@ inLabelAbstractTypesEnv(
   BinaryCwiseLogical <-
     function(code, symTab, auxEnv, handlingInfo) {
       ans <- BinaryCwise(code, symTab, auxEnv, handlingInfo)
-      code$type$type <- 'logical'
+      code$type$type <- "logical"
       ans
     }
 )
@@ -1268,12 +1513,15 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   BinaryReduction <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) != 2)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'BinaryReduction called with argument length != 2.'
-        ),
-        call. = FALSE)
+      if (length(code$args) != 2) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "BinaryReduction called with argument length != 2."
+          ),
+          call. = FALSE
+        )
+      }
 
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
@@ -1285,20 +1533,24 @@ inLabelAbstractTypesEnv(
       a2Type <- a2$type
 
       # tensor args must have same nDims
-      if(a1Type$nDim != a2Type$nDim) {
-        stop(exprClassProcessingErrorMsg(
-          code,
-          paste('BinaryReduction called with non-conformable tensors with ',
-                'dimensions ', a1Type$nDim, ', ', a2Type$nDim, '.', sep ='')
-        ),
-        call. = FALSE)
+      if (a1Type$nDim != a2Type$nDim) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            paste("BinaryReduction called with non-conformable tensors with ",
+              "dimensions ", a1Type$nDim, ", ", a2Type$nDim, ".",
+              sep = ""
+            )
+          ),
+          call. = FALSE
+        )
       }
 
       resultScalarType <- arithmeticOutputType(
         a1Type$type, a2Type$type, handlingInfo$returnTypeCode
       )
 
-      resultType <-symbolBasic$new(
+      resultType <- symbolBasic$new(
         nDim = 0,
         type = resultScalarType
       )
@@ -1312,30 +1564,38 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   UnaryReduction <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) != 1)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'unaryReduction called with argument length != 1.'
-        ),
-        call. = FALSE)
+      if (length(code$args) != 1) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "unaryReduction called with argument length != 1."
+          ),
+          call. = FALSE
+        )
+      }
 
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
       ## Kludgy catch of var case here.
       ## Can't do var(matrix) because in R that is interpreted as cov(data.frame)
-      if(!(code$args[[1]]$isLiteral)) {
-        if(code$args[[1]]$type$nDim >= 2) {
-          if(code$name == 'var') {
-            stop(exprClassProcessingErrorMsg(
-              code,
-              'nCompiler compiler does not support var with a matrix (or higher dimensional) argument.'),
-              call. = FALSE)
+      if (!(code$args[[1]]$isLiteral)) {
+        if (code$args[[1]]$type$nDim >= 2) {
+          if (code$name == "var") {
+            stop(
+              exprClassProcessingErrorMsg(
+                code,
+                "nCompiler compiler does not support var with a matrix (or higher dimensional) argument."
+              ),
+              call. = FALSE
+            )
           }
         }
       }
       argType <- code$args[[1]]$type
-      code$type <- symbolBasic$new(nDim = 0,
-                                   type = setReturnType(handlingInfo, argType$type))
+      code$type <- symbolBasic$new(
+        nDim = 0,
+        type = setReturnType(handlingInfo, argType$type)
+      )
       inserts
     }
 )
@@ -1346,16 +1606,18 @@ inLabelAbstractTypesEnv(
       # We have `length<-`(x, v) from length(x) <- v
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       objType <- code$args[[1]]$type
-      if(!inherits(objType, 'symbolScalarOrTensor'))
+      if (!inherits(objType, "symbolScalarOrTensor")) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'length<- can only be applied to basic types (numeric, integer, logical, character).'
+          "length<- can only be applied to basic types (numeric, integer, logical, character)."
         ), call. = FALSE)
-      if(objType$nDim != 1)
+      }
+      if (objType$nDim != 1) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'length<- can only be applied to vectors (nDim = 1).'
+          "length<- can only be applied to vectors (nDim = 1)."
         ), call. = FALSE)
+      }
       # transform this to a call to setSize
       iValue <- which(names(code$args) == "value") # should be 2
       names(code$args)[iValue] <- "size" # canonical name produced by the simpleTransformations handler for SetSize
@@ -1369,66 +1631,66 @@ inLabelAbstractTypesEnv(
       # compile_simpleTransformations(code, symTab, auxEnv)
       inserts <- c(inserts, recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo))
       # Like R's `length<-`, return the new length (the size argument), allowing chained calls.
-      sizeType <- code$args[['size']]$type
+      sizeType <- code$args[["size"]]$type
       code$type <- symbolBasic$new(type = sizeType$type, nDim = sizeType$nDim)
-      if(length(inserts) == 0) NULL else inserts
+      if (length(inserts) == 0) NULL else inserts
     }
 )
 
 inLabelAbstractTypesEnv(
   SetSize <- function(code, symTab, auxEnv, handlingInfo) {
-#     iDotsArgs <- which(names(code$args) == "")
-#     if(length(iDotsArgs) == 0) {
-#       stop(exprClassProcessingErrorMsg(
-#         code,
-#         'setSize is missing size argument(s), which should be provided in "...".'
-#       ), call. = FALSE)
-#     }
-#     if(length(iDotsArgs) == 1) {
-#       names(code$args)[iDotsArgs] <- "size"
-#     }
-#     else if(length(iDotsArgs) > 1) {
-#       newExpr <- nParse(quote(nC()))
-#       for(i in seq_along(iDotsArgs)) {
-#         insertArg(newExpr, ID = i, value = code$args[[iDotsArgs[i]]])
-#       }
-#       setArg(code, ID = iDotsArgs[1], value = newExpr)
-#       names(code$args)[iDotsArgs[1]] <- "size"
-#       for(i in length(iDotsArgs):2) {
-#         removeArg(code, ID = iDotsArgs[i])
-#       }
-#     }
-#     # fill over-rides fillZeros (which is for backward compatibility)
-#     # if fill is missing, replace it will fillZeros (which has a default).
-#     if(isTRUE("fill" %in% code$aux$provided_as_missing)) {
-#       setArg(code, "fill", code$args$fillZeros, add = TRUE)
-#     }
-#     removeArg(code, "fillZeros", allow_missing = TRUE)
-#     # obj over-rides numObj (which is for backward compatibility)
-#     # if obj is missing, replace it will numObj.
-#     if(isTRUE("obj" %in% code$aux$provided_as_missing)) {
-#       if(isTRUE("numObj" %in% code$aux$provided_as_missing)) {
-#         stop(exprClassProcessingErrorMsg(
-#           code,
-#           'setSize is missing required obj argument'
-#         ), call. = FALSE)
-#       }
-#       setArg(code, "obj", code$args$numObj, add = TRUE)
-#     }
-#     removeArg(code, "numObj", allow_missing = TRUE)
-#     # presence of value sets fill to TRUE.
-#     if(!isTRUE("value" %in% code$aux$provided_as_missing)) {
-#       code$args$fill <- literalLogicalExpr(TRUE)
-#     }
-#     code <- exprClass_put_args_in_order(
-#       function(obj, size, copy, fill, value) {},
-#       code,
-#       insertDefaults = FALSE
-#     )
-# #    code$name <- "setSize_"
+    #     iDotsArgs <- which(names(code$args) == "")
+    #     if(length(iDotsArgs) == 0) {
+    #       stop(exprClassProcessingErrorMsg(
+    #         code,
+    #         'setSize is missing size argument(s), which should be provided in "...".'
+    #       ), call. = FALSE)
+    #     }
+    #     if(length(iDotsArgs) == 1) {
+    #       names(code$args)[iDotsArgs] <- "size"
+    #     }
+    #     else if(length(iDotsArgs) > 1) {
+    #       newExpr <- nParse(quote(nC()))
+    #       for(i in seq_along(iDotsArgs)) {
+    #         insertArg(newExpr, ID = i, value = code$args[[iDotsArgs[i]]])
+    #       }
+    #       setArg(code, ID = iDotsArgs[1], value = newExpr)
+    #       names(code$args)[iDotsArgs[1]] <- "size"
+    #       for(i in length(iDotsArgs):2) {
+    #         removeArg(code, ID = iDotsArgs[i])
+    #       }
+    #     }
+    #     # fill over-rides fillZeros (which is for backward compatibility)
+    #     # if fill is missing, replace it will fillZeros (which has a default).
+    #     if(isTRUE("fill" %in% code$aux$provided_as_missing)) {
+    #       setArg(code, "fill", code$args$fillZeros, add = TRUE)
+    #     }
+    #     removeArg(code, "fillZeros", allow_missing = TRUE)
+    #     # obj over-rides numObj (which is for backward compatibility)
+    #     # if obj is missing, replace it will numObj.
+    #     if(isTRUE("obj" %in% code$aux$provided_as_missing)) {
+    #       if(isTRUE("numObj" %in% code$aux$provided_as_missing)) {
+    #         stop(exprClassProcessingErrorMsg(
+    #           code,
+    #           'setSize is missing required obj argument'
+    #         ), call. = FALSE)
+    #       }
+    #       setArg(code, "obj", code$args$numObj, add = TRUE)
+    #     }
+    #     removeArg(code, "numObj", allow_missing = TRUE)
+    #     # presence of value sets fill to TRUE.
+    #     if(!isTRUE("value" %in% code$aux$provided_as_missing)) {
+    #       code$args$fill <- literalLogicalExpr(TRUE)
+    #     }
+    #     code <- exprClass_put_args_in_order(
+    #       function(obj, size, copy, fill, value) {},
+    #       code,
+    #       insertDefaults = FALSE
+    #     )
+    # #    code$name <- "setSize_"
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # Return the size argument, like R's `length<-`, allowing chained calls.
-    sizeType <- code$args[['size']]$type
+    sizeType <- code$args[["size"]]$type
     code$type <- symbolBasic$new(type = sizeType$type, nDim = sizeType$nDim)
     invisible(inserts)
   }
@@ -1441,36 +1703,36 @@ inLabelAbstractTypesEnv(
     # ensure last argument(s) are scalar, defining constants across recycling
     # (e.g., log for d functions, or lower.tail and log.p for p and q functions)
     nFinal <- handlingInfo$nFinalScalarArgs
-    if(is.null(nFinal)) nFinal <- 1
+    if (is.null(nFinal)) nFinal <- 1
     nArgs <- length(code$args)
-    for(lastArg in code$args[(nArgs - nFinal + 1):nArgs]) {
-      if(lastArg$type$nDim > 0) {
+    for (lastArg in code$args[(nArgs - nFinal + 1):nArgs]) {
+      if (lastArg$type$nDim > 0) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'final argument(s) to function must be scalar (e.g., log = TRUE).'
+          "final argument(s) to function must be scalar (e.g., log = TRUE)."
         ), call. = FALSE)
       }
     }
     # value type and C++ generation depends on whether all args are scalars
-    if(all(sapply(code$args, function(arg) arg$type$nDim) == 0)) {
+    if (all(sapply(code$args, function(arg) arg$type$nDim) == 0)) {
       # value is a scalar
       code$type <- symbolBasic$new(nDim = 0, type = setReturnType(handlingInfo))
     } else {
       # value is a vector
       code$type <- symbolBasic$new(nDim = 1, type = setReturnType(handlingInfo))
       # wrap scalar args to length-1 vectors for implementation compatibility
-      for(arg in code$args) {
-        if(arg$type$nDim == 0) {
+      for (arg in code$args) {
+        if (arg$type$nDim == 0) {
           # wrap the scalar in a vector
           newExpr <- wrapExprClassOperator(
             code = arg,
-            funName = 'nNumeric',
+            funName = "nNumeric",
             type = typeDeclarationEnv$nNumeric()
           )
           # set vector length
           insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
           # name arguments
-          names(newExpr$args) = c('value', 'length')
+          names(newExpr$args) <- c("value", "length")
         }
       }
     }
@@ -1485,22 +1747,22 @@ inLabelAbstractTypesEnv(
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # remove sample size from the list of arguments parameterizing the dist'n.
-    size_ind = match('n', names(code$args))
-    if(is.na(size_ind)) size_ind = 1 # assume sample size is first if unnamed
-    parameterArgs = code$args[-size_ind]
+    size_ind <- match("n", names(code$args))
+    if (is.na(size_ind)) size_ind <- 1 # assume sample size is first if unnamed
+    parameterArgs <- code$args[-size_ind]
     # wrap scalar parameterization args to length-1 vectors for C++ generation
-    for(arg in parameterArgs) {
-      if(arg$type$nDim == 0) {
+    for (arg in parameterArgs) {
+      if (arg$type$nDim == 0) {
         # wrap the scalar in a vector
         newExpr <- wrapExprClassOperator(
           code = arg,
-          funName = 'nNumeric',
+          funName = "nNumeric",
           type = typeDeclarationEnv$nNumeric()
         )
         # set vector length
         insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
         # name arguments
-        names(newExpr$args) = c('value', 'length')
+        names(newExpr$args) <- c("value", "length")
       }
     }
     invisible(inserts)
@@ -1511,20 +1773,20 @@ inLabelAbstractTypesEnv(
   Bracket <- function(code, symTab, auxEnv, handlingInfo) {
     # Drop is already extracted as a compile-time arg.
     isAssign <- isTRUE(handlingInfo$isAssign)
-# To-do: Do we really need to clear and reconstruct args?
-#   drop_arg will need evaluation and updated handling below.
+    # To-do: Do we really need to clear and reconstruct args?
+    #   drop_arg will need evaluation and updated handling below.
     # Even in assignment case, we can never create a new variable
     # so we do not need to work with .AllowUnknowns here.
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
     ## drop must be named if provided, so this should work
     drop <- isTRUE(code$aux$compileArgs$drop)
-    #drop_arg <- code$args$drop
-    #code$args$drop <- NULL ## remove from AST
+    # drop_arg <- code$args$drop
+    # code$args$drop <- NULL ## remove from AST
 
     ## the indexed object should be the first arg among those other than drop
     obj <- code$args[[1]]
-    if(isAssign) {
+    if (isAssign) {
       index_args <- code$args[-c(1, length(code$args))]
       value_obj <- code$args[[length(code$args)]]
     } else {
@@ -1535,9 +1797,11 @@ inLabelAbstractTypesEnv(
     code$args <- NULL ## reset args
 
     brackets_empty <- TRUE
-    for(i in seq_along(index_args))
-      if(!(index_args[[i]]$isName && index_args[[i]]$name == ""))
+    for (i in seq_along(index_args)) {
+      if (!(index_args[[i]]$isName && index_args[[i]]$name == "")) {
         brackets_empty <- FALSE
+      }
+    }
 
     # brackets_empty <- length(index_args) == 1 &&
     #   index_args[[1]]$isName &&
@@ -1550,7 +1814,7 @@ inLabelAbstractTypesEnv(
     # not change the dims or sizes of y.
     # I don't think this will work for BracketAssign so am
     # excluding that
-    if(!isAssign) {
+    if (!isAssign) {
       if (brackets_empty) {
         ## no indexing is happening, so just replace [ with the obj in the AST
         ## and return
@@ -1562,7 +1826,7 @@ inLabelAbstractTypesEnv(
     ## at this point, the indexing args are not empty
     if (nDim == 0) {
       ## indexed object is a scalar so there should be at most 1 indexing arg
-      if (length(index_args) != 1)
+      if (length(index_args) != 1) {
         stop(
           exprClassProcessingErrorMsg(
             code,
@@ -1571,8 +1835,10 @@ inLabelAbstractTypesEnv(
               "' is a scalar; expected at most 1 indexing arg but received ",
               length(index_args), "."
             )
-          ), call. = FALSE
+          ),
+          call. = FALSE
         )
+      }
     } else if (length(index_args) != nDim) {
       ## indexed object is not scalar, the indexing args are not empty,
       ## and so their number should be equal to the obj dimension
@@ -1583,7 +1849,8 @@ inLabelAbstractTypesEnv(
             "In Bracket: number of indexing arguments does not match the dimension of '",
             obj$name, "'; expected ", nDim, " but received ", length(index_args), "."
           )
-        ), call. = FALSE
+        ),
+        call. = FALSE
       )
     }
 
@@ -1597,13 +1864,14 @@ inLabelAbstractTypesEnv(
       ## ensure that indexing args appear before drop in AST
       setArg(code, i + 1, index_args[[i]])
 
-      if (index_args[[i]]$name != '') {
+      if (index_args[[i]]$name != "") {
         # Possible checks to add (from nimble)
         # - invalid type result (missing or nDim>1) from recursing on indices above
         # - logical index (not allowed in nimble). Possible to-do extension later.
         # - indexing a scalar beyond a "[1]"
-        if (index_args[[i]]$type$nDim == 0) nDrop <- nDrop + 1
-        else {
+        if (index_args[[i]]$type$nDim == 0) {
+          nDrop <- nDrop + 1
+        } else {
           ## Backward compatibility with some slightly odd nimble behavior
           ## If an index slot contains a literal sequence of length one (e.g. 3:3, but not i:i)
           ## or a concatenation of a scalar (e.g. c(3) or c(i)), both of which
@@ -1616,17 +1884,17 @@ inLabelAbstractTypesEnv(
           ## If we discover other cases where nimble drops a dimension
           ##  we can handle it by making sure the expression resulting in that gets
           ##  knownSize == 1.
-          if(isTRUE(nOptions("nimble")) || isTRUE(nOptions("dropSingleSizes"))) {
-            if(is.numeric(index_args[[i]]$type$knownSize)
-               && index_args[[i]]$type$knownSize == 1) {
-                nDrop <- nDrop + 1
+          if (isTRUE(nOptions("nimble")) || isTRUE(nOptions("dropSingleSizes"))) {
+            if (is.numeric(index_args[[i]]$type$knownSize) &&
+              index_args[[i]]$type$knownSize == 1) {
+              nDrop <- nDrop + 1
             }
           }
         }
       }
     }
-    if(isAssign) setArg(code, "value", value_obj, add = TRUE) ## put value back as last arg in assignment case
-    if(nDim==0) drop <- FALSE
+    if (isAssign) setArg(code, "value", value_obj, add = TRUE) ## put value back as last arg in assignment case
+    if (nDim == 0) drop <- FALSE
     # drop <- TRUE
     # if (nDim == 0) {
     #                                     # If we're indexing a scalar, any drop arg provided is ignored.
@@ -1669,24 +1937,25 @@ inLabelAbstractTypesEnv(
     # symbolBasic type as it is understood today.  this is handling for the
     # subsetting operator, [], but will it always be subsetted to a symbolBasic
     # type?
-    if(obj$type$type == "character")
+    if (obj$type$type == "character") {
       code$type <- symbolBasicString$new(nDim = nDim)
-    else
+    } else {
       code$type <- symbolBasic$new(nDim = nDim, type = obj$type$type)
+    }
     invisible(NULL)
   }
 )
 
 nCompiler:::inLabelAbstractTypesEnv(
   Literal <- function(code, symTab, auxEnv, handlingInfo) {
-    if(!is.null(code$aux$compileArgs)) {
+    if (!is.null(code$aux$compileArgs)) {
       types <- code$aux$compileArgs$types
-      if(!is.null(types)) {
-        if(!is.list(types)) types <- eval(types, envir = auxEnv$closure)
-        newSymTab <- typeList2symbolTable(types, where=auxEnv$closure)
+      if (!is.null(types)) {
+        if (!is.list(types)) types <- eval(types, envir = auxEnv$closure)
+        newSymTab <- typeList2symbolTable(types, where = auxEnv$closure)
         resolveTBDsymbols(newSymTab, auxEnv$where, project_env = auxEnv$project_env)
         symbols <- newSymTab$getSymbols()
-        for (sym in symbols) if(sym$name != "return") symTab$addSymbol(sym)
+        for (sym in symbols) if (sym$name != "return") symTab$addSymbol(sym)
         code$type <- symbols[["return"]] # may be NULL if the code is an entire line
       }
     }
@@ -1697,18 +1966,24 @@ nCompiler:::inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   Return <-
     function(code, symTab, auxEnv, handlingInfo) {
-      if(length(code$args) > 1)
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'return has argument length > 1.'
-        ),
-        call. = FALSE)
-      if(!exists('return', envir = auxEnv))
-        stop(exprClassProcessingErrorMsg(
-          code,
-          'There was no returnType declaration and the default is missing.'
-        ),
-        call. = FALSE)
+      if (length(code$args) > 1) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "return has argument length > 1."
+          ),
+          call. = FALSE
+        )
+      }
+      if (!exists("return", envir = auxEnv)) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "There was no returnType declaration and the default is missing."
+          ),
+          call. = FALSE
+        )
+      }
       insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       code$type <- code$args[[1]]$type
       # see if the returned object differs from the nFunction's return type
@@ -1716,70 +1991,83 @@ inLabelAbstractTypesEnv(
       # determine validity of returned type. Instead here we just
       # see if both are symbolNC, with a special-case check for a symbolSelf (or other case)
       # that inherits from symbolNC
-      if(inherits(auxEnv$returnSymbol, "symbolNC")) {
-        if(!inherits(code$type, class(auxEnv$returnSymbol)[1]))
-         stop(exprClassProcessingErrorMsg(
-           code,
-           "Object nClass type for return() does not match the nFunction's return type."
-         ),
-         call. = FALSE)
+      if (inherits(auxEnv$returnSymbol, "symbolNC")) {
+        if (!inherits(code$type, class(auxEnv$returnSymbol)[1])) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              "Object nClass type for return() does not match the nFunction's return type."
+            ),
+            call. = FALSE
+          )
+        }
       } else {
-        if(!identical(class(auxEnv$returnSymbol), class(code$type))) {
-          stop(exprClassProcessingErrorMsg(
-            code,
-            "Object type for return() does not match the nFunction's return type."
-          ),
-          call. = FALSE)
+        if (!identical(class(auxEnv$returnSymbol), class(code$type))) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              "Object type for return() does not match the nFunction's return type."
+            ),
+            call. = FALSE
+          )
         }
       }
-      if(inherits(auxEnv$returnSymbol, "symbolBasic")) {
+      if (inherits(auxEnv$returnSymbol, "symbolBasic")) {
         # problem if number of dimensions differs
-        if(auxEnv$returnSymbol$nDim != code$type$nDim) {
-          stop(exprClassProcessingErrorMsg(
-            code,
-            paste0(
-              "Dimension (", code$type$nDim, ") for return() does not match ",
-              "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
-              sep = ''
-            )
-          ),
-          call. = FALSE)
+        if (auxEnv$returnSymbol$nDim != code$type$nDim) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0(
+                "Dimension (", code$type$nDim, ") for return() does not match ",
+                "the nFunction's dimension (", auxEnv$returnSymbol$nDim, ").",
+                sep = ""
+              )
+            ),
+            call. = FALSE
+          )
         }
         # To-do: Warn about element type mismatches and cast later.
         type_mismatch <- FALSE
         # if returnType is a scalar, do more checks
-        if(auxEnv$returnSymbol$nDim==0) {
+        if (auxEnv$returnSymbol$nDim == 0) {
           # if the return is a literal, check for a case like return(2) <integer> with return type "double"
-          if(code$args[[1]]$isLiteral) {
+          if (code$args[[1]]$isLiteral) {
             # Are there additional cases to warn on for literals other than returning an integer to a double?
             # returning anything to a logical is ok
             type_mismatch <- FALSE
-            if(auxEnv$returnSymbol$type == "integer" && code$type$type == "double")
-              if(code$args[[1]]$name != round(code$args[[1]]$name))
-                stop(exprClassProcessingErrorMsg(
-                  code,
-                  paste0(
-                    "It looks like you are returning a non-integer literal in a function with integer return type.",
-                    sep = ''
-                  )
-                ),
-                call. = FALSE)
+            if (auxEnv$returnSymbol$type == "integer" && code$type$type == "double") {
+              if (code$args[[1]]$name != round(code$args[[1]]$name)) {
+                stop(
+                  exprClassProcessingErrorMsg(
+                    code,
+                    paste0(
+                      "It looks like you are returning a non-integer literal in a function with integer return type.",
+                      sep = ""
+                    )
+                  ),
+                  call. = FALSE
+                )
+              }
+            }
           } else {
             # if the return type is not a literal, check if the returnType has richer information (e.g. double > integer)
             type_mismatch <- type_mismatch ||
               !(identical(arithmeticOutputType(auxEnv$returnSymbol$type, code$type$type), auxEnv$returnSymbol$type))
           }
         }
-        if(type_mismatch) {
-          stop(exprClassProcessingErrorMsg(
-            code,
-            paste0(
-              "Scalar type (", code$type$type, ") for return() does not perfectly match ",
-              "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
-              sep = ''
-            )
-          ),
-          call. = FALSE)
+        if (type_mismatch) {
+          stop(
+            exprClassProcessingErrorMsg(
+              code,
+              paste0(
+                "Scalar type (", code$type$type, ") for return() does not perfectly match ",
+                "the nFunction's return type (", auxEnv$returnSymbol$type, ").",
+                sep = ""
+              )
+            ),
+            call. = FALSE
+          )
         }
       }
 
@@ -1796,10 +2084,11 @@ inLabelAbstractTypesEnv(
     # symbolBasic type as it is understood today.  Is a Vector always a dense
     # vector?  Or do we really need a separate handler for vectors stored in
     # different datastructures, such as SparseVectors, hashmaps, or lists?
-    if(returnType == "character")
+    if (returnType == "character") {
       code$type <- symbolBasicString$new(nDim = 1)
-    else
+    } else {
       code$type <- symbolBasic$new(nDim = 1, type = returnType)
+    }
     invisible(inserts)
   }
 )
@@ -1823,28 +2112,30 @@ inLabelAbstractTypesEnv(
   ## recurse and set code type via setReturnType()
   nMul <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    returnType <- setReturnType(handlingInfo, code$args[['x']]$type$type)
+    returnType <- setReturnType(handlingInfo, code$args[["x"]]$type$type)
     # R's matrix-multiplication promotes all output types to matrices; also
     # important b/c matrix multiplication could be used to implement an outer
     # product between two input vectors, which returns a matrix
     resDim <- 2
     # return a dense object if any arguments are dense, o/w return sparse
-    if(all(sapply(code$args, function(a) inherits(a$type, 'symbolSparse')))) {
+    if (all(sapply(code$args, function(a) inherits(a$type, "symbolSparse")))) {
       code$type <- symbolSparse$new(nDim = resDim, type = returnType)
     } else {
       code$type <- symbolBasic$new(nDim = resDim, type = returnType)
     }
-    if(code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor') && 
-         inherits(code$args[['y']]$type, 'symbolSparse'))
+    if (code$args[["x"]]$type$type %in% c("sparseCholFactor", "denseCholFactor") &&
+      inherits(code$args[["y"]]$type, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'Matrix multiplication of a `Cholesky` factor and a sparse matrix is not supported'
+        "Matrix multiplication of a `Cholesky` factor and a sparse matrix is not supported"
       ), call. = FALSE)
-    if(code$args[['y']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    }
+    if (code$args[["y"]]$type$type %in% c("sparseCholFactor", "denseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'Matrix multiplication by a `Cholesky` factor is not supported'
+        "Matrix multiplication by a `Cholesky` factor is not supported"
       ), call. = FALSE)
+    }
     invisible(inserts)
   }
 )
@@ -1853,11 +2144,11 @@ inLabelAbstractTypesEnv(
   ## recurse and use the nth argument's type as the return type
   ArgReturnType <- function(code, symTab, auxEnv, handlingInfo) {
     # determine which code$arg entry will be used to specify the return type
-    argTypeInd <- handlingInfo[['argTypeInd']]
-    if(is.null(argTypeInd)) {
+    argTypeInd <- handlingInfo[["argTypeInd"]]
+    if (is.null(argTypeInd)) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'Need to specify the input argument to use as a return type.'
+        "Need to specify the input argument to use as a return type."
       ), call. = FALSE)
     }
     # recurse to determine argument types
@@ -1874,23 +2165,26 @@ inLabelAbstractTypesEnv(
   Solve <- function(code, symTab, auxEnv, handlingInfo) {
     # recurse to determine argument types
     inserts <- ArgReturnType(code, symTab, auxEnv, handlingInfo)
-    if(code$args[[2]]$type$type %in% c('sparseCholFactor','denseCholFactor') || 
-         inherits(code$args[[2]]$type, 'symbolSparse'))
+    if (code$args[[2]]$type$type %in% c("sparseCholFactor", "denseCholFactor") ||
+      inherits(code$args[[2]]$type, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'Using solve/backsolve with a `Cholesky` factor or sparse matrix as the second argument is not supported'
+        "Using solve/backsolve with a `Cholesky` factor or sparse matrix as the second argument is not supported"
       ), call. = FALSE)
-    if(inherits(code$args[[1]]$type, 'symbolSparse')) 
+    }
+    if (inherits(code$args[[1]]$type, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'To solve systems of equations with sparse matrices, first use `Cholesky`'
+        "To solve systems of equations with sparse matrices, first use `Cholesky`"
       ), call. = FALSE)
-    if(code$name == 'nForwardsolve' &&
-         code$args[[1]]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    }
+    if (code$name == "nForwardsolve" &&
+      code$args[[1]]$type$type %in% c("sparseCholFactor", "denseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'nForwardsolve using result of `Cholesky` is not supported. Expected use of `Cholesky` is for `nSolve` and `nBacksolve`. Contact the NIMBLE development team to discuss your use case.'
+        "nForwardsolve using result of `Cholesky` is not supported. Expected use of `Cholesky` is for `nSolve` and `nBacksolve`. Contact the NIMBLE development team to discuss your use case."
       ), call. = FALSE)
+    }
     invisible(inserts)
   }
 )
@@ -1905,18 +2199,18 @@ inLabelAbstractTypesEnv(
   asSparse <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['x']]$type
-    if(isTRUE(argType$type == "character")) {
+    argType <- code$args[["x"]]$type
+    if (isTRUE(argType$type == "character")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'dense to sparse conversions are not supported for character objects'
+        "dense to sparse conversions are not supported for character objects"
       ), call. = FALSE)
     }
     # extract or construct a sparse type for argument
-    if(inherits(argType, 'symbolSparse')) {
+    if (inherits(argType, "symbolSparse")) {
       code$type <- argType
-    } else if(inherits(argType, 'symbolBasic')) {
-      code$type = symbolSparse$new(
+    } else if (inherits(argType, "symbolBasic")) {
+      code$type <- symbolSparse$new(
         name = argType$name,
         type = argType$type,
         isArg = argType$isArg,
@@ -1927,10 +2221,10 @@ inLabelAbstractTypesEnv(
     } else {
       stop(exprClassProcessingErrorMsg(
         code,
-        'unable to determine sparse type for input'
+        "unable to determine sparse type for input"
       ), call. = FALSE)
     }
-    if(isTRUE("prune" %in% code$aux$provided_as_missing)) {
+    if (isTRUE("prune" %in% code$aux$provided_as_missing)) {
       removeArg(code, "prune")
     }
     invisible(NULL)
@@ -1941,18 +2235,18 @@ inLabelAbstractTypesEnv(
   asDense <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['x']]$type
-    if(isTRUE(argType$type == "character")) {
+    argType <- code$args[["x"]]$type
+    if (isTRUE(argType$type == "character")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'sparse to dense conversions are not supported for character objects'
+        "sparse to dense conversions are not supported for character objects"
       ), call. = FALSE)
     }
     # extract or construct a sparse type for argument
-    if(!inherits(argType, 'symbolSparse')) {
+    if (!inherits(argType, "symbolSparse")) {
       code$type <- argType
-    } else if(inherits(argType, 'symbolSparse')) {
-      code$type = symbolBasic$new(
+    } else if (inherits(argType, "symbolSparse")) {
+      code$type <- symbolBasic$new(
         name = argType$name,
         type = argType$type,
         isArg = argType$isArg,
@@ -1963,7 +2257,7 @@ inLabelAbstractTypesEnv(
     } else {
       stop(exprClassProcessingErrorMsg(
         code,
-        'unable to determine dense type for input'
+        "unable to determine dense type for input"
       ), call. = FALSE)
     }
     invisible(NULL)
@@ -1976,28 +2270,30 @@ inLabelAbstractTypesEnv(
     # recurse to determine argument types
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # extract the return type
-    code$type <- code$args[['x']]$type
-    if(isTRUE(code$type$type == "character"))
+    code$type <- code$args[["x"]]$type
+    if (isTRUE(code$type$type == "character")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'transpose is not supported for character objects.'
-      ), call. = FALSE)
-    if(code$type$type %in% c('denseCholFactor','sparseCholFactor'))
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'transpose of a `Cholesky` factor is not supported'
-      ), call. = FALSE)
-    # validate input of transpose function
-    if(code$type$nDim < 1) {
-      stop(exprClassProcessingErrorMsg(
-        code,
-        'cannot transpose a scalar.'
+        "transpose is not supported for character objects."
       ), call. = FALSE)
     }
-    if(code$type$nDim > 2) {
+    if (code$type$type %in% c("denseCholFactor", "sparseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'cannot transpose an object with more than two dimensions.'
+        "transpose of a `Cholesky` factor is not supported"
+      ), call. = FALSE)
+    }
+    # validate input of transpose function
+    if (code$type$nDim < 1) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        "cannot transpose a scalar."
+      ), call. = FALSE)
+    }
+    if (code$type$nDim > 2) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        "cannot transpose an object with more than two dimensions."
       ), call. = FALSE)
     }
     invisible(inserts)
@@ -2022,9 +2318,11 @@ inLabelAbstractTypesEnv(
   nLogdet <-
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-      
-      code$type <- symbolBasic$new(nDim = 0,
-                                   type = setReturnType(handlingInfo, "double"))
+
+      code$type <- symbolBasic$new(
+        nDim = 0,
+        type = setReturnType(handlingInfo, "double")
+      )
       inserts
     }
 )
@@ -2034,17 +2332,19 @@ inLabelAbstractTypesEnv(
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
       argType <- code$args[[1]]$type
-      if(inherits(argType, 'symbolSparse') ||
-         isTRUE(argType$type %in% c('denseCholFactor', 'sparseCholFactor')))
+      if (inherits(argType, "symbolSparse") ||
+        isTRUE(argType$type %in% c("denseCholFactor", "sparseCholFactor"))) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'inverse is not supported for sparse matrices or the result of `Cholesky`.'
+          "inverse is not supported for sparse matrices or the result of `Cholesky`."
         ), call. = FALSE)
-      if(!identical(as.integer(argType$nDim), 2L))
+      }
+      if (!identical(as.integer(argType$nDim), 2L)) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'inverse requires a matrix argument.'
+          "inverse requires a matrix argument."
         ), call. = FALSE)
+      }
       code$type <- symbolBasic$new(nDim = 2, type = "double")
       inserts
     }
@@ -2055,13 +2355,16 @@ inLabelAbstractTypesEnv(
   nEquals <-
     function(code, symTab, auxEnv, handlingInfo) {
       inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-      if(any(sapply(code$args, function(arg) arg$type$nDim) != 0))
+      if (any(sapply(code$args, function(arg) arg$type$nDim) != 0)) {
         stop(exprClassProcessingErrorMsg(
           code,
-          'equals (nEquals) supports only scalar arguments.'
+          "equals (nEquals) supports only scalar arguments."
         ), call. = FALSE)
-      code$type <- symbolBasic$new(nDim = 0,
-                                   type = setReturnType(handlingInfo, "integer"))
+      }
+      code$type <- symbolBasic$new(
+        nDim = 0,
+        type = setReturnType(handlingInfo, "integer")
+      )
       inserts
     }
 )
@@ -2070,19 +2373,21 @@ inLabelAbstractTypesEnv(
   nEigen <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['x']]$type
-    if(inherits(argType, 'symbolSparse')) 
+    argType <- code$args[["x"]]$type
+    if (inherits(argType, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'eigendecompositions not supported for sparse matrices.'
+        "eigendecompositions not supported for sparse matrices."
       ), call. = FALSE)
-    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
+    }
+    if (argType$type %in% c("denseCholFactor", "sparseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'eigendecompositions not supported for result of `Cholesky`.'
+        "eigendecompositions not supported for result of `Cholesky`."
       ), call. = FALSE)
+    }
     code$type <- symbolNC$new(
-      name = code$name, type = 'EigenDecomp', NCgenerator = EigenDecomp,
+      name = code$name, type = "EigenDecomp", NCgenerator = EigenDecomp,
       isArg = FALSE
     )
     auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, EigenDecomp) # To handle cases like nEigen(x)$vectors.
@@ -2094,19 +2399,21 @@ inLabelAbstractTypesEnv(
   nSvd <- function(code, symTab, auxEnv, handlingInfo) {
     # determine object's natural type
     insertions <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    argType <- code$args[['x']]$type
-    if(inherits(argType, 'symbolSparse')) 
+    argType <- code$args[["x"]]$type
+    if (inherits(argType, "symbolSparse")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'singular value decompositions not supported for sparse matrices.'
+        "singular value decompositions not supported for sparse matrices."
       ), call. = FALSE)
-    if(argType$type %in% c('denseCholFactor','sparseCholFactor')) 
+    }
+    if (argType$type %in% c("denseCholFactor", "sparseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'singular value decompositions not supported for result of `Cholesky`.'
+        "singular value decompositions not supported for result of `Cholesky`."
       ), call. = FALSE)
+    }
     code$type <- symbolNC$new(
-      name = code$name, type = 'SVDDecomp', NCgenerator = SVDDecomp,
+      name = code$name, type = "SVDDecomp", NCgenerator = SVDDecomp,
       isArg = FALSE
     )
     auxEnv$needed_nClasses <- c(auxEnv$needed_nClasses, SVDDecomp) # To handle cases like nSvd(x)$u.
@@ -2119,26 +2426,28 @@ inLabelAbstractTypesEnv(
     # recurse arguments
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
 
-    if('x' %in% names(code$args) && code$args[['x']]$type$type %in% c('sparseCholFactor','denseCholFactor'))
+    if ("x" %in% names(code$args) && code$args[["x"]]$type$type %in% c("sparseCholFactor", "denseCholFactor")) {
       stop(exprClassProcessingErrorMsg(
         code,
-        'Diagonal of a `Cholesky` factor is not supported'
+        "Diagonal of a `Cholesky` factor is not supported"
       ), call. = FALSE)
+    }
 
-      
-      
+
     # handle "diag(x)" when x is a matrix, and goal is to extract diagonal
-    if(length(code$args) == 1 && 'x' %in% names(code$args)) {
-      if(code$args[['x']]$type$nDim == 2) {
-        returnType <- code$args[['x']]$type$type
-        if(isTRUE(returnType == "character"))
+    if (length(code$args) == 1 && "x" %in% names(code$args)) {
+      if (code$args[["x"]]$type$nDim == 2) {
+        returnType <- code$args[["x"]]$type$type
+        if (isTRUE(returnType == "character")) {
           stop(exprClassProcessingErrorMsg(
             code,
-            'diag() is not supported for character objects.'
+            "diag() is not supported for character objects."
           ), call. = FALSE)
+        }
         code$type <- symbolBasic$new(nDim = 1, type = returnType)
-        if(code$name == "nDiagonal")
+        if (code$name == "nDiagonal") {
           code$name <- "nDiag"
+        }
         return(invisible(inserts))
       }
     }
@@ -2157,30 +2466,30 @@ inLabelAbstractTypesEnv(
       arg <- code$args[[argName]]
 
       # make sure argument exists if required, or skip processing
-      if(missingAllowed == TRUE) {
-        if(is.null(arg)) {
+      if (missingAllowed == TRUE) {
+        if (is.null(arg)) {
           return(NULL)
         }
-      } else if(missingAllowed == FALSE) {
-        if(is.null(arg)) {
+      } else if (missingAllowed == FALSE) {
+        if (is.null(arg)) {
           stop(exprClassProcessingErrorMsg(
             code,
-            paste('Required argument', argName, 'is missing from function call')
+            paste("Required argument", argName, "is missing from function call")
           ))
         }
       }
 
       # check inheritance - make sure object has dense storage
-      if(!inherits(arg$type, 'symbolBasic')) {
+      if (!inherits(arg$type, "symbolBasic")) {
         stop(exprClassProcessingErrorMsg(
-          code, paste('Argument', argName, 'must be a symbolBasic type')
+          code, paste("Argument", argName, "must be a symbolBasic type")
         ))
       }
 
       # check dimensions
-      if(arg$type$nDim > maxDim) {
+      if (arg$type$nDim > maxDim) {
         stop(exprClassProcessingErrorMsg(
-          code, paste('Argument', argName, 'must have nDim less than', maxDim)
+          code, paste("Argument", argName, "must have nDim less than", maxDim)
         ))
       }
 
@@ -2188,22 +2497,24 @@ inLabelAbstractTypesEnv(
     } # valArg
 
     # validate arguments
-    valArg(argName = 'x', maxDim = 1, missingAllowed = TRUE)
-    valArg(argName = 'nrow', maxDim = 0, missingAllowed = TRUE)
-    valArg(argName = 'ncol', maxDim = 0, missingAllowed = TRUE)
+    valArg(argName = "x", maxDim = 1, missingAllowed = TRUE)
+    valArg(argName = "nrow", maxDim = 0, missingAllowed = TRUE)
+    valArg(argName = "ncol", maxDim = 0, missingAllowed = TRUE)
 
-    returnType <- 'double'
+    returnType <- "double"
 
-    if(code$name == 'nDiag') {
+    if (code$name == "nDiag") {
       # output will be a symbolBasic type, representing a dense matrix
       code$type <- symbolBasic$new(nDim = 2, type = returnType)
-    } else if(code$name == 'nDiagonal') {
+    } else if (code$name == "nDiagonal") {
       # output will be a sparse matrix
       code$type <- symbolSparse$new(type = returnType, nDim = 2)
     } else {
       stop(exprClassProcessingErrorMsg(
-        code, paste('Not sure what symbol type should be returned for',
-                    code$name)
+        code, paste(
+          "Not sure what symbol type should be returned for",
+          code$name
+        )
       ))
     }
 
@@ -2213,16 +2524,19 @@ inLabelAbstractTypesEnv(
 
 inLabelAbstractTypesEnv(
   dim <- function(code, symTab, auxEnv, handlingInfo) {
-    if(length(code$args) != 1)
-        stop(exprClassProcessingErrorMsg(
+    if (length(code$args) != 1) {
+      stop(
+        exprClassProcessingErrorMsg(
           code,
-          'dim called with argument length != 1.'
+          "dim called with argument length != 1."
         ),
-        call. = FALSE)
+        call. = FALSE
+      )
+    }
     # recurse arguments
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     # output will be a vector of sizes
-    code$type <- symbolBasic$new(nDim = 1, type = 'integer')
+    code$type <- symbolBasic$new(nDim = 1, type = "integer")
     invisible(inserts)
   }
 )
@@ -2230,10 +2544,12 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nOptim <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    code$type <- symbolNC$new(name = '',
-                              type = 'OptimResultList',
-                              isArg = FALSE,
-                              NCgenerator = OptimResultList)
+    code$type <- symbolNC$new(
+      name = "",
+      type = "OptimResultList",
+      isArg = FALSE,
+      NCgenerator = OptimResultList
+    )
     invisible(inserts)
   }
 )
@@ -2241,21 +2557,24 @@ inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nDerivs <- function(code, symTab, auxEnv, handlingInfo) {
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo,
-                                          useArgs = c(FALSE, rep(TRUE, length(code$args)-1)))
+      useArgs = c(FALSE, rep(TRUE, length(code$args) - 1))
+    )
     # For now, we do not recurse into first argument. In future maybe that can be done.
-    code$type <- symbolNC$new(name = '',
-                              type = 'derivClass',
-                              isArg = FALSE,
-                              NCgenerator = derivClass)
+    code$type <- symbolNC$new(
+      name = "",
+      type = "derivClass",
+      isArg = FALSE,
+      NCgenerator = derivClass
+    )
     invisible(inserts)
   }
 )
 
 inLabelAbstractTypesEnv(
-    output <- function(code, symTab, auxEnv, handlingInfo) {
-        inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-        invisible(inserts)
-    }
+  output <- function(code, symTab, auxEnv, handlingInfo) {
+    inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
+    invisible(inserts)
+  }
 )
 
 inLabelAbstractTypesEnv(
@@ -2263,10 +2582,10 @@ inLabelAbstractTypesEnv(
   # Replace it by its integer value so the C++ does not need level names.
   nMessage <- function(code, symTab, auxEnv, handlingInfo) {
     iLevel <- which(names(code$args) == "level")
-    if(length(iLevel) == 1) {
+    if (length(iLevel) == 1) {
       levelArg <- code$args[[iLevel]]
       levels <- logger_levels()
-      if(isTRUE(levelArg$isName) && levelArg$name %in% names(levels)) {
+      if (isTRUE(levelArg$isName) && levelArg$name %in% names(levels)) {
         setArg(code, iLevel, literalIntegerExpr(levels[[levelArg$name]]))
       }
     }
@@ -2284,27 +2603,35 @@ logger_levels <- function() {
 
 inLabelAbstractTypesEnv(
   DEBUG <- function(code, symTab, auxEnv, handlingInfo) {
-    message('Entering into size processing debugging. Do debug(nCompiler:::compile_labelAbstractTypes) if you want to follow every step.\n',
-    'If execution ends with error, you may need to reset debugging by set_nOption("compilerOptions", FALSE, "debug_labelAbstractTypes")\n',
-    'Use browser() commands to proceed (e.g. "c <enter>" to continue).\n',
-    'If you continue, you will land in a browser() inside any handlers.')
+    message(
+      "Entering into size processing debugging. Do debug(nCompiler:::compile_labelAbstractTypes) if you want to follow every step.\n",
+      'If execution ends with error, you may need to reset debugging by set_nOption("compilerOptions", FALSE, "debug_labelAbstractTypes")\n',
+      'Use browser() commands to proceed (e.g. "c <enter>" to continue).\n',
+      "If you continue, you will land in a browser() inside any handlers."
+    )
     browser()
-    origValue <- get_nOption('compilerOptions')$debug_labelAbstractTypes
-    set_nOption('debug_labelAbstractTypes', TRUE, 'compilerOptions')
+    origValue <- get_nOption("compilerOptions")$debug_labelAbstractTypes
+    set_nOption("debug_labelAbstractTypes", TRUE, "compilerOptions")
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
     removeExprClassLayer(code, 1)
-    set_nOption('debug_labelAbstractTypes', origValue, 'compilerOptions')
-    if(is.null(inserts)) return(NULL) else return(inserts)
+    set_nOption("debug_labelAbstractTypes", origValue, "compilerOptions")
+    if (is.null(inserts)) {
+      return(NULL)
+    } else {
+      return(inserts)
+    }
   }
 )
 
 inLabelAbstractTypesEnv(
   ERROR <- function(code, symTab, auxEnv, handlingInfo) {
-    stop(exprClassProcessingErrorMsg(
-      code,
-      'The labelAbstractTypes stage was reached for an operator that should not get there.'
-    ),
-    call. = FALSE)
+    stop(
+      exprClassProcessingErrorMsg(
+        code,
+        "The labelAbstractTypes stage was reached for an operator that should not get there."
+      ),
+      call. = FALSE
+    )
   }
 )
 
@@ -2318,22 +2645,39 @@ inLabelAbstractTypesEnv(
 
 ## promote numeric output to most information-rich type, AD > double > integer > logical
 arithmeticOutputType <- function(t1, t2 = NULL, returnTypeCode = NULL) {
-  if (!is.null(returnTypeCode) && returnTypeCode %in% 1L:4L)
+  if (!is.null(returnTypeCode) && returnTypeCode %in% 1L:4L) {
     return(names(returnTypeCodes)[[returnTypeCode]])
-  if (t1 == 'AD') return ('AD')
-  if (!is.null(t2) && t2 == 'AD') return('AD')
-  if (t1 == 'double') return('double')
-  if (!is.null(t2) && t2 == 'double') return('double')
-  if (t1 == 'integer') return('integer')
-  if (!is.null(t2) && t2 == 'integer') return('integer')
-  if (!is.null(returnTypeCode) && returnTypeCode == 6L) return('double')
-  if (!is.null(returnTypeCode) && returnTypeCode == 7L) return('integer')
-  return('logical')
+  }
+  if (t1 == "AD") {
+    return("AD")
+  }
+  if (!is.null(t2) && t2 == "AD") {
+    return("AD")
+  }
+  if (t1 == "double") {
+    return("double")
+  }
+  if (!is.null(t2) && t2 == "double") {
+    return("double")
+  }
+  if (t1 == "integer") {
+    return("integer")
+  }
+  if (!is.null(t2) && t2 == "integer") {
+    return("integer")
+  }
+  if (!is.null(returnTypeCode) && returnTypeCode == 6L) {
+    return("double")
+  }
+  if (!is.null(returnTypeCode) && returnTypeCode == 7L) {
+    return("integer")
+  }
+  return("logical")
 }
 
 ## promote symbol with the most dense storage type, symbolBasic > symbolSparse
 arithmeticOutputSymbol <- function(s1, s2 = NULL, returnTypeCodes) {
-  if(inherits(s1$type, 'symbolSparse') && inherits(s2$type, 'symbolSparse')) {
+  if (inherits(s1$type, "symbolSparse") && inherits(s2$type, "symbolSparse")) {
     return(symbolSparse)
   } else {
     return(symbolBasic)

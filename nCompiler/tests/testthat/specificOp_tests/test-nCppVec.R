@@ -1,6 +1,6 @@
 message("nCppVec uncompiled is rudimentary.")
 message("nCppVec needs tests of nCppVecs of nClass types or even other nCppVecs")
-#debug(nCompiler:::type2symbol)
+# debug(nCompiler:::type2symbol)
 
 # working here on nList, a working step towards a new more fully featured nCppVec
 
@@ -27,10 +27,10 @@ message("nCppVec needs tests of nCppVecs of nClass types or even other nCppVecs"
 test_that("nCppVec('numericScalar') works in nFunction", {
   foo <- nFunction(
     function(x = "nCppVec('numericScalar')") {
-      ans <- nCppVec('numericScalar', 4)
+      ans <- nCppVec("numericScalar", 4)
       ans[[1]] <- 10.5
       z <- ans[[1]]
-      ans[[2]] <- z+1
+      ans[[2]] <- z + 1
       ans[[3]] <- x[[2]]
       return(ans)
     },
@@ -49,20 +49,21 @@ test_that("nCppVec('numericScalar') works in nFunction", {
 test_that("nCppVec('numericVector') works in nFunction", {
   foo <- nFunction(
     function(x = "nCppVec('numericVector()')") {
-      ans <- nCppVec('numericVector', 4)
+      ans <- nCppVec("numericVector", 4)
       ans[[1]] <- x[[1]]
       ans[[2]] <- ans[[1]] + 1
       ans[[3]] <- x[[2]]
-      for(i in 1:3)
+      for (i in 1:3) {
         ans[[3]][i] <- ans[[3]][i] + 1000
+      }
       return(ans)
     },
     returnType = "nCppVec('numericVector')" # How do alternate modes of saying this go through?
   )
   x <- list(1:3, 11:13)
-  expect_identical(foo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, NULL))
+  expect_identical(foo(x), list(x[[1]], x[[1]] + 1, x[[2]] + 1000, NULL))
   cfoo <- nCompile(foo)
-  expect_equal(cfoo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, numeric(0)))
+  expect_equal(cfoo(x), list(x[[1]], x[[1]] + 1, x[[2]] + 1000, numeric(0)))
 })
 
 test_that("nCppVec(my_type) finds my_type by correct scoping from nFunction", {
@@ -70,12 +71,13 @@ test_that("nCppVec(my_type) finds my_type by correct scoping from nFunction", {
     my_type <- nType(numericVector())
     foo <- nFunction(
       function(x = "nCppVec(T(my_type))") {
-        ans <- nCppVec('T(my_type)', 4)
+        ans <- nCppVec("T(my_type)", 4)
         ans[[1]] <- x[[1]]
         ans[[2]] <- ans[[1]] + 1
         ans[[3]] <- x[[2]]
-        for(i in 1:3)
+        for (i in 1:3) {
           ans[[3]][i] <- ans[[3]][i] + 1000
+        }
         return(ans)
       },
       returnType = "nCppVec({{my_type}})" # How do alternate modes of saying this go through?
@@ -84,9 +86,9 @@ test_that("nCppVec(my_type) finds my_type by correct scoping from nFunction", {
   }
   foo <- make_foo()
   x <- list(1:3, 11:13)
-  expect_identical(foo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, NULL))
+  expect_identical(foo(x), list(x[[1]], x[[1]] + 1, x[[2]] + 1000, NULL))
   cfoo <- nCompile(foo)
-  expect_equal(cfoo(x), list(x[[1]], x[[1]]+1, x[[2]]+1000, numeric(0)))
+  expect_equal(cfoo(x), list(x[[1]], x[[1]] + 1, x[[2]] + 1000, numeric(0)))
 })
 
 test_that("nCppVec('numericVector') works in nClass", {
@@ -98,7 +100,8 @@ test_that("nCppVec('numericVector') works in nClass", {
           x[[1]] <- list_vec[[2]][2]
           return(x)
           returnType("nCppVec('numericScalar')")
-        })
+        }
+      )
     )
   )
   nc1 <- nc$new()
@@ -110,14 +113,16 @@ test_that("nCppVec('numericVector') works in nClass", {
   obj$list_vec <- nc1$list_vec
   expect_equal(obj$list_vec, nc1$list_vec)
   expect_equal(obj$foo(x), list(12, 102, 103))
-  rm(obj); gc();
+  rm(obj)
+  gc()
 
   Cnc <- nCompile(nc, package = TRUE)
   obj <- Cnc$new()
   obj$list_vec <- nc1$list_vec
   expect_equal(obj$list_vec, nc1$list_vec)
   expect_equal(obj$foo(x), list(12, 102, 103))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nCppVec(my_type) finds my_type by correct scoping from nClass checking multiple pathways", {
@@ -132,7 +137,8 @@ test_that("nCppVec(my_type) finds my_type by correct scoping from nClass checkin
             x[[1]] <- list_vec[[2]][2]
             return(x)
             returnType("nCppVec('numericScalar')")
-          })
+          }
+        )
       )
     )
     nc
@@ -148,14 +154,16 @@ test_that("nCppVec(my_type) finds my_type by correct scoping from nClass checkin
   obj$list_vec <- nc1$list_vec
   expect_equal(obj$list_vec, nc1$list_vec)
   expect_equal(obj$foo(x), list(12, 102, 103))
-  rm(obj); gc();
+  rm(obj)
+  gc()
 
   Cnc <- nCompile(nc, package = TRUE)
   obj <- Cnc$new()
   obj$list_vec <- nc1$list_vec
   expect_equal(obj$list_vec, nc1$list_vec)
   expect_equal(obj$foo(x), list(12, 102, 103))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nCppVec of an nClass, requiring delayed type resolution, combined with scoping", {
@@ -178,14 +186,17 @@ test_that("nCppVec of an nClass, requiring delayed type resolution, combined wit
             x[[1]] <- list_vec[[2]][2]
             return(x)
             returnType("nCppVec('numericScalar')")
-          })
+          }
+        )
       )
     )
     my_nctype <- nType(nc())
     ncB <- nClass(
       Cpublic = list(
         list_nc = "nCppVec(nc())",
-        one = nFunction(function() return(1), returnType = 'integerScalar'),
+        one = nFunction(function() {
+          return(1)
+        }, returnType = "integerScalar"),
         fooB = nFunction(
           function(x = "nCppVec(T(my_nctype))") {
             list_nc2 <- nCppVec(nc(), 2)
@@ -196,7 +207,7 @@ test_that("nCppVec of an nClass, requiring delayed type resolution, combined wit
             return(list_nc2)
             returnType(nCppVec(nc()))
           }
-         )
+        )
       )
     )
     list(nc = nc, ncB = ncB)
@@ -212,29 +223,30 @@ test_that("nCppVec of an nClass, requiring delayed type resolution, combined wit
   x <- list(101, 102, 103)
   expect_equal(nc1$foo(x), list(12, 102, 103))
 
-  for(package in c(FALSE, TRUE)) {
-  CncAB <- nCompile(nc, ncB, package = package)
-  Cnc <- CncAB$nc
-  CncB <- CncAB$ncB
+  for (package in c(FALSE, TRUE)) {
+    CncAB <- nCompile(nc, ncB, package = package)
+    Cnc <- CncAB$nc
+    CncB <- CncAB$ncB
 
-  # compiled nc
-  obj <- Cnc$new()
-  obj$list_vec <- nc1$list_vec
-  expect_equal(obj$list_vec, nc1$list_vec)
-  expect_equal(obj$foo(x), list(12, 102, 103))
+    # compiled nc
+    obj <- Cnc$new()
+    obj$list_vec <- nc1$list_vec
+    expect_equal(obj$list_vec, nc1$list_vec)
+    expect_equal(obj$foo(x), list(12, 102, 103))
 
-  # compiled ncB
-  objB <- CncB$new()
-  objB$list_nc <- list(obj)
-  expect_identical(objB$list_nc[[1]]$list_vec, obj$list_vec)
-  objB$list_nc[[1]]$list_vec[[1]] <- 4:6
-  expect_equal(obj$list_vec[[1]], 4:6)
-  obj2 <- Cnc$new()
-  obj2$list_vec <- list(5:8, 15:18)
-  res <- objB$fooB(list(obj, obj2))
-  expect_equal(res[[1]]$list_vec, obj2$list_vec)
-  expect_equal(res[[2]]$list_vec, list(8:10, numeric()))
+    # compiled ncB
+    objB <- CncB$new()
+    objB$list_nc <- list(obj)
+    expect_identical(objB$list_nc[[1]]$list_vec, obj$list_vec)
+    objB$list_nc[[1]]$list_vec[[1]] <- 4:6
+    expect_equal(obj$list_vec[[1]], 4:6)
+    obj2 <- Cnc$new()
+    obj2$list_vec <- list(5:8, 15:18)
+    res <- objB$fooB(list(obj, obj2))
+    expect_equal(res[[1]]$list_vec, obj2$list_vec)
+    expect_equal(res[[2]]$list_vec, list(8:10, numeric()))
 
-  rm(obj, objB); gc();
+    rm(obj, objB)
+    gc()
   }
 })

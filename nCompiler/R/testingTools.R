@@ -47,44 +47,57 @@
 ##   invisible(NULL)
 ## }
 
-compareFilesUsingDiff <- function(trialFile, 
+compareFilesUsingDiff <- function(trialFile,
                                   correctFile,
                                   main = "") {
-  if(main == "") main <- paste0(trialFile, 
-                                ' and ',
-                                correctFile,
-                                ' do not match\n')
-  diffOutput <- system2('diff', 
-                        c(trialFile, correctFile),
-                        stdout = TRUE)
-  test_that(paste0(main,
-                   paste0(diffOutput, collapse = '\n')
-                   ),
-            expect_true(length(diffOutput) == 0)
+  if (main == "") {
+    main <- paste0(
+      trialFile,
+      " and ",
+      correctFile,
+      " do not match\n"
+    )
+  }
+  diffOutput <- system2("diff",
+    c(trialFile, correctFile),
+    stdout = TRUE
+  )
+  test_that(
+    paste0(
+      main,
+      paste0(diffOutput, collapse = "\n")
+    ),
+    expect_true(length(diffOutput) == 0)
   )
   invisible(NULL)
 }
 
-compareAllFilesInDir <- function(trialDir, 
+compareAllFilesInDir <- function(trialDir,
                                  correctDir) {
   trialFiles <- list.files(trialDir)
   correctFiles <- list.files(correctDir)
   intersectFiles <- intersect(trialFiles, correctFiles)
   compareFiles <- function(trialFile, correctFile) {
-    compareFilesUsingDiff(file.path(trialDir, trialFile),
-                          file.path(correctDir, correctFile))
+    compareFilesUsingDiff(
+      file.path(trialDir, trialFile),
+      file.path(correctDir, correctFile)
+    )
   }
-  mapply(compareFiles,
-         intersectFiles,
-         intersectFiles)
+  mapply(
+    compareFiles,
+    intersectFiles,
+    intersectFiles
+  )
   extraTrialFiles <- setdiff(trialFiles, correctFiles)
   extraCorrectFiles <- setdiff(correctFiles, trialFiles)
   expect_true(
-    isTRUE(length(extraTrialFiles)==0 & length(extraCorrectFiles)==0),
-    info = paste0("Trial files without a correct file:", 
-                  paste(extraTrialFiles),
-                  "Correct files without a trial file:", 
-                  paste(extraCorrectFiles)),
+    isTRUE(length(extraTrialFiles) == 0 & length(extraCorrectFiles) == 0),
+    info = paste0(
+      "Trial files without a correct file:",
+      paste(extraTrialFiles),
+      "Correct files without a trial file:",
+      paste(extraCorrectFiles)
+    ),
     label = "Mismatch in trial vs. correct files."
   )
 }

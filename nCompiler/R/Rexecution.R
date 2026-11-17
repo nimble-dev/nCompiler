@@ -5,7 +5,7 @@ parallel_for <- function(index, range, body, ...) {
   index <- substitute(index)
   range <- substitute(range)
   body <- substitute(body)
-  for_loop <- quote(for(i in range) body)
+  for_loop <- quote(for (i in range) body)
   for_loop[[2]] <- index
   for_loop[[3]] <- range
   for_loop[[4]] <- body
@@ -19,12 +19,12 @@ parallel_reduce <- function(f, x, init, ...) {
 
 make_nAs_output_dims <- function(input_dims, output_nDim) {
   input_nDim <- length(input_dims)
-  if(output_nDim >= input_nDim)
+  if (output_nDim >= input_nDim) {
     c(input_dims, rep(1, output_nDim - input_nDim))
-  else {
+  } else {
     output_dims <- input_dims[input_dims > 1]
-    if(length(output_dims) < output_nDim) output_dims <- c(output_dims, rep(1, output_nDim - length(output_dims)))
-    if(length(output_dims) > output_nDim) stop("input_dims don't have enough singleton dimensions for output_nDim = ", output_nDim)
+    if (length(output_dims) < output_nDim) output_dims <- c(output_dims, rep(1, output_nDim - length(output_dims)))
+    if (length(output_dims) > output_nDim) stop("input_dims don't have enough singleton dimensions for output_nDim = ", output_nDim)
     output_dims
   }
 }
@@ -32,10 +32,10 @@ make_nAs_output_dims <- function(input_dims, output_nDim) {
 #' @export
 nSwitch <- function(paramID, IDoptions = NULL, ...) {
   dotsList <- eval(substitute(alist(...)))
-  if(is.null(IDoptions)) IDoptions <- seq_along(dotsList)
-  if(length(IDoptions) != length(dotsList)) stop("length of IDoptions must match number of cases provided in ...")
+  if (is.null(IDoptions)) IDoptions <- seq_along(dotsList)
+  if (length(IDoptions) != length(dotsList)) stop("length of IDoptions must match number of cases provided in ...")
   iUse <- which(IDoptions == paramID)
-  if(length(iUse) > 0)  eval(dotsList[[iUse[1] ]], envir = parent.frame())
+  if (length(iUse) > 0) eval(dotsList[[iUse[1]]], envir = parent.frame())
   invisible(NULL)
 }
 
@@ -45,15 +45,17 @@ nAs <- function(object, type) {
   sym <- type2symbol(!!ttype)
   output_nDim <- sym$nDim
   scalar_type <- sym$type
-  if(storage.mode(object) != scalar_type)
+  if (storage.mode(object) != scalar_type) {
     storage.mode(object) <- scalar_type
+  }
   input_dims <- dim(object) %||% length(object)
   output_dims <- make_nAs_output_dims(input_dims, output_nDim)
-  if(output_nDim > 1) {
+  if (output_nDim > 1) {
     dim(object) <- output_dims
     object
-  } else
+  } else {
     as.vector(object)
+  }
 }
 
 #' @export
@@ -70,34 +72,36 @@ nAs <- function(object, type) {
   scalar_type <- storage.mode(object)
   input_dims <- dim(object) %||% length(object)
   output_dims <- make_nAs_output_dims(input_dims, output_nDim)
-  if(!length(output_dims)) output_dims <- 1
+  if (!length(output_dims)) output_dims <- 1
   value_dims <- dim(value) %||% length(value)
-  if(!all.equal(output_dims, value_dims))
+  if (!all.equal(output_dims, value_dims)) {
     stop("value doesn't conform to type in nAs<- assignment")
+  }
   object[] <- value[]
-  if(storage.mode(object) != scalar_type)
+  if (storage.mode(object) != scalar_type) {
     storage.mode(object) <- scalar_type
+  }
   expr <- substitute(LHS <- OBJ, list(LHS = obj_expr, OBJ = object))
   res <- eval(expr, envir = parent.frame())
   res
 }
 
 #' @export
-square <- function(x) x*x
+square <- function(x) x * x
 #' @export
-cube <- function(x) x*x*x
+cube <- function(x) x * x * x
 ## #' @export
 ## rsqrt <- function(x) 1/sqrt(x)
 #' @export
-logit <- function(x) log(x/(1-x))
+logit <- function(x) log(x / (1 - x))
 #' @export
-ilogit <- function(x) 1/(1+exp(-x))
+ilogit <- function(x) 1 / (1 + exp(-x))
 #' @export
 expit <- ilogit
 #' @export
-cloglog <- function(x) log(-log(1-x))
+cloglog <- function(x) log(-log(1 - x))
 #' @export
-icloglog <- function(x) 1-exp(-exp(x))
+icloglog <- function(x) 1 - exp(-exp(x))
 #' @export
 probit <- function(x) qnorm(x)
 #' @export
@@ -115,12 +119,14 @@ nCat <- cat
 #' @export
 nimCat <- function(...) { # As in nimble: arguments are not separated; arrays are printed with print().
   items <- list(...)
-  for(i in seq_along(items)) {if(is.array(items[[i]])) print(items[[i]]) else cat(items[[i]])}
+  for (i in seq_along(items)) {
+    if (is.array(items[[i]])) print(items[[i]]) else cat(items[[i]])
+  }
 }
 #' @export
 nPrint <- function(...) { # As nimble's nimPrint: nimCat followed by a newline.
   nimCat(...)
-  cat('\n')
+  cat("\n")
 }
 #' @export
 nimPrint <- nPrint
@@ -152,29 +158,29 @@ nWarning <- warning
 #' @seealso \code{\link{nMatrix}}, \code{\link{nArray}}
 #' @export
 nNumeric <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
-    fillValue <- makeFillValue(value, 'double', init)
-    makeReturnVector(fillValue, length, recycle)
+  fillValue <- makeFillValue(value, "double", init)
+  makeReturnVector(fillValue, length, recycle)
 }
 
 #' @rdname nNumeric
 #' @export
 nInteger <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
-    fillValue <- makeFillValue(value, 'integer', init)
-    makeReturnVector(fillValue, length, recycle)
+  fillValue <- makeFillValue(value, "integer", init)
+  makeReturnVector(fillValue, length, recycle)
 }
 
 #' @rdname nNumeric
 #' @export
 nLogical <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
-    fillValue <- makeFillValue(value, 'logical', init)
-    makeReturnVector(fillValue, length, recycle)
+  fillValue <- makeFillValue(value, "logical", init)
+  makeReturnVector(fillValue, length, recycle)
 }
 
 #' @rdname nCharacter
 #' @export
 nCharacter <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, recycle = TRUE) {
-    fillValue <- makeFillValue(value, 'character', init)
-    makeReturnVector(fillValue, length, recycle)
+  fillValue <- makeFillValue(value, "character", init)
+  makeReturnVector(fillValue, length, recycle)
 }
 
 
@@ -204,80 +210,84 @@ nCharacter <- function(length = 0, value = 0, init = TRUE, fillZeros = TRUE, rec
 #' @author Daniel Turek and Perry de Valpine
 #' @seealso \code{\link{nNumeric}} \code{\link{nInteger}} \code{\link{nLogical}}
 #' @export
-nMatrix <- function(value = if(type=="character") "" else 0, nrow = NA, ncol = NA, 
-                    init = TRUE, fillZeros = TRUE, recycle = TRUE, 
+nMatrix <- function(value = if (type == "character") "" else 0, nrow = NA, ncol = NA,
+                    init = TRUE, fillZeros = TRUE, recycle = TRUE,
                     type = "double") {
   ## the -1's are used because nCompiler does not allow both missingness and default value
   ## but R's matrix function relies on both possibilities
   fillValue <- makeFillValue(value, type, init)
   mnrow <- missing(nrow) || is.na(nrow)
   mncol <- missing(ncol) || is.na(ncol)
-  if(mnrow)
-    if(mncol) {
+  if (mnrow) {
+    if (mncol) {
       base::matrix(fillValue)
     } else {
-      nrow <- ceiling( length(fillValue) / ncol )
+      nrow <- ceiling(length(fillValue) / ncol)
       fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
       base::matrix(fillValue, ncol = ncol, nrow = nrow)
     }
-  else
-    if(mncol) {
-      ncol <- ceiling( length(fillValue) / nrow )
-      fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
-      base::matrix(fillValue, nrow = nrow, ncol = ncol)
-    } else {
-      fillValue <- makeReturnVector(fillValue, ncol*nrow, recycle)
-      base::matrix(fillValue, nrow = nrow, ncol = ncol)
-    }
+  } else if (mncol) {
+    ncol <- ceiling(length(fillValue) / nrow)
+    fillValue <- makeReturnVector(fillValue, nrow * ncol, recycle)
+    base::matrix(fillValue, nrow = nrow, ncol = ncol)
+  } else {
+    fillValue <- makeReturnVector(fillValue, ncol * nrow, recycle)
+    base::matrix(fillValue, nrow = nrow, ncol = ncol)
+  }
 }
 
 
 #' @rdname nMatrix
 #' @export
-nArray <- function(value = if(type=="character") "" else 0, dim = c(1, 1), 
+nArray <- function(value = if (type == "character") "" else 0, dim = c(1, 1),
                    init = TRUE, fillZeros = TRUE, recycle = TRUE,
-                   nDim, type = 'double') {
-  if(!missing(nDim)) dim <- dim[1:nDim]
+                   nDim, type = "double") {
+  if (!missing(nDim)) dim <- dim[1:nDim]
   fillValue <- makeFillValue(value, type, init)
   fillValue <- makeReturnVector(fillValue, prod(dim), recycle)
-  if(length(dim) == 1) fillValue
-  else base::array(fillValue, dim)
+  if (length(dim) == 1) {
+    fillValue
+  } else {
+    base::array(fillValue, dim)
+  }
 }
 
 makeFillValue <- function(value, type, init) {
-  fillValue <- if(init) value else 0
+  fillValue <- if (init) value else 0
   fillValueTyped <- switch(type,
-                            double = as.numeric(fillValue),
-                            integer = as.integer(fillValue),
-                            logical = as.logical(fillValue),
-                            character = as.character(fillValue),
-                            stop('unknown type argument')) 
+    double = as.numeric(fillValue),
+    integer = as.integer(fillValue),
+    logical = as.logical(fillValue),
+    character = as.character(fillValue),
+    stop("unknown type argument")
+  )
   return(fillValueTyped)
 }
 
 makeReturnVector <- function(fillValue, length, recycle) {
-    if(length(fillValue) == 1) {
-        if(recycle)
-            rep(fillValue, length)
-        else
-            c(fillValue, as(rep(0, max(length-1, 0)), class(fillValue)))
+  if (length(fillValue) == 1) {
+    if (recycle) {
+      rep(fillValue, length)
+    } else {
+      c(fillValue, as(rep(0, max(length - 1, 0)), class(fillValue)))
     }
-    else {
-        if(length(fillValue) != length) {
-            if(length(fillValue) < length) {
-                ##warning(paste0("Not enough values provided for vector of length ",length, "."))
-                if(recycle)
-                    rep(fillValue, length.out = length)
-                else
-                    c(fillValue, as(rep(0, length-length(fillValue)), class(fillValue)))
-            } else {
-                ##warning(paste0("Too many values provided for vector of length ",length, "."))
-                fillValue[1:length]
-            }
+  } else {
+    if (length(fillValue) != length) {
+      if (length(fillValue) < length) {
+        ## warning(paste0("Not enough values provided for vector of length ",length, "."))
+        if (recycle) {
+          rep(fillValue, length.out = length)
         } else {
-            fillValue
+          c(fillValue, as(rep(0, length - length(fillValue)), class(fillValue)))
         }
+      } else {
+        ## warning(paste0("Too many values provided for vector of length ",length, "."))
+        fillValue[1:length]
+      }
+    } else {
+      fillValue
     }
+  }
 }
 
 #' set the size of a numeric variable in NIMBLE
@@ -289,98 +299,110 @@ makeReturnVector <- function(fillValue, length, recycle) {
 #' @param copy      logical indicating whether values should be preserved (in column-major order)
 #' @param fillZeros logical indicating whether newly allocated space should be initialized with zeros (in compiled code)
 #'  This is provided for backward compatibility with NIMBLE and is superceded by the \code{fill} argument.
-#' @param fill      logical indicating whether newly allocated space should be initialized with zeros (in compiled code). 
+#' @param fill      logical indicating whether newly allocated space should be initialized with zeros (in compiled code).
 #'  If provided, this over-rides \code{fillZeros}.
 #' @param value     value for initializing new elements, if not copied or extended.
 #' @param numObj. Alternative argument for providing the object to be resized.
 #'   This is provided for backward compatibility with NIMBLE and is superceded by the \code{obj} argument.
-#' 
+#'
 #' @author NIMBLE development team
 #' @export
 #' @details
 #' Note that assigning the result of \code{numeric}, \code{integer}, \code{logical}, \code{matrix}, or \code{array} is often as good or better than using \code{setSize}.  For example, `x <- matrix(nrow = 5, ncol = 5)` is equivalent to `setSize(x, 5, 5)` but the former allows more control over initialization.
-#' 
+#'
 #' This function is part of the NIMBLE language.  Its purpose is to explicitly resize a multivariate object (vector, matrix or array), currently up to 4 dimensions.  Explicit resizing is not needed when an entire object is assigned to.  For example, in \code{Y <- A \%*\% B}, where A and B are matrices, \code{Y} will be resized automatically.  Explicit resizing is necessary when assignment will be by indexed elements or blocks, if the object is not already an appropriate size for the assignment.  E.g. prior to \code{Y[5:10] <- A \%*\% B}, one can use setSize to ensure that \code{Y} has a size (length) of at least 10.
 #'
 #' This does work in uncompiled (R) and well as compiled execution, but in some cases it is only necessary for compiled execution. During uncompiled execution, it may not catch bugs due to resizing because some R objects will be dynamically resized during assignments anyway.
 #'
 #' If preserving values in the resized object and/or initializing new values with 0 is not necessary, then setting these arguments to FALSE will yield slightly more efficient compiled code.
-#' 
+#'
 setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
                     fill, value, numObj) {
-    thisCall <- as.list(match.call()[-1])
-    if(length(thisCall) < 2) stop("No information provided to setSize")
-    objArgName <- "obj"
-    if(!missing(numObj)) {
-      objArgName <- "numObj"
-      obj <- numObj
+  thisCall <- as.list(match.call()[-1])
+  if (length(thisCall) < 2) stop("No information provided to setSize")
+  objArgName <- "obj"
+  if (!missing(numObj)) {
+    objArgName <- "numObj"
+    obj <- numObj
+  }
+  if (!missing(fill)) fillZeros <- fill
+  if (!missing(value)) fillZeros <- TRUE
+  newDimsList <- list(...)
+  if (is.numeric(obj) || is.logical(obj) || is.character(obj)) {
+    targetVar <- deparse(thisCall[[objArgName]])
+    if (!exists(targetVar, envir = parent.frame())) {
+      stop(paste0("Variable ", targetVar, " does not exist."))
     }
-    if(!missing(fill)) fillZeros <- fill
-    if(!missing(value)) fillZeros <- TRUE
-    newDimsList <- list(...)
-    if(is.numeric(obj) || is.logical(obj) || is.character(obj)) {
-        targetVar <- deparse(thisCall[[objArgName]])
-        if(!exists(targetVar, envir = parent.frame()))
-            stop(paste0("Variable ", targetVar, " does not exist."))
-        targetIsLocal <- exists(targetVar, envir = parent.frame(), inherits = FALSE)
-        oldType <- typeof(obj)
-        oldClass <- class(obj)
-        if(missing(value)) {
-          fillValue <- switch(oldType,
-                              double = 0,
-                              integer = 0L,
-                              logical = FALSE,
-                              character = "",
-                              stop("setSize does not know how to fill objects of class ", 
-                                paste(oldClass, collapse = ", "),
-                                " with type ", oldType, "."))
-        } else {
-          fillValue <- as(value, oldType)
-        }
-        oldDims <- dimOrLength(obj)
-        if(length(oldDims) != length(newDimsList)) {
-            ## newDims could have been provided as a vector
-            if(length(newDimsList) > 1)
-                stop("Number of dimensions provided does not match object to change in setSize")
-            newDims <- newDimsList[[1]]
-        } else {
-            newDims <- unlist(newDimsList)
-        }
-        if(any(is.na(newDims))) warning("Not sure what to do with NA dims in setSize")
-        if(length(newDims) != length(oldDims))
-            if(length(newDims) < length(oldDims))
-                stop("Number of dimensions provided does not match object to change in setSize")
-            else
-                warning("Number of dimensions provided to setSize does not match object to change in setSize.  Sizes will be truncated.")
-        newDims <- newDims[1:length(oldDims)]
+    targetIsLocal <- exists(targetVar, envir = parent.frame(), inherits = FALSE)
+    oldType <- typeof(obj)
+    oldClass <- class(obj)
+    if (missing(value)) {
+      fillValue <- switch(oldType,
+        double = 0,
+        integer = 0L,
+        logical = FALSE,
+        character = "",
+        stop(
+          "setSize does not know how to fill objects of class ",
+          paste(oldClass, collapse = ", "),
+          " with type ", oldType, "."
+        )
+      )
+    } else {
+      fillValue <- as(value, oldType)
+    }
+    oldDims <- dimOrLength(obj)
+    if (length(oldDims) != length(newDimsList)) {
+      ## newDims could have been provided as a vector
+      if (length(newDimsList) > 1) {
+        stop("Number of dimensions provided does not match object to change in setSize")
+      }
+      newDims <- newDimsList[[1]]
+    } else {
+      newDims <- unlist(newDimsList)
+    }
+    if (any(is.na(newDims))) warning("Not sure what to do with NA dims in setSize")
+    if (length(newDims) != length(oldDims)) {
+      if (length(newDims) < length(oldDims)) {
+        stop("Number of dimensions provided does not match object to change in setSize")
+      } else {
+        warning("Number of dimensions provided to setSize does not match object to change in setSize.  Sizes will be truncated.")
+      }
+    }
+    newDims <- newDims[1:length(oldDims)]
 
-        if(length(oldDims) == 1) {
-            if(oldDims[1] < newDims[1]) {
-                newObj <- as(rep(fillValue, newDims[1]), oldType)
-                if(copy) newObj[seq_len(oldDims[1])] <- obj
-            } else {
-                if(copy) newObj <- obj[seq_len(newDims[1])]
-                else newObj <- as(rep(fillValue, newDims[1]), oldType)
-            }
+    if (length(oldDims) == 1) {
+      if (oldDims[1] < newDims[1]) {
+        newObj <- as(rep(fillValue, newDims[1]), oldType)
+        if (copy) newObj[seq_len(oldDims[1])] <- obj
+      } else {
+        if (copy) {
+          newObj <- obj[seq_len(newDims[1])]
         } else {
-            newObj <- array(as(fillValue, oldType), newDims)
-            if(copy) {
-                if(length(obj) < length(newObj))
-                    newObj[seq_len(length(obj))] <- obj
-                else
-                    newObj[seq_len(length(newObj))] <- obj[seq_len(length(newObj))]
-            }
+          newObj <- as(rep(fillValue, newDims[1]), oldType)
         }
-        assign("_SETSIZE_TEMP_VAL", newObj, parent.frame())
-        if(targetIsLocal)
-            assignCall <- substitute(A <- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
-        else
-            assignCall <- substitute(A <<- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
-        eval(assignCall, envir = parent.frame())
-        rm("_SETSIZE_TEMP_VAL", envir = parent.frame())
-        # Return the new size(s), like R's `length<-`, allowing chained calls.
-        return(invisible(newDims))
+      }
+    } else {
+      newObj <- array(as(fillValue, oldType), newDims)
+      if (copy) {
+        if (length(obj) < length(newObj)) {
+          newObj[seq_len(length(obj))] <- obj
+        } else {
+          newObj[seq_len(length(newObj))] <- obj[seq_len(length(newObj))]
+        }
+      }
     }
+    assign("_SETSIZE_TEMP_VAL", newObj, parent.frame())
+    if (targetIsLocal) {
+      assignCall <- substitute(A <- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+    } else {
+      assignCall <- substitute(A <<- B, list(A = thisCall[[1]], B = as.name("_SETSIZE_TEMP_VAL")))
+    }
+    eval(assignCall, envir = parent.frame())
+    rm("_SETSIZE_TEMP_VAL", envir = parent.frame())
+    # Return the new size(s), like R's `length<-`, allowing chained calls.
+    return(invisible(newDims))
+  }
   stop(paste0("setSize only works for numeric, integer, logical, or character objects. An object of type ", class(obj)[1], " was provided."))
 }
 
@@ -397,12 +419,13 @@ setSize <- function(obj, ..., copy = TRUE, fillZeros = TRUE,
 #' @export
 #'
 nEigen <- function(x, symmetric, valuesOnly = FALSE) {
-  if(inherits(x, 'dCHMsimpl'))
-    stop("`nEigen` not implemented for sparse Cholesky factor input")      
+  if (inherits(x, "dCHMsimpl")) {
+    stop("`nEigen` not implemented for sparse Cholesky factor input")
+  }
   res <- eigen(x = x, symmetric = symmetric, only.values = valuesOnly)
   ans <- EigenDecomp$new()
   ans$values <- res$values
-  if(valuesOnly) {
+  if (valuesOnly) {
     # make uncompiled output compatible with compiled output
     ans$vectors <- matrix(0, nrow = 0, ncol = 0)
   } else {
@@ -450,33 +473,36 @@ nEigen <- function(x, symmetric, valuesOnly = FALSE) {
 #' }
 #'
 #' @examples
-#'  singularValuesDemoFunction <- nFunction(
-#'    setup = function(){
-#'      demoMatrix <- diag(4) + 2
-#'    },
-#'    run = function(){
-#'      singularValues <- svd(demoMatrix)$d
-#'      returnType(double(1))
-#'      return(singularValues)
-#'  })
-nSvd <- function(x, vectors = 'thin') {
-  if(inherits(x, 'dCHMsimpl'))
-    stop("`nSvd` not implemented for sparse Cholesky factor input")      
+#' singularValuesDemoFunction <- nFunction(
+#'   setup = function() {
+#'     demoMatrix <- diag(4) + 2
+#'   },
+#'   run = function() {
+#'     singularValues <- svd(demoMatrix)$d
+#'     returnType(double(1))
+#'     return(singularValues)
+#'   }
+#' )
+nSvd <- function(x, vectors = "thin") {
+  if (inherits(x, "dCHMsimpl")) {
+    stop("`nSvd` not implemented for sparse Cholesky factor input")
+  }
   n <- nrow(x)
   p <- ncol(x)
-  if(vectors %in% c(2, 'full')) {
+  if (vectors %in% c(2, "full")) {
     nu <- n
     nv <- p
-  } else if(vectors %in% c(1, 'thin')) {
+  } else if (vectors %in% c(1, "thin")) {
     nu <- min(n, p)
     nv <- nu
-  } else if(vectors %in% c(0, 'none')) {
+  } else if (vectors %in% c(0, "none")) {
     nu <- 0
     nv <- 0
   }
   s <- svd(x = x, nu = nu, nv = nv)
-  if(vectors %in% c(0, 'none'))  # For compatibility with compiled output.
+  if (vectors %in% c(0, "none")) { # For compatibility with compiled output.
     s$u <- s$v <- matrix(nrow = 0, ncol = 0)
+  }
   return(s)
 }
 
@@ -496,11 +522,13 @@ nSvd <- function(x, vectors = 'thin') {
 #'
 #' @export
 #'
-nDiag <- function(x=1, ...) {
-  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+nDiag <- function(x = 1, ...) {
+  if (inherits(x, "dCHMsimpl") || inherits(x, "Cholesky")) {
     stop("`nDiag` not implemented for Cholesky factor input")
-  if(inherits(x, 'dgCMatrix'))
+  }
+  if (inherits(x, "dgCMatrix")) {
     return(Matrix::diag(x))
+  }
   diag(x, ...)
 }
 
@@ -521,22 +549,27 @@ nDiag <- function(x=1, ...) {
 #' @export
 #'
 nDiagonal <- function(x, ...) {
-  if(inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky'))
+  if (inherits(x, "dCHMsimpl") || inherits(x, "Cholesky")) {
     stop("`nDiagonal` not implemented for Cholesky factor input")
-  if(inherits(x, 'dgCMatrix'))
+  }
+  if (inherits(x, "dgCMatrix")) {
     return(Matrix::diag(x))
-  if(is.matrix(x))
+  }
+  if (is.matrix(x)) {
     return(diag(x))
-  if(is.numeric(x) && length(x) == 1) 
+  }
+  if (is.numeric(x) && length(x) == 1) {
     return(sparseMatrix(i = 1:x, j = 1:x, x = 1))
+  }
   args <- list(...)
-  if(length(args) == 0)
+  if (length(args) == 0) {
     return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x))
-  if(length(args) == 1)
+  }
+  if (length(args) == 1) {
     stop("both `nrow` and `ncol` must be provided if one is provided")
+  }
   return(sparseMatrix(i = seq_along(x), j = seq_along(x), x = x, dims = c(args[[1]], args[[2]])))
 }
-
 
 
 #' Compute the cholesky decomposition of a matrix
@@ -551,17 +584,18 @@ nDiagonal <- function(x, ...) {
 #' @export
 #'
 nChol <- function(x) {
-  if(inherits(x, 'dCHMsimpl'))
-    stop("`nChol` not meaningful for sparse Cholesky factor input")      
+  if (inherits(x, "dCHMsimpl")) {
+    stop("`nChol` not meaningful for sparse Cholesky factor input")
+  }
   chol(x)
 }
 
 #' Compute the sparse Cholesky decomposition of a matrix for further operations
-#' 
+#'
 #' @details This function finds a sparse Cholesky factor using a fill-reducing
 #' `P` (AMD reordering by default), so the factorization is actually:
 # \eqn{P A P^\top = L L^\top}.
-#' 
+#'
 #' @param x a positive definite matrix
 #'
 #' @author nCompiler development team
@@ -571,9 +605,9 @@ nChol <- function(x) {
 #' @details
 #'
 #' @examples TODO
-#' 
+#'
 sparseCholFactor <- function(x) {
-  Matrix::Cholesky(x, LDL = FALSE)  
+  Matrix::Cholesky(x, LDL = FALSE)
 }
 
 #' Compute the log-determinant of a matrix
@@ -581,16 +615,19 @@ sparseCholFactor <- function(x) {
 #' In a \code{nFunction}, \code{nLogdet} is identical to \code{logdet}
 #'
 #' @param x a square matrix or a sparse Cholesky factor
-#' 
+#'
 #'
 #' @export
 #'
 nLogdet <- function(x) {
-  if(inherits(x, 'dgCMatrix') || inherits(x, 'dCHMsimpl') || inherits(x, 'Cholesky')) {
-    result <- Matrix::determinant(x, log = TRUE,
-                                  sqrt = FALSE)$modulus
-    if(!inherits(x, 'dgCMatrix'))
-      result <- result/2
+  if (inherits(x, "dgCMatrix") || inherits(x, "dCHMsimpl") || inherits(x, "Cholesky")) {
+    result <- Matrix::determinant(x,
+      log = TRUE,
+      sqrt = FALSE
+    )$modulus
+    if (!inherits(x, "dgCMatrix")) {
+      result <- result / 2
+    }
     attributes(result) <- NULL
     return(result)
   }
@@ -604,7 +641,7 @@ nLogdet <- function(x) {
 #' @export
 nStep <- function(x) ifelse(x >= 0, 1L, 0L)
 #' @export
-nEquals <- function(x1, x2) if(x1 == x2) 1 else 0
+nEquals <- function(x1, x2) if (x1 == x2) 1 else 0
 #' @export
 pow <- function(x1, x2) x1^x2
 #' @export
@@ -660,7 +697,6 @@ nSeq <- function(...) {
 }
 
 
-
 #' Converts a dense matrix or vector to a sparse matrix or vector
 #'
 #' @importFrom Matrix Matrix drop0
@@ -670,19 +706,21 @@ nSeq <- function(...) {
 #'   sparse format
 #' @export
 asSparse <- function(x, prune = TRUE) {
-  if(inherits(x, c('dgCMatrix', 'dgTMatrix', 'dsparseVector', 'isparseVector',
-                   'lsparseVector', 'zsparseVector'))) {
-    if(prune) {
+  if (inherits(x, c(
+    "dgCMatrix", "dgTMatrix", "dsparseVector", "isparseVector",
+    "lsparseVector", "zsparseVector"
+  ))) {
+    if (prune) {
       return(drop0(x))
     } else {
       return(x)
     }
-  } else if(inherits(x, 'matrix')) {
-    as(x, 'sparseMatrix')
-  } else if(inherits(x, c('numeric', 'integer', 'logical', 'complex'))) {
-    as(x, 'sparseVector')
+  } else if (inherits(x, "matrix")) {
+    as(x, "sparseMatrix")
+  } else if (inherits(x, c("numeric", "integer", "logical", "complex"))) {
+    as(x, "sparseVector")
   } else {
-    stop('Attempting to convert to sparse format from unknown type')
+    stop("Attempting to convert to sparse format from unknown type")
   }
 }
 
@@ -690,14 +728,14 @@ asSparse <- function(x, prune = TRUE) {
 #'
 #' @export
 asDense <- function(x) {
-  if(inherits(x, c('matrix', 'numeric', 'integer', 'logical', 'complex'))) {
+  if (inherits(x, c("matrix", "numeric", "integer", "logical", "complex"))) {
     return(x)
-  } else if(inherits(x, 'sparseMatrix')) {
-    return(as(x, 'matrix'))
-  } else if(inherits(x, 'sparseVector')) {
-    return(as(x, 'vector'))
+  } else if (inherits(x, "sparseMatrix")) {
+    return(as(x, "matrix"))
+  } else if (inherits(x, "sparseVector")) {
+    return(as(x, "vector"))
   } else {
-    stop('Attempting to convert to dense format from unknown type')
+    stop("Attempting to convert to dense format from unknown type")
   }
 }
 
@@ -705,14 +743,16 @@ asDense <- function(x) {
 #'
 #' @export
 nMul <- function(x, y) {
-  if(inherits(y, "dCHMsimpl") || inherits(y, "Cholesky"))
+  if (inherits(y, "dCHMsimpl") || inherits(y, "Cholesky")) {
     stop("matrix multiplication implemented only for right-hand side vector or matrix")
-  if(inherits(x, "dCHMsimpl"))
+  }
+  if (inherits(x, "dCHMsimpl")) {
     # P^{top} L* y (see ?Matrix:::solve))
     return(Matrix::solve(x, expand1(x, "L") %*% y, system = "Pt"))
-  if(inherits(x, "Cholesky")) {
+  }
+  if (inherits(x, "Cholesky")) {
     p <- expand1(x, "P1")@perm
-    return((expand1(x, "L") %*% y)[order(p),])
+    return((expand1(x, "L") %*% y)[order(p), ])
   }
   x %*% y
 }
@@ -728,23 +768,27 @@ nMul <- function(x, y) {
 #'
 #' @export
 nSolve <- function(a, b) {
-  if(inherits(b, 'sparseCholFactor') || inherits(b, 'denseCholFactor') ||
-       inherits(b, 'Cholesky') || inherits(b, 'dCHMsimpl'))
-    stop("`nSolve` not implemented for right-hand side Cholesky factor")  
-  if(inherits(a, 'sparseCholFactor') || inherits(a, 'denseCholFactor'))
+  if (inherits(b, "sparseCholFactor") || inherits(b, "denseCholFactor") ||
+    inherits(b, "Cholesky") || inherits(b, "dCHMsimpl")) {
+    stop("`nSolve` not implemented for right-hand side Cholesky factor")
+  }
+  if (inherits(a, "sparseCholFactor") || inherits(a, "denseCholFactor")) {
     stop("`nSolve` not supported for Cholesky factor produced in compiled code")
+  }
   # TODO: we may be able to just call `solve` depending on whether `Matrix` is loaded.
-  if(inherits(a, "dCHMsimpl") || inherits(a, 'Cholesky'))
+  if (inherits(a, "dCHMsimpl") || inherits(a, "Cholesky")) {
     return(Matrix::solve(a, b))
-  solve(a,b)  
+  }
+  solve(a, b)
 }
 
 #' Wrapper for forwardsolve
 #'
 #' @export
 nForwardsolve <- function(l, x) {
-  if(inherits(l, 'dCHMsimpl') || inherits(l, 'Cholesky'))
-    stop("`nForwardsolve` not implemented for sparse Cholesky factor input")      
+  if (inherits(l, "dCHMsimpl") || inherits(l, "Cholesky")) {
+    stop("`nForwardsolve` not implemented for sparse Cholesky factor input")
+  }
   forwardsolve(l, x)
 }
 
@@ -752,17 +796,20 @@ nForwardsolve <- function(l, x) {
 #'
 #' @export
 nBacksolve <- function(r, x) {
-  if(inherits(r, 'dCHMsimpl')) {
-    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
-    return(Matrix::solve(r, Matrix::solve(U, x), system = "Pt"))  # P^{top} U*^{-1} x
+  if (inherits(r, "dCHMsimpl")) {
+    U <- expand1(r, "L.") # This should work with both LLt and LDLt.
+    return(Matrix::solve(r, Matrix::solve(U, x), system = "Pt")) # P^{top} U*^{-1} x
   }
-  if(inherits(r, 'Cholesky')) {
-    U <- expand1(r, "L.")   # This should work with both LLt and LDLt.
+  if (inherits(r, "Cholesky")) {
+    U <- expand1(r, "L.") # This should work with both LLt and LDLt.
     p <- expand1(r, "P1")@perm
-    if(length(dim(x)) > 1)
-      return(solve(U, x)[order(p),]) else return(solve(U, x)[order(p)])
+    if (length(dim(x)) > 1) {
+      return(solve(U, x)[order(p), ])
+    } else {
+      return(solve(U, x)[order(p)])
+    }
   }
-  backsolve(r,x)
+  backsolve(r, x)
 }
 
 #' Wrapper for var
@@ -785,26 +832,27 @@ nSd <- function(x) {
 #'
 #' @export
 nMessage <- function(..., level = INFO) {
-    msg <- .makeMessage(...) # Combine arguments as message() does.
-    if(!cli::cli_progress_num()) {  # No active progress bar.
+  msg <- .makeMessage(...) # Combine arguments as message() does.
+  if (!cli::cli_progress_num()) { # No active progress bar.
+    logger::log_level(logger::as.loglevel(level), msg)
+  } else {
+    if (level <= log_threshold()) {
+      ## `capture.output()` does not work.
+      con <- textConnection("log_output", open = "w", local = TRUE)
+      logger::log_appender(logger::appender_file(con))
+      logger::log_level(logger::as.loglevel(level), msg)
+      output <- try(cli::cli_progress_output(log_output, .envir = globalenv()), silent = TRUE) # Cleanly handle the interrupting msg.
+      ## Having trouble with uncompiled execution needing to 'look' in different env:
+      ## Browse[1]> cli:::clienv$progress_ids
+      ## $`<environment: 0x64b09faa2ef8>`
+      ## [1] "cli-151-47"
+      ## This is a work-around, noting that this is a corner case (message within progress bar within uncompiled exec.).
+      logger::log_appender(logger::appender_stdout)
+      if (is(output, "try-error")) {
         logger::log_level(logger::as.loglevel(level), msg)
-    } else {
-        if(level <= log_threshold()) { 
-            ## `capture.output()` does not work.
-            con <- textConnection("log_output", open = "w", local = TRUE)  
-            logger::log_appender(logger::appender_file(con))
-            logger::log_level(logger::as.loglevel(level), msg)
-            output <- try(cli::cli_progress_output(log_output, .envir = globalenv()), silent = TRUE)  # Cleanly handle the interrupting msg.
-            ## Having trouble with uncompiled execution needing to 'look' in different env:
-            ## Browse[1]> cli:::clienv$progress_ids
-            ## $`<environment: 0x64b09faa2ef8>`
-            ## [1] "cli-151-47"
-            ## This is a work-around, noting that this is a corner case (message within progress bar within uncompiled exec.).
-            logger::log_appender(logger::appender_stdout)
-            if(is(output, 'try-error'))
-                logger::log_level(logger::as.loglevel(level), msg)  # Accept that interruption won't be clean.
-        }
+      } # Accept that interruption won't be clean.
     }
+  }
 }
 
 #' Progress bar functionality via `cli`.
@@ -812,10 +860,36 @@ nMessage <- function(..., level = INFO) {
 #' we have problems in R execution with
 #' "Cannot find current progress bar for `<environment: R_GlobalEnv>`"
 #' related to lookup of `cli:::clienv`.
-#' 
+#'
 #' @export
 progress_bar <- cli::cli_progress_bar
 
 #' @export
 progress_update <- cli::cli_progress_update
 
+#' @export
+nIs_na <- function(x) {
+  is.na(x)
+}
+
+#' @export
+nIs_nan <- function(x) {
+  is.nan(x)
+}
+
+
+#' Determine if any values in a vector are NA or NaN
+#'
+#' NIMBLE language functions that can be used in either compiled or uncompiled
+#' nimbleFunctions to detect if there are any NA or NaN values in a vector.
+#'
+#' @param x vector of values
+#'
+#' @aliases any_nan
+#' @author NIMBLE Development Team
+#' @export
+any_na <- function(x) any(is.na(x))
+
+#' @rdname any_na
+#' @export
+any_nan <- function(x) any(is.nan(x))

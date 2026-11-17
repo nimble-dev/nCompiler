@@ -15,11 +15,11 @@
 ## At the moment it is just a list, but we establish the abstraction
 ## because we suspect it will need to do more work in the future.
 Rcpp_nCompilerPacket <- function(...) {
-    ## In the future we may change internal representation,
-    ## so code should use Rcpp_nCompilerPacket as an API for
-    ## object creation.
-    ## Right now contents are just converted to a list.
-    list(...)
+  ## In the future we may change internal representation,
+  ## so code should use Rcpp_nCompilerPacket as an API for
+  ## object creation.
+  ## Right now contents are just converted to a list.
+  list(...)
 }
 
 ## Interface between nCompiler's cppDef representation of code and
@@ -27,67 +27,104 @@ Rcpp_nCompilerPacket <- function(...) {
 ## To be expanded to take a list of cppDefs
 cppDefs_2_RcppPacket <- function(cppDef,
                                  filebase) {
-  if(inherits(cppDef, 'cppRcppPacket'))
+  if (inherits(cppDef, "cppRcppPacket")) {
     return(cppDef$RcppPacket)
+  }
 
   name <- cppDef$name
-  if(missing(filebase))
+  if (missing(filebase)) {
     filebase <- make_cpp_filebase(name)
+  }
 
   allCppDefs <- cppDef$getInternalDefs()
 
-  prep <- function(x) x |> unlist(use.names=FALSE) |> unique()
+  prep <- function(x) {
+    x |>
+      unlist(use.names = FALSE) |>
+      unique()
+  }
 
-  Hincludes <- allCppDefs |> lapply(\(x) x$getHincludes()) |> prep()
-  CPPincludes <- allCppDefs |> lapply(\(x) x$getCPPincludes()) |> prep()
-  Hpreamble <- allCppDefs |> lapply(\(x) x$getHpreamble()) |> prep()
-  CPPpreamble <- allCppDefs |> lapply(\(x) x$getCPPpreamble()) |> prep()
-  depends <- allCppDefs |> lapply(\(x) x$getDepends()) |> prep()
-  CPPusings <- allCppDefs |> lapply(\(x) x$getCPPusings()) |> prep()
-  if(length(depends))
+  Hincludes <- allCppDefs |>
+    lapply(\(x) x$getHincludes()) |>
+    prep()
+  CPPincludes <- allCppDefs |>
+    lapply(\(x) x$getCPPincludes()) |>
+    prep()
+  Hpreamble <- allCppDefs |>
+    lapply(\(x) x$getHpreamble()) |>
+    prep()
+  CPPpreamble <- allCppDefs |>
+    lapply(\(x) x$getCPPpreamble()) |>
+    prep()
+  depends <- allCppDefs |>
+    lapply(\(x) x$getDepends()) |>
+    prep()
+  CPPusings <- allCppDefs |>
+    lapply(\(x) x$getCPPusings()) |>
+    prep()
+  if (length(depends)) {
     CPPusings <- c(CPPusings, paste0("// [[Rcpp::depends(", depends, ")]]")) |> unique()
+  }
   ## postCode is made unique by whole blocks, not lines.
-  prepBlocks <- function(x) do.call("c", x) |> unique() |> unlist(use.names=FALSE)
-  HpostCode <- allCppDefs |> lapply(\(x) x$getHpostCode()) |> prepBlocks()
-  CPPpostCode <- allCppDefs |> lapply(\(x) x$getCPPpostCode()) |> prepBlocks()
+  prepBlocks <- function(x) {
+    do.call("c", x) |>
+      unique() |>
+      unlist(use.names = FALSE)
+  }
+  HpostCode <- allCppDefs |>
+    lapply(\(x) x$getHpostCode()) |>
+    prepBlocks()
+  CPPpostCode <- allCppDefs |>
+    lapply(\(x) x$getCPPpostCode()) |>
+    prepBlocks()
   compileInfos <- allCppDefs |> lapply(\(x) x$getCompileInfo())
 
   ## Fields like copyFiles can be extracted directly from the compileInfos
   ## because they are never modified by the cppDef internally.
   ## (Whereas fields like Hincludes etc. may be modified by cppDef.)
-  copyFiles <- compileInfos |> lapply(\(x) x$copyFiles) |> unlist(use.names=FALSE) |> unique()
+  copyFiles <- compileInfos |>
+    lapply(\(x) x$copyFiles) |>
+    unlist(use.names = FALSE) |>
+    unique()
 
   selfCPP <- paste0('"', filebase, '.cpp"')
-  CPPincludes <- CPPincludes[ CPPincludes != selfCPP ]
+  CPPincludes <- CPPincludes[CPPincludes != selfCPP]
 
-  selfH <- paste0('"', filebase, '.h', '"')
+  selfH <- paste0('"', filebase, ".h", '"')
   CPPincludes <- c(CPPincludes, selfH)
 
-  debugCpp <- get_nOption('compilerOptions')[['debugCpp']]
+  debugCpp <- get_nOption("compilerOptions")[["debugCpp"]]
 
   cppCode <-
     unlist(
-      lapply(allCppDefs,
-             function(x) {
-               gen <- x$generate()
-               capture.output( {
-                 writeLines("")
-                 writeCode(gen)
-               }, split = debugCpp) ## for debugging to send handler output to console
-              }),
+      lapply(
+        allCppDefs,
+        function(x) {
+          gen <- x$generate()
+          capture.output(
+            {
+              writeLines("")
+              writeCode(gen)
+            },
+            split = debugCpp
+          ) ## for debugging to send handler output to console
+        }
+      ),
       use.names = FALSE
     )
 
   hCode <-
     unlist(
-      lapply(allCppDefs,
-             function(x) {
-               gen <- x$generate(declaration=TRUE)
-               capture.output( {
-                 writeLines("")
-                 writeCode(gen)
-               })
-              }),
+      lapply(
+        allCppDefs,
+        function(x) {
+          gen <- x$generate(declaration = TRUE)
+          capture.output({
+            writeLines("")
+            writeCode(gen)
+          })
+        }
+      ),
       use.names = FALSE
     )
 
@@ -95,23 +132,29 @@ cppDefs_2_RcppPacket <- function(cppDef,
 
   # preamble is now its own return list element so #inclue's can be combind across packets
 
-  cppContent <- collate_nCompiler_CppCode(includes = CPPincludes,
-                                          usings = CPPusings,
-                                          code = cppCode,
-                                          postCode = CPPpostCode,
-                                          ifndefName = paste0('__', name, '_CPP')
-                                          )
+  cppContent <- collate_nCompiler_CppCode(
+    includes = CPPincludes,
+    usings = CPPusings,
+    code = cppCode,
+    postCode = CPPpostCode,
+    ifndefName = paste0("__", name, "_CPP")
+  )
 
-  hContent <- collate_nCompiler_CppCode(includes = Hincludes,
-                                        code = hCode,
-                                        postCode = HpostCode,
-                                        ifndefName = paste0('__', name, '_H')
-                                        )
+  hContent <- collate_nCompiler_CppCode(
+    includes = Hincludes,
+    code = hCode,
+    postCode = HpostCode,
+    ifndefName = paste0("__", name, "_H")
+  )
 
   post_cpp_compiler <-
-    do.call('c',
-            lapply(allCppDefs,
-                   function(x) x$get_post_cpp_compiler()))
+    do.call(
+      "c",
+      lapply(
+        allCppDefs,
+        function(x) x$get_post_cpp_compiler()
+      )
+    )
 
   RcppPacket <- Rcpp_nCompilerPacket(
     preamble = preamble,
@@ -133,45 +176,56 @@ cppDefs_2_RcppPacket <- function(cppDef,
 ## It mostly just concatenates pieces.  It does add the #ifndef protection
 ## against redundant inclusion.
 collate_nCompiler_CppCode <- function(includes = character(),
-                                 usings = character(),
-                                 code = character(),
-                                 postCode = character(),
-                                 ifndefName = character()) {
-    ## open ifndef
-    openifndefOut <- if(length(ifndefName) > 0) {
-                         c(paste0('#ifndef ',ifndefName),
-                           paste0('#define ',ifndefName))
-                     } else
-                         character()
-    ## includes
-    includesOut <- c('#ifndef R_NO_REMAP',
-                     '#define R_NO_REMAP',
-                     '#endif',
-                     if(length(includes) > 0)
-                              paste0('#include ',
-                                     includes)
-                     else
-                         character()
-                     )
+                                      usings = character(),
+                                      code = character(),
+                                      postCode = character(),
+                                      ifndefName = character()) {
+  ## open ifndef
+  openifndefOut <- if (length(ifndefName) > 0) {
+    c(
+      paste0("#ifndef ", ifndefName),
+      paste0("#define ", ifndefName)
+    )
+  } else {
+    character()
+  }
+  ## includes
+  includesOut <- c(
+    "#ifndef R_NO_REMAP",
+    "#define R_NO_REMAP",
+    "#endif",
+    if (length(includes) > 0) {
+      paste0(
+        "#include ",
+        includes
+      )
+    } else {
+      character()
+    }
+  )
 
-    ## usings are included as is
-    ## code is included as is
-    ## postCode is included as is
+  ## usings are included as is
+  ## code is included as is
+  ## postCode is included as is
 
-    ## close ifndef
-    closeifndefOut <- if(length(ifndefName) > 0) {
-                          '#endif'
-                      } else {
-                          character()
-                      }
+  ## close ifndef
+  closeifndefOut <- if (length(ifndefName) > 0) {
+    "#endif"
+  } else {
+    character()
+  }
 
-  list(opener = openifndefOut,
-       body =
-         c(includesOut,
-           usings,
-           code,
-           postCode,
-           closeifndefOut))
+  list(
+    opener = openifndefOut,
+    body =
+      c(
+        includesOut,
+        usings,
+        code,
+        postCode,
+        closeifndefOut
+      )
+  )
 }
 
 ## We need a way to get ignore.stderr = TRUE and ignore.stdout = TRUE
@@ -201,25 +255,30 @@ sourceCppEnv$system <- function(...) {
 sourceCpp_nCompiler <- function(file,
                                 cacheDir,
                                 ...) {
-  if(isTRUE(get_nOption("use_nCompLocal")))
-    if(!requireLocalDLLpackage()) {
+  if (isTRUE(get_nOption("use_nCompLocal"))) {
+    if (!requireLocalDLLpackage()) {
       stop("Unable to load or create nCompLocal.")
     }
+  }
   ## In the future, this function can store "exported"
   ## in the nFunction somewhere if it is needed later.
   ## For now it just calls Rcpp::sourceCpp
   rcpp.warnNoExports <- getOption("rcpp.warnNoExports")
-  options(rcpp.warnNoExports=FALSE)
+  options(rcpp.warnNoExports = FALSE)
   on.exit(options(rcpp.warnNoExports = rcpp.warnNoExports))
-  if(!isTRUE(get_nOption("showCompilerOutput"))) {
-    exported <- QuietSourceCpp(file = file,
-                               cacheDir = cacheDir,
-                               ...)
+  if (!isTRUE(get_nOption("showCompilerOutput"))) {
+    exported <- QuietSourceCpp(
+      file = file,
+      cacheDir = cacheDir,
+      ...
+    )
   } else {
-    exported <- Rcpp::sourceCpp(file = file,
-                                cacheDir = cacheDir,
-                                showOutput = TRUE,
-                                ...)
+    exported <- Rcpp::sourceCpp(
+      file = file,
+      cacheDir = cacheDir,
+      showOutput = TRUE,
+      ...
+    )
   }
   exported
 }
@@ -255,65 +314,75 @@ sourceCpp_nCompiler <- function(file,
 #' @export
 cpp_nCompiler <- function(Rcpp_packet,
                           cppfile = NULL, # must be provided if packetList = TRUE
-                      dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                      cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
-                      env = parent.frame(),
-                      packetList = FALSE,
-                      write = TRUE,
-                      compile = TRUE,
-                      ...) {
-
-  if(write) {
-    if(packetList) {
+                          dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                          cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
+                          env = parent.frame(),
+                          packetList = FALSE,
+                          write = TRUE,
+                          compile = TRUE,
+                          ...) {
+  if (write) {
+    if (packetList) {
       writeCpp_nCompiler_combine(Rcpp_packet,
-                                 dir = dir,
-                                 cppfile = cppfile)
+        dir = dir,
+        cppfile = cppfile
+      )
     } else {
       writeCpp_nCompiler(Rcpp_packet,
-                         dir = dir)
+        dir = dir
+      )
     }
   }
-  if(!compile) {
+  if (!compile) {
     return(Rcpp_packet)
   }
-  if(isTRUE(get_nOption('pause_after_writing_files')))
+  if (isTRUE(get_nOption("pause_after_writing_files"))) {
     browser()
-  compileCpp_nCompiler(Rcpp_packet = Rcpp_packet,
-                       cppfile = cppfile,
-                   dir = dir,
-                   cacheDir = cacheDir,
-                   env = env,
-                   packetList = packetList,
-                   ...)
+  }
+  compileCpp_nCompiler(
+    Rcpp_packet = Rcpp_packet,
+    cppfile = cppfile,
+    dir = dir,
+    cacheDir = cacheDir,
+    env = env,
+    packetList = packetList,
+    ...
+  )
 }
 
 # writeCpp_nCompiler_combine is a utility to combine .h and .cpp outputs
 # from a list of RcppPackets
 writeCpp_nCompiler_combine <- function(RcppPacket_list,
                                        cppfile,
-                                       dir = file.path(tempdir(), 'nCompiler_generatedCode'),
+                                       dir = file.path(tempdir(), "nCompiler_generatedCode"),
                                        header.dir) {
-  if(missing(cppfile))
+  if (missing(cppfile)) {
     stop("A cppfile name must be provided for the combined contents of the RcppPackets.")
+  }
   dir.create(dir, showWarnings = FALSE)
   cppfilepath <- file.path(dir, cppfile)
 
-  combined_preamble <- RcppPacket_list |> lapply(\(x) x$preamble) |> unlist() |> unique()
+  combined_preamble <- RcppPacket_list |>
+    lapply(\(x) x$preamble) |>
+    unlist() |>
+    unique()
 
   con <- file(cppfilepath, open = "w")
-  for(RcppPacket in RcppPacket_list) {
+  for (RcppPacket in RcppPacket_list) {
     ## write all cpp contents to one file
     RcppPacket$preamble <- combined_preamble
     writeCpp_nCompiler(RcppPacket,
-                       dir = dir,
-                       con = con,
-                       include_h = FALSE)
+      dir = dir,
+      con = con,
+      include_h = FALSE
+    )
     ## write each h contents to its own file
     writeCpp_nCompiler(RcppPacket,
-                       dir = dir,
-                       con = NULL,
-                       header.dir = header.dir,
-                       include_cpp = FALSE)
+      dir = dir,
+      con = NULL,
+      header.dir = header.dir,
+      include_cpp = FALSE
+    )
   }
   close(con)
   invisible(RcppPacket_list)
@@ -322,71 +391,91 @@ writeCpp_nCompiler_combine <- function(RcppPacket_list,
 # writeCpp_nCompiler is a utility to write .h and .cpp files from an Rcpp_packet
 #' @export
 writeCpp_nCompiler <- function(Rcpp_packet,
-                           dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                           con = NULL,
-                           include_h = TRUE,
-                           include_cpp = TRUE,
-                           header.dir
-                          ) {
-  if(!missing(header.dir)) {
-    if(!is.null(con))
+                               dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                               con = NULL,
+                               include_h = TRUE,
+                               include_cpp = TRUE,
+                               header.dir) {
+  if (!missing(header.dir)) {
+    if (!is.null(con)) {
       warning("Both a header.dir and a con argument were provided.  header.dir will be ignored.")
-  } else
+    }
+  } else {
     header.dir <- dir
+  }
 
   copyFiles <- Rcpp_packet$copyFiles
-  if(!is.null(copyFiles)) {
-    for(cf in copyFiles) {
-      file.copy(cf, file.path(dir, basename(cf)), overwrite=TRUE)
+  if (!is.null(copyFiles)) {
+    for (cf in copyFiles) {
+      file.copy(cf, file.path(dir, basename(cf)), overwrite = TRUE)
     }
   }
 
   makeStandardFiles <- is.null(con)
-  if(is.null(Rcpp_packet$preamble))
+  if (is.null(Rcpp_packet$preamble)) {
     Rcpp_packet$preamble <- ""
-  if(include_cpp) {
-    if(makeStandardFiles) {
+  }
+  if (include_cpp) {
+    if (makeStandardFiles) {
       dir.create(dir, showWarnings = FALSE)
-      cppfile <- paste0(Rcpp_packet$filebase,
-                        ".cpp")
+      cppfile <- paste0(
+        Rcpp_packet$filebase,
+        ".cpp"
+      )
       cppfilepath <- file.path(dir, cppfile)
       con <- file(cppfilepath,
-                  open = "w")
+        open = "w"
+      )
     }
 
-    if(is.character(Rcpp_packet$cppContent))
-      Rcpp_packet$cppContent <- list(opener = "",
-                                     body = Rcpp_packet$cppContent)
+    if (is.character(Rcpp_packet$cppContent)) {
+      Rcpp_packet$cppContent <- list(
+        opener = "",
+        body = Rcpp_packet$cppContent
+      )
+    }
     writeLines(Rcpp_packet$cppContent$opener, con)
     writeLines(Rcpp_packet$preamble, con)
     writeLines("#ifdef USES_NCOMPILER", con)
     writeLines("#include <nCompiler/nCompiler_omnibus.h>", con)
     writeLines("#endif", con)
     writeLines(Rcpp_packet$cppContent$body, con)
-    if(makeStandardFiles)
+    if (makeStandardFiles) {
       close(con)
-  }
-  if(include_h) {
-    if(makeStandardFiles) {
-      if(header.dir != dir)
-        dir.create(header.dir, showWarnings = FALSE)
-      hfile <- paste0(Rcpp_packet$filebase,
-                      ".h")
-      con <- file(file.path(header.dir,
-                            hfile),
-                  open = "w")
     }
-    if(is.character(Rcpp_packet$hContent))
-      Rcpp_packet$cppContent <- list(opener = "",
-                                     body = Rcpp_packet$hContent)
+  }
+  if (include_h) {
+    if (makeStandardFiles) {
+      if (header.dir != dir) {
+        dir.create(header.dir, showWarnings = FALSE)
+      }
+      hfile <- paste0(
+        Rcpp_packet$filebase,
+        ".h"
+      )
+      con <- file(
+        file.path(
+          header.dir,
+          hfile
+        ),
+        open = "w"
+      )
+    }
+    if (is.character(Rcpp_packet$hContent)) {
+      Rcpp_packet$cppContent <- list(
+        opener = "",
+        body = Rcpp_packet$hContent
+      )
+    }
     writeLines(Rcpp_packet$hContent$opener, con)
     writeLines(Rcpp_packet$preamble, con)
     writeLines("#ifdef USES_NCOMPILER", con)
     writeLines("#include <nCompiler/nCompiler_omnibus.h>", con)
     writeLines("#endif", con)
     writeLines(Rcpp_packet$hContent$body, con)
-    if(makeStandardFiles)
+    if (makeStandardFiles) {
       close(con)
+    }
   }
   invisible(Rcpp_packet)
 }
@@ -400,27 +489,33 @@ writeCpp_nCompiler <- function(Rcpp_packet,
 #' @export
 compileCpp_nCompiler <- function(Rcpp_packet,
                                  cppfile = NULL,
-                                 dir = file.path(tempdir(), 'nCompiler_generatedCode'),
-                                 cacheDir = file.path(tempdir(), 'nCompiler_RcppCache'),
+                                 dir = file.path(tempdir(), "nCompiler_generatedCode"),
+                                 cacheDir = file.path(tempdir(), "nCompiler_RcppCache"),
                                  env = parent.frame(),
                                  packetList = FALSE,
                                  returnList = FALSE, ## force result list even for a singleton
                                  ...) {
-  if(!dir.exists(dir))
+  if (!dir.exists(dir)) {
     stop(paste0("directory ", dir, " does not exist."))
-  if(is.character(Rcpp_packet)) { # backward compatibility, to be deprecated perhaps
+  }
+  if (is.character(Rcpp_packet)) { # backward compatibility, to be deprecated perhaps
     cppfile <- Rcpp_packet
   } else {
-    if(is.null(cppfile))
-      cppfile <- paste0(Rcpp_packet$filebase,
-                        ".cpp")
+    if (is.null(cppfile)) {
+      cppfile <- paste0(
+        Rcpp_packet$filebase,
+        ".cpp"
+      )
+    }
   }
   cppfilepath <- file.path(dir, cppfile)
 
-  exported <- sourceCpp_nCompiler(file = cppfilepath,
-                                  cacheDir = cacheDir,
-                                  env = env,
-                                  ...)
+  exported <- sourceCpp_nCompiler(
+    file = cppfilepath,
+    cacheDir = cacheDir,
+    env = env,
+    ...
+  )
 
   ## if(packetList)
   ##   post_cpp_compiler <- do.call('c', lapply(Rcpp_packet, `[[`, 'post_cpp_compiler'))
@@ -430,8 +525,10 @@ compileCpp_nCompiler <- function(Rcpp_packet,
   ## for now without error checking until we see
   ## final uses.
   numFunctions <- length(exported$functions)
-  if(numFunctions == 0) return(invisible(NULL))
-  if(numFunctions == 1 & !returnList) {
+  if (numFunctions == 0) {
+    return(invisible(NULL))
+  }
+  if (numFunctions == 1 & !returnList) {
     fname <- exported$functions[[1]]
     ans <- get(fname, env)
     ## this_post <- post_cpp_compiler[[fname]]
@@ -442,9 +539,12 @@ compileCpp_nCompiler <- function(Rcpp_packet,
     return(ans)
   }
   ans <- structure(
-    lapply(exported$functions,
-           function(x) get(x, env)),
-    names = exported$functions)
+    lapply(
+      exported$functions,
+      function(x) get(x, env)
+    ),
+    names = exported$functions
+  )
   ## for(fname in names(ans)) {
   ##   this_post <- post_cpp_compiler[[fname]]
   ##   if(!is.null(this_post)) {
@@ -631,12 +731,15 @@ loadRcppPacket <- function(dir, name) {
 
     # Check if it looks like dput output
     if (grepl("^(list|c|character|NULL|[0-9])", first_line)) {
-      tryCatch({
-        return(dget(filepath))
-      }, error = function(e) {
-        # If dget fails, treat as plain text
-        return(readLines(filepath, warn = FALSE))
-      })
+      tryCatch(
+        {
+          return(dget(filepath))
+        },
+        error = function(e) {
+          # If dget fails, treat as plain text
+          return(readLines(filepath, warn = FALSE))
+        }
+      )
     }
 
     # Default: read as character lines

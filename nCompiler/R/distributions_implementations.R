@@ -32,22 +32,25 @@ NULL
 #' @export
 dwish_chol <- function(x, cholesky, df, scale_param = TRUE, log = FALSE) {
   # scale_param = TRUE is the GCSR parameterization (i.e., scale matrix); scale_param = FALSE is the BUGS parameterization (i.e., rate matrix)
-    if(storage.mode(cholesky) != 'double')
-          storage.mode(cholesky) <- 'double'
-    if(storage.mode(x) != 'double')
-            storage.mode(x) <- 'double'
-    .Call(C_dwish_chol, x, cholesky, as.double(df), as.double(scale_param), as.logical(log))
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  if (storage.mode(x) != "double") {
+    storage.mode(x) <- "double"
+  }
+  .Call(C_dwish_chol, x, cholesky, as.double(df), as.double(scale_param), as.logical(log))
 }
 
 #' @rdname Wishart
 #' @export
 rwish_chol <- function(n = 1, cholesky, df, scale_param = TRUE) {
-    if(n != 1) warning('rwish_chol only handles n = 1 at the moment')
-    if(storage.mode(cholesky) != 'double')
-    	storage.mode(cholesky) <- 'double'
-    out <- .Call(C_rwish_chol, cholesky, as.double(df), as.double(scale_param))
-    if(!is.null(out)) out <- matrix(out, nrow = sqrt(length(cholesky)))
-    return(out)
+  if (n != 1) warning("rwish_chol only handles n = 1 at the moment")
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  out <- .Call(C_rwish_chol, cholesky, as.double(df), as.double(scale_param))
+  if (!is.null(out)) out <- matrix(out, nrow = sqrt(length(cholesky)))
+  return(out)
 }
 
 #' The Inverse Wishart Distribution
@@ -81,22 +84,25 @@ NULL
 #' @export
 dinvwish_chol <- function(x, cholesky, df, scale_param = TRUE, log = FALSE) {
   # scale_param = FALSE is the GCSR parameterization (i.e., inverse scale matrix); scale_param = TRUE is the parameterization best for conjugacy calculations (i.e., scale matrix)
-    if(storage.mode(cholesky) != 'double')
-          storage.mode(cholesky) <- 'double'
-    if(storage.mode(x) != 'double')
-            storage.mode(x) <- 'double'
-    .Call(C_dinvwish_chol, x, cholesky, as.double(df), as.double(scale_param), as.logical(log))
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  if (storage.mode(x) != "double") {
+    storage.mode(x) <- "double"
+  }
+  .Call(C_dinvwish_chol, x, cholesky, as.double(df), as.double(scale_param), as.logical(log))
 }
 
 #' @rdname Inverse-Wishart
 #' @export
 rinvwish_chol <- function(n = 1, cholesky, df, scale_param = TRUE) {
-    if(n != 1) warning('rinvwish_chol only handles n = 1 at the moment')
-    if(storage.mode(cholesky) != 'double')
-    	storage.mode(cholesky) <- 'double'
-    out <- .Call(C_rinvwish_chol, cholesky, as.double(df), as.double(scale_param))
-    if(!is.null(out)) out <- matrix(out, nrow = sqrt(length(cholesky)))
-    return(out)
+  if (n != 1) warning("rinvwish_chol only handles n = 1 at the moment")
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  out <- .Call(C_rinvwish_chol, cholesky, as.double(df), as.double(scale_param))
+  if (!is.null(out)) out <- matrix(out, nrow = sqrt(length(cholesky)))
+  return(out)
 }
 
 #' Spectral Decomposition of a Matrix
@@ -133,20 +139,20 @@ rinvwish_chol <- function(n = 1, cholesky, df, scale_param = TRUE) {
 #'
 #' @examples
 #' eigenvaluesDemoFunction <- nimbleFunction(
-#'    setup = function(){
-#'      demoMatrix <- diag(4) + 2
-#'    },
-#'    run = function(){
-#'      eigenvalues <- eigen(demoMatrix, symmetric = TRUE)$values
-#'      returnType(double(1))
-#'      return(eigenvalues)
-#'  })
+#'   setup = function() {
+#'     demoMatrix <- diag(4) + 2
+#'   },
+#'   run = function() {
+#'     eigenvalues <- eigen(demoMatrix, symmetric = TRUE)$values
+#'     returnType(double(1))
+#'     return(eigenvalues)
+#'   }
+#' )
 #'
 nimEigen <- function(x, symmetric = FALSE, only.values = FALSE) {
   ## placeholder list with correct names of elements, will be populated in C++
   .Call(C_nimEigen, x, as.logical(symmetric), as.logical(only.values), eigenNimbleList$new())
 }
-
 
 
 #' Singular Value Decomposition of a Matrix
@@ -189,22 +195,24 @@ nimEigen <- function(x, symmetric = FALSE, only.values = FALSE) {
 #'
 #' @seealso  \code{\link{nimEigen}} for spectral decompositions.
 #' @examples
-#'  singularValuesDemoFunction <- nimbleFunction(
-#'    setup = function(){
-#'      demoMatrix <- diag(4) + 2
-#'    },
-#'    run = function(){
-#'      singularValues <- svd(demoMatrix)$d
-#'      returnType(double(1))
-#'      return(singularValues)
-#'  })
-nimSvd <- function(x, vectors = 'full') {
+#' singularValuesDemoFunction <- nimbleFunction(
+#'   setup = function() {
+#'     demoMatrix <- diag(4) + 2
+#'   },
+#'   run = function() {
+#'     singularValues <- svd(demoMatrix)$d
+#'     returnType(double(1))
+#'     return(singularValues)
+#'   }
+#' )
+nimSvd <- function(x, vectors = "full") {
   ## placeholder list with correct names of elements, will be populated in C++
   vectors <- switch(tolower(vectors),
-                    none = 0,
-                    thin = 1,
-                    full = 2)
-  if(is.null(vectors)) stop("nimSvd: vectors argument to 'svd' must be one of \"none\", \"thin\", or \"full\".")
+    none = 0,
+    thin = 1,
+    full = 2
+  )
+  if (is.null(vectors)) stop("nimSvd: vectors argument to 'svd' must be one of \"none\", \"thin\", or \"full\".")
   .Call(C_nimSvd, x, vectors, svdNimbleList$new())
 }
 
@@ -232,10 +240,10 @@ NULL
 #' @rdname flat
 #' @export
 dflat <- function(x, log = FALSE) {
-   if(log) out <- rep(0, length(x)) else  out <- rep(1, length(x))
-   nas <- is.na(x)
-   out[nas] <- x[nas]
-   return(out)
+  if (log) out <- rep(0, length(x)) else out <- rep(1, length(x))
+  nas <- is.na(x)
+  out[nas] <- x[nas]
+  return(out)
 }
 
 #' @rdname flat
@@ -251,7 +259,11 @@ dhalfflat <- function(x, log = FALSE) {
   out[x < 0] <- -Inf
   nas <- is.na(x)
   out[nas] <- x[nas]
-  if(log) return(out) else return(exp(out))
+  if (log) {
+    return(out)
+  } else {
+    return(exp(out))
+  }
 }
 
 #' @rdname flat
@@ -286,13 +298,13 @@ NULL
 #' @rdname Dirichlet
 #' @export
 ddirch <- function(x, alpha, log = FALSE) {
-    .Call(C_ddirch, as.double(x), as.double(alpha), as.logical(log))
+  .Call(C_ddirch, as.double(x), as.double(alpha), as.logical(log))
 }
 
 #' @rdname Dirichlet
 #' @export
 rdirch <- function(n = 1, alpha) {
-    if(n != 1) warning('rdirch only handles n = 1 at the moment')
+  if (n != 1) warning("rdirch only handles n = 1 at the moment")
   .Call(C_rdirch, as.double(alpha))
 }
 
@@ -316,7 +328,7 @@ rdirch <- function(n = 1, alpha) {
 #'
 #' @examples
 #' size <- 30
-#' probs <- c(1/4, 1/10, 1 - 1/4 - 1/10)
+#' probs <- c(1 / 4, 1 / 10, 1 - 1 / 4 - 1 / 10)
 #' x <- rmulti(1, size, probs)
 #' dmulti(x, size, probs)
 NULL
@@ -330,7 +342,7 @@ dmulti <- function(x, size = sum(x), prob, log = FALSE) {
 #' @rdname Multinomial
 #' @export
 rmulti <- function(n = 1, size, prob) {
-  if(n != 1) warning('rmulti only handles n = 1 at the moment')
+  if (n != 1) warning("rmulti only handles n = 1 at the moment")
   .Call(C_rmulti, as.double(size), as.double(prob))
 }
 
@@ -350,7 +362,7 @@ rmulti <- function(n = 1, size, prob) {
 ##' @seealso \link{Distributions} for other standard distributions
 #'
 #' @examples
-#' probs <- c(1/4, 1/10, 1 - 1/4 - 1/10)
+#' probs <- c(1 / 4, 1 / 10, 1 - 1 / 4 - 1 / 10)
 #' x <- rcat(n = 30, probs)
 #' dcat(x, probs)
 #'
@@ -459,62 +471,70 @@ NULL
 
 #' @rdname Double-Exponential
 #' @export
-ddexp <- function(x, location = 0, scale = 1, rate = 1/scale, log = FALSE) {
+ddexp <- function(x, location = 0, scale = 1, rate = 1 / scale, log = FALSE) {
   if (!missing(scale) && !missing(rate)) {
-      if (abs(scale * rate - 1) < 1e-15)
-          warning("specify 'scale' or 'rate' but not both")
-      else stop("specify 'scale' or 'rate' but not both")
+    if (abs(scale * rate - 1) < 1e-15) {
+      warning("specify 'scale' or 'rate' but not both")
+    } else {
+      stop("specify 'scale' or 'rate' but not both")
+    }
   }
-  if(missing(rate)) {
+  if (missing(rate)) {
     .Call(C_ddexp, as.double(x), as.double(location), as.double(scale), as.logical(log))
   } else {
-    .Call(C_ddexp, as.double(x), as.double(location), as.double(1/rate), as.logical(log))
+    .Call(C_ddexp, as.double(x), as.double(location), as.double(1 / rate), as.logical(log))
   }
 }
 
 #' @rdname Double-Exponential
 #' @export
-rdexp <- function(n, location = 0, scale = 1, rate = 1/scale) {
+rdexp <- function(n, location = 0, scale = 1, rate = 1 / scale) {
   if (!missing(scale) && !missing(rate)) {
-      if (abs(scale * rate - 1) < 1e-15)
-          warning("specify 'scale' or 'rate' but not both")
-      else stop("specify 'scale' or 'rate' but not both")
+    if (abs(scale * rate - 1) < 1e-15) {
+      warning("specify 'scale' or 'rate' but not both")
+    } else {
+      stop("specify 'scale' or 'rate' but not both")
+    }
   }
-  if(missing(rate)) {
+  if (missing(rate)) {
     .Call(C_rdexp, as.integer(n), as.double(location), as.double(scale))
   } else {
-    .Call(C_rdexp, as.integer(n), as.double(location), as.double(1/rate))
+    .Call(C_rdexp, as.integer(n), as.double(location), as.double(1 / rate))
   }
 }
 
 #' @rdname Double-Exponential
 #' @export
-pdexp <- function(q, location = 0, scale = 1, rate = 1/scale, lower.tail = TRUE, log.p = FALSE) {
+pdexp <- function(q, location = 0, scale = 1, rate = 1 / scale, lower.tail = TRUE, log.p = FALSE) {
   if (!missing(scale) && !missing(rate)) {
-      if (abs(scale * rate - 1) < 1e-15)
-          warning("specify 'scale' or 'rate' but not both")
-      else stop("specify 'scale' or 'rate' but not both")
+    if (abs(scale * rate - 1) < 1e-15) {
+      warning("specify 'scale' or 'rate' but not both")
+    } else {
+      stop("specify 'scale' or 'rate' but not both")
+    }
   }
-  if(missing(rate)) {
+  if (missing(rate)) {
     .Call(C_pdexp, as.double(q), as.double(location), as.double(scale), as.logical(lower.tail), as.logical(log.p))
   } else {
-    .Call(C_pdexp, as.double(q), as.double(location), as.double(1/rate), as.logical(lower.tail), as.logical(log.p))
+    .Call(C_pdexp, as.double(q), as.double(location), as.double(1 / rate), as.logical(lower.tail), as.logical(log.p))
   }
 }
 
 
 #' @rdname Double-Exponential
 #' @export
-qdexp <- function(p, location = 0, scale = 1, rate = 1/scale, lower.tail = TRUE, log.p = FALSE) {
+qdexp <- function(p, location = 0, scale = 1, rate = 1 / scale, lower.tail = TRUE, log.p = FALSE) {
   if (!missing(scale) && !missing(rate)) {
-      if (abs(scale * rate - 1) < 1e-15)
-          warning("specify 'scale' or 'rate' but not both")
-      else stop("specify 'scale' or 'rate' but not both")
+    if (abs(scale * rate - 1) < 1e-15) {
+      warning("specify 'scale' or 'rate' but not both")
+    } else {
+      stop("specify 'scale' or 'rate' but not both")
+    }
   }
-  if(missing(rate)) {
+  if (missing(rate)) {
     .Call(C_qdexp, as.double(p), as.double(location), as.double(scale), as.logical(lower.tail), as.logical(log.p))
   } else {
-    .Call(C_qdexp, as.double(p), as.double(location), as.double(1/rate), as.logical(lower.tail), as.logical(log.p))
+    .Call(C_qdexp, as.double(p), as.double(location), as.double(1 / rate), as.logical(lower.tail), as.logical(log.p))
   }
 }
 
@@ -548,8 +568,9 @@ qdexp <- function(p, location = 0, scale = 1, rate = 1/scale, lower.tail = TRUE,
 NULL
 
 PDinverse_logdet <- function(mat) {
-  if(storage.mode(mat) != 'double')
-   storage.mode(mat) <- 'double'
+  if (storage.mode(mat) != "double") {
+    storage.mode(mat) <- "double"
+  }
   out <- .Call(C_PDinverse_logdet, mat)
   return(out)
 }
@@ -560,43 +581,53 @@ PDinverse_logdet <- function(mat) {
 dmnorm_chol <- function(x, mean, cholesky, prec_param = TRUE, log = FALSE) {
   # cholesky should be upper triangular
   # FIXME: allow cholesky to be lower tri
-    if(storage.mode(cholesky) != 'double')
-         storage.mode(cholesky) <- 'double'
-    .Call(C_dmnorm_chol, as.double(x), as.double(mean), cholesky, as.double(prec_param), as.logical(log))
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  .Call(C_dmnorm_chol, as.double(x), as.double(mean), cholesky, as.double(prec_param), as.logical(log))
 }
 
 #' @rdname MultivariateNormal
 #' @export
 rmnorm_chol <- function(n = 1, mean, cholesky, prec_param = TRUE) {
- ## cholesky should be upper triangular
- ## FIXME: allow cholesky to be lower tri
-    if(n != 1) warning('rmnorm_chol only handles n = 1 at the moment')
-    if(storage.mode(cholesky) != 'double')
-         storage.mode(cholesky) <- 'double'
-    .Call(C_rmnorm_chol, as.double(mean), cholesky, as.double(prec_param))
+  ## cholesky should be upper triangular
+  ## FIXME: allow cholesky to be lower tri
+  if (n != 1) warning("rmnorm_chol only handles n = 1 at the moment")
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  .Call(C_rmnorm_chol, as.double(mean), cholesky, as.double(prec_param))
 }
 
 #' @rdname MultivariateNormal
 #' @export
 dmnorm_inv_ld <- function(x, mean, mat, inv_ld, prec_param = TRUE, log = FALSE) {
-    if(storage.mode(inv_ld) != 'double')
-         storage.mode(inv_ld) <- 'double'
-    if(storage.mode(mat) != 'double')
-         storage.mode(mat) <- 'double'
-    .Call(C_dmnorm_inv_ld, as.double(x), as.double(mean), mat, inv_ld,
-          as.double(prec_param), as.logical(log))
+  if (storage.mode(inv_ld) != "double") {
+    storage.mode(inv_ld) <- "double"
+  }
+  if (storage.mode(mat) != "double") {
+    storage.mode(mat) <- "double"
+  }
+  .Call(
+    C_dmnorm_inv_ld, as.double(x), as.double(mean), mat, inv_ld,
+    as.double(prec_param), as.logical(log)
+  )
 }
 
 #' @rdname MultivariateNormal
 #' @export
-rmnorm_inv_ld <- function(n=1, mean, mat, inv_ld, prec_param = TRUE) {
-    if(n != 1) warning('rmnorm_inv_ld only handles n = 1 at the moment')
-    if(storage.mode(inv_ld) != 'double')
-         storage.mode(inv_ld) <- 'double'
-    if(storage.mode(mat) != 'double')
-         storage.mode(mat) <- 'double'
-    .Call(C_rmnorm_inv_ld, as.double(mean), mat, inv_ld,
-          as.double(prec_param))
+rmnorm_inv_ld <- function(n = 1, mean, mat, inv_ld, prec_param = TRUE) {
+  if (n != 1) warning("rmnorm_inv_ld only handles n = 1 at the moment")
+  if (storage.mode(inv_ld) != "double") {
+    storage.mode(inv_ld) <- "double"
+  }
+  if (storage.mode(mat) != "double") {
+    storage.mode(mat) <- "double"
+  }
+  .Call(
+    C_rmnorm_inv_ld, as.double(mean), mat, inv_ld,
+    as.double(prec_param)
+  )
 }
 
 #' The Multivariate t Distribution
@@ -634,10 +665,13 @@ NULL
 dmvt_chol <- function(x, mu, cholesky, df, prec_param = TRUE, log = FALSE) {
   # cholesky should be upper triangular
   # FIXME: allow cholesky to be lower tri
-    if(storage.mode(cholesky) != 'double')
-       storage.mode(cholesky) <- 'double'
-    .Call(C_dmvt_chol, as.double(x), as.double(mu), cholesky,
-        as.double(df), as.double(prec_param), as.logical(log))
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  .Call(
+    C_dmvt_chol, as.double(x), as.double(mu), cholesky,
+    as.double(df), as.double(prec_param), as.logical(log)
+  )
 }
 
 #' @rdname Multivariate-t
@@ -645,11 +679,14 @@ dmvt_chol <- function(x, mu, cholesky, df, prec_param = TRUE, log = FALSE) {
 rmvt_chol <- function(n = 1, mu, cholesky, df, prec_param = TRUE) {
   ## cholesky should be upper triangular
   ## FIXME: allow cholesky to be lower tri
-    if(n != 1) warning('rmvt_chol only handles n = 1 at the moment')
-    if(storage.mode(cholesky) != 'double')
-         storage.mode(cholesky) <- 'double'
-    .Call(C_rmvt_chol, as.double(mu), cholesky,
-        as.double(df), as.double(prec_param))
+  if (n != 1) warning("rmvt_chol only handles n = 1 at the moment")
+  if (storage.mode(cholesky) != "double") {
+    storage.mode(cholesky) <- "double"
+  }
+  .Call(
+    C_rmvt_chol, as.double(mu), cholesky,
+    as.double(df), as.double(prec_param)
+  )
 }
 
 #' The LKJ Distribution for the Cholesky Factor of a Correlation Matrix
@@ -682,19 +719,20 @@ NULL
 #' @export
 dlkj_corr_cholesky <- function(x, eta, p, log = FALSE) {
   # x should be upper triangular
-                                        # FIXME: allow x to be lower tri
-    if (storage.mode(x) != "double")
-        storage.mode(x) <- "double"
-    .Call(C_dlkj_corr_cholesky, x, as.double(eta), as.integer(p), as.logical(log))
+  # FIXME: allow x to be lower tri
+  if (storage.mode(x) != "double") {
+    storage.mode(x) <- "double"
+  }
+  .Call(C_dlkj_corr_cholesky, x, as.double(eta), as.integer(p), as.logical(log))
 }
 
 #' @rdname LKJ
 #' @export
 rlkj_corr_cholesky <- function(n = 1, eta, p) {
-    if(n != 1) warning('rlkj_corr_cholesky only handles n = 1 at the moment')
-    out <- .Call(C_rlkj_corr_cholesky, as.double(eta), as.integer(p))
-    if(!is.null(out)) out <- matrix(out, nrow = p, ncol = p)
-    return(out)
+  if (n != 1) warning("rlkj_corr_cholesky only handles n = 1 at the moment")
+  out <- .Call(C_rlkj_corr_cholesky, as.double(eta), as.integer(p))
+  if (!is.null(out)) out <- matrix(out, nrow = p, ncol = p)
+  return(out)
 }
 
 #' Interval calculations
@@ -728,13 +766,13 @@ NULL
 #' @rdname Interval
 #' @export
 dinterval <- function(x, t, c, log = FALSE) {
-    .Call(C_dinterval, as.double(x), as.double(t), as.double(c), as.logical(log))
+  .Call(C_dinterval, as.double(x), as.double(t), as.double(c), as.logical(log))
 }
 
 #' @rdname Interval
 #' @export
 rinterval <- function(n = 1, t, c) {
-    .Call(C_rinterval, as.integer(n), as.double(t), as.double(c))
+  .Call(C_rinterval, as.integer(n), as.double(t), as.double(c))
 }
 
 #' Constraint calculations in NIMBLE
@@ -767,21 +805,27 @@ NULL
 #' @rdname Constraint
 #' @export
 dconstraint <- function(x, cond, log = FALSE) {
-    if(length(x) > 1 || length(cond) > 1) stop('dconstraint is not vectorized')
-    if(is.na(x) || is.na(cond)) return(x + cond) # mimic how R's C functions handle NA and NaN inputs
-    if(x == cond || x == 0) result <- 1 else result <- 0
-    if(log) return(log(result)) else return(result)
+  if (length(x) > 1 || length(cond) > 1) stop("dconstraint is not vectorized")
+  if (is.na(x) || is.na(cond)) {
+    return(x + cond)
+  } # mimic how R's C functions handle NA and NaN inputs
+  if (x == cond || x == 0) result <- 1 else result <- 0
+  if (log) {
+    return(log(result))
+  } else {
+    return(result)
+  }
 }
 
 #' @rdname Constraint
 #' @export
 rconstraint <- function(n = 1, cond) {
-    if(n != 1 || length(cond) > 1) stop('rconstraint only handles n = 1 at the moment')
-    if(is.na(cond)) {
-        warning("NAs produced")
-        return(NaN)
-    }
-    return(as.integer(cond))
+  if (n != 1 || length(cond) > 1) stop("rconstraint only handles n = 1 at the moment")
+  if (is.na(cond)) {
+    warning("NAs produced")
+    return(NaN)
+  }
+  return(as.integer(cond))
 }
 
 # exp_nComp extends R to allow rate or scale
@@ -820,53 +864,61 @@ NULL
 #' @rdname Exponential
 #' @export
 dexp_nComp <- function(x, rate = 1, scale = 1, log = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_dexp_nComp, as.double(x), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_dexp_nComp, as.double(x), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
 rexp_nComp <- function(n = 1, rate = 1, scale = 1) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_rexp_nComp, as.integer(n), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_rexp_nComp, as.integer(n), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
 pexp_nComp <- function(q, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_pexp_nComp, as.double(q), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_pexp_nComp, as.double(q), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Exponential
 #' @export
 qexp_nComp <- function(p, rate = 1, scale = 1, lower.tail = TRUE, log.p = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_qexp_nComp, as.double(p), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_qexp_nComp, as.double(p), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' The Inverse Gamma Distribution
@@ -920,79 +972,91 @@ NULL
 #' @rdname Inverse-Gamma
 #' @export
 dinvgamma <- function(x, shape, scale = 1, rate = 1, log = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_dinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_dinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Inverse-Gamma
 #' @export
 rinvgamma <- function(n = 1, shape, scale = 1, rate = 1) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_rinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_rinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 
 #' @rdname Inverse-Gamma
 #' @export
 pinvgamma <- function(q, shape, scale = 1, rate = 1, lower.tail = TRUE, log.p = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_pinvgamma, as.double(q), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_pinvgamma, as.double(q), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 #' @rdname Inverse-Gamma
 #' @export
 qinvgamma <- function(p, shape, scale = 1, rate = 1, lower.tail = TRUE, log.p = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_qinvgamma, as.double(p), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_qinvgamma, as.double(p), as.double(shape), as.double(rate_or_scale), as.logical(lower.tail), as.logical(log.p), using_rate = as.logical(missing_scale))
 }
 
 # sqrtinvgamma is intended solely for use in conjugacy with dhalfflat
 #' @export
 dsqrtinvgamma <- function(x, shape, scale = 1, rate = 1, log = FALSE) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_dsqrtinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_dsqrtinvgamma, as.double(x), as.double(shape), as.double(rate_or_scale), as.logical(log), using_rate = as.logical(missing_scale))
 }
 
 #' @export
 rsqrtinvgamma <- function(n = 1, shape, scale = 1, rate = 1) {
-    missing_scale <- missing(scale)
-    if (!missing(rate) && !missing(scale)) {
-        if (abs(rate * scale - 1) < 1e-15)
-            warning("specify 'rate' or 'scale' but not both")
-        else stop("specify 'rate' or 'scale' but not both")
+  missing_scale <- missing(scale)
+  if (!missing(rate) && !missing(scale)) {
+    if (abs(rate * scale - 1) < 1e-15) {
+      warning("specify 'rate' or 'scale' but not both")
+    } else {
+      stop("specify 'rate' or 'scale' but not both")
     }
-    rate_or_scale <- if(missing_scale) rate else scale
-    .Call(C_rsqrtinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
+  }
+  rate_or_scale <- if (missing_scale) rate else scale
+  .Call(C_rsqrtinvgamma, as.integer(n), as.double(shape), as.double(rate_or_scale), using_rate = as.logical(missing_scale))
 }
 
 #' The CAR-Normal Distribution
@@ -1032,59 +1096,61 @@ rsqrtinvgamma <- function(n = 1, shape, scale = 1, rate = 1) {
 #' @examples
 #' x <- c(1, 3, 3, 4)
 #' num <- c(1, 2, 2, 1)
-#' adj <- c(2, 1,3, 2,4, 3)
+#' adj <- c(2, 1, 3, 2, 4, 3)
 #' weights <- c(1, 1, 1, 1, 1, 1)
 #' lp <- dcar_normal(x, adj, weights, num, tau = 1)
 NULL
 
 #' @rdname CAR-Normal
 #' @export
-dcar_normal <- function(x, adj, weights = adj/adj, num, tau, c = CAR_calcNumIslands(adj, num), zero_mean = 0, log = FALSE) {
-    CAR_normal_checkAdjWeightsNum(adj, weights, num)
-    if(storage.mode(x) != 'double')   storage.mode(x) <- 'double'
-    if(storage.mode(adj) != 'double')   storage.mode(adj) <- 'double'
-    if(storage.mode(weights) != 'double')   storage.mode(weights) <- 'double'
-    if(storage.mode(num) != 'double')   storage.mode(num) <- 'double'
-    ##
-    ##k <- length(x)
-    ##c <- 1
-    ##lp <- 0
-    ##count <- 1
-    ##for(i in 1:k) {
-    ##    if(num[i] == 0)   c <- c + 1
-    ##    xi <- x[i]
-    ##    for(j in 1:num[i]) {
-    ##        xj <- x[adj[count]]
-    ##        lp <- lp + weights[count] * (xi-xj)^2
-    ##        count <- count + 1
-    ##    }
-    ##}
-    ##if(count != (length(adj)+1)) stop('something wrong')
-    ##lp <- lp / 2
-    ##lp <- lp * (-1/2) * tau
-    ##lp <- lp + (k-c)/2 * log(tau/2/pi)
-    ##if(log) return(lp)
-    ##return(exp(lp))
-    ##
-    .Call(C_dcar_normal, as.double(x), as.double(adj), as.double(weights), as.double(num), as.double(tau), as.double(c), as.double(zero_mean), as.logical(log))
+dcar_normal <- function(x, adj, weights = adj / adj, num, tau, c = CAR_calcNumIslands(adj, num), zero_mean = 0, log = FALSE) {
+  CAR_normal_checkAdjWeightsNum(adj, weights, num)
+  if (storage.mode(x) != "double") storage.mode(x) <- "double"
+  if (storage.mode(adj) != "double") storage.mode(adj) <- "double"
+  if (storage.mode(weights) != "double") storage.mode(weights) <- "double"
+  if (storage.mode(num) != "double") storage.mode(num) <- "double"
+  ##
+  ## k <- length(x)
+  ## c <- 1
+  ## lp <- 0
+  ## count <- 1
+  ## for(i in 1:k) {
+  ##    if(num[i] == 0)   c <- c + 1
+  ##    xi <- x[i]
+  ##    for(j in 1:num[i]) {
+  ##        xj <- x[adj[count]]
+  ##        lp <- lp + weights[count] * (xi-xj)^2
+  ##        count <- count + 1
+  ##    }
+  ## }
+  ## if(count != (length(adj)+1)) stop('something wrong')
+  ## lp <- lp / 2
+  ## lp <- lp * (-1/2) * tau
+  ## lp <- lp + (k-c)/2 * log(tau/2/pi)
+  ## if(log) return(lp)
+  ## return(exp(lp))
+  ##
+  .Call(C_dcar_normal, as.double(x), as.double(adj), as.double(weights), as.double(num), as.double(tau), as.double(c), as.double(zero_mean), as.logical(log))
 }
 
 #' @rdname CAR-Normal
 #' @export
-rcar_normal <- function(n = 1, adj, weights = adj/adj, num, tau, c = CAR_calcNumIslands(adj, num), zero_mean = 0) {
-    ## it's important that simulation via rcar_normal() does *not* set all values to NA (or NaN),
-    ## since initializeModel() will call this simulate method if there are any NA's present,
-    ## (which is allowed for island components), which over-writes all the other valid initial values.
-    ##return(rep(NaN, length(num)))
+rcar_normal <- function(n = 1, adj, weights = adj / adj, num, tau, c = CAR_calcNumIslands(adj, num), zero_mean = 0) {
+  ## it's important that simulation via rcar_normal() does *not* set all values to NA (or NaN),
+  ## since initializeModel() will call this simulate method if there are any NA's present,
+  ## (which is allowed for island components), which over-writes all the other valid initial values.
+  ## return(rep(NaN, length(num)))
 
-    ## issue 1238: this fails if `nodes` has more than the CAR node
-    ## currentValues <- eval(quote(model[[nodes]]), parent.frame(3))
-    e <- try(m <- get('model', parent.frame(2)), silent = TRUE)
-    if(inherits(e, 'try-error') || !is.model(m)) stop('The car_normal distribution is improper, and cannot be used to simulate process values.  See help(dcar_normal) for details.', call. = FALSE)
-    nodeName <- eval(quote(model$modelDef$declInfo[[declIDs[i]]]$targetNodeName),parent.frame(2))
-    currentValues <- eval(substitute(model[[nodeName]], list(nodeName = nodeName)),
-                          parent.frame(2))
-    return(currentValues)
+  ## issue 1238: this fails if `nodes` has more than the CAR node
+  ## currentValues <- eval(quote(model[[nodes]]), parent.frame(3))
+  e <- try(m <- get("model", parent.frame(2)), silent = TRUE)
+  if (inherits(e, "try-error") || !is.model(m)) stop("The car_normal distribution is improper, and cannot be used to simulate process values.  See help(dcar_normal) for details.", call. = FALSE)
+  nodeName <- eval(quote(model$modelDef$declInfo[[declIDs[i]]]$targetNodeName), parent.frame(2))
+  currentValues <- eval(
+    substitute(model[[nodeName]], list(nodeName = nodeName)),
+    parent.frame(2)
+  )
+  return(currentValues)
 }
 
 
@@ -1124,7 +1190,7 @@ rcar_normal <- function(n = 1, adj, weights = adj/adj, num, tau, c = CAR_calcNum
 #'
 #' x <- c(1, 3, 3, 4)
 #' mu <- rep(3, 4)
-#' adj <- c(2, 1,3, 2,4, 3)
+#' adj <- c(2, 1, 3, 2, 4, 3)
 #' num <- c(1, 2, 2, 1)
 #'
 #' ## omitting C and M uses all weights = 1
@@ -1149,27 +1215,27 @@ NULL
 #' @rdname CAR-Proper
 #' @export
 dcar_proper <- function(x, mu, C = CAR_calcC(adj, num), adj, num, M = CAR_calcM(num), tau, gamma, evs = CAR_calcEVs3(C, adj, num), log = FALSE) {
-    CAR_proper_checkAdjNumCM(adj, num, C, M)
-    if(storage.mode(x) != 'double')   storage.mode(x) <- 'double'
-    if(storage.mode(mu) != 'double')   storage.mode(mu) <- 'double'
-    if(storage.mode(C) != 'double')   storage.mode(C) <- 'double'
-    if(storage.mode(adj) != 'double')   storage.mode(adj) <- 'double'
-    if(storage.mode(num) != 'double')   storage.mode(num) <- 'double'
-    if(storage.mode(M) != 'double')   storage.mode(M) <- 'double'
-    if(storage.mode(evs) != 'double')   storage.mode(evs) <- 'double'
-    .Call(C_dcar_proper, as.double(x), as.double(mu), as.double(C), as.double(adj), as.double(num), as.double(M), as.double(tau), as.double(gamma), as.double(evs), as.logical(log))
+  CAR_proper_checkAdjNumCM(adj, num, C, M)
+  if (storage.mode(x) != "double") storage.mode(x) <- "double"
+  if (storage.mode(mu) != "double") storage.mode(mu) <- "double"
+  if (storage.mode(C) != "double") storage.mode(C) <- "double"
+  if (storage.mode(adj) != "double") storage.mode(adj) <- "double"
+  if (storage.mode(num) != "double") storage.mode(num) <- "double"
+  if (storage.mode(M) != "double") storage.mode(M) <- "double"
+  if (storage.mode(evs) != "double") storage.mode(evs) <- "double"
+  .Call(C_dcar_proper, as.double(x), as.double(mu), as.double(C), as.double(adj), as.double(num), as.double(M), as.double(tau), as.double(gamma), as.double(evs), as.logical(log))
 }
 
 #' @rdname CAR-Proper
 #' @export
 rcar_proper <- function(n = 1, mu, C = CAR_calcC(adj, num), adj, num, M = CAR_calcM(num), tau, gamma, evs = CAR_calcEVs3(C, adj, num)) {
-    if(n != 1) warning('rcar_proper only handles n = 1 at the moment')
-    CAR_proper_checkAdjNumCM(adj, num, C, M)
-    if(storage.mode(mu) != 'double')   storage.mode(mu) <- 'double'
-    if(storage.mode(C) != 'double')   storage.mode(C) <- 'double'
-    if(storage.mode(adj) != 'double')   storage.mode(adj) <- 'double'
-    if(storage.mode(num) != 'double')   storage.mode(num) <- 'double'
-    if(storage.mode(M) != 'double')   storage.mode(M) <- 'double'
-    if(storage.mode(evs) != 'double')   storage.mode(evs) <- 'double'
-    .Call(C_rcar_proper, as.integer(n), as.double(mu), as.double(C), as.double(adj), as.double(num), as.double(M), as.double(tau), as.double(gamma), as.double(evs))
+  if (n != 1) warning("rcar_proper only handles n = 1 at the moment")
+  CAR_proper_checkAdjNumCM(adj, num, C, M)
+  if (storage.mode(mu) != "double") storage.mode(mu) <- "double"
+  if (storage.mode(C) != "double") storage.mode(C) <- "double"
+  if (storage.mode(adj) != "double") storage.mode(adj) <- "double"
+  if (storage.mode(num) != "double") storage.mode(num) <- "double"
+  if (storage.mode(M) != "double") storage.mode(M) <- "double"
+  if (storage.mode(evs) != "double") storage.mode(evs) <- "double"
+  .Call(C_rcar_proper, as.integer(n), as.double(mu), as.double(C), as.double(adj), as.double(num), as.double(M), as.double(tau), as.double(gamma), as.double(evs))
 }

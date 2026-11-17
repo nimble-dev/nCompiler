@@ -271,9 +271,10 @@
 # The Rcpp plugin system allows packages to modify environment variables used as C++ compiler flags.
 # This function is also called by buildPackage
 get_nCompLocal_PKG_LIBS_entry <- function() {
-  if(!isTRUE(get_nOption("use_nCompLocal")))
+  if (!isTRUE(get_nOption("use_nCompLocal"))) {
     return("")
-  loc <- system.file(file.path('staticLib'), package = 'nCompLocal')
+  }
+  loc <- system.file(file.path("staticLib"), package = "nCompLocal")
   ans <- paste0("-L \"", loc, "\" -lnCompLocal")
   ans
 }

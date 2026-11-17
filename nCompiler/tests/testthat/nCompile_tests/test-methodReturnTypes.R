@@ -1,6 +1,5 @@
 #
 test_that("TBD types are handled for an nClass returned by another class' method", {
-
   innerNC <- nClass(
     classname = "innerNC",
     Cpublic = list(x = double(1))

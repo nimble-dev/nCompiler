@@ -1,4 +1,4 @@
-#tensorOperations: interoperability with dense linear algebra methods
+# tensorOperations: interoperability with dense linear algebra methods
 
 # This now works except nForwardsolve is not found for uncompiled execution.
 
@@ -51,9 +51,9 @@ test_that("dense forwardsolve/backsolve work in mvn example", {
     # evaluate quadratic form t(x - mu) %*% solve(Sigma) %*% (x - mu)
     y <- forwardsolve(t(R), x - mu)
 
-    res <- -.5 * n * log(2*pi) - ldet_chol - .5 * sum(y*y)
+    res <- -.5 * n * log(2 * pi) - ldet_chol - .5 * sum(y * y)
 
-    if(log) {
+    if (log) {
       return(res)
     } else {
       return(exp(res))
@@ -81,9 +81,9 @@ test_that("dense forwardsolve/backsolve work in mvn example", {
     # evaluate quadratic form t(x - mu) %*% solve(Sigma) %*% (x - mu)
     y <- forwardsolve(t(R), x - mu)
 
-    res <- -.5 * n * log(2*pi) - ldet_chol - .5 * (t(y)%*%y)[1,1]
+    res <- -.5 * n * log(2 * pi) - ldet_chol - .5 * (t(y) %*% y)[1, 1]
 
-    if(log) {
+    if (log) {
       return(res)
     } else {
       return(exp(res))
@@ -100,16 +100,20 @@ test_that("dense forwardsolve/backsolve work in mvn example", {
 
   nDmvn <- nFunction(
     fun = dmvn,
-    argTypes = list(x = 'numericVector', mu = 'numericVector',
-                    Sigma = 'nMatrix', log = 'logical'),
-    returnType = 'double'
+    argTypes = list(
+      x = "numericVector", mu = "numericVector",
+      Sigma = "nMatrix", log = "logical"
+    ),
+    returnType = "double"
   )
 
   nDmvn2 <- nFunction(
     fun = dmvn2,
-    argTypes = list(x = 'numericVector', mu = 'numericVector',
-                    Sigma = 'nMatrix', log = 'logical'),
-    returnType = 'double'
+    argTypes = list(
+      x = "numericVector", mu = "numericVector",
+      Sigma = "nMatrix", log = "logical"
+    ),
+    returnType = "double"
   )
 
   cDmvn <- nCompile(nDmvn)
@@ -120,13 +124,17 @@ test_that("dense forwardsolve/backsolve work in mvn example", {
 
   # validate the R implementations
   expect_equal(dmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
-  expect_equal(as.numeric(dmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)),
-               ll.ref)
+  expect_equal(
+    as.numeric(dmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)),
+    ll.ref
+  )
 
   # validate the nFunctions
   expect_equal(nDmvn(x = x, mu = mu, Sigma = Sigma, log = TRUE), ll.ref)
-  expect_equal(as.numeric(nDmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)),
-               ll.ref)
+  expect_equal(
+    as.numeric(nDmvn2(x = x, mu = mu, Sigma = Sigma, log = TRUE)),
+    ll.ref
+  )
 
   # validate the compiled nFunctions
   expect_equal(cDmvn(x = x, mu = mu, Sigma = Sigma, ARG_log_ = TRUE), ll.ref)
@@ -165,43 +173,43 @@ test_that("solve/forwardsolve/backsolve work", {
   # nCompiler implementation of forward solve with unknown matrix
   nLUsolve <- nFunction(
     fun = lusolve,
-    argTypes = list(A = 'numericMatrix', b = 'numericVector'),
-    returnType = 'numericVector'
+    argTypes = list(A = "numericMatrix", b = "numericVector"),
+    returnType = "numericVector"
   )
 
   # nCompiler implementation of forward solve with unknown matrix
   nLUsolveMat <- nFunction(
     fun = lusolve,
-    argTypes = list(A = 'numericMatrix', b = 'numericMatrix'),
-    returnType = 'numericMatrix'
+    argTypes = list(A = "numericMatrix", b = "numericMatrix"),
+    returnType = "numericMatrix"
   )
 
   # nCompiler implementation of forward solve with unknown matrix
   nFsolve <- nFunction(
     fun = fsolve,
-    argTypes = list(L = 'numericMatrix', b = 'numericVector'),
-    returnType = 'numericVector'
+    argTypes = list(L = "numericMatrix", b = "numericVector"),
+    returnType = "numericVector"
   )
 
   # nCompiler implementation of forward solve with unknown matrix
   nFsolveMat <- nFunction(
     fun = fsolve,
-    argTypes = list(L = 'numericMatrix', b = 'numericMatrix'),
-    returnType = 'numericMatrix'
+    argTypes = list(L = "numericMatrix", b = "numericMatrix"),
+    returnType = "numericMatrix"
   )
 
   # nCompiler implementation of backward solve with unknown matrix
   nBsolve <- nFunction(
     fun = bsolve,
-    argTypes = list(U = 'numericMatrix', b = 'numericVector'),
-    returnType = 'numericVector'
+    argTypes = list(U = "numericMatrix", b = "numericVector"),
+    returnType = "numericVector"
   )
 
   # nCompiler implementation of backward solve with unknown matrix
   nBsolveMat <- nFunction(
     fun = bsolve,
-    argTypes = list(U = 'numericMatrix', b = 'numericMatrix'),
-    returnType = 'numericMatrix'
+    argTypes = list(U = "numericMatrix", b = "numericMatrix"),
+    returnType = "numericMatrix"
   )
 
   # compile nFunctions
@@ -257,29 +265,29 @@ test_that("matrix mult works", {
   # nCompiler implementation of matrix multiplication with matrix inputs
   nMultMM <- nFunction(
     fun = mmult,
-    argTypes = list(x = 'numericMatrix', y = 'numericMatrix'),
-    returnType = 'numericMatrix'
+    argTypes = list(x = "numericMatrix", y = "numericMatrix"),
+    returnType = "numericMatrix"
   )
 
   # nCompiler implementation of matrix multiplication with matrix/vector inputs
   nMultMV <- nFunction(
     fun = mmult,
-    argTypes = list(x = 'numericMatrix', y = 'numericVector'),
-    returnType = 'numericMatrix'
+    argTypes = list(x = "numericMatrix", y = "numericVector"),
+    returnType = "numericMatrix"
   )
 
   # nCompiler implementation of matrix multiplication with vector/matrix inputs
   nMultVM <- nFunction(
     fun = mmult,
-    argTypes = list(x = 'numericVector', y = 'numericMatrix'),
-    returnType = 'numericMatrix'
+    argTypes = list(x = "numericVector", y = "numericMatrix"),
+    returnType = "numericMatrix"
   )
 
   # nCompiler implementation of matrix multiplication with vector/vector inputs
   nMultVV <- nFunction(
     fun = mmult,
-    argTypes = list(x = 'numericVector', y = 'numericVector'),
-    returnType = 'numericMatrix'
+    argTypes = list(x = "numericVector", y = "numericVector"),
+    returnType = "numericMatrix"
   )
 
   # compiled functions
@@ -289,17 +297,17 @@ test_that("matrix mult works", {
   cMultVV <- nCompile(nMultVV)
 
   # vector dimension
-  n = 10
+  n <- 10
 
   # vector stored as numeric
-  v = runif(n = n)
+  v <- runif(n = n)
 
   # explicit row and column vectors
-  cv = matrix(data = v, ncol = 1)
-  rv = matrix(data = v, nrow = 1)
+  cv <- matrix(data = v, ncol = 1)
+  rv <- matrix(data = v, nrow = 1)
 
   # square matrix
-  m = matrix(data = runif(n = n^2), nrow = n)
+  m <- matrix(data = runif(n = n^2), nrow = n)
 
   #
   # matrix multiplication tests
@@ -338,31 +346,34 @@ test_that("matrix mult works", {
 })
 
 test_that("log determinants work (dense matrices)", {
-
-  ldet_direct = nFunction(
-    fun = function(x) return(logdet(x)),
-    argTypes = list(x = 'numericMatrix()'),
-    returnType = 'numericScalar()'
+  ldet_direct <- nFunction(
+    fun = function(x) {
+      return(logdet(x))
+    },
+    argTypes = list(x = "numericMatrix()"),
+    returnType = "numericScalar()"
   )
 
-  ldet_tensor_op = nFunction(
-    fun = function(x, y) return(logdet(x + y)),
-    argTypes = list(x = 'numericMatrix()', y = 'numericMatrix()'),
-    returnType = 'numericScalar()'
+  ldet_tensor_op <- nFunction(
+    fun = function(x, y) {
+      return(logdet(x + y))
+    },
+    argTypes = list(x = "numericMatrix()", y = "numericMatrix()"),
+    returnType = "numericScalar()"
   )
 
-  ldet_direct_cpp = nCompile(ldet_direct)
-  ldet_tensor_op_cpp = nCompile(ldet_tensor_op)
+  ldet_direct_cpp <- nCompile(ldet_direct)
+  ldet_tensor_op_cpp <- nCompile(ldet_tensor_op)
 
-  n = 9
+  n <- 9
 
   set.seed(2025)
 
-  x = matrix(rnorm(n = n^2), nrow = n)
-  x = t(x) %*% x
+  x <- matrix(rnorm(n = n^2), nrow = n)
+  x <- t(x) %*% x
 
-  y = matrix(rnorm(n = n^2), nrow = n)
-  y = t(y) %*% y
+  y <- matrix(rnorm(n = n^2), nrow = n)
+  y <- t(y) %*% y
 
   #
   # uncompiled execution
@@ -373,7 +384,7 @@ test_that("log determinants work (dense matrices)", {
   # det < 0
   expect_identical(ldet_direct(x = -x), NaN)
   # det = 0
-  expect_identical(ldet_direct(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
+  expect_identical(ldet_direct(x = matrix(c(1, 0, 0, 0), nrow = 2)), -Inf)
 
   #
   # compiled execution
@@ -384,347 +395,345 @@ test_that("log determinants work (dense matrices)", {
   # det < 0
   expect_identical(ldet_direct_cpp(x = -x), NaN)
   # det = 0
-  expect_identical(ldet_direct_cpp(x = matrix(c(1,0,0,0), nrow = 2)), -Inf)
+  expect_identical(ldet_direct_cpp(x = matrix(c(1, 0, 0, 0), nrow = 2)), -Inf)
 
   # tensor expressions
-  expect_equal(ldet_tensor_op_cpp(x,y), log(det(x+y)))
-
+  expect_equal(ldet_tensor_op_cpp(x, y), log(det(x + y)))
 })
 
 test_that("various uses of nEigen", {
-    set.seed(1)
-    xnsymm <- matrix(c(1.5, .3, .1, 0, .25, .7, 0, 0, -.2), 3)
-    xsymm <- xnsymm
-    xsymm[upper.tri(xsymm)] <- t(xsymm[lower.tri(xsymm)])
+  set.seed(1)
+  xnsymm <- matrix(c(1.5, .3, .1, 0, .25, .7, 0, 0, -.2), 3)
+  xsymm <- xnsymm
+  xsymm[upper.tri(xsymm)] <- t(xsymm[lower.tri(xsymm)])
 
-    eig = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- eigen(x)
-            return(y$vectors)
-        },
-        returnType = 'numericMatrix'
-    )
-    cEig <- nCompile(eig)
+  eig <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- eigen(x)
+      return(y$vectors)
+    },
+    returnType = "numericMatrix"
+  )
+  cEig <- nCompile(eig)
 
-    result <- eigen(xnsymm, symmetric = FALSE)$vectors
-    vec <- eig(xnsymm)
-    cvec <- cEig(xnsymm)
-    expect_identical(result, vec)
-    ## Equal up to swapping of sign.
-    cvec[,1] <- -cvec[,1]
-    cvec[,2] <- -cvec[,2]
-    expect_equal(result, cvec)
+  result <- eigen(xnsymm, symmetric = FALSE)$vectors
+  vec <- eig(xnsymm)
+  cvec <- cEig(xnsymm)
+  expect_identical(result, vec)
+  ## Equal up to swapping of sign.
+  cvec[, 1] <- -cvec[, 1]
+  cvec[, 2] <- -cvec[, 2]
+  expect_equal(result, cvec)
 
-    ## Case with complex-valued result.
-    set.seed(1)
-    x <- matrix(rnorm(9), 3)
-    vec <- eig(x)
-    cvec <- cEig(x)
-    expect_identical(sum(is.nan(cvec)), 6L)
-    expect_equal(Re(vec[,3]), cvec[,1])
-    expect_equal(Im(vec[,3]), rep(0,3))
+  ## Case with complex-valued result.
+  set.seed(1)
+  x <- matrix(rnorm(9), 3)
+  vec <- eig(x)
+  cvec <- cEig(x)
+  expect_identical(sum(is.nan(cvec)), 6L)
+  expect_equal(Re(vec[, 3]), cvec[, 1])
+  expect_equal(Im(vec[, 3]), rep(0, 3))
 
-    eigns = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- eigen(x, symmetric = FALSE)
-            return(y$vectors)
-        },
-        returnType = 'numericMatrix'
-    )
-    cEigns <- nCompile(eigns)
+  eigns <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- eigen(x, symmetric = FALSE)
+      return(y$vectors)
+    },
+    returnType = "numericMatrix"
+  )
+  cEigns <- nCompile(eigns)
 
-    vec <- eig(xnsymm)
-    cvec <- cEig(xnsymm)
-    expect_identical(result, vec)
-    cvec[,1] <- -cvec[,1]
-    cvec[,2] <- -cvec[,2]
-    expect_equal(result, cvec)
+  vec <- eig(xnsymm)
+  cvec <- cEig(xnsymm)
+  expect_identical(result, vec)
+  cvec[, 1] <- -cvec[, 1]
+  cvec[, 2] <- -cvec[, 2]
+  expect_equal(result, cvec)
 
-    eigs = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- eigen(x, symmetric = TRUE)
-            return(y$vectors)
-        },
-        returnType = 'numericMatrix'
-    )
-    cEigs <- nCompile(eigs)
+  eigs <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- eigen(x, symmetric = TRUE)
+      return(y$vectors)
+    },
+    returnType = "numericMatrix"
+  )
+  cEigs <- nCompile(eigs)
 
-    result <- eigen(xsymm, symmetric = TRUE)$vectors
-    vec <- eig(xsymm)
-    cvec <- cEig(xsymm)
-    expect_identical(result, vec)
-    ## Eigenvectors can be in different order.
-    expect_equal(result[, order(result[1,])], cvec[, order(cvec[1,])])
+  result <- eigen(xsymm, symmetric = TRUE)$vectors
+  vec <- eig(xsymm)
+  cvec <- cEig(xsymm)
+  expect_identical(result, vec)
+  ## Eigenvectors can be in different order.
+  expect_equal(result[, order(result[1, ])], cvec[, order(cvec[1, ])])
 
-    ## If matrix is not actually symmetric, result should be same as symmetric counterpart.
-    result2 <- eigen(xsymm, symmetric = TRUE)$vectors
-    vec <- eigs(xnsymm)
-    cvec <- cEigs(xnsymm)
-    ## Should be the same as decomposition of the symmetric case.
-    expect_identical(result2, vec)
-    cvec[,2] <- -cvec[,2]
-    cvec[,3] <- -cvec[,3]
-    expect_equal(result2, cvec)
+  ## If matrix is not actually symmetric, result should be same as symmetric counterpart.
+  result2 <- eigen(xsymm, symmetric = TRUE)$vectors
+  vec <- eigs(xnsymm)
+  cvec <- cEigs(xnsymm)
+  ## Should be the same as decomposition of the symmetric case.
+  expect_identical(result2, vec)
+  cvec[, 2] <- -cvec[, 2]
+  cvec[, 3] <- -cvec[, 3]
+  expect_equal(result2, cvec)
 
 
-    ## Check case with EigenDecomp not as return type to make sure
-    ## predefined code is included with nCompiler_generated code.
-    eig = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- eigen(x)$vectors   # No EigenDecomp return type.
-            return(y)
-        },
-        returnType = 'numericMatrix'
-    )
-    cEig <- nCompile(eig)
+  ## Check case with EigenDecomp not as return type to make sure
+  ## predefined code is included with nCompiler_generated code.
+  eig <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- eigen(x)$vectors # No EigenDecomp return type.
+      return(y)
+    },
+    returnType = "numericMatrix"
+  )
+  cEig <- nCompile(eig)
 
-    result <- eigen(xnsymm, symmetric = FALSE)$vectors
-    vec <- eig(xnsymm)
-    cvec <- cEig(xnsymm)
-    expect_identical(result, vec)
-    cvec[,1] <- -cvec[,1]
-    cvec[,2] <- -cvec[,2]
-    expect_equal(result, cvec)
+  result <- eigen(xnsymm, symmetric = FALSE)$vectors
+  vec <- eig(xnsymm)
+  cvec <- cEig(xnsymm)
+  expect_identical(result, vec)
+  cvec[, 1] <- -cvec[, 1]
+  cvec[, 2] <- -cvec[, 2]
+  expect_equal(result, cvec)
 
-    eig = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- eigen(x, valuesOnly = TRUE)$values
-            return(y)
-        },
-        returnType = 'numericVector'
-    )
-    cEig <- nCompile(eig)
+  eig <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- eigen(x, valuesOnly = TRUE)$values
+      return(y)
+    },
+    returnType = "numericVector"
+  )
+  cEig <- nCompile(eig)
 
-    result <- eigen(xnsymm)$values
-    vals <- eig(xnsymm)
-    cvals <- cEig(xnsymm)
-    expect_identical(result, vals)
-    expect_equal(result, cvals)
+  result <- eigen(xnsymm)$values
+  vals <- eig(xnsymm)
+  cvals <- cEig(xnsymm)
+  expect_identical(result, vals)
+  expect_equal(result, cvals)
 
-    ## Inline as part of larger calculation.
-    fun = nFunction(
-        fun = function(x = 'numericMatrix', z = 'numericMatrix') {
-            y <- eigen(x)$vectors %*% z
-            return(y)
-        },
-        returnType = 'numericMatrix'
-    )
-    cfun <- nCompile(fun)
+  ## Inline as part of larger calculation.
+  fun <- nFunction(
+    fun = function(x = "numericMatrix", z = "numericMatrix") {
+      y <- eigen(x)$vectors %*% z
+      return(y)
+    },
+    returnType = "numericMatrix"
+  )
+  cfun <- nCompile(fun)
 
-    result <- eigen(xnsymm)$vectors %*% diag(3)
-    out <- fun(xnsymm, diag(3))
-    cout <- cfun(xnsymm, diag(3))
-    cout[,1] <- -cout[,1]
-    cout[,2] <- -cout[,2]
-    expect_identical(result, out)
-    expect_equal(result, cout)
+  result <- eigen(xnsymm)$vectors %*% diag(3)
+  out <- fun(xnsymm, diag(3))
+  cout <- cfun(xnsymm, diag(3))
+  cout[, 1] <- -cout[, 1]
+  cout[, 2] <- -cout[, 2]
+  expect_identical(result, out)
+  expect_equal(result, cout)
 
   nf <- nFunction(
     fun = function(X = "numericMatrix", Y = "numericMatrix") {
-      result <- nEigen(X+Y)$vectors 
+      result <- nEigen(X + Y)$vectors
       return(result)
     }, returnType = "numericMatrix"
   )
-  cnf <- nCompile(nf) 
+  cnf <- nCompile(nf)
 
   evec <- eigen(xsymm + xsymm)$vectors
   result <- cnf(xsymm, xsymm)
-  expect_equal(result[,order(result[1,])], evec[,order(evec[1,])])
+  expect_equal(result[, order(result[1, ])], evec[, order(evec[1, ])])
 
-    
-    ## Passing full decomp back to R and checking run-time use of valuesOnly.
-    eig = nFunction(
-        fun = function(x = 'numericMatrix', valsOnly = 'logicalScalar') {
-            y <- eigen(x, valuesOnly = valsOnly)
-            return(y)
-        },
-        returnType = 'EigenDecomp'
-    )
-    cEig <- nCompile(eig)
 
-    result <- eigen(xnsymm)
-    e <- eig(xnsymm, FALSE)
-    ce <- cEig(xnsymm, FALSE)
-    expect_identical(e$values, result$values)
-    expect_identical(e$vectors, result$vectors)
-    expect_equal(ce$values, result$values)
-    result$vectors[,1:2] <- -result$vectors[,1:2]
-    expect_equal(ce$vectors, result$vectors)
+  ## Passing full decomp back to R and checking run-time use of valuesOnly.
+  eig <- nFunction(
+    fun = function(x = "numericMatrix", valsOnly = "logicalScalar") {
+      y <- eigen(x, valuesOnly = valsOnly)
+      return(y)
+    },
+    returnType = "EigenDecomp"
+  )
+  cEig <- nCompile(eig)
 
-    e <- eig(xnsymm, TRUE)
-    ce <- cEig(xnsymm, TRUE)
-    expect_identical(e$values, result$values)
-    expect_equal(ce$values, result$values)
-    expect_length(e$vectors, 0)
-    expect_length(ce$vectors, 0)
+  result <- eigen(xnsymm)
+  e <- eig(xnsymm, FALSE)
+  ce <- cEig(xnsymm, FALSE)
+  expect_identical(e$values, result$values)
+  expect_identical(e$vectors, result$vectors)
+  expect_equal(ce$values, result$values)
+  result$vectors[, 1:2] <- -result$vectors[, 1:2]
+  expect_equal(ce$vectors, result$vectors)
 
-    # Error-trapped cases.
-    eig = nFunction(
-        fun = function(Q = 'nSparseMatrix') {
-            y <- eigen(Q)
-            return(y)
-        },
-        returnType = 'EigenDecomp'
-    )
-    expect_error(cEig <- nCompile(eig), "not supported")
-   
-    eig = nFunction(
-        fun = function(X = 'numericMatrix') {
-            ch <- Cholesky(X)
-            y <- eigen(ch)
-            return(y)
-        },
-        returnType = 'EigenDecomp'
-    )
-    expect_error(cEig <- nCompile(eig), "not supported")
+  e <- eig(xnsymm, TRUE)
+  ce <- cEig(xnsymm, TRUE)
+  expect_identical(e$values, result$values)
+  expect_equal(ce$values, result$values)
+  expect_length(e$vectors, 0)
+  expect_length(ce$vectors, 0)
+
+  # Error-trapped cases.
+  eig <- nFunction(
+    fun = function(Q = "nSparseMatrix") {
+      y <- eigen(Q)
+      return(y)
+    },
+    returnType = "EigenDecomp"
+  )
+  expect_error(cEig <- nCompile(eig), "not supported")
+
+  eig <- nFunction(
+    fun = function(X = "numericMatrix") {
+      ch <- Cholesky(X)
+      y <- eigen(ch)
+      return(y)
+    },
+    returnType = "EigenDecomp"
+  )
+  expect_error(cEig <- nCompile(eig), "not supported")
 })
 
 
 test_that("various uses of nSvd", {
-    set.seed(1)
-    x <- matrix(rnorm(12),4)
+  set.seed(1)
+  x <- matrix(rnorm(12), 4)
 
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x)
-            return(y$u)
-        },
-        returnType = 'numericMatrix'
-    )
-    cSvd <- nCompile(mysvd)
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x)
+      return(y$u)
+    },
+    returnType = "numericMatrix"
+  )
+  cSvd <- nCompile(mysvd)
 
-    result <- svd(x)$u
-    u <- mysvd(x)
-    cu <- cSvd(x)
+  result <- svd(x)$u
+  u <- mysvd(x)
+  cu <- cSvd(x)
 
-    expect_identical(result, u)
-    ## Equal up to swapping of sign.
-    cu[,2:3] <- -cu[,2:3]
-    expect_equal(result, cu)
+  expect_identical(result, u)
+  ## Equal up to swapping of sign.
+  cu[, 2:3] <- -cu[, 2:3]
+  expect_equal(result, cu)
 
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x)
-            return(y)
-        },
-        returnType = 'SVDDecomp'
-    )
-    cSvd <- nCompile(mysvd)
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x)
+      return(y)
+    },
+    returnType = "SVDDecomp"
+  )
+  cSvd <- nCompile(mysvd)
 
-    result <- svd(x)
-    out <- mysvd(x)
-    cout <- cSvd(x)
+  result <- svd(x)
+  out <- mysvd(x)
+  cout <- cSvd(x)
 
-    expect_identical(result$d, out$d)
-    expect_equal(result$d, cout$d)
+  expect_identical(result$d, out$d)
+  expect_equal(result$d, cout$d)
 
 
-    ## Check case with SVDDecomp not as return type to make sure
-    ## predefined code is included with nCompiler_generated code.
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x)$u   # No SVDDecomp return type.
-            return(y)
-        },
-        returnType = 'numericMatrix'
-    )
-    cSvd <- nCompile(mysvd)
+  ## Check case with SVDDecomp not as return type to make sure
+  ## predefined code is included with nCompiler_generated code.
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x)$u # No SVDDecomp return type.
+      return(y)
+    },
+    returnType = "numericMatrix"
+  )
+  cSvd <- nCompile(mysvd)
 
-    result <- svd(x)$u
-    u <- mysvd(x)
-    cu <- cSvd(x)
-    expect_identical(result, u)
-    cu[,2:3] <- -cu[,2:3]
-    expect_equal(result, cu)
+  result <- svd(x)$u
+  u <- mysvd(x)
+  cu <- cSvd(x)
+  expect_identical(result, u)
+  cu[, 2:3] <- -cu[, 2:3]
+  expect_equal(result, cu)
 
-    ## Inline as part of larger calculation.
-    fun = nFunction(
-        fun = function(x = 'numericMatrix', z = 'numericMatrix') {
-            y <- svd(x)$u %*% z
-            return(y)
-        },
-        returnType = 'numericMatrix'
-    )
-    cfun <- nCompile(fun)
+  ## Inline as part of larger calculation.
+  fun <- nFunction(
+    fun = function(x = "numericMatrix", z = "numericMatrix") {
+      y <- svd(x)$u %*% z
+      return(y)
+    },
+    returnType = "numericMatrix"
+  )
+  cfun <- nCompile(fun)
 
-    result <- svd(x)$u %*% diag(3)
-    out <- fun(x, diag(3))
-    cout <- cfun(x, diag(3))
-    cout[,2:3] <- -cout[,2:3]
-    expect_identical(result, out)
-    expect_equal(result, cout)
+  result <- svd(x)$u %*% diag(3)
+  out <- fun(x, diag(3))
+  cout <- cfun(x, diag(3))
+  cout[, 2:3] <- -cout[, 2:3]
+  expect_identical(result, out)
+  expect_equal(result, cout)
 
-    ## Passing full decomp back to R.
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x)
-            return(y)
-        },
-        returnType = 'SVDDecomp'
-    )
-    csvd <- nCompile(mysvd)
+  ## Passing full decomp back to R.
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x)
+      return(y)
+    },
+    returnType = "SVDDecomp"
+  )
+  csvd <- nCompile(mysvd)
 
-    result <- svd(x)
-    out <- mysvd(x)
-    cout <- csvd(x)
-    expect_identical(out$d, result$d)
-    expect_identical(out$u, result$u)
-    expect_equal(cout$d, result$d)
-    cout$u[,2:3] <- -cout$u[,2:3]
-    expect_equal(cout$u, result$u)
+  result <- svd(x)
+  out <- mysvd(x)
+  cout <- csvd(x)
+  expect_identical(out$d, result$d)
+  expect_identical(out$u, result$u)
+  expect_equal(cout$d, result$d)
+  cout$u[, 2:3] <- -cout$u[, 2:3]
+  expect_equal(cout$u, result$u)
 
-    ## Different arguments, including using non-integer values.
+  ## Different arguments, including using non-integer values.
 
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x, 0.0)
-            return(y)
-        },
-        returnType = 'SVDDecomp'
-    )
-    csvd <- nCompile(mysvd)
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x, 0.0)
+      return(y)
+    },
+    returnType = "SVDDecomp"
+  )
+  csvd <- nCompile(mysvd)
 
-    result <- svd(x)
-    out <- mysvd(x)
-    cout <- csvd(x)
+  result <- svd(x)
+  out <- mysvd(x)
+  cout <- csvd(x)
 
-    expect_identical(out$d, result$d)
-    expect_equal(cout$d, result$d)
-    expect_length(out$u, 0)
-    expect_length(cout$u, 0)
+  expect_identical(out$d, result$d)
+  expect_equal(cout$d, result$d)
+  expect_length(out$u, 0)
+  expect_length(cout$u, 0)
 
-    mysvd = nFunction(
-        fun = function(x = 'numericMatrix') {
-            y <- svd(x, 2.0)
-            return(y)
-        },
-        returnType = 'SVDDecomp'
-    )
-    csvd <- nCompile(mysvd)
+  mysvd <- nFunction(
+    fun = function(x = "numericMatrix") {
+      y <- svd(x, 2.0)
+      return(y)
+    },
+    returnType = "SVDDecomp"
+  )
+  csvd <- nCompile(mysvd)
 
-    result <- svd(x, nu = 4, nv = 3)
-    out <- mysvd(x)
-    cout <- csvd(x)
+  result <- svd(x, nu = 4, nv = 3)
+  out <- mysvd(x)
+  cout <- csvd(x)
 
-    expect_identical(dim(out$u), c(4L,4L))
-    expect_identical(dim(out$v), c(3L,3L))
-    expect_identical(dim(cout$u), c(4L,4L))
-    expect_identical(dim(cout$v), c(3L,3L))
-    expect_identical(result$u, out$u)
-    cout$u[,2:3] <- -cout$u[,2:3]
-    expect_equal(result$u, cout$u)
+  expect_identical(dim(out$u), c(4L, 4L))
+  expect_identical(dim(out$v), c(3L, 3L))
+  expect_identical(dim(cout$u), c(4L, 4L))
+  expect_identical(dim(cout$v), c(3L, 3L))
+  expect_identical(result$u, out$u)
+  cout$u[, 2:3] <- -cout$u[, 2:3]
+  expect_equal(result$u, cout$u)
 
   nf <- nFunction(
     fun = function(X = "numericMatrix", Y = "numericMatrix") {
-      result <- nSvd(X+Y)$u 
+      result <- nSvd(X + Y)$u
       return(result)
     }, returnType = "numericMatrix"
   )
-  cnf <- nCompile(nf) 
+  cnf <- nCompile(nf)
 
   u <- svd(x + x)$u
   result <- cnf(x, x)
-  result[,c(2,3)] <- -result[,c(2,3)]
+  result[, c(2, 3)] <- -result[, c(2, 3)]
   expect_equal(result, u)
-    
 })

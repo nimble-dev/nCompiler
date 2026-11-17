@@ -26,33 +26,39 @@
 
 ## math only
 nCompiler:::updateOperatorDef(
-  c('min', 'max', 'all', 'any', 'length'),
-  'testing',
+  c("min", "max", "all", "any", "length"),
+  "testing",
   val = list(
-    math_argTypes = list('numericScalar', 'integerScalar', 'logicalScalar',
-                         'numericVector', 'integerVector', 'logicalVector',
-                         'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                         'numericArray(nDim=3)',  'integerArray(nDim=3)',
-                         'logicalArray(nDim=3)'),
+    math_argTypes = list(
+      "numericScalar", "integerScalar", "logicalScalar",
+      "numericVector", "integerVector", "logicalVector",
+      "numericMatrix", "integerMatrix", "logicalMatrix",
+      "numericArray(nDim=3)", "integerArray(nDim=3)",
+      "logicalArray(nDim=3)"
+    ),
     reductionOp = TRUE ## this info is needed for return_type_string()
   )
 )
 
 nCompiler:::updateOperatorDef(
-  c('sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
-    'logit', 'ilogit', 'expit', 'probit', 'iprobit', 'phi', 'cloglog',
-    'icloglog', 'ceiling', 'floor', 'round', 'trunc', 'lgamma', 'loggam',
-    'log1p', 'lfactorial', 'logfact', 'mean', 'prod', 'sum', 'exp', 'log',
-    'sqrt', 'abs', 'cube', 'square', 'cosh', 'sinh', 'factorial'), # 'rsqrt'
-  'testing',
+  c(
+    "sin", "cos", "tan", "asin", "acos", "atan", "asinh", "acosh", "atanh",
+    "logit", "ilogit", "expit", "probit", "iprobit", "phi", "cloglog",
+    "icloglog", "ceiling", "floor", "round", "trunc", "lgamma", "loggam",
+    "log1p", "lfactorial", "logfact", "mean", "prod", "sum", "exp", "log",
+    "sqrt", "abs", "cube", "square", "cosh", "sinh", "factorial"
+  ), # 'rsqrt'
+  "testing",
   val = list(
-    ## derivatives currently only available for scalar and vector inputs  
-    AD_argTypes = list('numericScalar', 'numericVector(7)'),
-    math_argTypes = list('numericScalar', 'integerScalar', 'logicalScalar',
-                         'numericVector', 'integerVector', 'logicalVector',
-                         'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                         'numericArray(nDim=3)',  'integerArray(nDim=3)',
-                         'logicalArray(nDim=3)')
+    ## derivatives currently only available for scalar and vector inputs
+    AD_argTypes = list("numericScalar", "numericVector(7)"),
+    math_argTypes = list(
+      "numericScalar", "integerScalar", "logicalScalar",
+      "numericVector", "integerVector", "logicalVector",
+      "numericMatrix", "integerMatrix", "logicalMatrix",
+      "numericArray(nDim=3)", "integerArray(nDim=3)",
+      "logicalArray(nDim=3)"
+    )
   )
 )
 
@@ -69,72 +75,72 @@ nCompiler:::updateOperatorDef(
 
 input_gen_funs_zp1 <- function(arg_size, type) {
   switch(type,
-         'double' = runif(prod(arg_size), 0, 1),
-         'integer' = sample(0:1, size = prod(arg_size), replace = TRUE),
-         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
-         )
+    "double" = runif(prod(arg_size), 0, 1),
+    "integer" = sample(0:1, size = prod(arg_size), replace = TRUE),
+    "logical" = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+  )
 }
 
 input_gen_funs_zinf <- function(arg_size, type) {
   switch(type,
-         'double' = runif(prod(arg_size), 0, 100),
-         'integer' = sample(0:100, size = prod(arg_size), replace = TRUE),
-         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
-         )
+    "double" = runif(prod(arg_size), 0, 100),
+    "integer" = sample(0:100, size = prod(arg_size), replace = TRUE),
+    "logical" = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+  )
 }
 
 input_gen_funs_m1p1 <- function(arg_size, type) {
   switch(type,
-         'double' = runif(prod(arg_size), -1, 1),
-         'integer' = sample(-1:1, size = prod(arg_size), replace = TRUE),
-         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
-         )
-  }
+    "double" = runif(prod(arg_size), -1, 1),
+    "integer" = sample(-1:1, size = prod(arg_size), replace = TRUE),
+    "logical" = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+  )
+}
 
 input_gen_funs_m1inf <- function(arg_size, type) {
   switch(type,
-         'double' = runif(prod(arg_size), -1, 100),
-         'integer' = sample(-1:100, size = prod(arg_size), replace = TRUE),
-         'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
-         )
-  }
+    "double" = runif(prod(arg_size), -1, 100),
+    "integer" = sample(-1:100, size = prod(arg_size), replace = TRUE),
+    "logical" = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+  )
+}
 
 input_gen_funs_p1inf <- function(arg_size, type) {
   switch(type,
-         'double' = runif(prod(arg_size), 1, 100),
-         'integer' = sample(1:100, size = prod(arg_size), replace = TRUE),
-         'logical' = rep(TRUE, size = prod(arg_size))
-         )
+    "double" = runif(prod(arg_size), 1, 100),
+    "integer" = sample(1:100, size = prod(arg_size), replace = TRUE),
+    "logical" = rep(TRUE, size = prod(arg_size))
+  )
 }
 
 nCompiler:::updateOperatorDef(
-  c('log1p'), 'testing', 'input_gen_funs',
+  c("log1p"), "testing", "input_gen_funs",
   input_gen_funs_m1inf
 )
 
 nCompiler:::updateOperatorDef(
-  c('log', 'sqrt'), 'testing', 'input_gen_funs',
+  c("log", "sqrt"), "testing", "input_gen_funs",
   input_gen_funs_zinf
 )
 
 nCompiler:::updateOperatorDef(
-  c('cloglog', 'logit', 'probit'), 'testing', 'input_gen_funs',
+  c("cloglog", "logit", "probit"), "testing", "input_gen_funs",
   input_gen_funs_zp1
 )
 
 nCompiler:::updateOperatorDef(
-  c('asin', 'acos', 'atanh'), 'testing', 'input_gen_funs',
+  c("asin", "acos", "atanh"), "testing", "input_gen_funs",
   input_gen_funs_m1p1
 )
 
 nCompiler:::updateOperatorDef(
-  c('acosh'), 'testing', 'input_gen_funs',
+  c("acosh"), "testing", "input_gen_funs",
   input_gen_funs_p1inf
 )
 
 nCompiler:::updateOperatorDef(
-  'squaredNorm',
-  'testing',
+  "squaredNorm",
+  "testing",
   val = list(
     ## math_argTypes = list('numericScalar', 'integerScalar', 'logicalScalar',
     ##                      'numericVector', 'integerVector', 'logicalVector',
@@ -145,8 +151,8 @@ nCompiler:::updateOperatorDef(
 )
 
 nCompiler:::updateOperatorDef(
-  c('mean', 'prod', 'squaredNorm', 'sum'),
-  'testing', 'reductionOp', TRUE
+  c("mean", "prod", "squaredNorm", "sum"),
+  "testing", "reductionOp", TRUE
 )
 
 ###################
@@ -155,28 +161,36 @@ nCompiler:::updateOperatorDef(
 
 binaryOp_argTypes <- c(
   ## combine scalars and vectors in every way
-  make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
-                      'numericVector', 'integerVector', 'logicalVector'),
+  make_argType_tuples(
+    "numericScalar", "integerScalar", "logicalScalar",
+    "numericVector", "integerVector", "logicalVector"
+  ),
   ## matrices combine with matrices of same shape
-  make_argType_tuples('numericMatrix', 'integerMatrix', 'logicalMatrix'),
+  make_argType_tuples("numericMatrix", "integerMatrix", "logicalMatrix"),
   ## combine arrays with arrays of same shape
-  make_argType_tuples('numericArray(nDim=3)', 'integerArray(nDim=3)',
-                      'logicalArray(nDim=3)'),
+  make_argType_tuples(
+    "numericArray(nDim=3)", "integerArray(nDim=3)",
+    "logicalArray(nDim=3)"
+  ),
   ## combine scalars and matrices / arrays
-  make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar',
-                      rhs = c('numericMatrix', 'integerMatrix',
-                              'logicalMatrix', 'numericArray(nDim=3)',
-                              'integerArray(nDim=3)',
-                              'logicalArray(nDim=3)')),
-  make_argType_tuples('numericMatrix', 'integerMatrix', 'logicalMatrix',
-                      'numericArray(nDim=3)', 'integerArray(nDim=3)',
-                      'logicalArray(nDim=3)',
-                      rhs = c('numericScalar', 'integerScalar', 'logicalScalar'))
+  make_argType_tuples("numericScalar", "integerScalar", "logicalScalar",
+    rhs = c(
+      "numericMatrix", "integerMatrix",
+      "logicalMatrix", "numericArray(nDim=3)",
+      "integerArray(nDim=3)",
+      "logicalArray(nDim=3)"
+    )
+  ),
+  make_argType_tuples("numericMatrix", "integerMatrix", "logicalMatrix",
+    "numericArray(nDim=3)", "integerArray(nDim=3)",
+    "logicalArray(nDim=3)",
+    rhs = c("numericScalar", "integerScalar", "logicalScalar")
+  )
 )
 
 nCompiler:::updateOperatorDef(
-  c('pmin', 'pmax', '==', '!=', '<=', '>=', '<', '>', '&', '|', '+', '/', '*'),
-  'testing',
+  c("pmin", "pmax", "==", "!=", "<=", ">=", "<", ">", "&", "|", "+", "/", "*"),
+  "testing",
   val = list(
     math_argTypes = binaryOp_argTypes
   )
@@ -188,12 +202,11 @@ nCompiler:::updateOperatorDef(
 ## we provide.
 ## See make_input() and argType_2_input() in testing_utils.R.
 nCompiler:::updateOperatorDef(
-  c('/'), 'testing', 'input_gen_funs',
+  c("/"), "testing", "input_gen_funs",
   list(
     arg1 = NULL,
     arg2 = function(arg_size, type) {
-      switch(
-        type,
+      switch(type,
         "double"  = rnorm(prod(arg_size)),
         "integer" = rgeom(prod(arg_size), 0.5) + 1, ## no zeros
         "logical" = rep(TRUE, prod(arg_size)) ## always TRUE
@@ -204,26 +217,28 @@ nCompiler:::updateOperatorDef(
 
 ## add AD_argTypes for a few operators
 nCompiler:::updateOperatorDef(
-  c('+', '/', '*'),
-  'testing', 'AD_argTypes',
-  list(c('numericScalar', 'numericScalar'),
-       c('numericScalar', 'numericVector(7)'),
-       c('numericVector(7)', 'numericVector(7)'),
-       c('numericVector(7)', 'numericScalar'))
+  c("+", "/", "*"),
+  "testing", "AD_argTypes",
+  list(
+    c("numericScalar", "numericScalar"),
+    c("numericScalar", "numericVector(7)"),
+    c("numericVector(7)", "numericVector(7)"),
+    c("numericVector(7)", "numericScalar")
+  )
 )
 
 ## add descriptive and safe names for gold-file names
-nCompiler:::updateOperatorDef('+', 'testing', 'alpha_name', 'plus')
-nCompiler:::updateOperatorDef('==', 'testing', 'alpha_name', 'eq')
-nCompiler:::updateOperatorDef('!=', 'testing', 'alpha_name', 'neq')
-nCompiler:::updateOperatorDef('<=', 'testing', 'alpha_name', 'le')
-nCompiler:::updateOperatorDef('>=', 'testing', 'alpha_name', 'ge')
-nCompiler:::updateOperatorDef('<', 'testing', 'alpha_name', 'lt')
-nCompiler:::updateOperatorDef('>', 'testing', 'alpha_name', 'gt')
-nCompiler:::updateOperatorDef('&', 'testing', 'alpha_name', 'and')
-nCompiler:::updateOperatorDef('|', 'testing', 'alpha_name', 'or')
-nCompiler:::updateOperatorDef('/', 'testing', 'alpha_name', 'div')
-nCompiler:::updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
+nCompiler:::updateOperatorDef("+", "testing", "alpha_name", "plus")
+nCompiler:::updateOperatorDef("==", "testing", "alpha_name", "eq")
+nCompiler:::updateOperatorDef("!=", "testing", "alpha_name", "neq")
+nCompiler:::updateOperatorDef("<=", "testing", "alpha_name", "le")
+nCompiler:::updateOperatorDef(">=", "testing", "alpha_name", "ge")
+nCompiler:::updateOperatorDef("<", "testing", "alpha_name", "lt")
+nCompiler:::updateOperatorDef(">", "testing", "alpha_name", "gt")
+nCompiler:::updateOperatorDef("&", "testing", "alpha_name", "and")
+nCompiler:::updateOperatorDef("|", "testing", "alpha_name", "or")
+nCompiler:::updateOperatorDef("/", "testing", "alpha_name", "div")
+nCompiler:::updateOperatorDef("*", "testing", "alpha_name", "mult")
 
 #############################
 ## unary and binary operators
@@ -231,21 +246,25 @@ nCompiler:::updateOperatorDef('*', 'testing', 'alpha_name', 'mult')
 
 ## the *_argTypes include both the unary and binary cases
 nCompiler:::updateOperatorDef(
-  c('-'),
-  'testing',
+  c("-"),
+  "testing",
   val = list(
-    AD_argTypes = list('numericScalar', 'numericVector(7)',
-                       c('numericScalar', 'numericScalar'),
-                       c('numericScalar', 'numericVector(7)'),
-                       c('numericVector(7)', 'numericVector(7)'),
-                       c('numericVector(7)', 'numericScalar')),
-    math_argTypes = c(binaryOp_argTypes, ## remaining argTypes for unary usage:
-                      'numericScalar', 'integerScalar',
-                      'logicalScalar', 'numericVector', 'integerVector',
-                      'logicalVector', 'numericMatrix', 'integerMatrix',
-                      'logicalMatrix', 'numericArray(nDim=3)',
-                      'integerArray(nDim=3)', 'logicalArray(nDim=3)'),
-    alpha_name = 'minus'
+    AD_argTypes = list(
+      "numericScalar", "numericVector(7)",
+      c("numericScalar", "numericScalar"),
+      c("numericScalar", "numericVector(7)"),
+      c("numericVector(7)", "numericVector(7)"),
+      c("numericVector(7)", "numericScalar")
+    ),
+    math_argTypes = c(
+      binaryOp_argTypes, ## remaining argTypes for unary usage:
+      "numericScalar", "integerScalar",
+      "logicalScalar", "numericVector", "integerVector",
+      "logicalVector", "numericMatrix", "integerMatrix",
+      "logicalMatrix", "numericArray(nDim=3)",
+      "integerArray(nDim=3)", "logicalArray(nDim=3)"
+    ),
+    alpha_name = "minus"
   )
 )
 
@@ -254,24 +273,27 @@ nCompiler:::updateOperatorDef(
 ###################
 
 nCompiler:::updateOperatorDef(
-  '^',
-  'testing',
+  "^",
+  "testing",
   val = list(
     ## AD_argTypes = list(c('numericScalar', 'numericScalar'),
     ##                    c('numericVector(7)', 'numericScalar')),
-    math_argTypes = make_argType_tuples('numericScalar', 'integerScalar',
-                                        'logicalScalar', 'numericVector',
-                                        'integerVector', 'logicalVector',
-                                        'numericMatrix', 'integerMatrix',
-                                        'logicalMatrix',
-                                        'numericArray(nDim=3)',
-                                        'integerArray(nDim=3)',
-                                        'logicalArray(nDim=3)',
-                                        rhs = c('numericScalar',
-                                                'integerScalar',
-                                                'logicalScalar')),
-    alpha_name = 'pow',
-    returnTypeCode = 2L  # ^ always returns double regardless of input types
+    math_argTypes = make_argType_tuples("numericScalar", "integerScalar",
+      "logicalScalar", "numericVector",
+      "integerVector", "logicalVector",
+      "numericMatrix", "integerMatrix",
+      "logicalMatrix",
+      "numericArray(nDim=3)",
+      "integerArray(nDim=3)",
+      "logicalArray(nDim=3)",
+      rhs = c(
+        "numericScalar",
+        "integerScalar",
+        "logicalScalar"
+      )
+    ),
+    alpha_name = "pow",
+    returnTypeCode = 2L # ^ always returns double regardless of input types
   )
 )
 
@@ -280,35 +302,40 @@ nCompiler:::updateOperatorDef(
 #########################################
 
 nCompiler:::updateOperatorDef(
-  '%%',
-  'testing',
+  "%%",
+  "testing",
   val = list(
     math_argTypes = c(
-      make_argType_tuples('numericScalar', 'integerScalar', 'logicalScalar'),
-      make_argType_tuples('numericVector', 'integerVector', 'logicalVector',
-                          'numericMatrix', 'integerMatrix', 'logicalMatrix',
-                          'numericArray(nDim=3)', 'integerArray(nDim=3)',
-                          'logicalArray(nDim=3)', rhs = c('numericScalar',
-                                                          'integerScalar',
-                                                          'logicalScalar'))),
-    alpha_name = 'mod',
+      make_argType_tuples("numericScalar", "integerScalar", "logicalScalar"),
+      make_argType_tuples("numericVector", "integerVector", "logicalVector",
+        "numericMatrix", "integerMatrix", "logicalMatrix",
+        "numericArray(nDim=3)", "integerArray(nDim=3)",
+        "logicalArray(nDim=3)",
+        rhs = c(
+          "numericScalar",
+          "integerScalar",
+          "logicalScalar"
+        )
+      )
+    ),
+    alpha_name = "mod",
     ## mod with negative input(s) can give a positive or negative result from R or C++,
     ## and which it should give is undefined.  Therefore we give all positive inputs.
     ## We also make the first argument larger than the second to make it more interesting.
     input_gen_funs = list(
       arg1 = function(arg_size, type) {
         switch(type,
-               'double' = runif(prod(arg_size), 51, 100),
-               'integer' = 50 + floor(50 * runif(prod(arg_size))),
-               'logical' = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
-               )
+          "double" = runif(prod(arg_size), 51, 100),
+          "integer" = 50 + floor(50 * runif(prod(arg_size))),
+          "logical" = sample(c(TRUE, FALSE), size = prod(arg_size), replace = TRUE)
+        )
       },
       arg2 = function(arg_size, type) {
         switch(type,
-               'double' = runif(prod(arg_size), 0.5, 19),
-               'integer' = 1 + floor(20 * runif(prod(arg_size))), # no zeros
-               'logical' = rep(TRUE, size = prod(arg_size)) # no zeros
-               )
+          "double" = runif(prod(arg_size), 0.5, 19),
+          "integer" = 1 + floor(20 * runif(prod(arg_size))), # no zeros
+          "logical" = rep(TRUE, size = prod(arg_size)) # no zeros
+        )
       }
     )
   )
@@ -319,9 +346,9 @@ nCompiler:::updateOperatorDef(
 ##############
 
 nCompiler:::updateOperatorDef(
-  '%*%',
-  'testing',
-  val = list(matrixMultOp = TRUE, alpha_name = 'matmul')
+  "%*%",
+  "testing",
+  val = list(matrixMultOp = TRUE, alpha_name = "matmul")
 )
 
 #########################
@@ -329,8 +356,10 @@ nCompiler:::updateOperatorDef(
 #########################
 
 nCompiler:::updateOperatorDef(
-  c('dbeta', 'dbinom', 'ddexp', 'dgamma', 'dinvgamma', 'dlnorm', 'dnbinom',
-    'dnorm', 'dt', 'dt_nonstandard', 'dunif', 'dweibull'),
-  'testing',
+  c(
+    "dbeta", "dbinom", "ddexp", "dgamma", "dinvgamma", "dlnorm", "dnbinom",
+    "dnorm", "dt", "dt_nonstandard", "dunif", "dweibull"
+  ),
+  "testing",
   val = list(recyclingRuleOp = TRUE)
 )

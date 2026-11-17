@@ -1,10 +1,8 @@
-
-test_that('Basics of recycling rule work',
-{
+test_that("Basics of recycling rule work", {
   nf <- nFunction(
     function(x = numericVector(), y = numericVector(), mean = numericVector(),
              sd = integerVector(), log = logicalScalar()) {
-      ans = dnorm(x + y, exp(mean), sd, log)
+      ans <- dnorm(x + y, exp(mean), sd, log)
       returnType(numericVector())
       return(ans)
     }

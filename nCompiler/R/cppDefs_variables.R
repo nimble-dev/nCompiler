@@ -1,12 +1,12 @@
 ## Remove excess white spaces.  Keep one space.
-cleanWhite <- function(s) gsub('[[:blank:]]+', ' ', s)
+cleanWhite <- function(s) gsub("[[:blank:]]+", " ", s)
 
 ## This is a base class for c++ variables.
 ## To avoid having many unused fields in many cases, this can handle only ptrs and refs.
 ## If you need static, const, template arguments, or other adornments, use cppFullVar
 ## Below there are some wrappers for common cases like cppDouble, cppNimArrPtr, cppVoid, etc.
 cppVarClass <- R6::R6Class(
-  classname = 'cppVarClass',
+  classname = "cppVarClass",
   portable = TRUE,
   public = list(
     baseType = character(),
@@ -15,41 +15,49 @@ cppVarClass <- R6::R6Class(
     name = character(),
     initialize = function(...) {
       dotsList <- list(...)
-      for(v in names(dotsList))
+      for (v in names(dotsList)) {
         self[[v]] <- dotsList[[v]]
+      }
     },
     generate = function(printName = Rname2CppName(self$name),
                         ...) {
-      ptrs <- if(length(self$ptr) > 0)
-                paste(rep('*', self$ptr),
-                      collapse = '')
-      if(length(printName) > 0)
-        printName <- paste0(printName, collapse = ', ')
-      cleanWhite(paste(self$baseType,
-                       ptrs,
-                       if(isTRUE(self$ref))
-                         '&'
-                       else
-                         NULL,
-                       printName)
-                 )
+      ptrs <- if (length(self$ptr) > 0) {
+        paste(rep("*", self$ptr),
+          collapse = ""
+        )
+      }
+      if (length(printName) > 0) {
+        printName <- paste0(printName, collapse = ", ")
+      }
+      cleanWhite(paste(
+        self$baseType,
+        ptrs,
+        if (isTRUE(self$ref)) {
+          "&"
+        } else {
+          NULL
+        },
+        printName
+      ))
     },
     print = function() writeLines(self$generate()),
     generateUse = function(...) {
       Rname2CppName(self$name)
     },
-    generateUseDeref = function(...) { 
-      paste0('(',
-             paste(rep('*', max(0, ptr)),
-                   collapse = ''),
-             Rname2CppName(name), ')'
-             ) ## used to be ptr-asArg
+    generateUseDeref = function(...) {
+      paste0(
+        "(",
+        paste(rep("*", max(0, ptr)),
+          collapse = ""
+        ),
+        Rname2CppName(name), ")"
+      ) ## used to be ptr-asArg
     }
   )
 )
 
 cppVarSelfClass <- R6::R6Class(
-  classname = 'cppVarSelfClass',
+  classname = "cppVarSelfClass",
   inherit = cppVarClass,
   portable = TRUE,
   public = list(
@@ -65,18 +73,20 @@ cppVarSelfClass <- R6::R6Class(
 )
 
 cppVar2cppVarFull <- function(cppVar, ...) {
-  ans <- cppVarFullClass$new(name = cppVar$name,
-                             baseType = cppVar$baseType, 
-                             ptr = cppVar$ptr,
-                             ref = cppVar$ref,
-                             ...)
+  ans <- cppVarFullClass$new(
+    name = cppVar$name,
+    baseType = cppVar$baseType,
+    ptr = cppVar$ptr,
+    ref = cppVar$ref,
+    ...
+  )
   ans
 }
 
 ## Here is the full version that can handle most c++ variable declarations.
 ## One thing that cannot be handled is function pointers or member pointers
 cppVarFullClass <- R6::R6Class(
-  classname = 'cppVarFullClass',
+  classname = "cppVarFullClass",
   inherit = cppVarClass,
   portable = TRUE,
   public = list(
@@ -91,76 +101,102 @@ cppVarFullClass <- R6::R6Class(
     silent = FALSE,
     initialize = function(...) {
       dotsList <- list(...)
-      for(v in names(dotsList))
+      for (v in names(dotsList)) {
         self[[v]] <- dotsList[[v]]
+      }
       super$initialize()
     },
     generateUse = function(deref, ...) {
-      if(missing(deref)) {
-        ##if(selfDereference) generateUseDeref(...)
-        ##else super$generateUse(...)
+      if (missing(deref)) {
+        ## if(selfDereference) generateUseDeref(...)
+        ## else super$generateUse(...)
         super$generateUse(...)
       } else {
-        if(isTRUE(deref)) generateUseDeref(...)
-        else super$generateUse(...)
+        if (isTRUE(deref)) {
+          generateUseDeref(...)
+        } else {
+          super$generateUse(...)
+        }
       }
     },
     generate = function(printName = Rname2CppName(self$name), ...) {
-      if(self$silent) return(character())
-      bCP <- if(length(self$baseConst) > 0) { 
-        if(length(self$baseConstPtr) > 0)
-          paste(paste(rep('*', self$baseConstPtr),
-                      collapse = ''),
-                'const')
-        else
-          'const'
+      if (self$silent) {
+        return(character())
+      }
+      bCP <- if (length(self$baseConst) > 0) {
+        if (length(self$baseConstPtr) > 0) {
+          paste(
+            paste(rep("*", self$baseConstPtr),
+              collapse = ""
+            ),
+            "const"
+          )
+        } else {
+          "const"
+        }
       }
       baseTypePlusTemplate <-
-        if(length(self$templateArgs)==0)
+        if (length(self$templateArgs) == 0) {
           self$baseType
-      else {
-        expandedTemplateArgs <-
-          unlist(lapply(self$templateArgs,
-                        function(x) {
-                          if(inherits(x, 'cppVarClass'))
-                            return(x$generate())
-                          return(as.character(x))
-                        }
-                        )
-                 )
-        paste0(self$baseType,
-               '<',
-               paste(expandedTemplateArgs,
-                     collapse = ', '),
-               '>')
+        } else {
+          expandedTemplateArgs <-
+            unlist(lapply(
+              self$templateArgs,
+              function(x) {
+                if (inherits(x, "cppVarClass")) {
+                  return(x$generate())
+                }
+                return(as.character(x))
+              }
+            ))
+          paste0(
+            self$baseType,
+            "<",
+            paste(expandedTemplateArgs,
+              collapse = ", "
+            ),
+            ">"
+          )
+        }
+      ptrs <- if (length(self$ptr) > 0) {
+        paste(rep("*", self$ptr),
+          collapse = ""
+        )
       }
-      ptrs <- if(length(self$ptr) > 0)
-                paste(rep('*', self$ptr),
-                      collapse = '')
-      if(length(printName) > 0)
-        printName <- paste0(printName, collapse = ', ')
+      if (length(printName) > 0) {
+        printName <- paste0(printName, collapse = ", ")
+      }
       ans <- cleanWhite(
-        paste(baseTypePlusTemplate,
-              bCP,
-              ptrs,
-              if(length(self$const) > 0)
-                'const',
-              if(isTRUE(self$ref))
-                '&'
-              else
-                NULL,
-              printName)
+        paste(
+          baseTypePlusTemplate,
+          bCP,
+          ptrs,
+          if (length(self$const) > 0) {
+            "const"
+          },
+          if (isTRUE(self$ref)) {
+            "&"
+          } else {
+            NULL
+          },
+          printName
+        )
       )
-      if(length(self$arraySizes) > 0)
-        ans <- paste0(ans,
-                      '[',
-                      paste0(self$arraySizes,
-                             collapse =']['), ']'
-                      )
+      if (length(self$arraySizes) > 0) {
+        ans <- paste0(
+          ans,
+          "[",
+          paste0(self$arraySizes,
+            collapse = "]["
+          ), "]"
+        )
+      }
       ans <- paste0(ans, self$constructor)
-      if(length(self$static) > 0)
-        if(self$static[1])
-          ans <- paste('static', ans)
+      if (length(self$static) > 0) {
+        if (self$static[1]) {
+          ans <- paste("static", ans)
+        }
+      }
       ans
     }
   )
@@ -172,34 +208,43 @@ templateLabelGenerator <- labelFunctionCreator("TT")
 cppTemplate <- function(name = character(0),
                         baseType,
                         ...) {
-  if(missing(baseType))
+  if (missing(baseType)) {
     baseType <- templateLabelGenerator()
-  cppVarFullClass$new(name = name,
-                      baseType = baseType,
-                      ref = TRUE,
-                      ...)
+  }
+  cppVarFullClass$new(
+    name = name,
+    baseType = baseType,
+    ref = TRUE,
+    ...
+  )
 }
 
 cppTemplateDeclaration <- function(templateNames,
                                    ...) {
-  cppVarFullClass$new(name = "",
-                      baseType = "template",
-                      templateArgs = paste("class", templateNames),
-                      ...)
+  cppVarFullClass$new(
+    name = "",
+    baseType = "template",
+    templateArgs = paste("class", templateNames),
+    ...
+  )
 }
 
 cppNcppVec <- function(name = character(),
-                     elementVar) {
-  cppVarFullClass$new(name = name,
-                      baseType = "nCppVec",
-                      templateArgs = list(elementVar))
+                       elementVar) {
+  cppVarFullClass$new(
+    name = name,
+    baseType = "nCppVec",
+    templateArgs = list(elementVar)
+  )
 }
 
 cppETaccBase <- function(name = character(), ...) {
-  cppVarFullClass$new(name = name,
-                      baseType = "std::unique_ptr",
-                      templateArgs = list("ETaccessorBase"),
-                      ...)
+  cppVarFullClass$new(
+    name = name,
+    baseType = "std::unique_ptr",
+    templateArgs = list("ETaccessorBase"),
+    ...
+  )
 }
 
 cppEigenTensorRef <- function(name = character(),
@@ -220,95 +265,112 @@ cppEigenSparseRef <- function(name = character(),
 
 cppADinfo <- function(name = character(),
                       ...) {
-  cppVarFullClass$new(name = name,
-                      baseType = 'nCompilerCppADinfoClass',
-                      ...
-                      )
+  cppVarFullClass$new(
+    name = name,
+    baseType = "nCompilerCppADinfoClass",
+    ...
+  )
 }
 
-cppADFun <- function(name = character(), 
+cppADFun <- function(name = character(),
                      ...) {
-  cppVarFullClass$new(name = name,
-                      baseType = 'CppAD::ADFun',
-                      templateArgs = list('double'),
-                      ...
-                      )
+  cppVarFullClass$new(
+    name = name,
+    baseType = "CppAD::ADFun",
+    templateArgs = list("double"),
+    ...
+  )
 }
 
 cppSharedPtrToNC <- function(name = character(),
                              NCtype) {
-  cppVarFullClass$new(name = name,
-                      baseType = "std::shared_ptr",
-                      templateArgs = list(NCtype))
+  cppVarFullClass$new(
+    name = name,
+    baseType = "std::shared_ptr",
+    templateArgs = list(NCtype)
+  )
 }
 
 cppVectorOfADFunPtr <- function(name = character(),
                                 ...) {
-  cppVarFullClass$new(name = name,
-                      baseType = 'std::vector',
-                      templateArgs = list(cppADFun(ptr = 1)),
-                      ...)
+  cppVarFullClass$new(
+    name = name,
+    baseType = "std::vector",
+    templateArgs = list(cppADFun(ptr = 1)),
+    ...
+  )
 }
 
 CppADdouble <- function(name = character()) {
-  cppVarFullClass$new(name = name,
-                      baseType = 'CppAD::AD',
-                      templateArgs = 'double')
+  cppVarFullClass$new(
+    name = name,
+    baseType = "CppAD::AD",
+    templateArgs = "double"
+  )
 }
 
 cppVectorOfCppADdouble <- function(name = character()) {
-  cppVarFullClass$new(name = name,
-                      baseType = 'std::vector',
-                      templateArgs = list( CppADdouble() ),
-                      ref = FALSE)
+  cppVarFullClass$new(
+    name = name,
+    baseType = "std::vector",
+    templateArgs = list(CppADdouble()),
+    ref = FALSE
+  )
 }
 
 cppStridedTensorMapRef <- function(name = character(),
                                    nDim,
                                    scalarType) {
-  cppVarFullClass$new(name = name,
-                      baseType = "Eigen::StridedTensorMap",
-                      templateArgs = list(cppEigenTensor(nDim = nDim, scalarType = scalarType))
-                      )
+  cppVarFullClass$new(
+    name = name,
+    baseType = "Eigen::StridedTensorMap",
+    templateArgs = list(cppEigenTensor(nDim = nDim, scalarType = scalarType))
+  )
 }
 
 cppEigenTensor <- function(name = character(),
                            nDim,
                            scalarType) {
-  cppVarFullClass$new(name = name,
-                      baseType = "Eigen::Tensor",
-                      templateArgs = list(scalarType, nDim)
-                      )
+  cppVarFullClass$new(
+    name = name,
+    baseType = "Eigen::Tensor",
+    templateArgs = list(scalarType, nDim)
+  )
 }
 
 cppEigenSparse <- function(name = character(),
                            nDim,
                            scalarType) {
-  if(nDim == 1) {
-    cppVarFullClass$new(name = name,
-                        baseType = "Eigen::SparseVector",
-                        templateArgs = list(scalarType))
-  } else if(nDim == 2) {
-    cppVarFullClass$new(name = name,
-                        baseType = "Eigen::SparseMatrix",
-                        templateArgs = list(scalarType))
+  if (nDim == 1) {
+    cppVarFullClass$new(
+      name = name,
+      baseType = "Eigen::SparseVector",
+      templateArgs = list(scalarType)
+    )
+  } else if (nDim == 2) {
+    cppVarFullClass$new(
+      name = name,
+      baseType = "Eigen::SparseMatrix",
+      templateArgs = list(scalarType)
+    )
   } else {
-    stop('Cannot create a sparse Eigen object with more than 2 dimensions.')
+    stop("Cannot create a sparse Eigen object with more than 2 dimensions.")
   }
 }
 
-cppRcppType <- function(name = character(0), baseType, ...)
+cppRcppType <- function(name = character(0), baseType, ...) {
   cppVarClass$new(name = name, baseType = baseType, ...)
+}
 
 # cppRcppList <- function(name = character(0), ...)
 #   cppVarClass$new(name = name, baseType = 'Rcpp::List', ...)
-# 
+#
 # cppRcppNumericVector <- function(name = character(0), ...)
 #   cppVarClass$new(name = name, baseType = 'Rcpp::NumericVector', ...)
-# 
+#
 # cppRcppNumericMatrix <- function(name = character(0), ...)
 #   cppVarClass$new(name = name, baseType = 'Rcpp::NumericMatrix', ...)
-# 
+#
 # cppRcppDataFrame <- function(name = character(0), ...)
 #   cppVarClass$new(name = name, baseType = 'Rcpp::DataFrame', ...)
 
@@ -317,28 +379,36 @@ cppRcppType <- function(name = character(0), baseType, ...)
 #   cppVarClass$new(name = name, baseType = 'Eigen::MatrixXd', ...)
 
 
-
-emptyTypeInfo <- function()
-  cppVarClass$new(baseType = character()) ## for return type of constructors and destructors
+emptyTypeInfo <- function() {
+  cppVarClass$new(baseType = character())
+} ## for return type of constructors and destructors
 
 cppBlank <- function() {
   cppVarClass$new(name = "", baseType = "")
 }
-cppDouble <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'double', ...)
-cppInt <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'int', ...)
-cppBool <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'bool', ...)
-cppVoid <- function(name = character(0), ...)
-  cppVarClass$new(name = name, baseType = 'void', ...)
+cppDouble <- function(name = character(0), ...) {
+  cppVarClass$new(name = name, baseType = "double", ...)
+}
+cppInt <- function(name = character(0), ...) {
+  cppVarClass$new(name = name, baseType = "int", ...)
+}
+cppBool <- function(name = character(0), ...) {
+  cppVarClass$new(name = name, baseType = "bool", ...)
+}
+cppVoid <- function(name = character(0), ...) {
+  cppVarClass$new(name = name, baseType = "void", ...)
+}
 
 cppSEXP <- function(name = character(0),
-                    ...)
-  cppVarClass$new(name = name,
-                  baseType = 'SEXP',
-                  ptr = 0,
-                  ...)
+                    ...) {
+  cppVarClass$new(
+    name = name,
+    baseType = "SEXP",
+    ptr = 0,
+    ...
+  )
+}
 
-cppNCgenerator <- function(name = character(0), baseType, ...)
-    cppVarClass$new(name = name, baseType = baseType, ...)
+cppNCgenerator <- function(name = character(0), baseType, ...) {
+  cppVarClass$new(name = name, baseType = baseType, ...)
+}

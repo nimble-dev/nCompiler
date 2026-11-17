@@ -1,6 +1,4 @@
-test_that("NF_CompilerClass steps",
-{
-
+test_that("NF_CompilerClass steps", {
   ## hello world
   foo <- nFunction(
     fun = function(a = numericScalar()) {
@@ -9,35 +7,46 @@ test_that("NF_CompilerClass steps",
     }
   )
   NFC <- `:::`("nCompiler", "NF_CompilerClass")$new(f = foo)
-  expect_equal(NFC$origRcode,
-               quote({
-                 return(a+1)
-               })
-               )
+  expect_equal(
+    NFC$origRcode,
+    quote({
+      return(a + 1)
+    })
+  )
   NFC$setupSymbolTable()
-  expect_identical(NFC$symbolTable$getSymbolNames(),
-                   "a")
-  expect_identical(NFinternals(foo)$argSymTab$getSymbolNames(),
-                   "a")
+  expect_identical(
+    NFC$symbolTable$getSymbolNames(),
+    "a"
+  )
+  expect_identical(
+    NFinternals(foo)$argSymTab$getSymbolNames(),
+    "a"
+  )
   ## check that symbols have the same content...
   ## ... but are actually different objects, so a clone was made
-  
+
   ## Go through compiler stages
   ## 1. setInputOutputTypes
-  expect_equal(NFC$initialTypeInferenceDone,
-               FALSE)
+  expect_equal(
+    NFC$initialTypeInferenceDone,
+    FALSE
+  )
   NFC$process(
     control = list(
       startStage = 1,
       endStage = 1
     )
   )
-  expect_equal(NFC$initialTypeInferenceDone,
-               TRUE)
+  expect_equal(
+    NFC$initialTypeInferenceDone,
+    TRUE
+  )
 
   ## 2. substituteMangledArgumentNames
-  expect_equal(all.vars(NFC$newRcode),
-               "a")
+  expect_equal(
+    all.vars(NFC$newRcode),
+    "a"
+  )
   NFC$process(
     control = list(
       startStage = 2,
@@ -45,8 +54,7 @@ test_that("NF_CompilerClass steps",
     )
   )
   expect_equal(
-    all.vars(NFC$newRcode)
-   ,
+    all.vars(NFC$newRcode),
     "a"
   )
 
@@ -59,9 +67,11 @@ test_that("NF_CompilerClass steps",
     )
   )
   expect_false(is.null(NFC$code))
-  expect_true(inherits(NFC$code, 'exprClass'))
-  expect_equal(nDeparse(NFC$code, toR = TRUE),
-               NFC$newRcode)
+  expect_true(inherits(NFC$code, "exprClass"))
+  expect_equal(
+    nDeparse(NFC$code, toR = TRUE),
+    NFC$newRcode
+  )
 
   ## 4. simpleTransformations
   NFC$process(
@@ -80,18 +90,18 @@ test_that("NF_CompilerClass steps",
     )
   )
   ## Nothing interesting to test here either
-  
-  ## 6. initializeAuxiliaryEnvironment    
+
+  ## 6. initializeAuxiliaryEnvironment
   NFC$process(
     control = list(
       startStage = 6,
       endStage = 6
     )
   )
-  expect_true(is.list(NFC$auxEnv[['needed_nFunctions']]))
+  expect_true(is.list(NFC$auxEnv[["needed_nFunctions"]]))
 
   cat("\nCompiler steps only tested through stage 6\n")
-  
+
   ## 7. labelAbstractTypes
   NFC$process(
     control = list(
@@ -99,5 +109,4 @@ test_that("NF_CompilerClass steps",
       endStage = 7
     )
   )
-  
 })

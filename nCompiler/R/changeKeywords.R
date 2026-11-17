@@ -1,54 +1,57 @@
-nKeyWords <- list(as = 'nAs',
-                  # copy = 'nCopy',
-                  print = 'nPrint',
-                  cat = 'nCat',
-                  step = 'nStep',
-                  equals = 'nEquals',
-                  dim = 'nDim',
-                  stop = 'nStop',
-                  character = 'nCharacter',
-                  numeric = 'nNumeric',
-                  logical = 'nLogical',
-                  integer = 'nInteger',
-                  matrix = 'nMatrix',
-                  array = 'nArray',
-                  # round = 'nRound',
-                  c = 'nC',
-                  rep = 'nRep',
-                  seq = 'nSeq',
-                  switch = 'nSwitch',
-                  eigen = 'nEigen',
-                  diag = 'nDiag',
-                  Diagonal = 'nDiagonal', # mirror Matrix::Diagonal to
-                                          # create sparse matrices
-                  '%*%' = 'nMul',
-                  svd = 'nSvd',
-                  chol = 'nChol',
-                  dexp = 'dexp_nComp', # support scale as well as rate parameterization
-                  rexp = 'rexp_nComp',
-                  pexp = 'pexp_nComp',
-                  qexp = 'qexp_nComp',
-                  optim = 'nOptim',
-                  optimDefaultControl = 'nOptimDefaultControl',
-                  derivs = 'nDerivs',
-                  solve = 'nSolve',
-                  inverse = 'nInverse',
-                  forwardsolve = 'nForwardsolve',
-                  backsolve = 'nBacksolve',
-                  logdet = 'nLogdet',
-                  var = 'nVar',
-                  sd = 'nSd',
-                  warning = 'nWarning',
-                  message = 'nMessage'
-                  )
+nKeyWords <- list(
+  as = "nAs",
+  # copy = 'nCopy',
+  print = "nPrint",
+  cat = "nCat",
+  step = "nStep",
+  equals = "nEquals",
+  dim = "nDim",
+  stop = "nStop",
+  character = "nCharacter",
+  numeric = "nNumeric",
+  logical = "nLogical",
+  integer = "nInteger",
+  matrix = "nMatrix",
+  array = "nArray",
+  # round = 'nRound',
+  c = "nC",
+  rep = "nRep",
+  seq = "nSeq",
+  switch = "nSwitch",
+  eigen = "nEigen",
+  diag = "nDiag",
+  Diagonal = "nDiagonal", # mirror Matrix::Diagonal to
+  # create sparse matrices
+  "%*%" = "nMul",
+  svd = "nSvd",
+  chol = "nChol",
+  dexp = "dexp_nComp", # support scale as well as rate parameterization
+  rexp = "rexp_nComp",
+  pexp = "pexp_nComp",
+  qexp = "qexp_nComp",
+  optim = "nOptim",
+  optimDefaultControl = "nOptimDefaultControl",
+  derivs = "nDerivs",
+  solve = "nSolve",
+  inverse = "nInverse",
+  forwardsolve = "nForwardsolve",
+  backsolve = "nBacksolve",
+  logdet = "nLogdet",
+  var = "nVar",
+  sd = "nSd",
+  is_na = "nIs_na",
+  is_nan = "nIs_nan",
+  warning = "nWarning",
+  message = "nMessage"
+)
 
-nf_changeKeywords <- function(code, keywords = character()){
+nf_changeKeywords <- function(code, keywords = character()) {
   # User-provided keywords take precedence over defaults.
   keywords <- c(keywords, nKeyWords)
-  if(length(code) > 0){
-    for(i in seq_along(code) ) {
-      if(is.call(code) ) {
-        if(!is.null(code[[i]]) ) {
+  if (length(code) > 0) {
+    for (i in seq_along(code)) {
+      if (is.call(code)) {
+        if (!is.null(code[[i]])) {
           code[[i]] <- nf_changeKeywordsOne(code[[i]], keywords = keywords)
         }
       }
@@ -57,21 +60,22 @@ nf_changeKeywords <- function(code, keywords = character()){
   return(code)
 }
 
-nf_changeKeywordsOne <- function(code, first = FALSE, keywords){
-  if(length(code) == 1){
-    if(as.character(code) %in% names(keywords)) {
-      if(is.call(code)) {
-        code[[1]] <- as.name( keywords[[as.character(code)]] )
+nf_changeKeywordsOne <- function(code, first = FALSE, keywords) {
+  if (length(code) == 1) {
+    if (as.character(code) %in% names(keywords)) {
+      if (is.call(code)) {
+        code[[1]] <- as.name(keywords[[as.character(code)]])
       } else {
-        if(!is.character(code) & first)
-          code <- as.name( keywords[[as.character(code)]] )
+        if (!is.character(code) & first) {
+          code <- as.name(keywords[[as.character(code)]])
+        }
       }
     }
-  }
-  else if(length(code) > 1){
-    for(i in seq_along(code) ) {
-      if(!is.null(code[[i]]) )
+  } else if (length(code) > 1) {
+    for (i in seq_along(code)) {
+      if (!is.null(code[[i]])) {
         code[[i]] <- nf_changeKeywordsOne(code[[i]], first = i == 1, keywords = keywords)
+      }
     }
   }
   return(code)

@@ -36,9 +36,9 @@ M3_sparse <- Matrix::Matrix(M3, sparse = TRUE)
 
 # sparse matrix with additional 0's stored explicitly
 Munpruned <- Matrix::sparseMatrix(
-  i = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
-  j = sample(x = 1:m, size = floor(m*n*p) + 2, replace = TRUE),
-  x = c(runif(n = floor(m*n*p)), 0, 0)
+  i = sample(x = 1:m, size = floor(m * n * p) + 2, replace = TRUE),
+  j = sample(x = 1:m, size = floor(m * n * p) + 2, replace = TRUE),
+  x = c(runif(n = floor(m * n * p)), 0, 0)
 )
 
 #
@@ -88,27 +88,27 @@ asDense1arg <- function(x) {
 nAdd2_promote <- nFunction(
   fun = add2,
   argTypes = list(
-    x = 'nMatrix', y = 'nSparseMatrix'
+    x = "nMatrix", y = "nSparseMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate how asSparse conversion works
 nAdd2_force <- nFunction(
   fun = add2_force_sparse,
   argTypes = list(
-    x = 'nMatrix', y = 'nMatrix'
+    x = "nMatrix", y = "nMatrix"
   ),
-  returnType = 'nSparseMatrix'
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate how asDense conversion works
 nAdd2_force_dense <- nFunction(
   fun = add2_force_dense,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nSparseMatrix'
+    x = "nSparseMatrix", y = "nSparseMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate how asDense conversion works
@@ -116,92 +116,94 @@ nAdd2_force_dense <- nFunction(
 nAdd2_force_dense_unnecessary <- nFunction(
   fun = add2_force_dense,
   argTypes = list(
-    x = 'nMatrix', y = 'nMatrix'
+    x = "nMatrix", y = "nMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate how returnType must match the return type from argument fun
 nAdd2_force_bad_return <- nFunction(
   fun = add2_force_sparse,
   argTypes = list(
-    x = 'nMatrix', y = 'nMatrix'
+    x = "nMatrix", y = "nMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate how returnType must match the return type from argument fun
 nAdd2_force_dense_bad_return <- nFunction(
   fun = add2_force_dense,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nSparseMatrix'
+    x = "nSparseMatrix", y = "nSparseMatrix"
   ),
-  returnType = 'nSparseMatrix'
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate support for mixed inputs
 nAdd2_force_mixed <- nFunction(
   fun = add2_force_sparse,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nMatrix'
+    x = "nSparseMatrix", y = "nMatrix"
   ),
-  returnType = 'nSparseMatrix'
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate support for mixed inputs
 nAdd2_force_dense_mixed <- nFunction(
   fun = add2_force_dense,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nMatrix'
+    x = "nSparseMatrix", y = "nMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate full use of sparse matrices
 nAdd2_sparse <- nFunction(
   fun = add2,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nSparseMatrix'
+    x = "nSparseMatrix", y = "nSparseMatrix"
   ),
-  returnType = 'nSparseMatrix'
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate C++ works for nested statements (i.e., SparseMatrix + TensorExpr)
 nAdd3 <- nFunction(
   fun = add3,
   argTypes = list(
-    x = 'nSparseMatrix', y = 'nMatrix', z = 'nMatrix'
+    x = "nSparseMatrix", y = "nMatrix", z = "nMatrix"
   ),
-  returnType = 'nMatrix'
+  returnType = "nMatrix"
 )
 
 # demonstrate pruning extra 0's from sparse matrix objects
 nPrune <- nFunction(
   fun = prune,
-  argTypes = list(x = 'nSparseMatrix', prune = 'logical'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "nSparseMatrix", prune = "logical"),
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate C++ code can work with Eigen objects, not just Eigen expressions
 nAsSparse <- nFunction(
   fun = asSparse1arg,
-  argTypes = list(x = 'nMatrix'),
-  returnType = 'nSparseMatrix'
+  argTypes = list(x = "nMatrix"),
+  returnType = "nSparseMatrix"
 )
 
 # demonstrate C++ code can work with Eigen objects, not just Eigen expressions
 nAsDense <- nFunction(
   fun = asDense1arg,
-  argTypes = list(x = 'nSparseMatrix'),
-  returnType = 'nMatrix'
+  argTypes = list(x = "nSparseMatrix"),
+  returnType = "nMatrix"
 )
 
 # verify asSparse and asDense work from R
 expect_equal(nAdd2_force(x = M, y = M2), M_sparse + M2_sparse)
 expect_equal(
-  { z = nAdd2_force_dense(x = M_sparse, y = M2_sparse);
-    attr(z, 'dimnames') = NULL;
-    z },
+  {
+    z <- nAdd2_force_dense(x = M_sparse, y = M2_sparse)
+    attr(z, "dimnames") <- NULL
+    z
+  },
   M + M2
 )
 
@@ -254,4 +256,3 @@ expect_equal(cAdd2_force_dense_mixed(x = M_sparse, y = M2), M + M2)
 expect_equal(cAsSparse(x = M), M_sparse)
 expect_equal(cAsDense(x = M_sparse), M)
 expect_equal(cAdd2_force_dense_unnecessary(x = M, y = M2), M + M2)
-

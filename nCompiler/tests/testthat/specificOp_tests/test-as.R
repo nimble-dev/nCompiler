@@ -38,8 +38,8 @@ test_that("as(): same scalar 2D→1D singleton-drop, RHS", {
     )
   )
   package <- FALSE
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -54,7 +54,8 @@ test_that("as(): same scalar 2D→1D singleton-drop, RHS", {
     # Single-row (1×n) matrix: singleton row dim is dropped.
     x_row <- matrix(as.numeric(1:6), nrow = 1, ncol = 6)
     expect_equal(nco$row_to_vec(x_row), as.numeric(1:6))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -70,8 +71,8 @@ test_that("as(): same scalar 1D→2D dimension padding, RHS", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -82,7 +83,8 @@ test_that("as(): same scalar 1D→2D dimension padding, RHS", {
     # A length-n vector is viewed as an (n×1) matrix (second dim padded with 1).
     x <- as.numeric(1:5)
     expect_equal(nco$vec_to_mat(x), matrix(x, ncol = 1))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -99,8 +101,8 @@ test_that("as(): same scalar, result used in arithmetic", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -110,7 +112,8 @@ test_that("as(): same scalar, result used in arithmetic", {
 
     x <- matrix(as.numeric(1:4), nrow = 4, ncol = 1)
     expect_equal(nco$sum_col(x), sum(x) + sum(x + 1:length(x)))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -130,8 +133,8 @@ test_that("as(): cross scalar double→integer, RHS", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -141,7 +144,8 @@ test_that("as(): cross scalar double→integer, RHS", {
 
     x <- c(1.9, 2.1, 3.7, -0.5)
     expect_equal(nco$to_int(x), as.integer(x))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -157,8 +161,8 @@ test_that("as(): cross scalar integer→double, RHS", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -168,7 +172,8 @@ test_that("as(): cross scalar integer→double, RHS", {
 
     x <- 1:5L
     expect_equal(nco$to_double(x), as.numeric(x))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -184,8 +189,8 @@ test_that("as(): cross scalar logical→double, RHS", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -195,7 +200,8 @@ test_that("as(): cross scalar logical→double, RHS", {
 
     x <- c(TRUE, FALSE, TRUE, FALSE)
     expect_equal(nco$to_double(x), as.numeric(x))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -211,8 +217,8 @@ test_that("as(): cross scalar integer→double 2D, RHS", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -222,7 +228,8 @@ test_that("as(): cross scalar integer→double 2D, RHS", {
 
     x <- matrix(1:6L, nrow = 2, ncol = 3)
     expect_equal(nco$mat_to_double(x), matrix(as.numeric(1:6), nrow = 2, ncol = 3))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -242,8 +249,8 @@ test_that("as(): same scalar 1D viewed as 2D on LHS writes through STM", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -256,7 +263,8 @@ test_that("as(): same scalar 1D viewed as 2D on LHS writes through STM", {
     x <- as.numeric(1:5)
     y <- matrix(as.numeric(6:10), nrow = 5, ncol = 1)
     expect_equal(nco$assign_via_view(x, y), as.numeric(6:10))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -272,8 +280,8 @@ test_that("as(): same scalar 2D viewed as 1D on LHS writes through STM", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -286,7 +294,8 @@ test_that("as(): same scalar 2D viewed as 1D on LHS writes through STM", {
     x <- matrix(as.numeric(1:5), nrow = 5, ncol = 1)
     y <- as.numeric(6:10)
     expect_equal(nco$assign_via_view(x, y), matrix(y, nrow = 5, ncol = 1))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -306,8 +315,8 @@ test_that("as(): runtime error when non-singleton dims cannot be dropped", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -318,7 +327,8 @@ test_that("as(): runtime error when non-singleton dims cannot be dropped", {
     # A (3×4) matrix has two non-singleton dims — cannot map to 1D.
     x <- matrix(as.numeric(1:12), nrow = 3, ncol = 4)
     expect_error(nco$bad_reshape(x))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -338,8 +348,8 @@ test_that("as(): cross-scalar LHS — double source viewed as integer, integer a
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -350,7 +360,8 @@ test_that("as(): cross-scalar LHS — double source viewed as integer, integer a
     x <- c(1.5, 2.5, 3.5)
     y <- c(10L, 20L, 30L)
     expect_equal(nco$assign_int_to_double(x, y), as.numeric(y))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -366,8 +377,8 @@ test_that("as(): cross-scalar LHS — integer source viewed as double, double as
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -379,7 +390,8 @@ test_that("as(): cross-scalar LHS — integer source viewed as double, double as
     y <- c(10.9, 20.1, 30.7)
     # double values are truncated to integer on write-back
     expect_equal(nco$assign_double_to_int(x, y), as.integer(y))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -401,8 +413,8 @@ test_that("as(): RHS scalar indexing same-scalar (all-singleton)", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -410,9 +422,10 @@ test_that("as(): RHS scalar indexing same-scalar (all-singleton)", {
       nco <- ncc$new()
     }
 
-    x <- c(10.0, 20.0, 30.0)   # viewed as 3×1 matrix; [2,1] == x[2]
+    x <- c(10.0, 20.0, 30.0) # viewed as 3×1 matrix; [2,1] == x[2]
     expect_equal(nco$get_elem(x), 20.0)
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -430,8 +443,8 @@ test_that("as(): RHS scalar indexing cross-scalar (double→integer)", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -440,8 +453,9 @@ test_that("as(): RHS scalar indexing cross-scalar (double→integer)", {
     }
 
     x <- c(1.9, 2.7, 3.1)
-    expect_equal(nco$get_int(x), 2L)   # truncation toward zero
-    rm(nco); gc()
+    expect_equal(nco$get_int(x), 2L) # truncation toward zero
+    rm(nco)
+    gc()
   }
 })
 
@@ -452,15 +466,15 @@ test_that("as(): RHS range indexing same-scalar (pure range)", {
     Cpublic = list(
       sub_mat = nFunction(
         function(x = numericVector) {
-          ans <- as(x, "numericMatrix")[1:3, 1:1, drop=FALSE]
+          ans <- as(x, "numericMatrix")[1:3, 1:1, drop = FALSE]
           return(ans)
           returnType(numericMatrix)
         }
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -468,9 +482,10 @@ test_that("as(): RHS range indexing same-scalar (pure range)", {
       nco <- ncc$new()
     }
 
-    x <- as.numeric(1:5)   # viewed as 5×1; rows 1:3, col 1:1 → 3×1
+    x <- as.numeric(1:5) # viewed as 5×1; rows 1:3, col 1:1 → 3×1
     expect_equal(nco$sub_mat(x), matrix(1:3, ncol = 1))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -481,15 +496,15 @@ test_that("as(): RHS range indexing cross-scalar (integer→double)", {
     Cpublic = list(
       sub_dbl = nFunction(
         function(x = integerVector) {
-          ans <- as(x, "numericMatrix")[1:3, 1:1, drop=FALSE]
+          ans <- as(x, "numericMatrix")[1:3, 1:1, drop = FALSE]
           return(ans)
           returnType(numericMatrix)
         }
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -497,9 +512,10 @@ test_that("as(): RHS range indexing cross-scalar (integer→double)", {
       nco <- ncc$new()
     }
 
-    x <- 1:5L   # viewed as 5×1; rows 1:3 → 3×1 double matrix
+    x <- 1:5L # viewed as 5×1; rows 1:3 → 3×1 double matrix
     expect_equal(nco$sub_dbl(x), matrix(as.numeric(1:3), ncol = 1))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -517,8 +533,8 @@ test_that("as(): LHS scalar assignment same-scalar (all-singleton)", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -529,7 +545,8 @@ test_that("as(): LHS scalar assignment same-scalar (all-singleton)", {
     x <- c(10.0, 20.0, 30.0)
     result <- nco$set_elem(x, 99.0)
     expect_equal(result, c(10.0, 99.0, 30.0))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -547,8 +564,8 @@ test_that("as(): LHS range assignment same-scalar (pure range)", {
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -560,7 +577,8 @@ test_that("as(): LHS range assignment same-scalar (pure range)", {
     y <- matrix(c(10.0, 20.0, 30.0), nrow = 3, ncol = 1)
     result <- nco$set_range(x, y)
     expect_equal(result, c(10.0, 20.0, 30.0, 4.0, 5.0))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -578,8 +596,8 @@ test_that("as(): LHS scalar assignment cross-scalar (double source, integer view
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -587,10 +605,11 @@ test_that("as(): LHS scalar assignment cross-scalar (double source, integer view
       nco <- ncc$new()
     }
 
-    x <- c(10.0, 20.0, 30.0)   # double; view as int matrix, assign int to [2,1]
+    x <- c(10.0, 20.0, 30.0) # double; view as int matrix, assign int to [2,1]
     result <- nco$set_int_elem(x, 99L)
     expect_equal(result, c(10.0, 99.0, 30.0))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -608,8 +627,8 @@ test_that("as(): LHS range assignment cross-scalar (double source, integer view)
       )
     )
   )
-  for(mode in c("R", "non_pkg", "pkg")) {
-    if(mode == "R") {
+  for (mode in c("R", "non_pkg", "pkg")) {
+    if (mode == "R") {
       nco <- nc$new()
     } else {
       package <- mode == "pkg"
@@ -621,7 +640,8 @@ test_that("as(): LHS range assignment cross-scalar (double source, integer view)
     y <- matrix(c(10L, 20L, 30L), nrow = 3, ncol = 1)
     result <- nco$set_int_range(x, y)
     expect_equal(result, c(10.0, 20.0, 30.0, 4.0, 5.0))
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
@@ -629,11 +649,11 @@ test_that("as(): LHS range assignment cross-scalar (double source, integer view)
 # same scalar element type
 test_that("as(): true scalar input (same element type)", {
   foo <- nFunction(
-    function(x = 'numericScalar', scalar_res = numericVector()) {
-      v <- as(x, 'numericMatrix')
+    function(x = "numericScalar", scalar_res = numericVector()) {
+      v <- as(x, "numericMatrix")
       y <- x
       w <- v
-      as(y, "numericMatrix") <- 3*w
+      as(y, "numericMatrix") <- 3 * w
       scalar_res[1] <- y
       return(v)
       returnType(double(2))
@@ -646,22 +666,23 @@ test_that("as(): true scalar input (same element type)", {
   cscalar_res <- -1
   cans <- cfoo(2, cscalar_res)
   expect_identical(ans, cans)
-  expect_identical(dim(cans), c(1L,1L))
-  expect_equal(cans[1,1], 2)
+  expect_identical(dim(cans), c(1L, 1L))
+  expect_equal(cans[1, 1], 2)
 
   expect_identical(scalar_res, cscalar_res)
   expect_identical(cscalar_res, 6)
-  rm(ans, cans); gc()
+  rm(ans, cans)
+  gc()
 })
 
 # cross scalar element type
 test_that("as(): true scalar input (different element type)", {
   foo <- nFunction(
-    function(x = 'numericScalar', scalar_res = numericVector()) {
-      v <- as(x, 'integerMatrix')
+    function(x = "numericScalar", scalar_res = numericVector()) {
+      v <- as(x, "integerMatrix")
       y <- x
       w <- v
-      as(y, "integerMatrix") <- 3*w
+      as(y, "integerMatrix") <- 3 * w
       scalar_res[1] <- y
       return(v)
       returnType(integer(2))
@@ -674,12 +695,13 @@ test_that("as(): true scalar input (different element type)", {
   cscalar_res <- -1
   cans <- cfoo(2, cscalar_res)
   expect_identical(ans, cans)
-  expect_identical(dim(cans), c(1L,1L))
-  expect_identical(cans[1,1], 2L)
+  expect_identical(dim(cans), c(1L, 1L))
+  expect_identical(cans[1, 1], 2L)
 
   expect_identical(scalar_res, cscalar_res)
   expect_identical(cscalar_res, 6)
-  rm(ans, cans); gc()
+  rm(ans, cans)
+  gc()
 })
 
 
@@ -687,12 +709,12 @@ test_that("as(): true scalar input (different element type)", {
 # same type
 test_that("as(): true scalar target type (same element type)", {
   foo <- nFunction(
-    function(x = 'numericMatrix', scalar_res = numericVector()) {
-      v <- as(x, 'numericScalar')
+    function(x = "numericMatrix", scalar_res = numericVector()) {
+      v <- as(x, "numericScalar")
       y <- x
       w <- v
-      as(y, "numericScalar") <- 3*w
-      scalar_res[1] <- y[1,1]
+      as(y, "numericScalar") <- 3 * w
+      scalar_res[1] <- y[1, 1]
       return(v)
       returnType(double())
     },
@@ -709,18 +731,19 @@ test_that("as(): true scalar target type (same element type)", {
   expect_equal(cans, 2)
   expect_identical(scalar_res, cscalar_res)
   expect_identical(cscalar_res, 6)
-  rm(ans, cans); gc()
+  rm(ans, cans)
+  gc()
 })
 
 # cross type
 test_that("as(): true scalar target type (same element type)", {
   foo <- nFunction(
-    function(x = 'integerMatrix', scalar_res = numericVector()) {
-      v <- as(x, 'numericScalar')
+    function(x = "integerMatrix", scalar_res = numericVector()) {
+      v <- as(x, "numericScalar")
       y <- x
       w <- v
-      as(y, "numericScalar") <- 3*w
-      scalar_res[1] <- y[1,1]
+      as(y, "numericScalar") <- 3 * w
+      scalar_res[1] <- y[1, 1]
       return(v)
       returnType(double())
     },
@@ -737,18 +760,19 @@ test_that("as(): true scalar target type (same element type)", {
   expect_equal(cans, 2)
   expect_identical(scalar_res, cscalar_res)
   expect_identical(cscalar_res, 6)
-  rm(ans, cans); gc()
+  rm(ans, cans)
+  gc()
 })
 
 # Inputs are true scalars and output is also a true scalar
 # same type
 test_that("as(): true scalar input and  target type (same element type)", {
   foo <- nFunction(
-    function(x = 'numericScalar', scalar_res = numericVector()) {
-      v <- as(x, 'numericScalar')
+    function(x = "numericScalar", scalar_res = numericVector()) {
+      v <- as(x, "numericScalar")
       y <- x
       w <- v
-      as(y, "numericScalar") <- 3*w
+      as(y, "numericScalar") <- 3 * w
       scalar_res[1] <- y
       return(v)
       returnType(double())
@@ -765,18 +789,19 @@ test_that("as(): true scalar input and  target type (same element type)", {
   expect_true(is.null(dim(cans)))
   expect_equal(cans, 2.3)
   expect_identical(scalar_res, cscalar_res)
-  expect_identical(cscalar_res, 3*2.3)
-  rm(ans, cans); gc()
+  expect_identical(cscalar_res, 3 * 2.3)
+  rm(ans, cans)
+  gc()
 })
 
 # cross type
 test_that("as(): true scalar input and  target type (different element type)", {
   foo <- nFunction(
-    function(x = 'numericScalar', scalar_res = numericVector()) {
-      v <- as(x, 'integerScalar')
+    function(x = "numericScalar", scalar_res = numericVector()) {
+      v <- as(x, "integerScalar")
       y <- x
       w <- v
-      as(y, "integerScalar") <- 3*w
+      as(y, "integerScalar") <- 3 * w
       scalar_res[1] <- y
       return(v)
       returnType(integer())
@@ -793,8 +818,9 @@ test_that("as(): true scalar input and  target type (different element type)", {
   expect_true(is.null(dim(cans)))
   expect_equal(cans, 2L)
   expect_identical(scalar_res, cscalar_res)
-  expect_identical(cscalar_res, 3*2L)
-  rm(ans, cans); gc()
+  expect_identical(cscalar_res, 3 * 2L)
+  rm(ans, cans)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -813,7 +839,7 @@ test_that("as(): true scalar input and  target type (different element type)", {
 
 test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and element)", {
   ncAcc <- nClass(
-    Cpublic = list(x = 'numericVector')
+    Cpublic = list(x = "numericVector")
   )
   ncOps <- nClass(
     Cpublic = list(
@@ -852,7 +878,7 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
       )
     )
   )
-  for(mode in c("non_pkg", "pkg")) {
+  for (mode in c("non_pkg", "pkg")) {
     package <- mode == "pkg"
     comp <- nCompile(ncAcc, ncOps, package = package)
     nco <- comp$ncOps$new()
@@ -866,13 +892,14 @@ test_that("as(): ETaccessorBase RHS paths (same-scalar, cross-scalar sum and ele
     # cross scalar element: x[2] = 20.1 → truncates to 20
     expect_equal(nco$rhs_xscalar_elem(c(10.9, 20.1, 30.7), 2L), 20L)
 
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })
 
 test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scalar write-back)", {
   ncAcc <- nClass(
-    Cpublic = list(x = 'numericVector')
+    Cpublic = list(x = "numericVector")
   )
   ncOps <- nClass(
     Cpublic = list(
@@ -902,7 +929,7 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
       )
     )
   )
-  for(mode in c("non_pkg", "pkg")) {
+  for (mode in c("non_pkg", "pkg")) {
     package <- mode == "pkg"
     comp <- nCompile(ncAcc, ncOps, package = package)
     nco <- comp$ncOps$new()
@@ -913,6 +940,7 @@ test_that("as(): ETaccessorBase LHS paths (same-scalar write-through, cross-scal
     # cross scalar: write int [10,20,30] into double x, read sum = 60
     expect_equal(nco$lhs_xscalar(c(10L, 20L, 30L)), 60.0)
 
-    rm(nco); gc()
+    rm(nco)
+    gc()
   }
 })

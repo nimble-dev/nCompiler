@@ -16,14 +16,14 @@ cNL <- nCompile(rNL)
 make_uncompiled <- function() {
   obj <- rNL$new()
   length(obj) <- 4
-  for(i in 1:4) obj[[i]] <- i * 10.0
+  for (i in 1:4) obj[[i]] <- i * 10.0
   obj
 }
 
 make_compiled <- function() {
   obj <- cNL$new()
   obj$setLength(4L)
-  for(i in 1:4) obj[[i]] <- i * 10.0
+  for (i in 1:4) obj[[i]] <- i * 10.0
   obj
 }
 
@@ -40,7 +40,8 @@ test_that("nList uncompiled: length, setLength, length<-", {
   expect_equal(length(obj), 2)
   obj$setLength(6L)
   expect_equal(obj$getLength(), 6L)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,8 @@ test_that("nList uncompiled: [[ get and set", {
   expect_equal(obj[[3]], 3.3)
   obj[[2]] <- 99.9
   expect_equal(obj[[2]], 99.9)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [[ get gives and error and set expands", {
@@ -67,7 +69,8 @@ test_that("nList uncompiled: [[ get gives and error and set expands", {
   obj[[2]] <- 2.2
   expect_equal(obj[[1]], NULL)
   expect_equal(obj[[2]], 2.2)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [[ set chains correctly", {
@@ -77,9 +80,9 @@ test_that("nList uncompiled: [[ set chains correctly", {
   A$obj[[1]] <- 1.1
   expect_equal(A$obj[[1]], 1.1)
   expect_equal(A$obj[[2]], 2.2)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
-
 
 
 # ---------------------------------------------------------------------------
@@ -88,21 +91,24 @@ test_that("nList uncompiled: [[ set chains correctly", {
 
 test_that("nList uncompiled: [ get with integer indices", {
   obj <- make_uncompiled()
-  expect_equal(as.list(obj[c(1L, 3L)]),     list(10.0, 30.0))
+  expect_equal(as.list(obj[c(1L, 3L)]), list(10.0, 30.0))
   expect_equal(as.list(obj[c(4L, 2L, 1L)]), list(40.0, 20.0, 10.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [ get with numeric indices", {
   obj <- make_uncompiled()
   expect_equal(as.list(obj[c(2.0, 4.0)]), list(20.0, 40.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [ get with logical indices", {
   obj <- make_uncompiled()
   expect_equal(as.list(obj[c(TRUE, FALSE, TRUE, FALSE)]), list(10.0, 30.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [ get errors for bad indices", {
@@ -110,7 +116,8 @@ test_that("nList uncompiled: [ get errors for bad indices", {
   expect_error(obj[5])
   expect_error(obj[0])
   expect_error(obj[rep(TRUE, 5)])
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 
@@ -124,18 +131,20 @@ test_that("nList uncompiled: [<- with list values", {
   obj[c(1L, 3L)] <- list(100.0, 300.0)
   expect_equal(obj[[1]], 100.0)
   expect_equal(obj[[3]], 300.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [<- with list, recycling rule", {
   obj <- rNL$new()
   length(obj) <- 4
-  obj[1:4] <- list(1.0, 2.0)   # 2 values recycled over 4 positions
+  obj[1:4] <- list(1.0, 2.0) # 2 values recycled over 4 positions
   expect_equal(obj[[1]], 1.0)
   expect_equal(obj[[2]], 2.0)
   expect_equal(obj[[3]], 1.0)
   expect_equal(obj[[4]], 2.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [<- extends contents when necessary", {
@@ -143,10 +152,11 @@ test_that("nList uncompiled: [<- extends contents when necessary", {
   obj[5] <- 5.5
   expect_equal(length(obj), 5)
   expect_equal(obj[[5]], 5.5)
-  expect_equal(obj[1:4] |> as.list(), vector(mode="list", 4))
+  expect_equal(obj[1:4] |> as.list(), vector(mode = "list", 4))
   obj[c(4, 6)] <- c(4.4, 6.6)
   expect_equal(length(obj), 6)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [<- chains correctly", {
@@ -156,7 +166,8 @@ test_that("nList uncompiled: [<- chains correctly", {
   A$obj[2] <- 6.6
   expect_equal(length(A$obj), 2)
   expect_equal(A$obj[[2]], 6.6)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -170,7 +181,8 @@ test_that("nList uncompiled: [<- with single scalar value", {
   expect_equal(obj[[1]], 7.7)
   expect_equal(obj[[2]], 7.7)
   expect_equal(obj[[3]], 7.7)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -195,12 +207,13 @@ test_that("nList uncompiled: [<- with nList value", {
   expect_equal(dst[[3]], 500.0)
   expect_equal(dst[[4]], 40.0)
 
-  dst[c(1L, 3L)] <- src   # src IS an nList -> singleBracket_set_nList path
+  dst[c(1L, 3L)] <- src # src IS an nList -> singleBracket_set_nList path
   expect_equal(dst[[1]], 200.0)
   expect_equal(dst[[3]], 400.0)
   expect_equal(dst[[2]], 20.0)
   expect_equal(dst[[4]], 40.0)
-  rm(src, dst); gc()
+  rm(src, dst)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -210,7 +223,8 @@ test_that("nList uncompiled: [<- with nList value", {
 test_that("nList uncompiled: as.list", {
   obj <- make_uncompiled()
   expect_equal(as.list(obj), list(10.0, 20.0, 30.0, 40.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -226,7 +240,8 @@ test_that("nList compiled obj used from R: length, setLength, length<-", {
   expect_equal(length(obj), 2L)
   obj$setLength(6L)
   expect_equal(obj$getLength(), 6L)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -244,14 +259,16 @@ test_that("nList compiled obj used from R: [[ get and set", {
   expect_equal(obj[[3]], 3.3)
   obj[[2]] <- 99.9
   expect_equal(obj[[2]], 99.9)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ with numeric and logical index", {
   obj <- make_compiled()
-  expect_equal(obj[[2.0]],  20.0)  # numeric index
-  expect_equal(obj[[TRUE]], 10.0)  # logical TRUE -> first element
-  rm(obj); gc()
+  expect_equal(obj[[2.0]], 20.0) # numeric index
+  expect_equal(obj[[TRUE]], 10.0) # logical TRUE -> first element
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ get gives and error and set expands", {
@@ -260,7 +277,8 @@ test_that("nList compiled obj used from R: [[ get gives and error and set expand
   obj[[2]] <- 2.2
   expect_equal(obj[[1]], 0)
   expect_equal(obj[[2]], 2.2)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: [[ set chains correctly", {
@@ -270,7 +288,8 @@ test_that("nList uncompiled: [[ set chains correctly", {
   A$obj[[1]] <- 1.1
   expect_equal(A$obj[[1]], 1.1)
   expect_equal(A$obj[[2]], 2.2)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -279,27 +298,31 @@ test_that("nList uncompiled: [[ set chains correctly", {
 
 test_that("nList compiled obj used from R: [ get with integer indices", {
   obj <- make_compiled()
-  expect_equal(as.list(obj[c(1L, 3L)]),     list(10.0, 30.0))
+  expect_equal(as.list(obj[c(1L, 3L)]), list(10.0, 30.0))
   expect_equal(as.list(obj[c(4L, 2L, 1L)]), list(40.0, 20.0, 10.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [ get with numeric indices", {
   obj <- make_compiled()
   expect_equal(as.list(obj[c(2.0, 4.0)]), list(20.0, 40.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [ get with logical indices", {
   obj <- make_compiled()
   expect_equal(as.list(obj[c(TRUE, FALSE, TRUE, FALSE)]), list(10.0, 30.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [ get, logical index recycled over contents", {
-  obj <- make_compiled()                      # length 4: 10,20,30,40
-  expect_equal(as.list(obj[c(TRUE, FALSE)]),  list(10.0, 30.0))
-  rm(obj); gc()
+  obj <- make_compiled() # length 4: 10,20,30,40
+  expect_equal(as.list(obj[c(TRUE, FALSE)]), list(10.0, 30.0))
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -313,7 +336,8 @@ test_that("nList compiled obj used from R: [<- with list values, integer indices
   expect_equal(obj[[2]], 20.0)
   expect_equal(obj[[3]], 300.0)
   expect_equal(obj[[4]], 40.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- with list values, numeric indices", {
@@ -321,7 +345,8 @@ test_that("nList compiled obj used from R: [<- with list values, numeric indices
   obj[c(2.0, 4.0)] <- list(200.0, 400.0)
   expect_equal(obj[[2]], 200.0)
   expect_equal(obj[[4]], 400.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- with list values, logical indices", {
@@ -331,7 +356,8 @@ test_that("nList compiled obj used from R: [<- with list values, logical indices
   expect_equal(obj[[2]], 20.0)
   expect_equal(obj[[3]], 33.0)
   expect_equal(obj[[4]], 40.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -342,26 +368,29 @@ test_that("nList compiled obj used from R: [<- list recycled over integer indice
   obj <- make_compiled()
   obj[1:4] <- list(1.0, 2.0)
   expect_equal(as.list(obj), list(1.0, 2.0, 1.0, 2.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- list recycled over logical indices", {
   obj <- make_compiled()
-  obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(99.0)  # single value -> recycled
+  obj[c(TRUE, FALSE, TRUE, FALSE)] <- list(99.0) # single value -> recycled
   expect_equal(obj[[1]], 99.0)
   expect_equal(obj[[3]], 99.0)
-  expect_equal(obj[[2]], 20.0)   # untouched
-  rm(obj); gc()
+  expect_equal(obj[[2]], 20.0) # untouched
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- logical index recycled over contents", {
-  obj <- make_compiled()                    # length 4: 10,20,30,40
-  obj[c(TRUE, FALSE)] <- list(11.0, 33.0)  # bools recycled to T,F,T,F
+  obj <- make_compiled() # length 4: 10,20,30,40
+  obj[c(TRUE, FALSE)] <- list(11.0, 33.0) # bools recycled to T,F,T,F
   expect_equal(obj[[1]], 11.0)
   expect_equal(obj[[2]], 20.0)
   expect_equal(obj[[3]], 33.0)
   expect_equal(obj[[4]], 40.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -374,8 +403,9 @@ test_that("nList compiled obj used from R: [<- single scalar recycled over posit
   expect_equal(obj[[1]], 7.7)
   expect_equal(obj[[2]], 7.7)
   expect_equal(obj[[3]], 7.7)
-  expect_equal(obj[[4]], 40.0)   # untouched
-  rm(obj); gc()
+  expect_equal(obj[[4]], 40.0) # untouched
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -405,7 +435,8 @@ test_that("nList compiled obj used from R: [<- with same-type nList", {
   expect_equal(dst[[2]], 20.0)
   expect_equal(dst[[3]], 400.0)
   expect_equal(dst[[4]], 40.0)
-  rm(src, dst); gc()
+  rm(src, dst)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -415,35 +446,41 @@ test_that("nList compiled obj used from R: [<- with same-type nList", {
 test_that("nList compiled obj used from R: integer [<- auto-expands contents", {
   obj <- cNL$new()
   obj$setLength(2L)
-  obj[[1]] <- 1.0; obj[[2]] <- 2.0
-  obj[c(1L, 5L)] <- list(10.0, 50.0)   # index 5 is out of bounds
+  obj[[1]] <- 1.0
+  obj[[2]] <- 2.0
+  obj[c(1L, 5L)] <- list(10.0, 50.0) # index 5 is out of bounds
   expect_equal(length(obj), 5L)
   expect_equal(obj[[1]], 10.0)
   expect_equal(obj[[5]], 50.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: numeric [<- auto-expands contents", {
   obj <- cNL$new()
   obj$setLength(2L)
-  obj[[1]] <- 1.0; obj[[2]] <- 2.0
-  obj[c(1.0, 6.0)] <- list(10.0, 60.0)  # index 6 is out of bounds
+  obj[[1]] <- 1.0
+  obj[[2]] <- 2.0
+  obj[c(1.0, 6.0)] <- list(10.0, 60.0) # index 6 is out of bounds
   expect_equal(length(obj), 6L)
   expect_equal(obj[[1]], 10.0)
   expect_equal(obj[[6]], 60.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: logical [<- auto-expands when bools longer than contents", {
   obj <- cNL$new()
   obj$setLength(2L)
-  obj[[1]] <- 1.0; obj[[2]] <- 2.0
-  obj[c(TRUE, FALSE, TRUE, FALSE, TRUE)] <- list(10.0, 30.0, 50.0)  # bools longer -> resize to 5
+  obj[[1]] <- 1.0
+  obj[[2]] <- 2.0
+  obj[c(TRUE, FALSE, TRUE, FALSE, TRUE)] <- list(10.0, 30.0, 50.0) # bools longer -> resize to 5
   expect_equal(length(obj), 5L)
   expect_equal(obj[[1]], 10.0)
   expect_equal(obj[[3]], 30.0)
   expect_equal(obj[[5]], 50.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -453,7 +490,8 @@ test_that("nList compiled obj used from R: logical [<- auto-expands when bools l
 test_that("nList compiled obj used from R: as.list", {
   obj <- make_compiled()
   expect_equal(as.list(obj), list(10.0, 20.0, 30.0, 40.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -464,35 +502,40 @@ test_that("nList compiled obj used from R: [[ NA index errors", {
   obj <- make_compiled()
   expect_error(obj[[NA_integer_]])
   expect_error(obj[[NA_real_]])
-  expect_error(obj[[NA]])            # logical NA
-  rm(obj); gc()
+  expect_error(obj[[NA]]) # logical NA
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ out-of-bounds errors", {
   obj <- make_compiled()
   expect_error(obj[[0L]])
-  expect_error(obj[[5L]])            # length is 4
+  expect_error(obj[[5L]]) # length is 4
   expect_error(obj[[-1L]])
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ FALSE logical errors", {
   obj <- make_compiled()
   expect_error(obj[[FALSE]])
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ multi-element index errors", {
   obj <- make_compiled()
   expect_error(obj[[c(1L, 2L)]])
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [[ non-finite numeric errors", {
   obj <- make_compiled()
   expect_error(obj[[Inf]])
   expect_error(obj[[NaN]])
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -501,30 +544,34 @@ test_that("nList compiled obj used from R: [[ non-finite numeric errors", {
 
 test_that("nList compiled obj used from R: [<- NA index errors", {
   obj <- make_compiled()
-  expect_error(obj[NA_integer_]  <- list(1.0))
-  expect_error(obj[NA_real_]     <- list(1.0))
-  expect_error(obj[NA]           <- list(1.0))   # logical NA
-  rm(obj); gc()
+  expect_error(obj[NA_integer_] <- list(1.0))
+  expect_error(obj[NA_real_] <- list(1.0))
+  expect_error(obj[NA] <- list(1.0)) # logical NA
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- zero or negative integer index errors", {
   obj <- make_compiled()
-  expect_error(obj[0L]  <- list(1.0))
+  expect_error(obj[0L] <- list(1.0))
   expect_error(obj[-1L] <- list(1.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- non-finite numeric index errors", {
   obj <- make_compiled()
   expect_error(obj[Inf] <- list(1.0))
   expect_error(obj[NaN] <- list(1.0))
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled obj used from R: [<- zero-length replacement errors", {
   obj <- make_compiled()
   expect_error(obj[1:2] <- list())
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList: [<- wrong nList element type is rejected", {
@@ -532,9 +579,10 @@ test_that("nList: [<- wrong nList element type is rejected", {
   cNL_int <- nCompile(rNL_int)
   src <- cNL_int$new()
   src$setLength(2L)
-  dst <- make_compiled()   # numericScalar nList
+  dst <- make_compiled() # numericScalar nList
   expect_error(dst[1:2] <- src)
-  rm(src, dst); gc()
+  rm(src, dst)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -553,7 +601,7 @@ test_that("type2uniqueID works", {
   v1 <- nCompiler:::type2uniqueID("nCppVec('double()')")
   v2 <- nCompiler:::type2uniqueID("nCppVec(double())")
   myt <- nType(nCppVec(double()))
-  v3 <- nCompiler:::type2uniqueID({{myt}})
+  v3 <- nCompiler:::type2uniqueID({{ myt }})
   myt2 <- nType(nCppVec(double()))
   v4 <- nCompiler:::type2uniqueID(T(myt2))
   v5 <- nCompiler:::type2uniqueID(nCppVec(double()))
@@ -572,7 +620,7 @@ test_that("type2uniqueID works", {
   v1 <- nCompiler:::type2uniqueID("nList('double()')")
   v2 <- nCompiler:::type2uniqueID("nList(double())")
   myt <- nType(nList(double()))
-  v3 <- nCompiler:::type2uniqueID({{myt}})
+  v3 <- nCompiler:::type2uniqueID({{ myt }})
   myt2 <- nType(nList(double()))
   v4 <- nCompiler:::type2uniqueID(T(myt2))
   v5 <- nCompiler:::type2uniqueID(nList(double()))
@@ -590,7 +638,7 @@ test_that("type2uniqueID works", {
   v1 <- nCompiler:::type2uniqueID("nCppVec('nCppVec(double())')")
   v2 <- nCompiler:::type2uniqueID("nCppVec(nCppVec(double()))")
   myt <- nType(nCppVec(nCppVec(double())))
-  v3 <- nCompiler:::type2uniqueID({{myt}})
+  v3 <- nCompiler:::type2uniqueID({{ myt }})
   myt2 <- nType(nCppVec(nCppVec(double())))
   v4 <- nCompiler:::type2uniqueID(T(myt2))
   v5 <- nCompiler:::type2uniqueID(nCppVec(nCppVec(double())))
@@ -607,7 +655,7 @@ test_that("type2uniqueID works", {
   v1 <- nCompiler:::type2uniqueID("nList('nList(double())')")
   v2 <- nCompiler:::type2uniqueID("nList(nList(double()))")
   myt <- nType(nList(nList(double())))
-  v3 <- nCompiler:::type2uniqueID({{myt}})
+  v3 <- nCompiler:::type2uniqueID({{ myt }})
   myt2 <- nType(nList(nList(double())))
   v4 <- nCompiler:::type2uniqueID(T(myt2))
   v5 <- nCompiler:::type2uniqueID(nList(nList(double())))
@@ -629,18 +677,20 @@ test_that("limits of T() notation vs {{}} in nested cases", {
   # specified by T() fails because
   # when used as RtypeObj inside of nList_nClass
   # the scoping to myt3 is lost.
-  problem <- quote({  myt3 <- nType(double())
-  v7 <- nCompiler:::type2cpp_typename(nList(T(myt3)))})
+  problem <- quote({
+    myt3 <- nType(double())
+    v7 <- nCompiler:::type2cpp_typename(nList(T(myt3)))
+  })
   myenv <- new.env()
   expect_error(eval(problem, envir = myenv))
-  #myenv$v7
+  # myenv$v7
 
   # then we see that by full use of rlang, with {{}}
   # to pass expressions with environments,
   # there is no problem
   problem <- quote({
     myt3 <- nType(double())
-    v7 <- nCompiler:::type2cpp_typename(nList({{myt3}}))
+    v7 <- nCompiler:::type2cpp_typename(nList({{ myt3 }}))
   })
   myenv <- new.env()
   eval(problem, envir = myenv)
@@ -658,7 +708,7 @@ test_that("type2cpp_typename works", {
   v1 <- nCompiler:::type2cpp_typename("nCppVec('double()')")
   v2 <- nCompiler:::type2cpp_typename("nCppVec(double())")
   myt <- nType(nCppVec(double()))
-  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  v3 <- nCompiler:::type2cpp_typename({{ myt }})
   myt2 <- nType(nCppVec(double()))
   v4 <- nCompiler:::type2cpp_typename(T(myt2))
   v5 <- nCompiler:::type2cpp_typename(nCppVec(double()))
@@ -675,13 +725,13 @@ test_that("type2cpp_typename works", {
   v1 <- nCompiler:::type2cpp_typename("nList('double()')")
   v2 <- nCompiler:::type2cpp_typename("nList(double())")
   myt <- nType(nList(double()))
-  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  v3 <- nCompiler:::type2cpp_typename({{ myt }})
   myt2 <- nType(nList(double()))
   v4 <- nCompiler:::type2cpp_typename(T(myt2))
   v5 <- nCompiler:::type2cpp_typename(nList(double()))
   v6 <- nCompiler:::type2cpp_typename(nList("double()"))
   myt3 <- nType(double())
-  v7 <- nCompiler:::type2cpp_typename(nList({{myt3}})) ## see limits of T() vs {{}} above. T() fails here, only when run through testthat because then scoping matters.
+  v7 <- nCompiler:::type2cpp_typename(nList({{ myt3 }})) ## see limits of T() vs {{}} above. T() fails here, only when run through testthat because then scoping matters.
   expect_identical(v1, v2)
   expect_identical(v1, v3)
   expect_identical(v3, v4)
@@ -692,7 +742,7 @@ test_that("type2cpp_typename works", {
   v1 <- nCompiler:::type2cpp_typename("nCppVec('nCppVec(double())')")
   v2 <- nCompiler:::type2cpp_typename("nCppVec(nCppVec(double()))")
   myt <- nType(nCppVec(nCppVec(double())))
-  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  v3 <- nCompiler:::type2cpp_typename({{ myt }})
   myt2 <- nType(nCppVec(nCppVec(double())))
   v4 <- nCompiler:::type2cpp_typename(T(myt2))
   v5 <- nCompiler:::type2cpp_typename(nCppVec(nCppVec(double())))
@@ -709,13 +759,13 @@ test_that("type2cpp_typename works", {
   v1 <- nCompiler:::type2cpp_typename("nList('nList(double())')")
   v2 <- nCompiler:::type2cpp_typename("nList(nList(double()))")
   myt <- nType(nList(nList(double())))
-  v3 <- nCompiler:::type2cpp_typename({{myt}})
+  v3 <- nCompiler:::type2cpp_typename({{ myt }})
   myt2 <- nType(nList(nList(double())))
   v4 <- nCompiler:::type2cpp_typename(T(myt2))
   v5 <- nCompiler:::type2cpp_typename(nList(nList(double())))
   v6 <- nCompiler:::type2cpp_typename(nList(nList("double()")))
   myt3 <- nType(nList(double()))
-  v7 <- nCompiler:::type2cpp_typename(nList({{myt3}})) ## ditto
+  v7 <- nCompiler:::type2cpp_typename(nList({{ myt3 }})) ## ditto
   expect_identical(v1, v2)
   expect_identical(v1, v3)
   expect_identical(v3, v4)
@@ -728,7 +778,8 @@ test_that("nList: two generators of same type have equal classID", {
   rNL1 <- nList("numericScalar")
   rNL2 <- nList("numericScalar")
   expect_equal(NCinternals(rNL1)$classID, NCinternals(rNL2)$classID)
-  rm(rNL1, rNL2); gc()
+  rm(rNL1, rNL2)
+  gc()
 })
 
 test_that("nList: duplicate units in nCompile are error-trapped", {
@@ -737,7 +788,8 @@ test_that("nList: duplicate units in nCompile are error-trapped", {
   # Both generators have the same classID; nCompile should deduplicate and
   # produce exactly one compiled nList class without error.
   expect_error(comp <- nCompile(rNL1, rNL2))
-  rm(rNL1, rNL2); gc()
+  rm(rNL1, rNL2)
+  gc()
 })
 
 test_that("nList: multiple ways to indicate the same nList are de-duplicated", {
@@ -745,12 +797,12 @@ test_that("nList: multiple ways to indicate the same nList are de-duplicated", {
   rNL2 <- nList("integerScalar")
   foo <- nFunction(
     name = "foo",
-    function(nl = 'rNL1') {
+    function(nl = "rNL1") {
       return(nl)
     },
     returnType = "nList('numericScalar')"
   )
-#  comp <- nCompile(foo)
+  #  comp <- nCompile(foo)
   comp <- nCompile(rNL1 = rNL1, rNL2 = rNL2, foo) # packageNames will be used unless named explicitly
   cNL1a <- comp$rNL1$new()
   cNL2a <- comp$rNL2$new()
@@ -764,7 +816,7 @@ test_that("nList: multiple ways to indicate the same nList are correctly de-dupl
   rNL1 <- nList("double()") # equivalent to numericScalar but not seen as the same - FIX ME
   foo <- nFunction(
     name = "foo",
-    function(nl = 'rNL1') {
+    function(nl = "rNL1") {
       return(nl)
     },
     returnType = "nList('numericScalar')"
@@ -779,14 +831,13 @@ test_that("nList: multiple ways to indicate the same nList are correctly de-dupl
 # Compiled: various [ an [[ get and set operations compile and work
 # ---------------------------------------------------------------------------
 
-test_that("nList various bracket get and set operations compile and work for scalar element",
-{
+test_that("nList various bracket get and set operations compile and work for scalar element", {
   inner_type <- nType(numericScalar())
-  rNL <- nList({{inner_type}})
+  rNL <- nList({{ inner_type }})
   nc <- nClass(
     classname = "nc_holds_nList",
     Cpublic = list(
-      lst = 'rNL',
+      lst = "rNL",
       set_length = nFunction(
         function(len = integerScalar()) {
           length(lst) <- len
@@ -806,55 +857,55 @@ test_that("nList various bracket get and set operations compile and work for sca
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_single_bracket_double = nFunction(
         function(inds = double(1)) {
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_single_bracket_logical = nFunction(
         function(inds = logical(1)) {
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_int = nFunction(
-        function(inds = integer(1), v = 'rNL') {
+        function(inds = integer(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_double = nFunction(
-        function(inds = double(1), v = 'rNL') {
+        function(inds = double(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_logical = nFunction(
-        function(inds = logical(1), v = 'rNL') {
+        function(inds = logical(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_double_bracket = nFunction(
         function(ind = integer()) {
           return(lst[[ind]])
         },
-        returnType = 'T(inner_type)'
+        returnType = "T(inner_type)"
       ),
       set_double_bracket = nFunction(
-        function(ind = integer(), v = {{inner_type}}) {
+        function(ind = integer(), v = {{ inner_type }}) {
           lst[[ind]] <- v
           return(v)
         },
-        returnType = 'T(inner_type)'
+        returnType = "T(inner_type)"
       )
     )
   )
@@ -899,17 +950,17 @@ test_that("nList various bracket get and set operations compile and work for sca
   expect_equal(obj$get_length(), 4)
   expect_equal(obj$set_length(5), 5)
   expect_equal(obj$get_length(), 5)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
-test_that("nList various bracket get and set operations compile and work for vector element",
-{
-  inner_type <- nType(integerVector()) #nType(numericScalar())
-  rNL <- nList({{inner_type}})
+test_that("nList various bracket get and set operations compile and work for vector element", {
+  inner_type <- nType(integerVector()) # nType(numericScalar())
+  rNL <- nList({{ inner_type }})
   nc <- nClass(
     classname = "nc_holds_nList",
     Cpublic = list(
-      lst = 'rNL',
+      lst = "rNL",
       set_length = nFunction(
         function(len = integerScalar()) {
           length(lst) <- len
@@ -929,55 +980,55 @@ test_that("nList various bracket get and set operations compile and work for vec
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_single_bracket_double = nFunction(
         function(inds = double(1)) {
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_single_bracket_logical = nFunction(
         function(inds = logical(1)) {
           res <- lst[inds]
           return(res)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_int = nFunction(
-        function(inds = integer(1), v = 'rNL') {
+        function(inds = integer(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_double = nFunction(
-        function(inds = double(1), v = 'rNL') {
+        function(inds = double(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       set_single_bracket_logical = nFunction(
-        function(inds = logical(1), v = 'rNL') {
+        function(inds = logical(1), v = "rNL") {
           lst[inds] <- v
           return(lst)
         },
-        returnType = 'rNL'
+        returnType = "rNL"
       ),
       get_double_bracket = nFunction(
         function(ind = integer()) {
           return(lst[[ind]])
         },
-        returnType = 'T(inner_type)'
+        returnType = "T(inner_type)"
       ),
       set_double_bracket = nFunction(
-        function(ind = integer(), v = {{inner_type}}) {
+        function(ind = integer(), v = {{ inner_type }}) {
           lst[[ind]] <- v
           return(v)
         },
-        returnType = 'T(inner_type)'
+        returnType = "T(inner_type)"
       )
     )
   )
@@ -1022,7 +1073,8 @@ test_that("nList various bracket get and set operations compile and work for vec
   expect_equal(obj$get_length(), 4)
   expect_equal(obj$set_length(5), 5)
   expect_equal(obj$get_length(), 5)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 
@@ -1030,11 +1082,11 @@ test_that("nList of nClass elements works", {
   element_nc <- nClass(
     classname = "element_nc_",
     Cpublic = list(
-      x = 'numericVector',
+      x = "numericVector",
       foo = nFunction(
         function(a = double()) {
-        return(a+1)
-        returnType(double())
+          return(a + 1)
+          returnType(double())
         }
       )
     )
@@ -1061,11 +1113,11 @@ test_that("nList of nClass elements works", {
 ##
 test_that("nList: nClass member of nList type compiles and works", {
   elemT <- nType("numericScalar")
-  rNL <- nList({{elemT}})
+  rNL <- nList({{ elemT }})
   nc <- nClass(
     classname = "nc_holds_nList",
     Cpublic = list(
-      lst = 'rNL',
+      lst = "rNL",
       init = nFunction(function() {
         lst <<- rNL$new()
         length(lst) <- 3
@@ -1074,10 +1126,12 @@ test_that("nList: nClass member of nList type compiles and works", {
         length(lst) <- 4
         len <- length(lst)
         return(A)
-        returnType({{elemT}})
+        returnType({{ elemT }})
       }),
       getLen = nFunction(
-        function() {return(length(lst))},
+        function() {
+          return(length(lst))
+        },
         returnType = integerScalar()
       )
     )
@@ -1086,7 +1140,8 @@ test_that("nList: nClass member of nList type compiles and works", {
   obj <- comp$nc$new()
   obj$init()
   expect_equal(obj$getLen(), 4L)
-  rm(rNL, nc, comp, obj); gc()
+  rm(rNL, nc, comp, obj)
+  gc()
 })
 
 test_that("nList: nFunction return type of nList compiles and works", {
@@ -1094,15 +1149,18 @@ test_that("nList: nFunction return type of nList compiles and works", {
   nc <- nClass(
     classname = "nc_returns_nList",
     Cpublic = list(
-      lst = 'rNL',
+      lst = "rNL",
       init = nFunction(function() {
         lst <<- rNL$new()
         length(lst) <- 2
-        lst[[1]] <<- 100.0; lst[[2]] <<- 200.0
+        lst[[1]] <<- 100.0
+        lst[[2]] <<- 200.0
       }),
       getLst = nFunction(
-        function() { return(lst) },
-        returnType = 'rNL'
+        function() {
+          return(lst)
+        },
+        returnType = "rNL"
       )
     )
   )
@@ -1114,7 +1172,8 @@ test_that("nList: nFunction return type of nList compiles and works", {
   got <- obj$getLst()
   expect_equal(got[[1]], 100.0)
   expect_equal(got[[2]], 200.0)
-  rm(rNL, nc, comp, obj, got); gc()
+  rm(rNL, nc, comp, obj, got)
+  gc()
 })
 
 test_that("nList: nFunction argument of nList type compiles and works", {
@@ -1123,17 +1182,20 @@ test_that("nList: nFunction argument of nList type compiles and works", {
     classname = "nc_nList_arg",
     Cpublic = list(
       lenOf = nFunction(
-        function(x = 'rNL') { return(length(x)) },
-        returnType = 'integerScalar'
+        function(x = "rNL") {
+          return(length(x))
+        },
+        returnType = "integerScalar"
       )
     )
   )
   comp <- nCompile(nc, rNL = rNL)
-  obj  <- comp$nc$new()
-  lst  <- comp$rNL$new()
+  obj <- comp$nc$new()
+  lst <- comp$rNL$new()
   length(lst) <- 5
   expect_equal(obj$lenOf(lst), 5L)
-  rm(rNL, nc, comp, obj, lst); gc()
+  rm(rNL, nc, comp, obj, lst)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -1147,7 +1209,8 @@ test_that("nList uncompiled: set_all_values from plain list", {
   expect_equal(obj[[1]], 1.0)
   expect_equal(obj[[2]], 2.0)
   expect_equal(obj[[3]], 3.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList uncompiled: set_all_values from uncompiled nList", {
@@ -1155,8 +1218,9 @@ test_that("nList uncompiled: set_all_values from uncompiled nList", {
   obj <- rNL$new()
   obj$set_all_values(src)
   expect_equal(length(obj), 4)
-  for(i in 1:4) expect_equal(obj[[i]], src[[i]])
-  rm(src, obj); gc()
+  for (i in 1:4) expect_equal(obj[[i]], src[[i]])
+  rm(src, obj)
+  gc()
 })
 
 test_that("nList uncompiled: set_all_values from compiled nList", {
@@ -1164,8 +1228,9 @@ test_that("nList uncompiled: set_all_values from compiled nList", {
   obj <- rNL$new()
   obj$set_all_values(src)
   expect_equal(length(obj), 4)
-  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
-  rm(src, obj); gc()
+  for (i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj)
+  gc()
 })
 
 test_that("nList compiled: set_all_values from plain list", {
@@ -1175,7 +1240,8 @@ test_that("nList compiled: set_all_values from plain list", {
   expect_equal(obj[[1]], 1.0)
   expect_equal(obj[[2]], 2.0)
   expect_equal(obj[[3]], 3.0)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList compiled: set_all_values from compiled nList", {
@@ -1183,8 +1249,9 @@ test_that("nList compiled: set_all_values from compiled nList", {
   obj <- cNL$new()
   obj$set_all_values(src)
   expect_equal(obj$getLength(), 4L)
-  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
-  rm(src, obj); gc()
+  for (i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj)
+  gc()
 })
 
 test_that("nList compiled: set_all_values from uncompiled nList", {
@@ -1192,8 +1259,9 @@ test_that("nList compiled: set_all_values from uncompiled nList", {
   obj <- cNL$new()
   obj$set_all_values(src)
   expect_equal(obj$getLength(), 4L)
-  for(i in 1:4) expect_equal(obj[[i]], i * 10.0)
-  rm(src, obj); gc()
+  for (i in 1:4) expect_equal(obj[[i]], i * 10.0)
+  rm(src, obj)
+  gc()
 })
 
 test_that("nList compiled: set_all_values copies character scalars from a separately compiled nList", {
@@ -1206,7 +1274,8 @@ test_that("nList compiled: set_all_values copies character scalars from a separa
   obj <- cNLchr2$new()
   obj$set_all_values(src)
   expect_equal(as.list(obj), list("a", "bc"))
-  rm(src, obj); gc()
+  rm(src, obj)
+  gc()
 })
 
 # ---------------------------------------------------------------------------
@@ -1216,7 +1285,7 @@ test_that("nList compiled: set_all_values copies character scalars from a separa
 test_that("nList get_nDim and get_elementType work uncompiled, compiled, and via base class", {
   elemInfo_nc <- nClass(
     classname = "elemInfo_nc_",
-    Cpublic = list(x = 'numericScalar')
+    Cpublic = list(x = "numericScalar")
   )
   inner <- nList("numericVector") # must differ from the other nList types to be a distinct unit
   NL_num0 <- nList("numericScalar")
@@ -1254,11 +1323,13 @@ test_that("nList get_nDim and get_elementType work uncompiled, compiled, and via
     )
   )
   # nList units must be named to be returned under these names rather than their classIDs.
-  comp <- nCompile(NL_num0 = NL_num0, NL_int1 = NL_int1, NL_lgl2 = NL_lgl2, NL_chr0 = NL_chr0,
-                   NL_chr1 = NL_chr1, NL_nc = NL_nc, NL_nl = NL_nl,
-                   elemInfo_nc, inner, elemInfo_holder)
+  comp <- nCompile(
+    NL_num0 = NL_num0, NL_int1 = NL_int1, NL_lgl2 = NL_lgl2, NL_chr0 = NL_chr0,
+    NL_chr1 = NL_chr1, NL_nc = NL_nc, NL_nl = NL_nl,
+    elemInfo_nc, inner, elemInfo_holder
+  )
   holder <- comp$elemInfo_holder$new()
-  for(nm in names(expected)) {
+  for (nm in names(expected)) {
     # Uncompiled. Results do not depend on contents, so the nLists are empty.
     obj <- get(nm)$new()
     expect_identical(obj$get_nDim(), expected[[nm]][[1]], info = nm)
@@ -1276,21 +1347,22 @@ test_that("nList get_nDim and get_elementType work uncompiled, compiled, and via
   obj <- nList("RcppList")$new()
   expect_identical(obj$get_nDim(), NA_integer_)
   expect_identical(obj$get_elementType(), "UNKNOWN")
-  rm(obj, Cobj, holder); gc()
+  rm(obj, Cobj, holder)
+  gc()
 })
 
 test_that("nList ETaccess at C++ level works", {
   nc_inner <- nClass(
     Cpublic = list(x = "numericScalar")
   )
-  NL1 = nList(nc_inner())
-  NL2 = nList("numericVector()")
+  NL1 <- nList(nc_inner())
+  NL2 <- nList("numericVector()")
 
   nc_outer <- nClass(
     classname = "nc_outer",
     Cpublic = list(
       NLinner = "NL1",
-      NLvec  = "NL2",
+      NLvec = "NL2",
       nc_outer = nFunction(
         function() {
           NLinner <<- NL1$new()
@@ -1303,8 +1375,7 @@ test_that("nList ETaccess at C++ level works", {
         compileInfo = list(constructor = TRUE)
       ),
       check1 = nFunction(
-        function() {
-        },
+        function() {},
         returnType = "numericVector()",
         compileInfo = list(
           C_fun = function() {
@@ -1315,8 +1386,7 @@ test_that("nList ETaccess at C++ level works", {
         )
       ),
       check2 = nFunction(
-        function() {
-        },
+        function() {},
         returnType = "numericVector()",
         compileInfo = list(
           C_fun = function() {
@@ -1328,8 +1398,7 @@ test_that("nList ETaccess at C++ level works", {
         )
       ),
       check3 = nFunction(
-        function() {
-        },
+        function() {},
         returnType = "SEXP",
         compileInfo = list(
           C_fun = function() {
@@ -1340,8 +1409,7 @@ test_that("nList ETaccess at C++ level works", {
         )
       ),
       check4 = nFunction(
-        function() {
-        },
+        function() {},
         returnType = "SEXP",
         compileInfo = list(
           C_fun = function() {
@@ -1353,12 +1421,12 @@ test_that("nList ETaccess at C++ level works", {
         )
       ),
       check5 = nFunction(
-        function(i = 'integerScalar') {
+        function(i = "integerScalar") {
           # HAZARD: We can use access_at in the DSL but we can't get the -1 subtracted yet
           # (due to limitation on providing custom opDef for a method)
-          ans <- as(NLvec$access_at(i-1), 'numericVector')
+          ans <- as(NLvec$access_at(i - 1), "numericVector")
           return(ans)
-          returnType('numericVector')
+          returnType("numericVector")
         }
       )
     )
@@ -1373,7 +1441,8 @@ test_that("nList ETaccess at C++ level works", {
   expect_equal(obj$check3(), 3)
   expect_error(obj$check4())
   expect_equal(obj$check5(2), 1:3)
-  rm(obj); gc()
+  rm(obj)
+  gc()
 })
 
 test_that("nList new operation works inline", {

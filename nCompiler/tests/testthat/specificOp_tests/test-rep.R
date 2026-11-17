@@ -1,4 +1,3 @@
-
 test_that("Basic rep usage works", {
   nc <- nClass(
     Cpublic = list(
@@ -36,7 +35,7 @@ test_that("Basic rep usage works", {
         function(x = integerArray(nDim = 3), length.out = numericScalar) {
           # N.B. If we do any arithmetic, whether exp(x) or 3L*x here, the result is integerNumeric, and we get C++ compilation errors.
           # but if we do 3L*x, we maintain integerVector
-          ans <- rep(3L*x, length.out = length.out)
+          ans <- rep(3L * x, length.out = length.out)
           return(ans)
           returnType(integerVector)
         }
@@ -105,8 +104,8 @@ test_that("Basic rep usage works", {
   x2 <- matrix(1:10, 2)
   expect_equivalent(nc_obj$nf3(x2, 7), 1 + log(rep(exp(x2), 7)))
   x3 <- array(1:24, c(2, 3, 4))
-  expect_equivalent(nc_obj$nf4(x3, 13), rep(3*x3, length.out = 13))
-  expect_equivalent(nc_obj$nf4(x3, 57), rep(3*x3, length.out = 57))
+  expect_equivalent(nc_obj$nf4(x3, 13), rep(3 * x3, length.out = 13))
+  expect_equivalent(nc_obj$nf4(x3, 57), rep(3 * x3, length.out = 57))
   expect_equivalent(nc_obj$nf5(1:7, 3), 1 + rep(exp(1:7), length.out = 3))
   expect_equivalent(nc_obj$nf5(12:7, 24), 1 + rep(exp(12:7), length.out = 24))
   expect_equivalent(nc_obj$nf6(7:1, 20, 9), 1 + log(rep(exp(7:1), 20, 9)))
@@ -114,7 +113,7 @@ test_that("Basic rep usage works", {
   expect_equivalent(nc_obj$nf7b(7, 3), 1 + log(rep(exp(7), each = 3)))
   expect_equivalent(nc_obj$nf8(x2, 3), 1 + log(rep(exp(x2), each = 3)))
   expect_equivalent(nc_obj$nf9(1:5, 3, 2), 1 + log(rep(exp(1:5), times = 3, each = 2)))
-  expect_equivalent(nc_obj$nf10(1:5, 3, 2), 1 + log(rep(exp(1:5), each = 3, length.out =2)))
+  expect_equivalent(nc_obj$nf10(1:5, 3, 2), 1 + log(rep(exp(1:5), each = 3, length.out = 2)))
 })
 
 ## To do: Try adding EIGEN_STRONG_INLINE

@@ -13,13 +13,14 @@ respect_known_failures <- TRUE
 
 utils <- system.file(
   file.path(
-    'tests', 'testthat',
-    c('testing_utils.R', 'testing_operatorLists.R',
-      if(respect_known_failures) 'known_failures.R' else character(),
-      'math_utils.R')
-
+    "tests", "testthat",
+    c(
+      "testing_utils.R", "testing_operatorLists.R",
+      if (respect_known_failures) "known_failures.R" else character(),
+      "math_utils.R"
+    )
   ),
-  package = 'nCompiler'
+  package = "nCompiler"
 )
 for (util_file in utils) source(util_file)
 
@@ -53,10 +54,10 @@ for (util_file in utils) source(util_file)
 
 ## Gold file testing takes approx. 1 minute.
 WRITE_GOLD_FILES <- FALSE ## If TRUE, this run of the code will create what we consider correct "gold" files.
-                          ## If FALSE, then gold file testing will compare to existing gold files.
-                          ## This is ignored if FULL_TESTING is TRUE
-FULL_TESTING <- TRUE     ## If TRUE, run actual tests involving compiling and running code.
-                          ## If FALSE, only compare generated code to what is in the gold files, but don't actually run it.
+## If FALSE, then gold file testing will compare to existing gold files.
+## This is ignored if FULL_TESTING is TRUE
+FULL_TESTING <- TRUE ## If TRUE, run actual tests involving compiling and running code.
+## If FALSE, only compare generated code to what is in the gold files, but don't actually run it.
 
 ## FULL_TESTING_GRANULARITY levels:
 ##   1 = put all test params in one giant nClass (approx. 15-20 minutes)
@@ -72,12 +73,12 @@ FULL_TESTING_GRANULARITY <- 2
 if (WRITE_GOLD_FILES) {
   gold_file_dir <- readline(
     # set this to your local repo's gold_files dir
-    prompt = 'Where do you want to save the gold files? '
+    prompt = "Where do you want to save the gold files? "
   )
 } else {
   gold_file_dir <- system.file(
-    file.path('tests', 'testthat', 'gold_files'),
-    package = 'nCompiler'
+    file.path("tests", "testthat", "gold_files"),
+    package = "nCompiler"
   )
 }
 
@@ -113,8 +114,9 @@ math_test_params <- make_math_test_params(get_math_ops())
 message("tests for pmin and pmax do not work and are omitted.")
 message("test for %% is omitted.\n See handler tag allScalar=TRUE for backward compatbility with nimble.\n The test suite does not respect this so we get errors.\n Either restrict the test suite in this case or change handling of backward compatibility.")
 run_test_suite(
-  math_test_params[c(1:5,7:45)], 'math', test_math, FULL_TESTING,
-  FULL_TESTING_GRANULARITY, write_gold_file = WRITE_GOLD_FILES,
+  math_test_params[c(1:5, 7:45)], "math", test_math, FULL_TESTING,
+  FULL_TESTING_GRANULARITY,
+  write_gold_file = WRITE_GOLD_FILES,
   gold_file_dir
 )
 
