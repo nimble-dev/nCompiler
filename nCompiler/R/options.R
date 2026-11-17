@@ -56,6 +56,11 @@ updateDefaults <- function(defaults, control) {
     nimble = FALSE, ## ensure all backward compatibility
     dropSingleSizes = FALSE, ## backward compatibility
     useSafeDeparse = TRUE,
+    ## If TRUE, assignment to an indexed (fixed-size) LHS with the same nDim as the RHS,
+    ## e.g. y[1:3] <- x, uses flex_ in C++ to check sizes at run-time.
+    ## If FALSE, such assignments use plain C++ `=` (Eigen checks sizes only in debug builds).
+    ## Assignments with a scalar LHS or with different LHS and RHS nDim always use flex_.
+    check_sizes_on_assignment = TRUE,
     digits = NULL
   )
 )

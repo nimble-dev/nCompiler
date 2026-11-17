@@ -399,9 +399,9 @@ inGenCppEnv(
 
     if (!isTRUE(get_nOption("automaticDerivatives"))) {
       ## The code generated for automatic derivatives creates problems here.
-      ## The isEigScalar may not be general.
-      ## In any case, we'll want a more general way to manage flex_()
-      if (code$name %in% assignmentOperators && isEigScalar(code$args[[1]], allowIndexing = TRUE)) {
+      ## The decision is made here (rather than in eigenization) because every
+      ## assignment reaches this point, including ones to a scalar-indexed LHS.
+      if (code$name %in% assignmentOperators && checkFlexAssignment(code$args[[1]], code$args[[2]])) {
         firstPart <- paste0("flex_(", firstPart, ")")
       }
     }
@@ -410,7 +410,7 @@ inGenCppEnv(
     output <- paste0(firstPart, opString, secondPart)
 
     if (useParens) {
-      ouput <- paste0("(", output, ")")
+      output <- paste0("(", output, ")")
     }
 
     output

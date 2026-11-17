@@ -52,7 +52,7 @@ public:
 
 template<typename TargetScalar,typename Scalar>
 class CastingScalarProxy {
-  static_assert(!flex_string_cast_v<TargetScalar, Scalar>, FLEX_STRING_TYPE_ERROR);
+  static_assert(flex_cast_allowed_v<TargetScalar, Scalar>, FLEX_STRING_TYPE_ERROR);
   Scalar& scalar_;
   TargetScalar casted_scalar_;
 public:

@@ -2,6 +2,7 @@
 #define __TENSOR_UTILS
 
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <string>
 
 template<typename other>
 long nDimTraits2_size(const other& x);
@@ -85,6 +86,46 @@ namespace Eigen {
   struct nDimTraits2<bool> {
     static const  std::size_t NumDimensions = 0;
     typedef bool Scalar;
+  };
+  template<>
+  struct nDimTraits2<std::string> {
+    static const  std::size_t NumDimensions = 0;
+    typedef std::string Scalar;
+  };
+
+  // x.eval() gives a TensorForcedEvalOp. Its TensorEvaluator stores its argument by value,
+  // so constructing one copies a concrete tensor argument (e.g. when x is an Eigen::Tensor).
+  // To get dimensions without that copy, nDimTraits2 uses the argument expression instead.
+  template<typename ArgType>
+  class nDimTraits2<const TensorForcedEvalOp<ArgType> > {
+  public:
+    typedef nDimTraits2<const typename internal::remove_all<ArgType>::type> ArgTraits;
+    typedef typename ArgTraits::Dimensions Dimensions;
+    static const std::size_t NumDimensions = ArgTraits::NumDimensions;
+    typedef typename ArgTraits::Scalar Scalar;
+
+    EIGEN_DEVICE_FUNC nDimTraits2(const TensorForcedEvalOp<ArgType>& xpr) :
+      m_ArgTraits(xpr.expression())
+    {}
+
+    EIGEN_DEVICE_FUNC const Dimensions& dimensions() const
+    {
+      return m_ArgTraits.dimensions();
+    }
+
+    EIGEN_DEVICE_FUNC Index size() const
+    {
+      return Eigen::internal::array_prod(m_ArgTraits.dimensions());
+    }
+
+  private:
+    ArgTraits m_ArgTraits;
+  };
+
+  template<typename ArgType>
+  class nDimTraits2<TensorForcedEvalOp<ArgType> > : public nDimTraits2<const TensorForcedEvalOp<ArgType> > {
+  public:
+    using nDimTraits2<const TensorForcedEvalOp<ArgType> >::nDimTraits2;
   };
 
 // This is used in one place, generated code for Rep.
