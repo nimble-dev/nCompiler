@@ -401,15 +401,17 @@ inGenCppEnv(
       ## The code generated for automatic derivatives creates problems here.
       ## The decision is made here (rather than in eigenization) because every
       ## assignment reaches this point, including ones to a scalar-indexed LHS.
-      if (code$name %in% assignmentOperators && checkFlexAssignment(code$args[[1]], code$args[[2]]))
-        firstPart <- paste0('flex_(', firstPart, ')')
+      if (code$name %in% assignmentOperators && checkFlexAssignment(code$args[[1]], code$args[[2]])) {
+        firstPart <- paste0("flex_(", firstPart, ")")
+      }
     }
 
     opString <- getCppString(code)
     output <- paste0(firstPart, opString, secondPart)
 
-    if(useParens)
-      output <- paste0( '(', output, ')')
+    if (useParens) {
+      output <- paste0("(", output, ")")
+    }
 
     output
   }

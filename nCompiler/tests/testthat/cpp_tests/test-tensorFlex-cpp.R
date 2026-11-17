@@ -6,191 +6,227 @@ flexFuns <- list(
   ## Scalar Lhs
   scalar_from_int_literal = nFunction(
     function() {
-      cppLiteral('flex_(ans) = 3;', types = list(ans = 'numericScalar'))
-      cppLiteral('return ans;')
-      returnType('numericScalar')
-    }),
+      cppLiteral("flex_(ans) = 3;", types = list(ans = "numericScalar"))
+      cppLiteral("return ans;")
+      returnType("numericScalar")
+    }
+  ),
   scalar_from_reduction = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('flex_(ans) = x.sum();', types = list(ans = 'numericScalar'))
-      cppLiteral('return ans;')
-      returnType('numericScalar')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("flex_(ans) = x.sum();", types = list(ans = "numericScalar"))
+      cppLiteral("return ans;")
+      returnType("numericScalar")
+    }
+  ),
   scalar_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('flex_(ans) = x;', types = list(ans = 'numericScalar'))
-      cppLiteral('return ans;')
-      returnType('numericScalar')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("flex_(ans) = x;", types = list(ans = "numericScalar"))
+      cppLiteral("return ans;")
+      returnType("numericScalar")
+    }
+  ),
   scalar_from_matrix_op = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('flex_(ans) = X * 2.0;', types = list(ans = 'numericScalar'))
-      cppLiteral('return ans;')
-      returnType('numericScalar')
-    }),
+    function(X = "numericMatrix") {
+      cppLiteral("flex_(ans) = X * 2.0;", types = list(ans = "numericScalar"))
+      cppLiteral("return ans;")
+      returnType("numericScalar")
+    }
+  ),
   int_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('flex_(ans) = x;', types = list(ans = 'integerScalar'))
-      cppLiteral('return ans;')
-      returnType('integerScalar')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("flex_(ans) = x;", types = list(ans = "integerScalar"))
+      cppLiteral("return ans;")
+      returnType("integerScalar")
+    }
+  ),
   bool_from_reduction = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('flex_(ans) = (x > 2.0).any();', types = list(ans = 'logicalScalar'))
-      cppLiteral('return ans;')
-      returnType('logicalScalar')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("flex_(ans) = (x > 2.0).any();", types = list(ans = "logicalScalar"))
+      cppLiteral("return ans;")
+      returnType("logicalScalar")
+    }
+  ),
   long_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('long L; flex_(L) = x; flex_(ans) = L;', types = list(ans = 'numericScalar'))
-      cppLiteral('return ans;')
-      returnType('numericScalar')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("long L; flex_(L) = x; flex_(ans) = L;", types = list(ans = "numericScalar"))
+      cppLiteral("return ans;")
+      returnType("numericScalar")
+    }
+  ),
   ## Whole-object Lhs
   vector_from_matrix = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('flex_(y) = X;', types = list(y = 'numericVector'))
-      cppLiteral('return y;')
-      returnType('numericVector')
-    }),
+    function(X = "numericMatrix") {
+      cppLiteral("flex_(y) = X;", types = list(y = "numericVector"))
+      cppLiteral("return y;")
+      returnType("numericVector")
+    }
+  ),
   vector_from_matrix_op = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('flex_(y) = X * 2.0;', types = list(y = 'numericVector'))
-      cppLiteral('return y;')
-      returnType('numericVector')
-    }),
+    function(X = "numericMatrix") {
+      cppLiteral("flex_(y) = X * 2.0;", types = list(y = "numericVector"))
+      cppLiteral("return y;")
+      returnType("numericVector")
+    }
+  ),
   vector_from_vector_cast = nFunction(
-    function(x = 'integerVector') {
-      cppLiteral('y = Eigen::Tensor<double, 1>(5); flex_(y) = x;', types = list(y = 'numericVector'))
-      cppLiteral('return y;')
-      returnType('numericVector')
-    }),
+    function(x = "integerVector") {
+      cppLiteral("y = Eigen::Tensor<double, 1>(5); flex_(y) = x;", types = list(y = "numericVector"))
+      cppLiteral("return y;")
+      returnType("numericVector")
+    }
+  ),
   vector_from_scalar = nFunction(
-    function(a = 'numericScalar') {
-      cppLiteral('y = Eigen::Tensor<double, 1>(5); flex_(y) = a;', types = list(y = 'numericVector'))
-      cppLiteral('return y;')
-      returnType('numericVector')
-    }),
+    function(a = "numericScalar") {
+      cppLiteral("y = Eigen::Tensor<double, 1>(5); flex_(y) = a;", types = list(y = "numericVector"))
+      cppLiteral("return y;")
+      returnType("numericVector")
+    }
+  ),
   vector_from_reduction = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('y = Eigen::Tensor<double, 1>(5); flex_(y) = x.sum();', types = list(y = 'numericVector'))
-      cppLiteral('return y;')
-      returnType('numericVector')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("y = Eigen::Tensor<double, 1>(5); flex_(y) = x.sum();", types = list(y = "numericVector"))
+      cppLiteral("return y;")
+      returnType("numericVector")
+    }
+  ),
   matrix_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('flex_(M) = x;', types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("flex_(M) = x;", types = list(M = "numericMatrix"))
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   matrix_from_array3 = nFunction(
     function() {
-      cppLiteral('Eigen::Tensor<double, 3> A(2, 1, 3); for(int i = 0; i < 6; ++i) A.data()[i] = i + 1; flex_(M) = A;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+      cppLiteral("Eigen::Tensor<double, 3> A(2, 1, 3); for(int i = 0; i < 6; ++i) A.data()[i] = i + 1; flex_(M) = A;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   matrix_from_scalar = nFunction(
-    function(a = 'numericScalar') {
-      cppLiteral('flex_(M) = a;', types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(a = "numericScalar") {
+      cppLiteral("flex_(M) = a;", types = list(M = "numericMatrix"))
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   array3_from_matrix = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('flex_(A) = X;', types = list(A = 'numericArray(nDim = 3)'))
-      cppLiteral('return A;')
-      returnType('numericArray(nDim = 3)')
-    }),
+    function(X = "numericMatrix") {
+      cppLiteral("flex_(A) = X;", types = list(A = "numericArray(nDim = 3)"))
+      cppLiteral("return A;")
+      returnType("numericArray(nDim = 3)")
+    }
+  ),
   array3_from_array4 = nFunction(
-    function(B = 'numericArray(nDim = 4)') {
-      cppLiteral('flex_(A) = B;', types = list(A = 'numericArray(nDim = 3)'))
-      cppLiteral('return A;')
-      returnType('numericArray(nDim = 3)')
-    }),
+    function(B = "numericArray(nDim = 4)") {
+      cppLiteral("flex_(A) = B;", types = list(A = "numericArray(nDim = 3)"))
+      cppLiteral("return A;")
+      returnType("numericArray(nDim = 3)")
+    }
+  ),
   ## Fixed-size Lhs (Eigen ops that can be assigned to but not resized)
   column_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   column_from_matrix = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = X;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(X = "numericMatrix") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = X;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   slice_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero();
+    function(x = "numericVector") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero();
                   Eigen::array<Eigen::Index, 2> offsets{{0, 2}}, extents{{3, 1}};
-                  flex_(M.slice(offsets, extents)) = x;', types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+                  flex_(M.slice(offsets, extents)) = x;", types = list(M = "numericMatrix"))
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   slice_from_matrix = nFunction(
-    function(X = 'numericMatrix') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero();
+    function(X = "numericMatrix") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero();
                   Eigen::array<Eigen::Index, 2> offsets{{0, 2}}, extents{{3, 1}};
-                  flex_(M.slice(offsets, extents)) = X;', types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+                  flex_(M.slice(offsets, extents)) = X;", types = list(M = "numericMatrix"))
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   column_from_scalar = nFunction(
-    function(a = 'numericScalar') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = a;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(a = "numericScalar") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = a;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   column_from_reduction = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x.sum();',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(x = "numericVector") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x.sum();",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   column_from_int_vector = nFunction(
-    function(x = 'integerVector') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    }),
+    function(x = "integerVector") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); flex_(M.chip(1, 1)) = x;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  ),
   named_column_from_vector = nFunction(
-    function(x = 'numericVector') {
-      cppLiteral('M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); auto col = M.chip(1, 1); flex_(col) = x;',
-                 types = list(M = 'numericMatrix'))
-      cppLiteral('return M;')
-      returnType('numericMatrix')
-    })
+    function(x = "numericVector") {
+      cppLiteral("M = Eigen::Tensor<double, 2>(3, 3); M.setZero(); auto col = M.chip(1, 1); flex_(col) = x;",
+        types = list(M = "numericMatrix")
+      )
+      cppLiteral("return M;")
+      returnType("numericMatrix")
+    }
+  )
 )
 
 ## Non-Eigen LHS (like DiagIO): flex_ passes through to the LHS type's own operator=.
 ## DoubleIt is a small proxy whose operator= writes twice the value(s) into y.
-nonEigenProxy <- 'struct DoubleIt {
+nonEigenProxy <- "struct DoubleIt {
                     Eigen::Tensor<double, 1> &y;
                     DoubleIt(Eigen::Tensor<double, 1> &y_) : y(y_) {}
                     DoubleIt& operator=(double a) { y.setConstant(2.0 * a); return *this; }
                     DoubleIt& operator=(const Eigen::Tensor<double, 1> &v) { y = v * 2.0; return *this; }
-                  };'
+                  };"
 flexFuns$proxy_from_scalar <- nFunction(
-  function(a = 'numericScalar') {
-    cppLiteral(paste(nonEigenProxy, 'y = Eigen::Tensor<double, 1>(3); flex_(DoubleIt(y)) = a;'),
-               types = list(y = 'numericVector'))
-    cppLiteral('return y;')
-    returnType('numericVector')
-  })
+  function(a = "numericScalar") {
+    cppLiteral(paste(nonEigenProxy, "y = Eigen::Tensor<double, 1>(3); flex_(DoubleIt(y)) = a;"),
+      types = list(y = "numericVector")
+    )
+    cppLiteral("return y;")
+    returnType("numericVector")
+  }
+)
 flexFuns$proxy_from_vector <- nFunction(
-  function(x = 'numericVector') {
-    cppLiteral(paste(nonEigenProxy, 'flex_(DoubleIt(y)) = x;'),
-               types = list(y = 'numericVector'))
-    cppLiteral('return y;')
-    returnType('numericVector')
-  })
+  function(x = "numericVector") {
+    cppLiteral(paste(nonEigenProxy, "flex_(DoubleIt(y)) = x;"),
+      types = list(y = "numericVector")
+    )
+    cppLiteral("return y;")
+    returnType("numericVector")
+  }
+)
 
 cFlexFuns <- do.call(nCompile, flexFuns)
 
@@ -230,8 +266,16 @@ test_that("flex_ assigns to whole objects, resizing them", {
 })
 
 test_that("flex_ assigns to fixed-size targets when extents match except for 1s", {
-  colResult <- function(v) { M <- matrix(0, 3, 3); M[, 2] <- v; M }
-  lastColResult <- function(v) { M <- matrix(0, 3, 3); M[, 3] <- v; M }
+  colResult <- function(v) {
+    M <- matrix(0, 3, 3)
+    M[, 2] <- v
+    M
+  }
+  lastColResult <- function(v) {
+    M <- matrix(0, 3, 3)
+    M[, 3] <- v
+    M
+  }
   expect_equal(cFlexFuns$column_from_vector(1:3), colResult(1:3))
   expect_equal(cFlexFuns$column_from_matrix(matrix(1:3, 1, 3)), colResult(1:3))
   expect_equal(cFlexFuns$column_from_matrix(matrix(1:3, 3, 1)), colResult(1:3))
@@ -246,7 +290,11 @@ test_that("flex_ assigns to fixed-size targets when extents match except for 1s"
 })
 
 test_that("flex_ fills fixed-size targets from scalars", {
-  colResult <- function(v) { M <- matrix(0, 3, 3); M[, 2] <- v; M }
+  colResult <- function(v) {
+    M <- matrix(0, 3, 3)
+    M[, 2] <- v
+    M
+  }
   expect_equal(cFlexFuns$column_from_scalar(7), colResult(7))
   expect_equal(cFlexFuns$column_from_reduction(1:3), colResult(6))
 })

@@ -471,15 +471,25 @@ isEigScalar <- function(code, allowIndexing = FALSE) {
 #   is indexed (fixed-size) and the nOption check_sizes_on_assignment is TRUE.
 # Note that a whole-object LHS with the same nDim as the RHS uses plain `=` (not flex).
 checkFlexAssignment <- function(LHS, RHS) {
-  if(isEigScalar(LHS, allowIndexing = TRUE)) return(TRUE)
+  if (isEigScalar(LHS, allowIndexing = TRUE)) {
+    return(TRUE)
+  }
   LHStype <- LHS$type
   RHStype <- RHS$type
-  if(!inherits(LHStype, "symbolBasic") || !inherits(RHStype, "symbolBasic")) return(FALSE)
-  if(!(LHStype$type %in% c("double", "integer", "logical"))) return(FALSE)
+  if (!inherits(LHStype, "symbolBasic") || !inherits(RHStype, "symbolBasic")) {
+    return(FALSE)
+  }
+  if (!(LHStype$type %in% c("double", "integer", "logical"))) {
+    return(FALSE)
+  }
   LHSnDim <- LHStype$nDim
   RHSnDim <- RHStype$nDim
-  if(!is.numeric(LHSnDim) || !is.numeric(RHSnDim)) return(FALSE)
-  if(LHSnDim != RHSnDim) return(TRUE)
+  if (!is.numeric(LHSnDim) || !is.numeric(RHSnDim)) {
+    return(FALSE)
+  }
+  if (LHSnDim != RHSnDim) {
+    return(TRUE)
+  }
   !isTRUE(LHS$isName) && isTRUE(get_nOption("check_sizes_on_assignment"))
 }
 

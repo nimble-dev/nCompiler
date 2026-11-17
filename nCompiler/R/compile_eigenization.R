@@ -457,8 +457,8 @@ inEigenizeEnv(
       }
     }
     ##
-    ## Use of flex_(LHS) is decided in genCppEnv$MidOperator 
-    if(isTRUE(workEnv$aliasRisk)) {
+    ## Use of flex_(LHS) is decided in genCppEnv$MidOperator
+    if (isTRUE(workEnv$aliasRisk)) {
       use_eval <- TRUE
       if (!inherits(code$args[[2]]$type, "symbolBasic")) {
         use_eval <- FALSE
