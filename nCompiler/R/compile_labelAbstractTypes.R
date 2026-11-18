@@ -634,12 +634,13 @@ inLabelAbstractTypesEnv(
         )
       }
       code$type <- returnSym$clone() ## clone is needed because we might resolve a TBD symbol and we don't want to change the original returnSym
-      ## Passing a scalar to a non-scalar parameter is not supported yet.
-      ## (For a copy parameter it would compile, via the Eigen::Tensor size constructor, to the wrong result.)
+      ## Passing a scalar to a non-scalar ref or blockRef parameter is not supported yet.
+      ## (A copy parameter is handled by an as_nC Copy proxy; see nFunction_call in eigenization.)
       for (i in seq_along(code$args)) {
         paramSym <- nFunctionCallParamSymbol(code, i)
         argType <- code$args[[i]]$type
         if (inherits(paramSym, "symbolBasic") && inherits(argType, "symbolBasic") &&
+          (isTRUE(paramSym$isRef) || isTRUE(paramSym$isBlockRef)) &&
           isTRUE(paramSym$nDim > 0) && identical(argType$nDim, 0)) {
           stop(
             exprClassProcessingErrorMsg(

@@ -517,6 +517,38 @@ nFunctionCallParamSymbol <- function(code, argID) {
   argSymTab$getSymbol(argName)
 }
 
+# How should argument arg be passed to an nFunction (or nClass method) parameter
+# whose declared symbol is paramSym (from nFunctionCallParamSymbol)?
+# Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "Copy") for
+# an as_nC proxy, which is generated via an nAs layer.
+# Currently only copy (not ref or blockRef) parameters of basic types are handled:
+# - same scalar type and nDim: as-is.
+# - both true scalars: as-is (C++ converts the scalar type).
+# - otherwise: "Copy" (a new object made by flex_ assignment, see CopyProxy in nC_as.h).
+checkArgPassing <- function(arg, paramSym) {
+  argType <- arg$type
+  if (!inherits(paramSym, "symbolBasic") || !inherits(argType, "symbolBasic")) {
+    return(NULL)
+  }
+  if (isTRUE(paramSym$isRef) || isTRUE(paramSym$isBlockRef)) {
+    return(NULL)
+  }
+  basicTypes <- c("double", "integer", "logical")
+  if (!(paramSym$type %in% basicTypes) || !(argType$type %in% basicTypes)) {
+    return(NULL)
+  }
+  if (!is.numeric(paramSym$nDim) || !is.numeric(argType$nDim)) {
+    return(NULL)
+  }
+  if (paramSym$type == argType$type && paramSym$nDim == argType$nDim) {
+    return(NULL)
+  }
+  if (paramSym$nDim == 0 && argType$nDim == 0) {
+    return(NULL)
+  }
+  "Copy"
+}
+
 newAssignmentExpression <- function() {
   exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = "<-")
 }

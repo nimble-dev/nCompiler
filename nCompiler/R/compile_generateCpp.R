@@ -789,7 +789,10 @@ nCompiler:::inGenCppEnv(
     is_lhs <- isTRUE(code$aux$onLHS)
 
     # tgt_cpp  <- as_op_scalarToCpp(target_sym$type)
-    mode_arg <- if (is_lhs) ", AsMode::LHS" else if (use_stm) ", AsMode::STM" else ""
+    # aux$asMode is set when the nAs layer is inserted for argument passing (see nFunction_call in eigenization).
+    mode_arg <- if (!is.null(code$aux$asMode)) {
+      paste0(", AsMode::", code$aux$asMode)
+    } else if (is_lhs) ", AsMode::LHS" else if (use_stm) ", AsMode::STM" else ""
     # All proxy types expose operator()() — always append ().
     #    paste0('as_nC<', tgt_cpp, ', ', tgt_nDim, mode_arg, '>(', obj_cpp, ')()')
     paste0(

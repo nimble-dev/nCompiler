@@ -580,6 +580,25 @@ inEigenizeEnv(
   }
 )
 
+## A call to an nFunction or nClass method.
+## Each argument that can't be passed as-is to its parameter (see checkArgPassing)
+## gets an nAs layer with the parameter's type, generating as_nC<type, AsMode::mode>(arg)().
+## This runs after the arguments have been eigenized.
+inEigenizeEnv(
+  nFunction_call <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    for (i in seq_along(code$args)) {
+      if (!inherits(code$args[[i]], "exprClass")) next
+      paramSym <- nFunctionCallParamSymbol(code, i)
+      mode <- checkArgPassing(code$args[[i]], paramSym)
+      if (is.null(mode)) next
+      asExpr <- insertExprClassLayer(code, i, "nAs")
+      asExpr$type <- symbolBasic$new(name = "", type = paramSym$type, nDim = paramSym$nDim)
+      asExpr$aux$asMode <- mode
+    }
+    invisible(NULL)
+  }
+)
+
 inEigenizeEnv(
   RandomGeneration <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # determine arguments that parameterize the dist'n.

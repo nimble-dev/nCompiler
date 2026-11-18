@@ -801,13 +801,70 @@ test_that("blockRef views follow the flex rule for dimensions (C++ to C++)", {
   expect_equal(A[-12], (1:12)[-12])
 })
 
-test_that("unsupported argument passing cases give compile-time errors", {
-  foo1 <- nFunction(
+test_that("pass by copy adapts scalar type, nDim, expressions, and scalars (C++ to C++)", {
+  # Copy arguments: modifying x does not affect the caller's object.
+  cp <- nFunction(
     fun = function(x = double(1)) {
+      x[1] <- x[1] + 100
       return(sum(x))
       returnType(double())
     }
   )
+  cpi <- nFunction(
+    fun = function(x = integer(1)) {
+      return(sum(x))
+      returnType(double())
+    }
+  )
+  cpm <- nFunction(
+    fun = function(x = double(2)) {
+      return(x[3, 1])
+      returnType(double())
+    }
+  )
+  sc <- nFunction(
+    fun = function(x = double()) {
+      return(2 * x)
+      returnType(double())
+    }
+  )
+  foo <- nFunction(
+    fun = function(v = double(1), iv = integer(1), M = double(2), a = double()) {
+      ans <- c(
+        cp(iv), # integer -> double
+        cp(M), # 3x1 -> vector
+        cp(iv + 1L), # integer expression
+        cp(a), # scalar -> vector (length 1)
+        cp(v), # same type (passed as-is)
+        cp(v + 1), # same-type expression (passed as-is)
+        cpi(v * 1.5), # double expression -> integer (truncates)
+        cpm(v), # vector -> 3x1 matrix
+        sc(v[2:2]) # length-1 vector -> scalar
+      )
+      return(ans)
+      returnType(double(1))
+    }
+  )
+  foo2 <- nFunction(
+    fun = function(v = double(1)) {
+      return(sc(v)) # run-time error unless v has length 1
+      returnType(double())
+    }
+  )
+  C <- nCompile(cp, cpi, cpm, sc, foo, foo2)
+  v <- as.numeric(1:3)
+  iv <- 1:3
+  M <- matrix(as.numeric(1:3), ncol = 1)
+  ans <- C$foo(v, iv, M, 5)
+  expect_equal(ans, c(106, 106, 109, 105, 106, 109, 1 + 3 + 4, 3, 4))
+  expect_identical(v, as.numeric(1:3))
+  expect_identical(iv, 1:3)
+  expect_identical(M, matrix(as.numeric(1:3), ncol = 1))
+  expect_equal(C$foo2(7), 14)
+  expect_error(C$foo2(v))
+})
+
+test_that("unsupported argument passing cases give compile-time errors", {
   foo1bref <- nFunction(
     fun = function(x = double(1)) {
       return(sum(x))
@@ -815,14 +872,14 @@ test_that("unsupported argument passing cases give compile-time errors", {
     },
     blockRefArgs = "x"
   )
-  # Scalar to non-scalar parameter (not supported yet)
+  # Scalar to non-scalar blockRef parameter (not supported yet)
   foo2 <- nFunction(
     fun = function(a = double()) {
-      return(foo1(a))
+      return(foo1bref(a))
       returnType(double())
     }
   )
-  expect_error(nCompile(foo1, foo2), "scalar was passed")
+  expect_error(nCompile(foo1bref, foo2), "scalar was passed")
   # A non-strided index can't be passed by blockRef
   foo3 <- nFunction(
     fun = function(x = double(1)) {
