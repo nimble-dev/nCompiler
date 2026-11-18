@@ -207,7 +207,7 @@ class RuntimeCastingProxy<Eigen::Tensor<TargetScalar, nDim> > {
   Eigen::array<Eigen::Index, nDim> dims_;
   bool is_lhs_;
 
-  // Mirrors mapTyped singleton-drop/pad logic from ETaccessorTyped.
+  // Same flex rule as mapTyped in ETaccessorTyped (see set_output_dims).
   Eigen::array<Eigen::Index, nDim> computeDims(const std::vector<int>& intDims) {
     Eigen::array<Eigen::Index, nDim> outDim;
     set_output_dims(intDims, outDim, nDim);

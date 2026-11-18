@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
+#include <nCompiler/ET_ext/flexDims.h>
 #include <nCompiler/ET_ext/RuntimeFlatView.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorFlex.h>
@@ -19,27 +20,14 @@ class ETaccessorTyped;
 template<typename ERROR, bool copy = false>
 class ETaccessor;
 
+// Set outDim (output_nDim elements) from inDim (a run-time number of dimensions)
+// by the flex rule (see flexDims.h): extents other than 1 are used in order,
+// spare dimensions keep the leftmost 1s, and trailing 1s are padded.
 template<typename inDimsT, typename outDimsT>
 void set_output_dims(const inDimsT &inDim, outDimsT &outDim,
                     size_t output_nDim) {
-  size_t in_nDim = inDim.size();
-  if(output_nDim >= in_nDim) {
-    for(size_t i = 0; i < in_nDim; ++i) 
-      outDim[i] = inDim[i];
-    for(size_t i = in_nDim; i < output_nDim; ++i)
-      outDim[i] = 1;
-  } else {
-    size_t i_out = 0;
-    for(size_t i_in = 0; i_in < in_nDim; ++i_in) {
-      if(inDim[i_in] > 1) {
-        if(i_out >= output_nDim)
-          Rcpp::stop("Too many non-singleton dimensions for requested morphing to lower dimensional object.");
-        outDim[i_out++] = inDim[i_in];
-      }
-    }
-    for(; i_out < output_nDim; ++i_out)
-      outDim[i_out] = 1;
-  }
+  if(!flexDimsSetup(inDim, static_cast<int>(inDim.size()), outDim, static_cast<int>(output_nDim)))
+    Rcpp::stop("Too many non-singleton dimensions for requested use as lower number of dimensions.");
 }
 
 enum class AsMode { TM, STM, LHS };
@@ -254,14 +242,10 @@ class ETaccessorTyped : public ETaccessorBase {
 
   template<int output_nDim>
   ETM<output_nDim> mapTyped() {
-    //innate_nDim is the nDim of the object.
     //output_nDim is the requested nDim of the output map.
-    //If the output_nDim > innate_nDim, then set the output dims to innate dims padded with 1s.
-    //If the output_nDim < innate_nDim, then drop singleton dimensions in the innate dims.
-    //This is very similar to checkAndSetupDims in tensorFlex.h
-    //but there both the LHS and RHS nDims are known at compile time.
-    //Here only the output_nDim is known at compile time.
-    //Also it looks like in checkAndSetupDims, RHS singletons are always dropped
+    //The output dims are set from the object's dims by the flex rule (see set_output_dims),
+    //the same rule as checkAndSetupDims in tensorFlex.h, but here the object's nDim
+    //is only known at run time.
     // typedef typename Eigen::internal::traits<ETM<output_nDim> >::Index Index;
     typedef typename ETM<output_nDim>::Dimensions output_Dimensions;
     output_Dimensions outDim;

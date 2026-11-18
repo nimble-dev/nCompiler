@@ -744,6 +744,63 @@ test_that("pass indexed and dimension-changing arguments by blockRef (C++ to C++
   expect_equal(A, array(c(101, 2, 3), dim = c(1, 3, 1)))
 })
 
+test_that("blockRef views follow the flex rule for dimensions (C++ to C++)", {
+  # Mark element [i, j] (or [i]) and return the sum
+  m2 <- nFunction(
+    fun = function(x = double(2), i = integer(), j = integer()) {
+      x[i, j] <- x[i, j] + 100
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  v1 <- nFunction(
+    fun = function(x = double(1), i = integer()) {
+      x[i] <- x[i] + 100
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  foo <- nFunction(
+    fun = function(v = double(1), A = double(3), M = double(2), case = integer()) {
+      s <- 0
+      if (case == 1) s <- m2(v, 2L, 1L) # padding: (3) -> (3, 1)
+      if (case == 2) s <- m2(A, 1L, 2L) # leading 1 kept: (1, 3, 1) -> (1, 3)
+      if (case == 3) s <- v1(M[2, ], 3L) # row of a matrix (strided)
+      if (case == 4) s <- v1(M, 2L) # 3x4 -> vector: no flattening, error
+      return(s)
+      returnType(double())
+    },
+    blockRefArgs = c("v", "A", "M")
+  )
+  foo2 <- nFunction(
+    fun = function(A = double(3)) {
+      return(m2(A[, , 2], 2L, 3L)) # offset from a scalar-indexed higher dimension
+      returnType(double())
+    },
+    blockRefArgs = "A"
+  )
+  C <- nCompile(m2, v1, foo, foo2)
+
+  v <- as.numeric(1:3)
+  A <- array(as.numeric(1:3), c(1, 3, 1))
+  M <- matrix(as.numeric(1:12), 3)
+  expect_equal(C$foo(v, A, M, 1L), 106)
+  expect_equal(v, c(1, 102, 3))
+  expect_equal(C$foo(v, A, M, 2L), 106)
+  expect_equal(as.numeric(A), c(1, 102, 3))
+  expect_equal(C$foo(v, A, M, 3L), 2 + 5 + 108 + 11)
+  expect_equal(M[2, 3], 108)
+  M <- matrix(as.numeric(1:12), 3)
+  expect_error(C$foo(v, A, M, 4L), "Cannot create requested variable block")
+  expect_equal(M, matrix(as.numeric(1:12), 3))
+  A <- array(as.numeric(1:12), c(2, 3, 2))
+  expect_equal(C$foo2(A), sum(7:12) + 100)
+  expect_equal(A[2, 3, 2], 112)
+  expect_equal(A[-12], (1:12)[-12])
+})
+
 test_that("unsupported argument passing cases give compile-time errors", {
   foo1 <- nFunction(
     fun = function(x = double(1)) {

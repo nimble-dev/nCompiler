@@ -487,10 +487,9 @@ Scalar* make_scalarFieldPtr(const std::shared_ptr<genericInterfaceBaseC> &obj,
 // non-missing values, after the missing/negative check).
 //
 // The number of kept (non-dropped) dimensions must equal output_nDim: this
-// is checked explicitly before construction, because createSubTensorInfoGeneral
-// fills a fixed-size Eigen::array<long, output_nDim> by counting kept
-// dimensions as it walks ss, and silently leaves slots uninitialized (rather
-// than erroring) if that count doesn't match output_nDim.
+// is checked explicitly before construction. (createSubTensorInfoGeneral
+// itself would match a different number of kept dimensions to output_nDim
+// by the flex rule of flexDims.h, padding or dropping 1s.)
 template<typename Scalar>
 struct fieldSTM_spec {
   Scalar *data;

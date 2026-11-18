@@ -3,6 +3,9 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "index_block.h"
+#include "flexDims.h"
+#include <sstream>
+#include <stdexcept>
 
 // output_sizes gives output-dimensional sizes.
 // prod(output_sizes) will equal prod(input_sizes).
@@ -25,7 +28,14 @@
 //     startIndices[0] + i*output_strides[0] + output_sizes[0]*( (j*output_strides[1] + startIndices[1]) + output_sizes[1] * ( (k * output_strides[2] + startIndices[2]) )
 // Note also that quantities like output_sizes[1] * output_strides[2] could be cached.
 
-// backward compatibility with first version that used fixed input_nDim
+// The input dimensions in the view are those not indexed by a scalar (not ss[i].isSingle()).
+// Their extents (from ss, or the full input size for an empty block) are matched to
+// output_nDim by the flex rule (see flexDims.h): extents other than 1 are used in order,
+// spare output dimensions keep the leftmost 1s, and remaining output dimensions are padded
+// trailing 1s. Nothing is flattened: it is an error if more extents other than 1 are in the
+// view than output_nDim.
+// Input dimensions that are not used for an output dimension (scalar-indexed ones, and 1s that
+// are not kept) contribute only to the offset and to output_sizes.
 
 template<typename ss_type, typename input_sizes_type, size_t output_nDim, typename ScalarType=double>
 void createSubTensorInfoGeneral(const ss_type &ss,
@@ -35,63 +45,76 @@ void createSubTensorInfoGeneral(const ss_type &ss,
                                 Eigen::array<long, output_nDim> &output_startIndices,
                                 Eigen::array<long, output_nDim> &output_stopIndices) {
   typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
-  size_t currentOutputDim(output_nDim-1);
   if(output_nDim < 1) {
     std::cout<<"Shouldn't be calling createSubTensorInfo with output_nDim of 0.  That should be a scalar"<<std::endl;
+    return;
   }
-  
+  const int input_nDim = static_cast<int>(input_sizes.size());
+  // Extent of input dimension i in the view, or -1 if it is indexed by a scalar.
+  auto input_extents = [&ss, &input_sizes](int i) -> Index {
+    if(ss[i].isSingle()) return -1;
+    if(ss[i].isEmpty()) return input_sizes[i];
+    return ss[i].extent();
+  };
+  // outIndex_2_inIndex[j] is the input dimension used for output dimension j, or -1 for a padded trailing 1.
+  Eigen::array<int, output_nDim> outIndex_2_inIndex;
+  if(!flexDimsMap(input_extents, input_nDim, static_cast<int>(output_nDim), outIndex_2_inIndex)) {
+    std::ostringstream msg;
+    msg << "Cannot create requested variable block with " << output_nDim << " dimension(s) from extents (";
+    bool first = true;
+    for(int i = 0; i < input_nDim; ++i) {
+      if(input_extents(i) < 0) continue;
+      msg << (first ? "" : ", ") << input_extents(i);
+      first = false;
+    }
+    msg << ").";
+    throw std::runtime_error(msg.str());
+  }
+  int nUsed = 0;
+  while(nUsed < static_cast<int>(output_nDim) && outIndex_2_inIndex[nUsed] >= 0) ++nUsed;
+
+  // Walk the input dimensions from last to first. Each output dimension j > 0 accumulates the
+  // sizes and offset of the input dimensions from outIndex_2_inIndex[j] up to (but not including) outIndex_2_inIndex[j+1]
+  // (or up to the last input dimension for the last used output dimension).
+  // Output dimension 0 also accumulates the input dimensions below outIndex_2_inIndex[0], whose sizes
+  // multiply into its stride. It is finished after the loop.
+  // If no input dimension is used, output dimension 0 is a single element at the offset.
+  int currentOutputDim = nUsed - 1;
   Index currentOutputDimSize(1);
   Index currentOutputDimStart(0);
-  //  long currentOutputDimStop(0);
   Index currentOutputStride(1);
-  bool onLeadingSingletons(false);
-  bool dim0Done(false); // true if output dim 0 was finished in the loop (input dim 0 not single)
-  Index currentExtent(1); // product of extents of the non-single input dims merged into the current output dim
-  size_t i;
-  int input_nDim = input_sizes.size();
-  for(size_t ip1 = input_nDim; ip1 > 0; --ip1) {
-    i = ip1-1; // weirdness of decrement sequence with unsigned type
-    //   std::cout<<"i = "<<i<<" currentOutputDim = "<<currentOutputDim<<std::endl;
-    if(!ss[i].isSingle()) { // not single
-      currentOutputDimSize *= input_sizes[i];
-      currentOutputDimStart *= input_sizes[i];
-      currentOutputDimStart += ss[i].start();
-      if(ss[i].isEmpty())
-        currentExtent *= input_sizes[i];
-      else
-        currentExtent *= ss[i].extent();
-      // finish this outputDim:
-      if(currentOutputDim > 0 || i == 0) {
-        if(currentOutputDim < output_nDim) { // if it was decremented below 0 (which should never happen anyway), it will actually be MAX_INT or something like that, so this is really ">= 0"
-          output_sizes[currentOutputDim] = currentOutputDimSize;
-          output_startIndices[currentOutputDim] = currentOutputDimStart;
-          output_stopIndices[currentOutputDim] = currentOutputDimStart + currentExtent;
-          output_strides[currentOutputDim] = currentOutputStride;
-          if(i == 0) dim0Done = true;
-          --currentOutputDim;
-          currentOutputDimSize = 1;
-          currentOutputDimStart = 0;
-          currentOutputStride = 1;
-          currentExtent = 1;
-        }
+  Index dim0Extent(1);
+  bool belowDim0(false);
+  for(int i = input_nDim - 1; i >= 0; --i) {
+    currentOutputDimSize *= input_sizes[i];
+    currentOutputDimStart *= input_sizes[i];
+    currentOutputDimStart += ss[i].start(); // 0 for an empty block
+    if(belowDim0) currentOutputStride *= input_sizes[i];
+    if(currentOutputDim >= 0 && i == outIndex_2_inIndex[currentOutputDim]) {
+      if(currentOutputDim > 0) {
+        output_sizes[currentOutputDim] = currentOutputDimSize;
+        output_startIndices[currentOutputDim] = currentOutputDimStart;
+        output_stopIndices[currentOutputDim] = currentOutputDimStart + input_extents(i);
+        output_strides[currentOutputDim] = 1;
+        currentOutputDimSize = 1;
+        currentOutputDimStart = 0;
       } else {
-        onLeadingSingletons = true;
+        dim0Extent = input_extents(i);
+        belowDim0 = true;
       }
-    } else { // single
-      currentOutputDimSize *= input_sizes[i];
-      currentOutputDimStart *= input_sizes[i];
-      currentOutputDimStart += ss[i].start();
-      if(onLeadingSingletons) {
-        currentOutputStride *= input_sizes[i];
-      }
+      --currentOutputDim;
     }
   }
-  // If input dim 0 is single, output dim 0 was not finished in the loop, so finish it here.
-  if(onLeadingSingletons && !dim0Done) {
-    output_sizes[0] = currentOutputDimSize;
-    output_startIndices[0] = currentOutputDimStart;
-    output_stopIndices[0] = currentOutputDimStart + currentExtent * currentOutputStride;
-    output_strides[0] = currentOutputStride;
+  output_sizes[0] = currentOutputDimSize;
+  output_startIndices[0] = currentOutputDimStart;
+  output_stopIndices[0] = currentOutputDimStart + dim0Extent * currentOutputStride;
+  output_strides[0] = currentOutputStride;
+  // padded trailing 1s
+  for(int j = (nUsed > 0 ? nUsed : 1); j < static_cast<int>(output_nDim); ++j) {
+    output_sizes[j] = 1;
+    output_startIndices[j] = 0;
+    output_stopIndices[j] = 1;
+    output_strides[j] = 1;
   }
 }
     

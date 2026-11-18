@@ -234,6 +234,46 @@ test_that("access and ETaccess work for doubles", {
   expect_identical(obj$DM_get_set_arg_map_scalar(matrix(DS)), DS * 20)
 })
 
+test_that("ETaccess maps to fewer dimensions keep leftmost 1s (flex rule)", {
+  nc <- nClass(
+    Cpublic = list(
+      DA_map2 = nFunction(
+        function(DAx = "numericArray(nDim=3)") {
+          cppLiteral("ETaccess(DAx).map<2>() = 2 * ETaccess(DAx).map<2>();")
+          cppLiteral("return ETaccess(DAx).map<2>();")
+          returnType("numericMatrix")
+        }
+      ),
+      DA_STmap2 = nFunction(
+        function(DAx = "numericArray(nDim=3)") {
+          cppLiteral("ans = ETaccess(DAx).STmap<2>();", types = list(ans = "numericMatrix"))
+          cppLiteral("return ans;")
+          returnType("numericMatrix")
+        }
+      ),
+      DA_map1 = nFunction(
+        function(DAx = "numericArray(nDim=3)") {
+          cppLiteral("return ETaccess(DAx).map<1>();")
+          returnType("numericVector")
+        }
+      )
+    )
+  )
+  Cnc <- nCompile(nc)
+  obj <- Cnc$new()
+  # A spare dimension keeps the leading 1: (1, 5, 1) -> (1, 5), not (5, 1)
+  expect_identical(obj$DA_map2(array(as.numeric(1:5), dim = c(1, 5, 1))), matrix(2 * (1:5), nrow = 1))
+  expect_identical(obj$DA_STmap2(array(as.numeric(1:5), dim = c(1, 5, 1))), matrix(as.numeric(1:5), nrow = 1))
+  # (1, 1, 5) -> (1, 5); (5, 1, 1) -> (5, 1); (5, 1, 6) -> (5, 6)
+  expect_identical(obj$DA_map2(array(as.numeric(1:5), dim = c(1, 1, 5))), matrix(2 * (1:5), nrow = 1))
+  expect_identical(obj$DA_map2(array(as.numeric(1:5), dim = c(5, 1, 1))), matrix(2 * (1:5), ncol = 1))
+  expect_identical(obj$DA_map2(array(as.numeric(1:30), dim = c(5, 1, 6))), matrix(2 * (1:30), nrow = 5))
+  # No flattening
+  expect_identical(obj$DA_map1(array(as.numeric(1:5), dim = c(1, 5, 1))), as.numeric(1:5))
+  expect_error(obj$DA_map1(array(as.numeric(1:6), dim = c(2, 1, 3))))
+  expect_error(obj$DA_map2(array(as.numeric(1:24), dim = c(2, 3, 4))))
+})
+
 test_that("access and ETaccess work for integers", {
   nc <- nClass(
     Cpublic = list(
