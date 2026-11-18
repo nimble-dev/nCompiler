@@ -30,18 +30,6 @@ void set_output_dims(const inDimsT &inDim, outDimsT &outDim,
     Rcpp::stop("Too many non-singleton dimensions for requested use as lower number of dimensions.");
 }
 
-enum class AsMode { TM, STM, LHS };
-
-// Forward declarations: proxy classes are defined in nC_as.h (included after
-// this file). ETaccessorTyped::asTyped() returns them; because asTyped() is a
-// template, instantiation is deferred to the call site where they are fully
-// defined.
-template<typename ViewType> class EmptyProxy;
-template<typename Scalar> class EmptyScalarProxy;
-template<typename TargetScalar, typename ViewType> class RHSCastProxy;
-template<typename TargetScalar, typename ViewType> class CastingProxy;
-template<typename TargetScalar, typename Scalar> class CastingScalarProxy;
-
 // Names of scalar types used to downcast an ETaccessorBase without relying on
 // RTTI matching across DLLs (see typed_cast below, and nc_cast in
 // generic_class_interface.h for the same issue with nClasses). An ETaccessor may be
@@ -199,45 +187,6 @@ class ETaccessorTyped : public ETaccessorBase {
   template<int output_nDim>
   ESTM<output_nDim> STmapTyped() {
     return Eigen::MakeStridedTensorMap<output_nDim>::make(mapTyped<output_nDim>());
-  }
-
-  // Central dispatch for as() operations. Returns a proxy wrapping the
-  // appropriate view. All proxy types expose operator()() uniformly.
-  template<typename TargetType, AsMode mode = AsMode::TM, 
-           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, eigenTensor>, int> = 0>
-  auto asTyped() {
-    typedef typename Eigen::nDimTraits2<TargetType>::Scalar TargetScalar;
-    constexpr int nDim = Eigen::nDimTraits2<TargetType>::NumDimensions;
-    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
-      if constexpr (mode == AsMode::TM)
-        return EmptyProxy<ETM<nDim>>(mapTyped<nDim>());
-      else
-        return EmptyProxy<ESTM<nDim>>(STmapTyped<nDim>());
-    } else {
-      if constexpr (mode == AsMode::LHS) {
-        auto view = STmapTyped<nDim>();
-        return CastingProxy<TargetScalar, decltype(view)>(view);
-      } else if constexpr (mode == AsMode::STM) {
-        // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
-        // have correct strides in the lazy cast expression.
-        auto view = STmapTyped<nDim>();
-        return RHSCastProxy<TargetScalar, decltype(view)>(view);
-      } else {
-        auto view = mapTyped<nDim>();
-        return RHSCastProxy<TargetScalar, decltype(view)>(view);
-      }
-    }
-  }
-
-  template<typename TargetType, AsMode mode = AsMode::TM, 
-           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, trueScalar>, int> = 0>
-  auto asTyped() {
-    typedef TargetType TargetScalar;
-    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
-      return EmptyScalarProxy<TargetScalar>(scalarTyped());
-    } else {
-      return CastingScalarProxy<TargetScalar, Scalar>(scalarTyped());
-    }
   }
 
   template<int output_nDim>

@@ -5,13 +5,19 @@
 #include <type_traits>
 #include "../../ET_ext/StridedTensorMap.h"
 
+// The kind of view an as_nC proxy provides:
+//   TM  -- read-only (RHS) use of a whole object, as a TensorMap.
+//   STM -- read-only (RHS) use that will be indexed, as a StridedTensorMap.
+//   LHS -- writable use (assignment), as a StridedTensorMap, with write-back if cast.
+enum class AsMode { TM, STM, LHS };
+
 // ---------------------------------------------------------------------------
 // All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
 // obtain the underlying tensor expression or reference. This uniform interface
 // means callers always write as_nC<T,N,mode>(x)() regardless of mode or
 // scalar match.
 //
-// Four proxy types, selected at compile time by asTyped() / as_nC():
+// Four proxy types, selected at compile time by as_nC():
 //
 //   EmptyProxy<ViewType>               — same-scalar; wraps TM or STM view
 //   RHSCastProxy<Src,Tgt,N>            — cross-scalar RHS; lazy, no allocation
@@ -340,11 +346,81 @@ KnownProxy<TargetType> known_nC(std::unique_ptr<ETaccessorBase>&& acc) {
 // All overloads return a proxy; caller always writes as_nC<T,N,mode>(x)().
 // ---------------------------------------------------------------------------
 
-// Compile-time source: delegates to ETaccessorTyped<Scalar>::asTyped<>().
-// Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy.
-template<typename TargetType, AsMode mode = AsMode::TM, bool copy = false, typename T>
+// Helpers for the compile-time-source as_nC, which builds views directly from the source
+// (no ETaccessor). The source is an Eigen::Tensor or a true scalar.
+namespace as_nC_detail {
+  // TensorMap with nDim dimensions, set from the source's dimensions by the flex rule
+  // (see set_output_dims). A true scalar has no dimensions, so its map has extents of 1.
+  template<int nDim, typename T>
+  Eigen::TensorMap<Eigen::Tensor<flex_scalar_t<T>, nDim> > map(T &x) {
+    typedef Eigen::TensorMap<Eigen::Tensor<flex_scalar_t<T>, nDim> > TM;
+    typename TM::Dimensions outDim;
+    if constexpr (std::is_same_v<type_category_t<T>, trueScalar>) {
+      Eigen::array<Eigen::Index, 0> inDim;
+      set_output_dims(inDim, outDim, nDim);
+      return TM(&x, outDim);
+    } else {
+      set_output_dims(x.dimensions(), outDim, nDim);
+      return TM(x.data(), outDim);
+    }
+  }
+
+  // Reference to the single element of a true scalar, or of a tensor whose extents are all 1.
+  template<typename T>
+  flex_scalar_t<T> &scalar(T &x) {
+    if constexpr (std::is_same_v<type_category_t<T>, trueScalar>) {
+      return x;
+    } else {
+      const auto &dims = x.dimensions();
+      for(size_t i = 0; i < dims.size(); ++i) {
+        if(dims[i] != 1)
+          Rcpp::stop("Invalid use of as() to a scalar for an object with dimensions not all equal to 1.");
+      }
+      return *x.data();
+    }
+  }
+}
+
+// Compile-time source (an Eigen::Tensor or a true scalar).
+// Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy for a tensor
+// TargetType, or EmptyScalarProxy or CastingScalarProxy for a scalar TargetType.
+template<typename TargetType, AsMode mode = AsMode::TM, typename T>
 auto as_nC(T& x) {
-  return ETaccess<copy>(x).template asTyped<TargetType, mode>();
+  static_assert(!std::is_same_v<type_category_t<T>, eigenOp>,
+                "C++ COMPILATION ERROR: as_nC requires an Eigen::Tensor or a scalar as its argument.");
+  typedef flex_scalar_t<T> Scalar;
+  if constexpr (std::is_same_v<type_category_t<TargetType>, trueScalar>) {
+    typedef TargetType TargetScalar;
+    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+      return EmptyScalarProxy<TargetScalar>(as_nC_detail::scalar(x));
+    } else {
+      return CastingScalarProxy<TargetScalar, Scalar>(as_nC_detail::scalar(x));
+    }
+  } else {
+    typedef flex_scalar_t<TargetType> TargetScalar;
+    constexpr int nDim = flex_nDim_v<TargetType>;
+    auto view = as_nC_detail::map<nDim>(x);
+    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+      if constexpr (mode == AsMode::TM)
+        return EmptyProxy<decltype(view)>(view);
+      else {
+        auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+        return EmptyProxy<decltype(stview)>(stview);
+      }
+    } else {
+      if constexpr (mode == AsMode::LHS) {
+        auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+        return CastingProxy<TargetScalar, decltype(stview)>(stview);
+      } else if constexpr (mode == AsMode::STM) {
+        // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
+        // have correct strides in the lazy cast expression.
+        auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+        return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
+      } else {
+        return RHSCastProxy<TargetScalar, decltype(view)>(view);
+      }
+    }
+  }
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
