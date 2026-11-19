@@ -1216,6 +1216,185 @@ test_that("pass ETaccessor arguments by copy, ref, and blockRef (C++ to C++)", {
   gc()
 })
 
+test_that("pass to scalar copy, ref, and blockRef parameters adapts arguments (C++ to C++)", {
+  cp <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    }
+  )
+  rf <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  br <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    },
+    blockRefArgs = "x" # a scalar blockRef is a reference, as for ref
+  )
+  foo <- nFunction(
+    fun = function(v = double(1), iv = integer(1), M = double(2), v1 = double(1),
+                   a = double(), ia = integer(), kind = integer(), case = integer()) {
+      s <- 0
+      if (kind == 1) {
+        if (case == 1) s <- cp(a)
+        if (case == 2) s <- cp(ia)
+        if (case == 3) s <- cp(v[2])
+        if (case == 4) s <- cp(iv[2])
+        if (case == 5) s <- cp(M[2, 1])
+        if (case == 6) s <- cp(v1)
+        if (case == 7) s <- cp(v[2:2])
+        if (case == 8) s <- cp(v)
+        if (case == 9) s <- cp(a + 1)
+        if (case == 10) s <- cp(5)
+      }
+      if (kind == 2) {
+        if (case == 1) s <- rf(a)
+        if (case == 2) s <- rf(ia)
+        if (case == 3) s <- rf(v[2])
+        if (case == 4) s <- rf(iv[2])
+        if (case == 5) s <- rf(M[2, 1])
+        if (case == 6) s <- rf(v1)
+        if (case == 7) s <- rf(v[2:2])
+        if (case == 8) s <- rf(v)
+        if (case == 9) s <- rf(a + 1)
+        if (case == 10) s <- rf(5)
+      }
+      if (kind == 3) {
+        if (case == 1) s <- br(a)
+        if (case == 2) s <- br(ia)
+        if (case == 3) s <- br(v[2])
+        if (case == 4) s <- br(iv[2])
+        if (case == 5) s <- br(M[2, 1])
+        if (case == 6) s <- br(v1)
+        if (case == 7) s <- br(v[2:2])
+        if (case == 8) s <- br(v)
+        if (case == 9) s <- br(a + 1)
+        if (case == 10) s <- br(5)
+      }
+      return(c(s, a, ia))
+      returnType(double(1))
+    },
+    refArgs = c("v", "iv", "M", "v1")
+  )
+  C <- nCompile(cp, rf, br, foo)
+  run <- function(kind, cs) {
+    v <- c(1, 2, 3)
+    iv <- 1:3
+    M <- matrix(c(1, 2, 3), 3, 1)
+    v1 <- 7
+    ans <- C$foo(v, iv, M, v1, 5, 6L, kind, cs)
+    list(s = ans[1], a = ans[2], ia = ans[3], v = v, iv = iv, M = M, v1 = v1)
+  }
+  sums <- c(105.5, 106.5, 102.5, 102.5, 102.5, 107.5, 102.5, NA, 106.5, 105.5)
+  for (kind in 1:3) {
+    for (cs in c(1:7, 9:10)) {
+      r <- run(kind, cs)
+      expect_equal(r$s, sums[cs])
+      written <- kind > 1 # ref and blockRef write back; copy does not
+      expect_equal(r$a, if (written && cs == 1) 105.5 else 5)
+      expect_equal(r$ia, if (written && cs == 2) 106 else 6) # integer write-back is truncated
+      expect_identical(r$v, if (written && cs %in% c(3, 7)) c(1, 102.5, 3) else c(1, 2, 3))
+      expect_identical(r$iv, if (written && cs == 4) c(1L, 102L, 3L) else 1:3)
+      expect_identical(r$M, matrix(if (written && cs == 5) c(1, 102.5, 3) else c(1, 2, 3), 3, 1))
+      expect_identical(r$v1, if (written && cs == 6) 107.5 else 7)
+    }
+    expect_error(run(kind, 8), "to a scalar") # a length-3 vector can't be a scalar
+  }
+
+  # Optional code-generation warnings for copies
+  old <- get_nOption("warn_arg_passing_copies")
+  set_nOption("warn_arg_passing_copies", TRUE)
+  on.exit(set_nOption("warn_arg_passing_copies", old), add = TRUE)
+  foo2 <- nFunction(
+    fun = function(v1 = double(1)) {
+      return(rf(v1))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(rf, foo2), "not a scalar variable or element")
+  foo3 <- nFunction(
+    fun = function(ia = integer()) {
+      return(br(ia))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(br, foo3), "cast copy is passed and written back")
+})
+
+test_that("pass ETaccessor arguments to scalar copy, ref, and blockRef parameters (C++ to C++)", {
+  cp <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    }
+  )
+  rf <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  br <- nFunction(
+    fun = function(x = double()) {
+      x <- x + 100.5
+      return(x)
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  nc <- nClass(
+    Cpublic = list(
+      s = "numericScalar", is = "integerScalar", v1 = "numericVector", v3 = "numericVector",
+      run = nFunction(
+        function(kind = integer(), vn = "string") {
+          ans <- 0
+          if (kind == 1) ans <- cp(self[[vn]])
+          if (kind == 2) ans <- rf(self[[vn]])
+          if (kind == 3) ans <- br(self[[vn]])
+          return(ans)
+          returnType(double())
+        }
+      )
+    )
+  )
+  C <- nCompile(cp, rf, br, nc)
+  newObj <- function() {
+    o <- C$nc$new()
+    o$s <- 5
+    o$is <- 6L
+    o$v1 <- 7
+    o$v3 <- c(1, 2, 3)
+    o
+  }
+  orig <- list(s = 5, is = 6L, v1 = 7)
+  changed <- list(s = 105.5, is = 106L, v1 = 107.5) # integer write-back is truncated
+  sums <- c(s = 105.5, is = 106.5, v1 = 107.5)
+  for (kind in 1:3) {
+    for (vn in c("s", "is", "v1")) {
+      o <- newObj()
+      expect_equal(o$run(kind, vn), sums[[vn]])
+      expect_identical(o[[vn]], if (kind == 1) orig[[vn]] else changed[[vn]])
+    }
+    o <- newObj()
+    expect_error(o$run(kind, "v3"), "not all equal to 1")
+    expect_identical(o$v3, c(1, 2, 3))
+  }
+  rm(o)
+  gc()
+})
+
 test_that("unsupported argument passing cases give compile-time errors", {
   foo1bref <- nFunction(
     fun = function(x = double(1)) {

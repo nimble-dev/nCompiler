@@ -250,6 +250,12 @@ class RuntimeCastingProxy {
   TargetScalar* data_ptr_;
 
   void castCopyFrom() {
+    // As in ETaccessorTyped::scalarTyped (used when the scalar type matches).
+    const auto& intDims = source_.intDims();
+    for(size_t i = 0; i < intDims.size(); ++i) {
+      if(intDims[i] != 1)
+        Rcpp::stop("Invalid use of an ETaccessor as a scalar for an object with dimensions not all equal to 1.");
+    }
     as_nC_runtime::castCopyFrom(source_, &copy_, 1);
     data_ptr_ = &copy_;
     copy_made_ = true;
@@ -574,7 +580,8 @@ auto as_nC(const T& x) {
 
 // Runtime source: scalar type of acc is unknown at compile time.
 // Returns CopyProxy for AsMode::CopyProxy (made from a RuntimeCastingProxy view),
-// RefProxy<TargetType, ETaccessorBase> for AsMode::RefProxy, or otherwise RuntimeCastingProxy,
+// RefProxy<TargetType, ETaccessorBase> for AsMode::RefProxy (RuntimeCastingProxy with write-back
+// for a scalar TargetType), or otherwise RuntimeCastingProxy,
 // with write-back on destruction iff mode == LHS (incl. BlockRefProxy).
 template<typename TargetType, AsMode mode = AsMode::TM>
 auto as_nC(ETaccessorBase& acc) {
@@ -582,7 +589,12 @@ auto as_nC(ETaccessorBase& acc) {
     RuntimeCastingProxy<TargetType> view(acc);
     return CopyProxy<TargetType>(view());
   } else if constexpr (mode == AsMode::RefProxy) {
-    return RefProxy<TargetType, ETaccessorBase>(acc);
+    if constexpr (std::is_same_v<type_category_t<TargetType>, trueScalar>) {
+      // A scalar is viewed directly, or cast-copied and written back.
+      return RuntimeCastingProxy<TargetType>(acc, true);
+    } else {
+      return RefProxy<TargetType, ETaccessorBase>(acc);
+    }
   } else {
     return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
   }

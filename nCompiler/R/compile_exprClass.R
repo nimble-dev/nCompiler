@@ -528,7 +528,7 @@ argHasStorage <- function(arg) {
 # whose declared symbol is paramSym (from nFunctionCallParamSymbol)?
 # Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "CopyProxy") for
 # an as_nC proxy, which is generated via an nAs layer.
-# Copy, non-scalar ref, and non-scalar blockRef parameters of basic types are handled:
+# Copy, ref, and blockRef parameters of basic types are handled:
 # For a copy parameter:
 # - same scalar type and nDim: as-is.
 # - both true scalars: as-is (C++ converts the scalar type).
@@ -545,21 +545,26 @@ argHasStorage <- function(arg) {
 # - a variable or member (not a blockRef) of the same scalar type and nDim: as-is.
 # - otherwise: "RefProxy" (a copy made by flex_ assignment that is written back, see RefProxy
 #   in nC_as.h; for an argument without storage, a temporary, so changes are lost).
-# An ETaccessor argument (runtime type) to a non-scalar parameter: "CopyProxy", "RefProxy", or
-# "BlockRefProxy" for a copy, ref, or blockRef parameter (see the runtime as_nC in nC_as.h).
+# For a scalar ref or blockRef parameter (a C++ reference to a scalar):
+# - a scalar variable, element, or member of the same scalar type: as-is.
+# - otherwise: "RefProxy" (a copy that is written back; the argument must have exactly one
+#   element; for an argument without storage, a temporary, so changes are lost).
+# An ETaccessor argument (runtime type): "CopyProxy", "RefProxy", or "BlockRefProxy" for a copy,
+# ref, or blockRef parameter ("RefProxy" for a scalar blockRef; see the runtime as_nC in nC_as.h).
 argPassingMode <- function(arg, paramSym) {
   argType <- arg$type
   basicTypes <- c("double", "integer", "logical")
   if (inherits(argType, "symbolETaccBase")) {
     if (!inherits(paramSym, "symbolBasic") || !(paramSym$type %in% basicTypes) ||
-      !isTRUE(paramSym$nDim > 0)) {
+      !is.numeric(paramSym$nDim)) {
       return(NULL)
-    } # scalar parameters are not handled yet
+    }
     if (isTRUE(paramSym$isRef)) {
       return("RefProxy")
     }
     if (isTRUE(paramSym$isBlockRef)) {
-      return("BlockRefProxy")
+      ## A scalar blockRef parameter is a reference (as for ref).
+      return(if (paramSym$nDim == 0) "RefProxy" else "BlockRefProxy")
     }
     return("CopyProxy")
   }
@@ -572,10 +577,14 @@ argPassingMode <- function(arg, paramSym) {
   if (!is.numeric(paramSym$nDim) || !is.numeric(argType$nDim)) {
     return(NULL)
   }
-  if (isTRUE(paramSym$isRef)) {
-    if (paramSym$nDim == 0) {
+  ## A scalar ref or blockRef parameter is a C++ reference to a scalar.
+  if (paramSym$nDim == 0 && (isTRUE(paramSym$isRef) || isTRUE(paramSym$isBlockRef))) {
+    if (argHasStorage(arg) && argType$nDim == 0 && paramSym$type == argType$type) {
       return(NULL)
-    } # scalar ref parameters are not handled yet
+    }
+    return("RefProxy")
+  }
+  if (isTRUE(paramSym$isRef)) {
     if (!argHasStorage(arg)) {
       return("RefProxy")
     }
@@ -587,9 +596,6 @@ argPassingMode <- function(arg, paramSym) {
     return("RefProxy")
   }
   if (isTRUE(paramSym$isBlockRef)) {
-    if (paramSym$nDim == 0) {
-      return(NULL)
-    } # scalar blockRef parameters are not handled yet
     if (!argHasStorage(arg)) {
       return("CopyProxy")
     }

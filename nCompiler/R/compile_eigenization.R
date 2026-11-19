@@ -591,7 +591,8 @@ inEigenizeEnv(
       paramSym <- nFunctionCallParamSymbol(code, i)
       mode <- argPassingMode(code$args[[i]], paramSym)
       if (is.null(mode)) next
-      isRefParam <- isTRUE(paramSym$isRef)
+      ## A scalar blockRef parameter is a reference, so it is warned about as for ref.
+      isRefParam <- isTRUE(paramSym$isRef) || (isTRUE(paramSym$isBlockRef) && identical(paramSym$nDim, 0))
       ## No warnings for an ETaccessor argument: whether a copy is needed is only known at run time.
       if ((isRefParam || isTRUE(paramSym$isBlockRef)) && isTRUE(get_nOption("warn_arg_passing_copies")) &&
         !inherits(code$args[[i]]$type, "symbolETaccBase")) {
@@ -603,6 +604,8 @@ inEigenizeEnv(
             "has type ", argType$type, " (not ", paramSym$type,
             "), so a cast copy is passed and written back"
           )
+        } else if (isRefParam && paramSym$nDim == 0) {
+          "is not a scalar variable or element, so a copy is passed and written back"
         } else if (isRefParam) {
           paste0(
             "is not a whole variable with ", paramSym$nDim,
@@ -613,7 +616,7 @@ inEigenizeEnv(
         }
         if (!is.null(reason)) {
           warning(
-            "In a call to ", code$name, ", the argument for ", if (isRefParam) "ref" else "blockRef",
+            "In a call to ", code$name, ", the argument for ", if (isTRUE(paramSym$isRef)) "ref" else "blockRef",
             " parameter '", paramSym$name, "' ", reason, ".",
             call. = FALSE
           )
@@ -1216,11 +1219,10 @@ nCompiler:::inEigenizeEnv(
       }
       return(invisible(NULL))
     }
-    ## An indexed argument to a blockRef or (non-scalar) ref parameter becomes a StridedTensorMap.
+    ## An indexed (non-scalar) argument to a blockRef or ref parameter becomes a StridedTensorMap.
     if (!isAssign && !is.null(code$caller)) {
       paramSym <- nFunctionCallParamSymbol(code$caller, code$callerArgID)
-      if (isTRUE(paramSym$isBlockRef) ||
-        (isTRUE(paramSym$isRef) && isTRUE(paramSym$nDim > 0))) {
+      if (isTRUE(paramSym$isBlockRef) || isTRUE(paramSym$isRef)) {
         return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
       }
     }
