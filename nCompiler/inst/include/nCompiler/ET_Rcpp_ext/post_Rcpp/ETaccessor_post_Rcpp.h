@@ -67,7 +67,13 @@ class ETaccessorBase {
   template<int nDim, typename Scalar>
   ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorTyped_tensorPtr();
 
-//  virtual void resize(Eigen::Tensor<double, 1> &t)=0;
+  // Resize the object to dims, a run-time number of dimensions, set to the object's own
+  // number of dimensions by the flex rule (see set_output_dims), as in whole-object flex_
+  // assignment. A scalar can only be "resized" to extents that are all 1. Values are not kept.
+  // Used, e.g., to write back a copy that was resized through a ref argument (see RefProxy in nC_as.h).
+  virtual void resize(const std::vector<int> &dims) {
+    Rcpp::stop("resize not supported for this ETaccessor type.");
+  }
   // To iron out: set, get, generic ref access.
   virtual void set(SEXP Sinput)=0;
   virtual SEXP get()=0;
@@ -342,6 +348,11 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Sca
   SEXP get() override {
     return wrap(obj);
   }
+  void resize(const std::vector<int> &dims) override {
+    Dimensions outDim;
+    set_output_dims(dims, outDim, nDim);
+    obj.resize(outDim);
+  }
   ET &innerRef() {return obj;}
   ET &obj;
   std::vector<int> intDims_;
@@ -379,6 +390,12 @@ class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   std::vector<int> &intDims() override {return intDims_;}
   void set(SEXP Sinput) override { obj = as<Scalar>(Sinput);}
   SEXP get() override {return wrap(obj);}
+  void resize(const std::vector<int> &dims) override {
+    for(size_t i = 0; i < dims.size(); ++i) {
+      if(dims[i] != 1)
+        Rcpp::stop("Invalid resize of an ETaccessor to a scalar to dimensions not all equal to 1.");
+    }
+  }
   Eigen::Tensor<double, 0> &innerRef() {
     Rcpp::stop("Invalid call to ref() for ETaccessor to scalar.");
     return *new Eigen::Tensor<double, 0>(); // bad memory mgmt (would leak) but will never be called. only to show compiler valid return.

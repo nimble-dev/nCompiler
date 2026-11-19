@@ -592,7 +592,9 @@ inEigenizeEnv(
       mode <- argPassingMode(code$args[[i]], paramSym)
       if (is.null(mode)) next
       isRefParam <- isTRUE(paramSym$isRef)
-      if ((isRefParam || isTRUE(paramSym$isBlockRef)) && isTRUE(get_nOption("warn_arg_passing_copies"))) {
+      ## No warnings for an ETaccessor argument: whether a copy is needed is only known at run time.
+      if ((isRefParam || isTRUE(paramSym$isBlockRef)) && isTRUE(get_nOption("warn_arg_passing_copies")) &&
+        !inherits(code$args[[i]]$type, "symbolETaccBase")) {
         argType <- code$args[[i]]$type
         reason <- if (!argHasStorage(code$args[[i]])) {
           "is not a variable or a block of one, so a temporary copy is passed and changes to it are lost"

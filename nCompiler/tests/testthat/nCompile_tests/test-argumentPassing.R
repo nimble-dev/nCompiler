@@ -1120,6 +1120,102 @@ test_that("pass by ref adapts scalar type, nDim, blocks, expressions, and scalar
   expect_warning(nCompile(r1, foo4), "not a whole variable")
 })
 
+test_that("pass ETaccessor arguments by copy, ref, and blockRef (C++ to C++)", {
+  cp <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100.5
+      return(sum(x))
+      returnType(double())
+    }
+  )
+  rf <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100.5
+      return(sum(x))
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  br <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100.5
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  # resizes its ref argument
+  rz <- nFunction(
+    fun = function(x = double(1), n = integer()) {
+      x <- numeric(value = 9, length = n)
+      return(sum(x))
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  nc <- nClass(
+    Cpublic = list(
+      dv = "numericVector", iv = "integerVector", M = "numericMatrix", s = "numericScalar",
+      run = nFunction(
+        function(kind = integer(), vn = "string") {
+          ans <- 0
+          if (kind == 1) ans <- cp(self[[vn]])
+          if (kind == 2) ans <- rf(self[[vn]])
+          if (kind == 3) ans <- br(self[[vn]])
+          if (kind == 4) ans <- rz(self[[vn]], 4L)
+          if (kind == 5) {
+            acc <- self[[vn]]
+            ans <- rf(acc)
+          }
+          return(ans)
+          returnType(double())
+        }
+      )
+    )
+  )
+  C <- nCompile(cp, rf, br, rz, nc)
+  # dv: same type (passed directly for ref); iv: cast copy; M: 3x1 matrix, copy for ref;
+  # s: scalar, viewed or copied as a length-1 vector
+  newObj <- function() {
+    o <- C$nc$new()
+    o$dv <- c(1, 2, 3)
+    o$iv <- 1:3
+    o$M <- matrix(c(1, 2, 3), 3, 1)
+    o$s <- 5
+    o
+  }
+  changed <- list(
+    dv = c(101.5, 2, 3), iv = c(101L, 2L, 3L), # integer write-back is truncated
+    M = matrix(c(101.5, 2, 3), 3, 1), s = 105.5
+  )
+  for (vn in c("dv", "iv", "M", "s")) {
+    sumExpected <- if (vn == "s") 105.5 else 106.5
+    # copy: changes are not seen
+    o <- newObj()
+    orig <- o[[vn]]
+    expect_equal(o$run(1, vn), sumExpected)
+    expect_identical(o[[vn]], orig)
+    # ref, blockRef, and ref through an ETaccessor variable: changes are written back
+    for (kind in c(2, 3, 5)) {
+      o <- newObj()
+      expect_equal(o$run(kind, vn), sumExpected)
+      expect_identical(o[[vn]], changed[[vn]])
+    }
+  }
+  # Resizing through a ref
+  o <- newObj()
+  expect_equal(o$run(4, "dv"), 36) # same type: resized directly
+  expect_identical(o$dv, rep(9, 4))
+  expect_equal(o$run(4, "iv"), 36) # cast copy: source resized on write-back
+  expect_identical(o$iv, rep(9L, 4))
+  expect_equal(o$run(4, "M"), 36) # copy: source resized by the flex rule
+  expect_identical(o$M, matrix(9, 4, 1))
+  expect_error(o$run(4, "s"), "not all equal to 1") # a scalar can't hold 4 elements
+  expect_identical(o$s, 5)
+  rm(o)
+  gc()
+})
+
 test_that("unsupported argument passing cases give compile-time errors", {
   foo1bref <- nFunction(
     fun = function(x = double(1)) {

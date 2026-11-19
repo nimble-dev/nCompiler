@@ -30,6 +30,7 @@ enum class AsMode { TM, STM, LHS, CopyProxy, RefProxy, BlockRefProxy = LHS };
 //   CastingProxy<Tgt,ViewType>         — cross-scalar LHS; eager copy + write-back
 //   CopyProxy<TargetType>              — AsMode::CopyProxy; owns a new object made by flex_ assignment
 //   RefProxy<TargetType,Source>        — AsMode::RefProxy; as CopyProxy, plus flex_ write-back
+//                                        (specialized for a runtime source, ETaccessorBase)
 //   RuntimeCastingProxy<Tgt,N>         — runtime-source (ETaccessorBase)
 //
 // A fifth proxy, KnownProxy<TargetType>, is selected explicitly by
@@ -193,6 +194,34 @@ public:
   TargetType& operator()() { return copy_; }
 };
 
+// Element-wise cast copy from, and write-back to, a runtime source (ETaccessorBase)
+// via its virtual methods for the supported scalar types (double, int, bool).
+namespace as_nC_runtime {
+  template<typename TargetScalar>
+  void castCopyFrom(ETaccessorBase& source, TargetScalar* dest, size_t n) {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source.castCopyToDouble(dest, n);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source.castCopyToInt(dest, n);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source.castCopyToBool(dest, n);
+    else
+      Rcpp::stop("as_nC: unsupported scalar type for a runtime (ETaccessor) source.");
+  }
+
+  template<typename TargetScalar>
+  void writeBack(ETaccessorBase& source, const TargetScalar* src, size_t n) {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source.writeBackFromDouble(src, n);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source.writeBackFromInt(src, n);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source.writeBackFromBool(src, n);
+    else
+      Rcpp::stop("as_nC: unsupported scalar type for a runtime (ETaccessor) source.");
+  }
+}
+
 // RuntimeCastingProxy<TargetScalar, nDim>
 //
 // Runtime-source proxy (ETaccessorBase). At construction, ETaccessorTyped_ptr() tests
@@ -221,27 +250,13 @@ class RuntimeCastingProxy {
   TargetScalar* data_ptr_;
 
   void castCopyFrom() {
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.castCopyToDouble(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.castCopyToInt(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.castCopyToBool(&copy_, 1);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::castCopyFrom(source_, &copy_, 1);
     data_ptr_ = &copy_;
     copy_made_ = true;
   }
 
   void writeBack() {
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.writeBackFromDouble(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.writeBackFromInt(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.writeBackFromBool(&copy_, 1);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::writeBack(source_, &copy_, 1);
   }
 
 public:
@@ -295,27 +310,12 @@ class RuntimeCastingProxy<Eigen::Tensor<TargetScalar, nDim> > {
   void castCopyFrom() {
     size_t n = totalElems();
     copy_ = std::make_unique<CopyTensor>(dims_);
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.castCopyToDouble(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.castCopyToInt(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.castCopyToBool(copy_->data(), n);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::castCopyFrom(source_, copy_->data(), n);
     data_ptr_ = copy_->data();
   }
 
   void writeBack() {
-    size_t n = totalElems();
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.writeBackFromDouble(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.writeBackFromInt(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.writeBackFromBool(copy_->data(), n);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::writeBack(source_, copy_->data(), totalElems());
   }
 
 public:
@@ -342,6 +342,48 @@ public:
   RuntimeCastingProxy& operator=(const RuntimeCastingProxy&) = delete;
 
   TM operator()() { return TM(data_ptr_, dims_); }
+};
+
+// RefProxy<Eigen::Tensor<TargetScalar, nDim>, ETaccessorBase>
+//
+// AsMode::RefProxy proxy for a runtime source (ETaccessorBase), for passing to a ref (Tensor&)
+// argument. If the source is exactly an Eigen::Tensor<TargetScalar, nDim>, operator()() returns
+// a reference to it (no copy), so changes, including resizing, are made directly.
+// Otherwise it owns a copy, with dimensions from the source's by the flex rule and values
+// cast element-wise. On destruction, the source is resized to the copy's dimensions
+// (by the flex rule; see ETaccessorBase::resize) and the copy is written back.
+// As in RefProxy above, write-back is skipped if an exception is being thrown.
+template<typename TargetScalar, int nDim>
+class RefProxy<Eigen::Tensor<TargetScalar, nDim>, ETaccessorBase> {
+  using TargetType = Eigen::Tensor<TargetScalar, nDim>;
+  ETaccessorBase& source_;
+  TargetType* direct_;
+  TargetType copy_;
+  int uncaught_;
+public:
+  explicit RefProxy(ETaccessorBase& acc)
+    : source_(acc), direct_(nullptr), uncaught_(std::uncaught_exceptions()) {
+    // Done via a virtual method so the check is made in the DLL that created acc.
+    auto* exact = acc.template ETaccessorTyped_tensorPtr<nDim, TargetScalar>();
+    if(exact) {
+      direct_ = &exact->innerRef();
+    } else {
+      typename TargetType::Dimensions dims;
+      set_output_dims(acc.intDims(), dims, nDim);
+      copy_.resize(dims);
+      as_nC_runtime::castCopyFrom(acc, copy_.data(), static_cast<size_t>(copy_.size()));
+    }
+  }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return direct_ ? *direct_ : copy_; }
+  ~RefProxy() noexcept(false) {
+    if(direct_ || std::uncaught_exceptions() != uncaught_) return;
+    const auto& d = copy_.dimensions();
+    std::vector<int> dims(d.begin(), d.end());
+    source_.resize(dims);
+    as_nC_runtime::writeBack(source_, copy_.data(), static_cast<size_t>(copy_.size()));
+  }
 };
 
 // KnownProxy was added using Claude as a potentially useful feature,
@@ -531,24 +573,33 @@ auto as_nC(const T& x) {
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
-// Returns RuntimeCastingProxy. Write-back occurs on destruction iff mode == LHS.
+// Returns CopyProxy for AsMode::CopyProxy (made from a RuntimeCastingProxy view),
+// RefProxy<TargetType, ETaccessorBase> for AsMode::RefProxy, or otherwise RuntimeCastingProxy,
+// with write-back on destruction iff mode == LHS (incl. BlockRefProxy).
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(ETaccessorBase& acc) {
-  return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
+auto as_nC(ETaccessorBase& acc) {
+  if constexpr (mode == AsMode::CopyProxy) {
+    RuntimeCastingProxy<TargetType> view(acc);
+    return CopyProxy<TargetType>(view());
+  } else if constexpr (mode == AsMode::RefProxy) {
+    return RefProxy<TargetType, ETaccessorBase>(acc);
+  } else {
+    return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
+  }
 }
 
 // genericInterfaceBaseC::access() returns a unique_ptr<ETaccessorBase>,
 // so this overload allows direct passing of the unique_ptr, for simpler usage and code-generation.
 // This takes its argument by value, so that it can be an rvalue (returned from another call at the call site).
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>& acc) {
-    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
+auto as_nC(std::unique_ptr<ETaccessorBase>& acc) {
+  return as_nC<TargetType, mode>(*acc);
 }
 
 
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>&& acc) {
-    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
+auto as_nC(std::unique_ptr<ETaccessorBase>&& acc) {
+  return as_nC<TargetType, mode>(*acc);
 }
 
 #endif // NCOMPILER_NC_AS_H_

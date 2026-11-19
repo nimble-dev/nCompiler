@@ -545,12 +545,27 @@ argHasStorage <- function(arg) {
 # - a variable or member (not a blockRef) of the same scalar type and nDim: as-is.
 # - otherwise: "RefProxy" (a copy made by flex_ assignment that is written back, see RefProxy
 #   in nC_as.h; for an argument without storage, a temporary, so changes are lost).
+# An ETaccessor argument (runtime type) to a non-scalar parameter: "CopyProxy", "RefProxy", or
+# "BlockRefProxy" for a copy, ref, or blockRef parameter (see the runtime as_nC in nC_as.h).
 argPassingMode <- function(arg, paramSym) {
   argType <- arg$type
+  basicTypes <- c("double", "integer", "logical")
+  if (inherits(argType, "symbolETaccBase")) {
+    if (!inherits(paramSym, "symbolBasic") || !(paramSym$type %in% basicTypes) ||
+      !isTRUE(paramSym$nDim > 0)) {
+      return(NULL)
+    } # scalar parameters are not handled yet
+    if (isTRUE(paramSym$isRef)) {
+      return("RefProxy")
+    }
+    if (isTRUE(paramSym$isBlockRef)) {
+      return("BlockRefProxy")
+    }
+    return("CopyProxy")
+  }
   if (!inherits(paramSym, "symbolBasic") || !inherits(argType, "symbolBasic")) {
     return(NULL)
   }
-  basicTypes <- c("double", "integer", "logical")
   if (!(paramSym$type %in% basicTypes) || !(argType$type %in% basicTypes)) {
     return(NULL)
   }
