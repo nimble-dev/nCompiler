@@ -521,16 +521,25 @@ nFunctionCallParamSymbol <- function(code, argID) {
 # whose declared symbol is paramSym (from nFunctionCallParamSymbol)?
 # Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "Copy") for
 # an as_nC proxy, which is generated via an nAs layer.
-# Currently only copy (not ref or blockRef) parameters of basic types are handled:
+# Copy and non-scalar blockRef parameters of basic types are handled (ref parameters are not yet):
+# For a copy parameter:
 # - same scalar type and nDim: as-is.
 # - both true scalars: as-is (C++ converts the scalar type).
 # - otherwise: "Copy" (a new object made by flex_ assignment, see CopyProxy in nC_as.h).
+# For a blockRef parameter:
+# - an argument without storage (e.g. an expression or literal): "Copy" (a temporary,
+#   so changes are lost).
+# - an argument with storage (a variable, a block or element of one, or a member) of a different scalar type:
+#   "BlockRef" (a cast copy that is written back).
+# - a scalar variable or element of the same scalar type: "BlockRef" (a view of the scalar).
+# - otherwise: as-is (the StridedTensorMap parameter is made from the argument, with
+#   dimensions matched by the flex rule).
 checkArgPassing <- function(arg, paramSym) {
   argType <- arg$type
   if (!inherits(paramSym, "symbolBasic") || !inherits(argType, "symbolBasic")) {
     return(NULL)
   }
-  if (isTRUE(paramSym$isRef) || isTRUE(paramSym$isBlockRef)) {
+  if (isTRUE(paramSym$isRef)) {
     return(NULL)
   }
   basicTypes <- c("double", "integer", "logical")
@@ -538,6 +547,20 @@ checkArgPassing <- function(arg, paramSym) {
     return(NULL)
   }
   if (!is.numeric(paramSym$nDim) || !is.numeric(argType$nDim)) {
+    return(NULL)
+  }
+  if (isTRUE(paramSym$isBlockRef)) {
+    if (paramSym$nDim == 0) {
+      return(NULL)
+    } # scalar blockRef parameters are not handled yet
+    hasStorage <- isTRUE(arg$isName) || isTRUE(arg$aux$isStridedView) ||
+      (isTRUE(arg$isCall) && arg$name %in% c("$", "->member", "index[", "index("))
+    if (!hasStorage) {
+      return("Copy")
+    }
+    if (paramSym$type != argType$type || argType$nDim == 0) {
+      return("BlockRef")
+    }
     return(NULL)
   }
   if (paramSym$type == argType$type && paramSym$nDim == argType$nDim) {

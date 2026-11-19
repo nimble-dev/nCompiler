@@ -591,6 +591,25 @@ inEigenizeEnv(
       paramSym <- nFunctionCallParamSymbol(code, i)
       mode <- checkArgPassing(code$args[[i]], paramSym)
       if (is.null(mode)) next
+      if (isTRUE(paramSym$isBlockRef) && isTRUE(get_nOption("warn_arg_passing_copies"))) {
+        reason <- if (mode == "Copy") {
+          "is not a variable or a block of one, so a temporary copy is passed and changes to it are lost"
+        } else if (code$args[[i]]$type$type != paramSym$type) {
+          paste0(
+            "has type ", code$args[[i]]$type$type, " (not ", paramSym$type,
+            "), so a cast copy is passed and written back"
+          )
+        } else {
+          NULL
+        }
+        if (!is.null(reason)) {
+          warning(
+            "In a call to ", code$name, ", the argument for blockRef parameter '", paramSym$name,
+            "' ", reason, ".",
+            call. = FALSE
+          )
+        }
+      }
       asExpr <- insertExprClassLayer(code, i, "nAs")
       asExpr$type <- symbolBasic$new(name = "", type = paramSym$type, nDim = paramSym$nDim)
       asExpr$aux$asMode <- mode
@@ -1035,6 +1054,7 @@ inEigenizeEnv(
       }
     }
     code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
+    code$aux$isStridedView <- TRUE ## a view with storage (see checkArgPassing)
     code$args[-1] <- NULL ## clear indexing args from AST
 
     blocks_expr <- setArg(

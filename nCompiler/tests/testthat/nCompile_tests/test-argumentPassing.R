@@ -698,6 +698,77 @@ test_that("nested pass by blockRef works", {
   expect_equal(x, 3:4)
 })
 
+test_that("nested blockRef passing keeps offsets and strides (blocks of blocks, C++ to C++)", {
+  foo1 <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100
+    },
+    blockRefArgs = "x"
+  )
+  inner_idx <- nFunction(
+    fun = function(x = double(1)) {
+      foo1(x[2:3]) # block of a blockRef argument
+    },
+    blockRefArgs = "x"
+  )
+  inner_whole <- nFunction(
+    fun = function(x = double(1)) {
+      foo1(x) # blockRef argument passed on whole
+    },
+    blockRefArgs = "x"
+  )
+  inner_2D <- nFunction(
+    fun = function(x = double(2)) {
+      foo1(x[2, 2:3])
+    },
+    blockRefArgs = "x"
+  )
+  level2 <- nFunction(
+    fun = function(x = double(1)) {
+      inner_idx(x[2:4])
+    },
+    blockRefArgs = "x"
+  )
+  level1 <- nFunction(
+    fun = function(x = double(2)) {
+      level2(x[, 3])
+    },
+    blockRefArgs = "x"
+  )
+  outer <- nFunction(
+    fun = function(v = double(1), M = double(2), A = double(3), case = integer()) {
+      if (case == 1) inner_idx(v[2:4]) # v[3]
+      if (case == 2) inner_whole(v[2:4]) # v[2]
+      if (case == 3) inner_idx(M[2, ]) # M[2, 2] (row has stride 3)
+      if (case == 4) inner_whole(M[2, ]) # M[2, 1]
+      if (case == 5) inner_2D(M[2:3, 2:4]) # M[3, 3]
+      if (case == 6) level1(A[2, , ]) # A[2, , ][, 3][2:4][2:3][1] is A[2, 3, 3]
+    },
+    blockRefArgs = c("v", "M", "A")
+  )
+  C <- nCompile(foo1, inner_idx, inner_whole, inner_2D, level2, level1, outer)
+  expected <- list(
+    list(v = 3), list(v = 2), list(M = c(2, 2)), list(M = c(2, 1)),
+    list(M = c(3, 3)), list(A = c(2, 3, 3))
+  )
+  for (cs in 1:6) {
+    v <- as.numeric(1:5)
+    M <- matrix(as.numeric(1:12), nrow = 3)
+    A <- array(as.numeric(1:60), dim = c(3, 4, 5))
+    C$outer(v, M, A, cs)
+    v_exp <- as.numeric(1:5)
+    M_exp <- matrix(as.numeric(1:12), nrow = 3)
+    A_exp <- array(as.numeric(1:60), dim = c(3, 4, 5))
+    e <- expected[[cs]]
+    if (!is.null(e$v)) v_exp[e$v] <- v_exp[e$v] + 100
+    if (!is.null(e$M)) M_exp[e$M[1], e$M[2]] <- M_exp[e$M[1], e$M[2]] + 100
+    if (!is.null(e$A)) A_exp[e$A[1], e$A[2], e$A[3]] <- A_exp[e$A[1], e$A[2], e$A[3]] + 100
+    expect_identical(v, v_exp, info = paste("case", cs))
+    expect_identical(M, M_exp, info = paste("case", cs))
+    expect_identical(A, A_exp, info = paste("case", cs))
+  }
+})
+
 test_that("pass indexed and dimension-changing arguments by blockRef (C++ to C++)", {
   foo1 <- nFunction(
     fun = function(x = double(1)) {
@@ -864,6 +935,78 @@ test_that("pass by copy adapts scalar type, nDim, expressions, and scalars (C++ 
   expect_error(C$foo2(v))
 })
 
+test_that("pass by blockRef adapts scalar type, expressions, and scalars (C++ to C++)", {
+  br <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100.5
+      return(sum(x))
+      returnType(double())
+    },
+    blockRefArgs = "x"
+  )
+  foo <- nFunction(
+    fun = function(v = double(1), iv = integer(1), a = double(), ia = integer(), case = integer()) {
+      s <- 0
+      if (case == 1) s <- br(iv) # integer -> double: cast copy, written back (truncated)
+      if (case == 2) s <- br(iv[2:3]) # indexed integer: cast copy of the block, written back
+      if (case == 3) s <- br(v + 1) # expression: temporary copy, changes lost
+      if (case == 4) s <- br(a) # scalar variable: viewed as a length-1 vector
+      if (case == 5) s <- br(ia) # integer scalar variable: cast copy, written back
+      if (case == 6) s <- br(v[2]) # scalar element: viewed as a length-1 vector
+      if (case == 7) s <- br(5) # literal: temporary copy
+      return(c(s, a, ia))
+      returnType(double(1))
+    },
+    blockRefArgs = c("v", "iv")
+  )
+  C <- nCompile(br, foo)
+  run <- function(cs) {
+    v <- as.numeric(1:3)
+    iv <- 1:3
+    ans <- C$foo(v, iv, 5, 7L, cs)
+    list(s = ans[1], a = ans[2], ia = ans[3], v = v, iv = iv)
+  }
+  r <- run(1)
+  expect_equal(r$s, 101.5 + 2 + 3)
+  expect_identical(r$iv, c(101L, 2L, 3L))
+  r <- run(2)
+  expect_equal(r$s, 102.5 + 3)
+  expect_identical(r$iv, c(1L, 102L, 3L))
+  r <- run(3)
+  expect_equal(r$s, 102.5 + 3 + 4)
+  expect_identical(r$v, as.numeric(1:3))
+  r <- run(4)
+  expect_equal(r$s, 105.5)
+  expect_equal(r$a, 105.5)
+  r <- run(5)
+  expect_equal(r$s, 107.5)
+  expect_equal(r$ia, 107)
+  r <- run(6)
+  expect_equal(r$s, 102.5)
+  expect_identical(r$v, c(1, 102.5, 3))
+  r <- run(7)
+  expect_equal(r$s, 105.5)
+
+  # Optional code-generation warnings for copies
+  old <- get_nOption("warn_arg_passing_copies")
+  set_nOption("warn_arg_passing_copies", TRUE)
+  on.exit(set_nOption("warn_arg_passing_copies", old), add = TRUE)
+  foo2 <- nFunction(
+    fun = function(iv = integer(1)) {
+      return(br(iv))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(br, foo2), "cast copy is passed and written back")
+  foo3 <- nFunction(
+    fun = function(v = double(1)) {
+      return(br(v + 1))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(br, foo3), "changes to it are lost")
+})
+
 test_that("unsupported argument passing cases give compile-time errors", {
   foo1bref <- nFunction(
     fun = function(x = double(1)) {
@@ -872,14 +1015,21 @@ test_that("unsupported argument passing cases give compile-time errors", {
     },
     blockRefArgs = "x"
   )
-  # Scalar to non-scalar blockRef parameter (not supported yet)
+  # Scalar to non-scalar ref parameter (not supported yet)
+  foo1ref <- nFunction(
+    fun = function(x = double(1)) {
+      return(sum(x))
+      returnType(double())
+    },
+    refArgs = "x"
+  )
   foo2 <- nFunction(
     fun = function(a = double()) {
-      return(foo1bref(a))
+      return(foo1ref(a))
       returnType(double())
     }
   )
-  expect_error(nCompile(foo1bref, foo2), "scalar was passed")
+  expect_error(nCompile(foo1ref, foo2), "scalar was passed")
   # A non-strided index can't be passed by blockRef
   foo3 <- nFunction(
     fun = function(x = double(1)) {

@@ -138,6 +138,112 @@ void createSubTensorInfo(const Eigen::array<long, input_nDim> &input_sizes,
   createSubTensorInfoGeneral< Eigen::array<b__, input_nDim>, Eigen::array<long, input_nDim>, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
 }
 
+// Set up a view of a view: a new StridedTensorMap from an existing one (the source view),
+// given by its sizes, strides, start and stop indices (as set up by createSubTensorInfoGeneral),
+// and blocks ss in the source view's own indices (an empty b__ uses a whole dimension).
+// The source view's data and dimensions() alone are not enough, because they describe
+// its underlying (outer) sizes, not its offsets and strides.
+//
+// This computes the new setup directly from the source setup. It parallels
+// createSubTensorInfoGeneral, with each source view dimension d in place of an input dimension:
+// index i of source dimension d is at src_starts[d] + i * src_strides[d] within a dimension of size
+// src_sizes[d] (for a tensor input dimension, the start is 0 and the stride is 1).
+// So an index or block start i in source dimension d contributes src_starts[d] + i * src_strides[d]
+// to the offset, and an output dimension using source dimension d has stride src_strides[d]
+// (times, for output dimension 0, the sizes of the source dimensions below d).
+// Dimensions are matched by the flex rule (see flexDims.h).
+template<size_t source_nDim, typename src_info_type, size_t output_nDim, typename ScalarType=double>
+void createSubTensorInfoFromView(const src_info_type &src_sizes,
+                                 const src_info_type &src_strides,
+                                 const src_info_type &src_starts,
+                                 const src_info_type &src_stops,
+                                 const Eigen::array<b__, source_nDim> &ss,
+                                 Eigen::array<long, output_nDim> &output_sizes,
+                                 Eigen::array<long, output_nDim> &output_strides,
+                                 Eigen::array<long, output_nDim> &output_startIndices,
+                                 Eigen::array<long, output_nDim> &output_stopIndices) {
+  typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
+  if(output_nDim < 1) {
+    std::cout<<"Shouldn't be calling createSubTensorInfo with output_nDim of 0.  That should be a scalar"<<std::endl;
+    return;
+  }
+  const int src_nDim = static_cast<int>(source_nDim);
+  // Extent of source view dimension d (as in its TensorEvaluator).
+  Eigen::array<Index, source_nDim> src_extents;
+  for(int d = 0; d < src_nDim; ++d) {
+    const Index stop = src_stops[d] < src_sizes[d] ? src_stops[d] : src_sizes[d];
+    const Index interval = stop - src_starts[d];
+    src_extents[d] = interval <= 0 ? 0 : interval / src_strides[d] + (interval % src_strides[d] != 0 ? 1 : 0);
+    if(!ss[d].isEmpty()) {
+      const Index last = ss[d].isSingle() ? ss[d].start() : ss[d].stop();
+      if(ss[d].start() < 0 || last >= src_extents[d])
+        throw std::runtime_error("Index out of range in a view of a view.");
+    }
+  }
+  // Extent of source dimension d in the new view, or -1 if it is indexed by a scalar.
+  auto input_extents = [&ss, &src_extents](int d) -> Index {
+    if(ss[d].isSingle()) return -1;
+    if(ss[d].isEmpty()) return src_extents[d];
+    return ss[d].extent();
+  };
+  // outIndex_2_inIndex[j] is the source dimension used for output dimension j, or -1 for a padded trailing 1.
+  Eigen::array<int, output_nDim> outIndex_2_inIndex;
+  if(!flexDimsMap(input_extents, src_nDim, static_cast<int>(output_nDim), outIndex_2_inIndex)) {
+    std::ostringstream msg;
+    msg << "Cannot create requested variable block with " << output_nDim << " dimension(s) from extents (";
+    bool first = true;
+    for(int d = 0; d < src_nDim; ++d) {
+      if(input_extents(d) < 0) continue;
+      msg << (first ? "" : ", ") << input_extents(d);
+      first = false;
+    }
+    msg << ").";
+    throw std::runtime_error(msg.str());
+  }
+  int nUsed = 0;
+  while(nUsed < static_cast<int>(output_nDim) && outIndex_2_inIndex[nUsed] >= 0) ++nUsed;
+
+  // The same walk as in createSubTensorInfoGeneral (see there), from the last source dimension to the first.
+  int currentOutputDim = nUsed - 1;
+  Index currentOutputDimSize(1);
+  Index currentOutputDimStart(0);
+  Index currentOutputStride(1);
+  Index dim0Extent(1);
+  bool belowDim0(false);
+  for(int d = src_nDim - 1; d >= 0; --d) {
+    currentOutputDimSize *= src_sizes[d];
+    currentOutputDimStart *= src_sizes[d];
+    currentOutputDimStart += src_starts[d] + ss[d].start() * src_strides[d]; // ss[d].start() is 0 for an empty block
+    if(belowDim0) currentOutputStride *= src_sizes[d];
+    if(currentOutputDim >= 0 && d == outIndex_2_inIndex[currentOutputDim]) {
+      if(currentOutputDim > 0) {
+        output_sizes[currentOutputDim] = currentOutputDimSize;
+        output_startIndices[currentOutputDim] = currentOutputDimStart;
+        output_stopIndices[currentOutputDim] = currentOutputDimStart + input_extents(d) * src_strides[d];
+        output_strides[currentOutputDim] = src_strides[d];
+        currentOutputDimSize = 1;
+        currentOutputDimStart = 0;
+      } else {
+        dim0Extent = input_extents(d);
+        currentOutputStride = src_strides[d];
+        belowDim0 = true;
+      }
+      --currentOutputDim;
+    }
+  }
+  output_sizes[0] = currentOutputDimSize;
+  output_startIndices[0] = currentOutputDimStart;
+  output_stopIndices[0] = currentOutputDimStart + dim0Extent * currentOutputStride;
+  output_strides[0] = currentOutputStride;
+  // padded trailing 1s
+  for(int j = (nUsed > 0 ? nUsed : 1); j < static_cast<int>(output_nDim); ++j) {
+    output_sizes[j] = 1;
+    output_startIndices[j] = 0;
+    output_stopIndices[j] = 1;
+    output_strides[j] = 1;
+  }
+}
+
 template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>
 void showSubTensorInfo(const Eigen::array<b__, input_nDim> &ss,
                        const Eigen::array<long, input_nDim> &input_sizes) {

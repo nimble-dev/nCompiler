@@ -26,10 +26,20 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "StridedTensorMapInfo.h"
+#include <type_traits>
 
 namespace Eigen {
   template<typename PlainObjectType, int Options_ = Unaligned, template <class> class MakePointer_ = MakePointer>
   class StridedTensorMap;
+
+  // True for a StridedTensorMap type. A StridedTensorMap made from another one must use
+  // its offsets and strides (see the view-of-a-view constructors), so the general
+  // constructors, which use only data() and dimensions(), exclude StridedTensorMap inputs.
+  template<typename T> struct is_StridedTensorMap : std::false_type {};
+  template<typename PlainObjectType, int Options_, template <class> class MakePointer_>
+  struct is_StridedTensorMap<StridedTensorMap<PlainObjectType, Options_, MakePointer_> > : std::true_type {};
+  template<typename T>
+  constexpr bool is_StridedTensorMap_v = is_StridedTensorMap<typename std::remove_cv<T>::type>::value;
 }
 
 #undef USE_VARIADIC_TEMPLATES_IN_STRIDED_TENSOR_MAP
@@ -124,7 +134,7 @@ namespace Eigen {
     // See Eigen::TensorMap for alternative constructor ideas that have been removed.
     // Constructors added for StridedTensorMap
 
-    template<typename InputType>
+    template<typename InputType, typename std::enable_if<!is_StridedTensorMap_v<InputType>, int>::type = 0>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor) // default to mapping the full tensor
       : m_data(inputTensor.data())
     {
@@ -143,7 +153,7 @@ namespace Eigen {
 
     // const-ref overload so temporaries and const tensors/maps can be used as input.
     // Only data() and dimensions() are needed; m_data points to the source data, which outlives the temp.
-    template<typename InputType>
+    template<typename InputType, typename std::enable_if<!is_StridedTensorMap_v<InputType>, int>::type = 0>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const InputType &inputTensor)
       : m_data(const_cast<PointerType>(inputTensor.data()))
     {
@@ -154,7 +164,7 @@ namespace Eigen {
                                                                      m_stopIndices);
     }
 
-    template<typename InputType>
+    template<typename InputType, typename std::enable_if<!is_StridedTensorMap_v<InputType>, int>::type = 0>
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(InputType &inputTensor,
                                                            const Eigen::array<b__, InputType::NumIndices> &ss)
       : m_data(inputTensor.data())
@@ -185,6 +195,33 @@ namespace Eigen {
                                                                                 m_strides,
                                                                                 m_startIndices,
                                                                                 m_stopIndices);
+    }
+
+    // View of a view: from another StridedTensorMap (whole), using its offsets and strides,
+    // with dimensions matched by the flex rule. (A copy of the same type uses the implicit
+    // copy constructor instead, which is equivalent.) Added for StridedTensorMap.
+    template<typename SrcPlainObjectType, int SrcOptions_, template <class> class SrcMakePointer_>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const StridedTensorMap<SrcPlainObjectType, SrcOptions_, SrcMakePointer_> &src)
+      : m_data(const_cast<PointerType>(src.data()))
+    {
+      constexpr size_t srcN = SrcPlainObjectType::NumIndices;
+      Eigen::array<b__, srcN> ss {}; // all empty blocks: the whole source view
+      createSubTensorInfoFromView<srcN, typename SrcPlainObjectType::Dimensions, NumIndices, Scalar>(
+        src.dimensions(), src.strides(), src.startIndices(), src.stopIndices(), ss,
+        m_dimensions, m_strides, m_startIndices, m_stopIndices);
+    }
+
+    // View of a view: a block (ss, in the source view's own indices) of another StridedTensorMap.
+    // This supports, e.g., indexing a blockRef argument. Added for StridedTensorMap.
+    template<typename SrcPlainObjectType, int SrcOptions_, template <class> class SrcMakePointer_>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE StridedTensorMap(const StridedTensorMap<SrcPlainObjectType, SrcOptions_, SrcMakePointer_> &src,
+                                                           const Eigen::array<b__, SrcPlainObjectType::NumIndices> &ss)
+      : m_data(const_cast<PointerType>(src.data()))
+    {
+      constexpr size_t srcN = SrcPlainObjectType::NumIndices;
+      createSubTensorInfoFromView<srcN, typename SrcPlainObjectType::Dimensions, NumIndices, Scalar>(
+        src.dimensions(), src.strides(), src.startIndices(), src.stopIndices(), ss,
+        m_dimensions, m_strides, m_startIndices, m_stopIndices);
     }
 
     // Default constructor: leaves the map empty (m_data == nullptr). Only

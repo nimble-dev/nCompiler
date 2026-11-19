@@ -11,7 +11,8 @@
 //   LHS -- writable use (assignment), as a StridedTensorMap, with write-back if cast.
 //   Copy -- a new object of the target type (e.g. for passing to a by-value (copy) argument),
 //           made by flex_ assignment from any source, including expressions and scalars.
-enum class AsMode { TM, STM, LHS, Copy };
+//   BlockRef -- the same as LHS, named for passing to a blockRef (StridedTensorMap) argument.
+enum class AsMode { TM, STM, LHS, Copy, BlockRef = LHS };
 
 // ---------------------------------------------------------------------------
 // All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
@@ -403,7 +404,8 @@ namespace as_nC_detail {
   }
 }
 
-// Compile-time source (an Eigen::Tensor or a true scalar, or any source for AsMode::Copy).
+// Compile-time source (an Eigen::Tensor, a StridedTensorMap, or a true scalar, or any source
+// for AsMode::Copy). A StridedTensorMap source is viewed with its own offsets and strides.
 // Returns CopyProxy for AsMode::Copy. Otherwise returns EmptyProxy<TM>, EmptyProxy<STM>,
 // RHSCastProxy, or CastingProxy for a tensor TargetType, or EmptyScalarProxy or
 // CastingScalarProxy for a scalar TargetType.
@@ -412,10 +414,12 @@ auto as_nC(T& x) {
   if constexpr (mode == AsMode::Copy) {
     return CopyProxy<TargetType>(x);
   } else {
-    static_assert(!std::is_same_v<type_category_t<T>, eigenOp>,
-                  "C++ COMPILATION ERROR: as_nC requires an Eigen::Tensor or a scalar as its argument.");
+    static_assert(!std::is_same_v<type_category_t<T>, eigenOp> || Eigen::is_StridedTensorMap_v<T>,
+                  "C++ COMPILATION ERROR: as_nC requires an Eigen::Tensor, a StridedTensorMap, or a scalar as its argument.");
     typedef flex_scalar_t<T> Scalar;
     if constexpr (std::is_same_v<type_category_t<TargetType>, trueScalar>) {
+      static_assert(!Eigen::is_StridedTensorMap_v<T>,
+                    "C++ COMPILATION ERROR: as_nC to a scalar type from a StridedTensorMap is not supported.");
       typedef TargetType TargetScalar;
       if constexpr (std::is_same_v<TargetScalar, Scalar>) {
         return EmptyScalarProxy<TargetScalar>(as_nC_detail::scalar(x));
@@ -425,37 +429,57 @@ auto as_nC(T& x) {
     } else {
       typedef flex_scalar_t<TargetType> TargetScalar;
       constexpr int nDim = flex_nDim_v<TargetType>;
-      auto view = as_nC_detail::map<nDim>(x);
-      if constexpr (std::is_same_v<TargetScalar, Scalar>) {
-        if constexpr (mode == AsMode::TM)
-          return EmptyProxy<decltype(view)>(view);
-        else {
-          auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+      if constexpr (Eigen::is_StridedTensorMap_v<T>) {
+        // A view of a view (by the flex rule for dimensions). There is no TensorMap of it,
+        // so the TM mode uses it as an STM.
+        Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> > stview(x);
+        if constexpr (std::is_same_v<TargetScalar, Scalar>) {
           return EmptyProxy<decltype(stview)>(stview);
+        } else if constexpr (mode == AsMode::LHS) {
+          return CastingProxy<TargetScalar, decltype(stview)>(stview);
+        } else {
+          return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
         }
       } else {
-        if constexpr (mode == AsMode::LHS) {
-          auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
-          return CastingProxy<TargetScalar, decltype(stview)>(stview);
-        } else if constexpr (mode == AsMode::STM) {
-          // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
-          // have correct strides in the lazy cast expression.
-          auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
-          return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
+        auto view = as_nC_detail::map<nDim>(x);
+        if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+          if constexpr (mode == AsMode::TM)
+            return EmptyProxy<decltype(view)>(view);
+          else {
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return EmptyProxy<decltype(stview)>(stview);
+          }
         } else {
-          return RHSCastProxy<TargetScalar, decltype(view)>(view);
+          if constexpr (mode == AsMode::LHS) {
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return CastingProxy<TargetScalar, decltype(stview)>(stview);
+          } else if constexpr (mode == AsMode::STM) {
+            // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
+            // have correct strides in the lazy cast expression.
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
+          } else {
+            return RHSCastProxy<TargetScalar, decltype(view)>(view);
+          }
         }
       }
     }
   }
 }
 
-// A temporary source (e.g. an expression such as x + 1) can only be copied.
+// A temporary source (e.g. an expression such as x + 1) can only be copied,
+// except a temporary StridedTensorMap (e.g. from MakeStridedTensorMap for an indexed argument),
+// which is a view of data that outlives it.
 template<typename TargetType, AsMode mode = AsMode::TM, typename T>
-CopyProxy<TargetType> as_nC(const T& x) {
-  static_assert(mode == AsMode::Copy,
-                "C++ COMPILATION ERROR: as_nC can use a temporary (e.g. an expression) only with AsMode::Copy.");
-  return CopyProxy<TargetType>(x);
+auto as_nC(const T& x) {
+  if constexpr (mode == AsMode::Copy) {
+    return CopyProxy<TargetType>(x);
+  } else {
+    static_assert(Eigen::is_StridedTensorMap_v<T>,
+                  "C++ COMPILATION ERROR: as_nC can use a temporary (e.g. an expression) only with AsMode::Copy.");
+    T view(x); // a copy of the view; the proxies store their own views by value.
+    return as_nC<TargetType, mode>(view);
+  }
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
