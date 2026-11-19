@@ -1007,6 +1007,119 @@ test_that("pass by blockRef adapts scalar type, expressions, and scalars (C++ to
   expect_warning(nCompile(br, foo3), "changes to it are lost")
 })
 
+test_that("pass by ref adapts scalar type, nDim, blocks, expressions, and scalars (C++ to C++)", {
+  r1 <- nFunction(
+    fun = function(x = double(1)) {
+      x[1] <- x[1] + 100.5
+      return(sum(x))
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  # resizes its ref argument
+  rz <- nFunction(
+    fun = function(x = double(1), n = integer()) {
+      x <- numeric(value = 9, length = n)
+      return(sum(x))
+      returnType(double())
+    },
+    refArgs = "x"
+  )
+  foo <- nFunction(
+    fun = function(v = double(1), iv = integer(1), M = double(2), a = double(), ia = integer(), case = integer()) {
+      s <- 0
+      if (case == 1) s <- r1(v) # exact type: passed as-is
+      if (case == 2) s <- r1(iv) # integer -> double: cast copy, written back (truncated)
+      if (case == 3) s <- r1(M) # 3x1 matrix -> vector: copy, written back
+      if (case == 4) s <- r1(v[2:3]) # block: copy, written back
+      if (case == 5) s <- r1(M[1:2, 1]) # block of a matrix: copy, written back
+      if (case == 6) s <- r1(v + 1) # expression: temporary copy, changes lost
+      if (case == 7) s <- r1(a) # scalar variable: copy, written back
+      if (case == 8) s <- r1(ia) # integer scalar variable: cast copy, written back
+      if (case == 9) s <- r1(v[2]) # scalar element: copy, written back
+      if (case == 10) s <- r1(5) # literal: temporary copy
+      if (case == 11) s <- rz(iv, 5L) # whole object of another type: resized by write-back
+      if (case == 12) s <- rz(M, 4L) # whole object of another nDim: resized by write-back
+      if (case == 13) s <- rz(v[2:3], 4L) # block can't be resized: error
+      if (case == 14) s <- rz(a, 2L) # scalar can't take 2 elements: error
+      return(c(s, a, ia))
+      returnType(double(1))
+    },
+    refArgs = c("v", "iv", "M")
+  )
+  C <- nCompile(r1, rz, foo)
+  run <- function(cs) {
+    v <- as.numeric(1:3)
+    iv <- 1:3
+    M <- matrix(as.numeric(1:3), 3, 1)
+    ans <- C$foo(v, iv, M, 5, 7L, cs)
+    list(s = ans[1], a = ans[2], ia = ans[3], v = v, iv = iv, M = M)
+  }
+  r <- run(1)
+  expect_equal(r$s, 101.5 + 2 + 3)
+  expect_identical(r$v, c(101.5, 2, 3))
+  r <- run(2)
+  expect_equal(r$s, 101.5 + 2 + 3)
+  expect_identical(r$iv, c(101L, 2L, 3L))
+  r <- run(3)
+  expect_equal(r$s, 101.5 + 2 + 3)
+  expect_identical(r$M, matrix(c(101.5, 2, 3), 3, 1))
+  r <- run(4)
+  expect_equal(r$s, 102.5 + 3)
+  expect_identical(r$v, c(1, 102.5, 3))
+  r <- run(5)
+  expect_equal(r$s, 101.5 + 2)
+  expect_identical(r$M, matrix(c(101.5, 2, 3), 3, 1))
+  r <- run(6)
+  expect_equal(r$s, 102.5 + 3 + 4)
+  expect_identical(r$v, as.numeric(1:3))
+  r <- run(7)
+  expect_equal(r$s, 105.5)
+  expect_equal(r$a, 105.5)
+  r <- run(8)
+  expect_equal(r$s, 107.5)
+  expect_equal(r$ia, 107)
+  r <- run(9)
+  expect_equal(r$s, 102.5)
+  expect_identical(r$v, c(1, 102.5, 3))
+  r <- run(10)
+  expect_equal(r$s, 105.5)
+  r <- run(11)
+  expect_equal(r$s, 45)
+  expect_identical(r$iv, rep(9L, 5))
+  r <- run(12)
+  expect_equal(r$s, 36)
+  expect_identical(r$M, matrix(9, 4, 1))
+  expect_error(run(13))
+  expect_error(run(14))
+
+  # Optional code-generation warnings for copies
+  old <- get_nOption("warn_arg_passing_copies")
+  set_nOption("warn_arg_passing_copies", TRUE)
+  on.exit(set_nOption("warn_arg_passing_copies", old), add = TRUE)
+  foo2 <- nFunction(
+    fun = function(iv = integer(1)) {
+      return(r1(iv))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(r1, foo2), "cast copy is passed and written back")
+  foo3 <- nFunction(
+    fun = function(v = double(1)) {
+      return(r1(v + 1))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(r1, foo3), "changes to it are lost")
+  foo4 <- nFunction(
+    fun = function(v = double(1)) {
+      return(r1(v[2:3]))
+      returnType(double())
+    }
+  )
+  expect_warning(nCompile(r1, foo4), "not a whole variable")
+})
+
 test_that("unsupported argument passing cases give compile-time errors", {
   foo1bref <- nFunction(
     fun = function(x = double(1)) {
@@ -1015,21 +1128,6 @@ test_that("unsupported argument passing cases give compile-time errors", {
     },
     blockRefArgs = "x"
   )
-  # Scalar to non-scalar ref parameter (not supported yet)
-  foo1ref <- nFunction(
-    fun = function(x = double(1)) {
-      return(sum(x))
-      returnType(double())
-    },
-    refArgs = "x"
-  )
-  foo2 <- nFunction(
-    fun = function(a = double()) {
-      return(foo1ref(a))
-      returnType(double())
-    }
-  )
-  expect_error(nCompile(foo1ref, foo2), "scalar was passed")
   # A non-strided index can't be passed by blockRef
   foo3 <- nFunction(
     fun = function(x = double(1)) {

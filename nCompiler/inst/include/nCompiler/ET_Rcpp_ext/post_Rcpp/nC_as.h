@@ -1,6 +1,7 @@
 #ifndef NCOMPILER_NC_AS_H_
 #define NCOMPILER_NC_AS_H_
 
+#include <exception>
 #include <memory>
 #include <type_traits>
 #include "../../ET_ext/StridedTensorMap.h"
@@ -9,10 +10,12 @@
 //   TM  -- read-only (RHS) use of a whole object, as a TensorMap.
 //   STM -- read-only (RHS) use that will be indexed, as a StridedTensorMap.
 //   LHS -- writable use (assignment), as a StridedTensorMap, with write-back if cast.
-//   Copy -- a new object of the target type (e.g. for passing to a by-value (copy) argument),
+//   CopyProxy -- a new object of the target type (e.g. for passing to a by-value (copy) argument),
 //           made by flex_ assignment from any source, including expressions and scalars.
-//   BlockRef -- the same as LHS, named for passing to a blockRef (StridedTensorMap) argument.
-enum class AsMode { TM, STM, LHS, Copy, BlockRef = LHS };
+//   BlockRefProxy -- the same as LHS, named for passing to a blockRef (StridedTensorMap) argument.
+//   RefProxy -- a copy of the target type, as for CopyProxy, that is written back to the source
+//          (if it is not a temporary), for passing to a ref (Tensor&) argument.
+enum class AsMode { TM, STM, LHS, CopyProxy, RefProxy, BlockRefProxy = LHS };
 
 // ---------------------------------------------------------------------------
 // All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
@@ -20,12 +23,13 @@ enum class AsMode { TM, STM, LHS, Copy, BlockRef = LHS };
 // means callers always write as_nC<T,N,mode>(x)() regardless of mode or
 // scalar match.
 //
-// Five proxy types, selected at compile time by as_nC():
+// Proxy types selected by as_nC():
 //
 //   EmptyProxy<ViewType>               — same-scalar; wraps TM or STM view
 //   RHSCastProxy<Src,Tgt,N>            — cross-scalar RHS; lazy, no allocation
 //   CastingProxy<Tgt,ViewType>         — cross-scalar LHS; eager copy + write-back
-//   CopyProxy<TargetType>              — AsMode::Copy; owns a new object made by flex_ assignment
+//   CopyProxy<TargetType>              — AsMode::CopyProxy; owns a new object made by flex_ assignment
+//   RefProxy<TargetType,Source>        — AsMode::RefProxy; as CopyProxy, plus flex_ write-back
 //   RuntimeCastingProxy<Tgt,N>         — runtime-source (ETaccessorBase)
 //
 // A fifth proxy, KnownProxy<TargetType>, is selected explicitly by
@@ -133,12 +137,12 @@ public:
 
 // CopyProxy<TargetType>
 //
-// AsMode::Copy proxy. Owns a new object of TargetType (an Eigen::Tensor or a true scalar),
+// The proxy for AsMode::CopyProxy. Owns a new object of TargetType (an Eigen::Tensor or a true scalar),
 // assigned from the source by flex_, so the source can be any object or expression
 // (with a different scalar type or nDim) that flex_ assignment accepts, including a scalar
 // for a tensor TargetType. operator()() moves the object out, e.g. to construct a by-value
 // argument without a second copy:
-//   foo(as_nC<Eigen::Tensor<double, 1>, AsMode::Copy>(x + 1)());
+//   foo(as_nC<Eigen::Tensor<double, 1>, AsMode::CopyProxy>(x + 1)());
 template<typename TargetType>
 class CopyProxy {
   TargetType copy_{};
@@ -148,6 +152,45 @@ public:
   CopyProxy(const CopyProxy&) = delete;
   CopyProxy& operator=(const CopyProxy&) = delete;
   TargetType&& operator()() { return std::move(copy_); }
+};
+
+// RefProxy<TargetType, Source>
+//
+// The proxy for AsMode::RefProxy, for passing a source that is not exactly TargetType (e.g. a different
+// scalar type or nDim, a block, or a scalar) to a ref (TargetType&) argument. Owns a copy
+// made by flex_ assignment, as in CopyProxy. operator()() returns a reference to the copy.
+// On destruction, the copy is written back by flex_ assignment, so a whole-object source
+// takes any resizing done through the ref, while a block (StridedTensorMap) must keep its
+// extents (apart from 1s) and a scalar must receive exactly one element; otherwise flex_ throws.
+// A StridedTensorMap source is stored by value (it is a view, and may be a temporary);
+// other sources are stored by reference. Source = void means a temporary that is not a view
+// (e.g. an expression): there is nothing to write back, so changes to the copy are lost.
+// Write-back is skipped if an exception is being thrown (e.g. from the called function).
+template<typename TargetType, typename Source>
+class RefProxy {
+  using SourceStore = std::conditional_t<Eigen::is_StridedTensorMap_v<Source>, Source, Source&>;
+  SourceStore source_;
+  TargetType copy_{};
+  int uncaught_;
+public:
+  explicit RefProxy(Source& x) : source_(x), uncaught_(std::uncaught_exceptions()) { flex_(copy_) = x; }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return copy_; }
+  ~RefProxy() noexcept(false) {
+    if(std::uncaught_exceptions() == uncaught_) flex_(source_) = copy_;
+  }
+};
+
+template<typename TargetType>
+class RefProxy<TargetType, void> {
+  TargetType copy_{};
+public:
+  template<typename T>
+  explicit RefProxy(const T& x) { flex_(copy_) = x; }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return copy_; }
 };
 
 // RuntimeCastingProxy<TargetScalar, nDim>
@@ -405,14 +448,16 @@ namespace as_nC_detail {
 }
 
 // Compile-time source (an Eigen::Tensor, a StridedTensorMap, or a true scalar, or any source
-// for AsMode::Copy). A StridedTensorMap source is viewed with its own offsets and strides.
-// Returns CopyProxy for AsMode::Copy. Otherwise returns EmptyProxy<TM>, EmptyProxy<STM>,
+// for AsMode::CopyProxy). A StridedTensorMap source is viewed with its own offsets and strides.
+// Returns CopyProxy for AsMode::CopyProxy. Otherwise returns EmptyProxy<TM>, EmptyProxy<STM>,
 // RHSCastProxy, or CastingProxy for a tensor TargetType, or EmptyScalarProxy or
 // CastingScalarProxy for a scalar TargetType.
 template<typename TargetType, AsMode mode = AsMode::TM, typename T>
 auto as_nC(T& x) {
-  if constexpr (mode == AsMode::Copy) {
+  if constexpr (mode == AsMode::CopyProxy) {
     return CopyProxy<TargetType>(x);
+  } else if constexpr (mode == AsMode::RefProxy) {
+    return RefProxy<TargetType, T>(x);
   } else {
     static_assert(!std::is_same_v<type_category_t<T>, eigenOp> || Eigen::is_StridedTensorMap_v<T>,
                   "C++ COMPILATION ERROR: as_nC requires an Eigen::Tensor, a StridedTensorMap, or a scalar as its argument.");
@@ -467,16 +512,19 @@ auto as_nC(T& x) {
   }
 }
 
-// A temporary source (e.g. an expression such as x + 1) can only be copied,
+// A temporary source (e.g. an expression such as x + 1) can only be copied
+// (for AsMode::RefProxy, a copy that is not written back),
 // except a temporary StridedTensorMap (e.g. from MakeStridedTensorMap for an indexed argument),
 // which is a view of data that outlives it.
 template<typename TargetType, AsMode mode = AsMode::TM, typename T>
 auto as_nC(const T& x) {
-  if constexpr (mode == AsMode::Copy) {
+  if constexpr (mode == AsMode::CopyProxy) {
     return CopyProxy<TargetType>(x);
+  } else if constexpr (mode == AsMode::RefProxy && !Eigen::is_StridedTensorMap_v<T>) {
+    return RefProxy<TargetType, void>(x);
   } else {
     static_assert(Eigen::is_StridedTensorMap_v<T>,
-                  "C++ COMPILATION ERROR: as_nC can use a temporary (e.g. an expression) only with AsMode::Copy.");
+                  "C++ COMPILATION ERROR: as_nC can use a temporary (e.g. an expression) only with AsMode::CopyProxy or AsMode::RefProxy.");
     T view(x); // a copy of the view; the proxies store their own views by value.
     return as_nC<TargetType, mode>(view);
   }

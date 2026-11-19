@@ -581,7 +581,7 @@ inEigenizeEnv(
 )
 
 ## A call to an nFunction or nClass method.
-## Each argument that can't be passed as-is to its parameter (see checkArgPassing)
+## Each argument that can't be passed as-is to its parameter (see argPassingMode)
 ## gets an nAs layer with the parameter's type, generating as_nC<type, AsMode::mode>(arg)().
 ## This runs after the arguments have been eigenized.
 inEigenizeEnv(
@@ -589,23 +589,30 @@ inEigenizeEnv(
     for (i in seq_along(code$args)) {
       if (!inherits(code$args[[i]], "exprClass")) next
       paramSym <- nFunctionCallParamSymbol(code, i)
-      mode <- checkArgPassing(code$args[[i]], paramSym)
+      mode <- argPassingMode(code$args[[i]], paramSym)
       if (is.null(mode)) next
-      if (isTRUE(paramSym$isBlockRef) && isTRUE(get_nOption("warn_arg_passing_copies"))) {
-        reason <- if (mode == "Copy") {
+      isRefParam <- isTRUE(paramSym$isRef)
+      if ((isRefParam || isTRUE(paramSym$isBlockRef)) && isTRUE(get_nOption("warn_arg_passing_copies"))) {
+        argType <- code$args[[i]]$type
+        reason <- if (!argHasStorage(code$args[[i]])) {
           "is not a variable or a block of one, so a temporary copy is passed and changes to it are lost"
-        } else if (code$args[[i]]$type$type != paramSym$type) {
+        } else if (argType$type != paramSym$type) {
           paste0(
-            "has type ", code$args[[i]]$type$type, " (not ", paramSym$type,
+            "has type ", argType$type, " (not ", paramSym$type,
             "), so a cast copy is passed and written back"
+          )
+        } else if (isRefParam) {
+          paste0(
+            "is not a whole variable with ", paramSym$nDim,
+            " dimension(s), so a copy is passed and written back"
           )
         } else {
           NULL
         }
         if (!is.null(reason)) {
           warning(
-            "In a call to ", code$name, ", the argument for blockRef parameter '", paramSym$name,
-            "' ", reason, ".",
+            "In a call to ", code$name, ", the argument for ", if (isRefParam) "ref" else "blockRef",
+            " parameter '", paramSym$name, "' ", reason, ".",
             call. = FALSE
           )
         }
@@ -1054,7 +1061,7 @@ inEigenizeEnv(
       }
     }
     code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
-    code$aux$isStridedView <- TRUE ## a view with storage (see checkArgPassing)
+    code$aux$isStridedView <- TRUE ## a view with storage (see argPassingMode)
     code$args[-1] <- NULL ## clear indexing args from AST
 
     blocks_expr <- setArg(
@@ -1207,10 +1214,13 @@ nCompiler:::inEigenizeEnv(
       }
       return(invisible(NULL))
     }
-    ## An indexed argument to a blockRef parameter becomes a StridedTensorMap.
-    if (!isAssign && !is.null(code$caller) &&
-      isTRUE(nFunctionCallParamSymbol(code$caller, code$callerArgID)$isBlockRef)) {
-      return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
+    ## An indexed argument to a blockRef or (non-scalar) ref parameter becomes a StridedTensorMap.
+    if (!isAssign && !is.null(code$caller)) {
+      paramSym <- nFunctionCallParamSymbol(code$caller, code$callerArgID)
+      if (isTRUE(paramSym$isBlockRef) ||
+        (isTRUE(paramSym$isRef) && isTRUE(paramSym$nDim > 0))) {
+        return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
+      }
     }
     ## Work: new handling here
     indexVec_inds <- integer()

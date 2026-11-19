@@ -517,29 +517,37 @@ nFunctionCallParamSymbol <- function(code, argID) {
   argSymTab$getSymbol(argName)
 }
 
+# Does argument arg have storage that changes can be written to: a variable,
+# a block or element of one, or a member?
+argHasStorage <- function(arg) {
+  isTRUE(arg$isName) || isTRUE(arg$aux$isStridedView) ||
+    (isTRUE(arg$isCall) && arg$name %in% c("$", "->member", "index[", "index("))
+}
+
 # How should argument arg be passed to an nFunction (or nClass method) parameter
 # whose declared symbol is paramSym (from nFunctionCallParamSymbol)?
-# Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "Copy") for
+# Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "CopyProxy") for
 # an as_nC proxy, which is generated via an nAs layer.
-# Copy and non-scalar blockRef parameters of basic types are handled (ref parameters are not yet):
+# Copy, non-scalar ref, and non-scalar blockRef parameters of basic types are handled:
 # For a copy parameter:
 # - same scalar type and nDim: as-is.
 # - both true scalars: as-is (C++ converts the scalar type).
-# - otherwise: "Copy" (a new object made by flex_ assignment, see CopyProxy in nC_as.h).
+# - otherwise: "CopyProxy" (a new object made by flex_ assignment, see CopyProxy in nC_as.h).
 # For a blockRef parameter:
-# - an argument without storage (e.g. an expression or literal): "Copy" (a temporary,
+# - an argument without storage (e.g. an expression or literal): "CopyProxy" (a temporary,
 #   so changes are lost).
 # - an argument with storage (a variable, a block or element of one, or a member) of a different scalar type:
-#   "BlockRef" (a cast copy that is written back).
-# - a scalar variable or element of the same scalar type: "BlockRef" (a view of the scalar).
+#   "BlockRefProxy" (a cast copy that is written back).
+# - a scalar variable or element of the same scalar type: "BlockRefProxy" (a view of the scalar).
 # - otherwise: as-is (the StridedTensorMap parameter is made from the argument, with
 #   dimensions matched by the flex rule).
-checkArgPassing <- function(arg, paramSym) {
+# For a ref parameter:
+# - a variable or member (not a blockRef) of the same scalar type and nDim: as-is.
+# - otherwise: "RefProxy" (a copy made by flex_ assignment that is written back, see RefProxy
+#   in nC_as.h; for an argument without storage, a temporary, so changes are lost).
+argPassingMode <- function(arg, paramSym) {
   argType <- arg$type
   if (!inherits(paramSym, "symbolBasic") || !inherits(argType, "symbolBasic")) {
-    return(NULL)
-  }
-  if (isTRUE(paramSym$isRef)) {
     return(NULL)
   }
   basicTypes <- c("double", "integer", "logical")
@@ -549,17 +557,29 @@ checkArgPassing <- function(arg, paramSym) {
   if (!is.numeric(paramSym$nDim) || !is.numeric(argType$nDim)) {
     return(NULL)
   }
+  if (isTRUE(paramSym$isRef)) {
+    if (paramSym$nDim == 0) {
+      return(NULL)
+    } # scalar ref parameters are not handled yet
+    if (!argHasStorage(arg)) {
+      return("RefProxy")
+    }
+    isWholeObject <- isTRUE(arg$isName) || (isTRUE(arg$isCall) && arg$name %in% c("$", "->member"))
+    if (isWholeObject && !isTRUE(argType$isBlockRef) &&
+      paramSym$type == argType$type && paramSym$nDim == argType$nDim) {
+      return(NULL)
+    }
+    return("RefProxy")
+  }
   if (isTRUE(paramSym$isBlockRef)) {
     if (paramSym$nDim == 0) {
       return(NULL)
     } # scalar blockRef parameters are not handled yet
-    hasStorage <- isTRUE(arg$isName) || isTRUE(arg$aux$isStridedView) ||
-      (isTRUE(arg$isCall) && arg$name %in% c("$", "->member", "index[", "index("))
-    if (!hasStorage) {
-      return("Copy")
+    if (!argHasStorage(arg)) {
+      return("CopyProxy")
     }
     if (paramSym$type != argType$type || argType$nDim == 0) {
-      return("BlockRef")
+      return("BlockRefProxy")
     }
     return(NULL)
   }
@@ -569,7 +589,7 @@ checkArgPassing <- function(arg, paramSym) {
   if (paramSym$nDim == 0 && argType$nDim == 0) {
     return(NULL)
   }
-  "Copy"
+  "CopyProxy"
 }
 
 newAssignmentExpression <- function() {
