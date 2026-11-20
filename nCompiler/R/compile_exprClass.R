@@ -493,6 +493,126 @@ checkFlexAssignment <- function(LHS, RHS) {
   !isTRUE(LHS$isName) && isTRUE(get_nOption("check_sizes_on_assignment"))
 }
 
+# This gets the declared argument type of an nFunction or nClass method,
+#  by argument name or order.
+# Note that arguments of code have been ordered and named by normalizeCalls.
+# argID can be a name or placement order.
+# Failures return NULL so they can be understood by the caller.
+nFunctionCallParamSymbol <- function(code, argID) {
+  cachedOpInfo <- code$aux$cachedOpInfo
+  if (is.null(cachedOpInfo) || !isTRUE(cachedOpInfo$case %in% c("nFunction", "nClass method"))) {
+    return(NULL)
+  }
+  argSymTab <- cachedOpInfo$obj_internals$argSymTab
+  if (is.null(argSymTab)) {
+    return(NULL)
+  }
+  argName <- names(code$args)[argID]
+  if (is.null(argName) || is.na(argName) || argName == "") {
+    argName <- argSymTab$getSymbolNames()[argID]
+  }
+  if (is.null(argName) || is.na(argName)) {
+    return(NULL)
+  }
+  argSymTab$getSymbol(argName)
+}
+
+# Does argument arg have storage that changes can be written to: a variable,
+# a block or element of one, or a member?
+argHasStorage <- function(arg) {
+  isTRUE(arg$isName) || isTRUE(arg$aux$isStridedView) ||
+    (isTRUE(arg$isCall) && arg$name %in% c("$", "->member", "index[", "index("))
+}
+
+# How should argument arg be passed to an nFunction (or nClass method) parameter
+# whose declared symbol is paramSym (from nFunctionCallParamSymbol)?
+# Returns NULL if arg can be passed as-is, or else the AsMode (e.g. "CopyProxy") for
+# an as_nC proxy, which is generated via an nAs layer.
+# Copy, ref, and blockRef parameters of basic types are handled:
+# For a copy parameter:
+# - same scalar type and nDim: as-is.
+# - both true scalars: as-is (C++ converts the scalar type).
+# - otherwise: "CopyProxy" (a new object made by flex_ assignment, see CopyProxy in nC_as.h).
+# For a blockRef parameter:
+# - an argument without storage (e.g. an expression or literal): "CopyProxy" (a temporary,
+#   so changes are lost).
+# - an argument with storage (a variable, a block or element of one, or a member) of a different scalar type:
+#   "BlockRefProxy" (a cast copy that is written back).
+# - a scalar variable or element of the same scalar type: "BlockRefProxy" (a view of the scalar).
+# - otherwise: as-is (the StridedTensorMap parameter is made from the argument, with
+#   dimensions matched by the flex rule).
+# For a ref parameter:
+# - a variable or member (not a blockRef) of the same scalar type and nDim: as-is.
+# - otherwise: "RefProxy" (a copy made by flex_ assignment that is written back, see RefProxy
+#   in nC_as.h; for an argument without storage, a temporary, so changes are lost).
+# For a scalar ref or blockRef parameter (a C++ reference to a scalar):
+# - a scalar variable, element, or member of the same scalar type: as-is.
+# - otherwise: "RefProxy" (a copy that is written back; the argument must have exactly one
+#   element; for an argument without storage, a temporary, so changes are lost).
+# An ETaccessor argument (runtime type): "CopyProxy", "RefProxy", or "BlockRefProxy" for a copy,
+# ref, or blockRef parameter ("RefProxy" for a scalar blockRef; see the runtime as_nC in nC_as.h).
+argPassingMode <- function(arg, paramSym) {
+  argType <- arg$type
+  basicTypes <- c("double", "integer", "logical")
+  if (inherits(argType, "symbolETaccBase")) {
+    if (!inherits(paramSym, "symbolBasic") || !(paramSym$type %in% basicTypes) ||
+      !is.numeric(paramSym$nDim)) {
+      return(NULL)
+    }
+    if (isTRUE(paramSym$isRef)) {
+      return("RefProxy")
+    }
+    if (isTRUE(paramSym$isBlockRef)) {
+      ## A scalar blockRef parameter is a reference (as for ref).
+      return(if (paramSym$nDim == 0) "RefProxy" else "BlockRefProxy")
+    }
+    return("CopyProxy")
+  }
+  if (!inherits(paramSym, "symbolBasic") || !inherits(argType, "symbolBasic")) {
+    return(NULL)
+  }
+  if (!(paramSym$type %in% basicTypes) || !(argType$type %in% basicTypes)) {
+    return(NULL)
+  }
+  if (!is.numeric(paramSym$nDim) || !is.numeric(argType$nDim)) {
+    return(NULL)
+  }
+  ## A scalar ref or blockRef parameter is a C++ reference to a scalar.
+  if (paramSym$nDim == 0 && (isTRUE(paramSym$isRef) || isTRUE(paramSym$isBlockRef))) {
+    if (argHasStorage(arg) && argType$nDim == 0 && paramSym$type == argType$type) {
+      return(NULL)
+    }
+    return("RefProxy")
+  }
+  if (isTRUE(paramSym$isRef)) {
+    if (!argHasStorage(arg)) {
+      return("RefProxy")
+    }
+    isWholeObject <- isTRUE(arg$isName) || (isTRUE(arg$isCall) && arg$name %in% c("$", "->member"))
+    if (isWholeObject && !isTRUE(argType$isBlockRef) &&
+      paramSym$type == argType$type && paramSym$nDim == argType$nDim) {
+      return(NULL)
+    }
+    return("RefProxy")
+  }
+  if (isTRUE(paramSym$isBlockRef)) {
+    if (!argHasStorage(arg)) {
+      return("CopyProxy")
+    }
+    if (paramSym$type != argType$type || argType$nDim == 0) {
+      return("BlockRefProxy")
+    }
+    return(NULL)
+  }
+  if (paramSym$type == argType$type && paramSym$nDim == argType$nDim) {
+    return(NULL)
+  }
+  if (paramSym$nDim == 0 && argType$nDim == 0) {
+    return(NULL)
+  }
+  "CopyProxy"
+}
+
 newAssignmentExpression <- function() {
   exprClass$new(isName = FALSE, isCall = TRUE, isAssign = TRUE, name = "<-")
 }

@@ -580,6 +580,56 @@ inEigenizeEnv(
   }
 )
 
+## A call to an nFunction or nClass method.
+## Each argument that can't be passed as-is to its parameter (see argPassingMode)
+## gets an nAs layer with the parameter's type, generating as_nC<type, AsMode::mode>(arg)().
+## This runs after the arguments have been eigenized.
+inEigenizeEnv(
+  nFunction_call <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
+    for (i in seq_along(code$args)) {
+      if (!inherits(code$args[[i]], "exprClass")) next
+      paramSym <- nFunctionCallParamSymbol(code, i)
+      mode <- argPassingMode(code$args[[i]], paramSym)
+      if (is.null(mode)) next
+      ## A scalar blockRef parameter is a reference, so it is warned about as for ref.
+      isRefParam <- isTRUE(paramSym$isRef) || (isTRUE(paramSym$isBlockRef) && identical(paramSym$nDim, 0))
+      ## No warnings for an ETaccessor argument: whether a copy is needed is only known at run time.
+      if ((isRefParam || isTRUE(paramSym$isBlockRef)) && isTRUE(get_nOption("warn_arg_passing_copies")) &&
+        !inherits(code$args[[i]]$type, "symbolETaccBase")) {
+        argType <- code$args[[i]]$type
+        reason <- if (!argHasStorage(code$args[[i]])) {
+          "is not a variable or a block of one, so a temporary copy is passed and changes to it are lost"
+        } else if (argType$type != paramSym$type) {
+          paste0(
+            "has type ", argType$type, " (not ", paramSym$type,
+            "), so a cast copy is passed and written back"
+          )
+        } else if (isRefParam && paramSym$nDim == 0) {
+          "is not a scalar variable or element, so a copy is passed and written back"
+        } else if (isRefParam) {
+          paste0(
+            "is not a whole variable with ", paramSym$nDim,
+            " dimension(s), so a copy is passed and written back"
+          )
+        } else {
+          NULL
+        }
+        if (!is.null(reason)) {
+          warning(
+            "In a call to ", code$name, ", the argument for ", if (isTRUE(paramSym$isRef)) "ref" else "blockRef",
+            " parameter '", paramSym$name, "' ", reason, ".",
+            call. = FALSE
+          )
+        }
+      }
+      asExpr <- insertExprClassLayer(code, i, "nAs")
+      asExpr$type <- symbolBasic$new(name = "", type = paramSym$type, nDim = paramSym$nDim)
+      asExpr$aux$asMode <- mode
+    }
+    invisible(NULL)
+  }
+)
+
 inEigenizeEnv(
   RandomGeneration <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
     # determine arguments that parameterize the dist'n.
@@ -994,16 +1044,29 @@ inEigenizeEnv(
 
 inEigenizeEnv(
   Bracket_to_StridedTensorMap <- function(code, symTab, auxEnv, workEnv, handlingInfo) {
-    code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
-
-    ## labelAbstractTypes IndexingBracket handler put named arg 'drop'
-    drop <- code$args$drop$name
-    ## remove the drop arg from AST
-    code$args$drop <- NULL
+    ## drop is a compileArg of `[`, so it is in aux, not in the AST.
+    drop <- isTRUE(code$aux$compileArgs$drop)
 
     ## the labelAbstractTypes IndexingBracket handler ensures that index_args
     ## is not just the empty argument ""
     index_args <- code$args[-1]
+    ## A strided view supports only empty, scalar, or `:` indices.
+    for (i in seq_along(index_args)) {
+      ok <- index_args[[i]]$name == "" ||
+        (isTRUE(index_args[[i]]$isCall) && index_args[[i]]$name %in% c(":", "nSeqFromTo")) ||
+        identical(index_args[[i]]$type$nDim, 0)
+      if (!ok) {
+        stop(
+          exprClassProcessingErrorMsg(
+            code,
+            "An indexed argument for assignment or passing can only use empty, scalar, or `:` indices."
+          ),
+          call. = FALSE
+        )
+      }
+    }
+    code$name <- paste0("Eigen::MakeStridedTensorMap<", code$type$nDim, ">::make")
+    code$aux$isStridedView <- TRUE ## a view with storage (see argPassingMode)
     code$args[-1] <- NULL ## clear indexing args from AST
 
     blocks_expr <- setArg(
@@ -1021,7 +1084,7 @@ inEigenizeEnv(
         isName = FALSE, isCall = TRUE
       )
 
-      if (index_args[[i]]$isCall && index_args[[i]]$name == ":") {
+      if (index_args[[i]]$isCall && index_args[[i]]$name %in% c(":", "nSeqFromTo")) {
         ## the labelAbstractTypes handler ensures ':' is the only non-scalar call
         setArg(b_expr, 1, index_args[[i]]$args[[1]])
         setArg(b_expr, 2, index_args[[i]]$args[[2]])
@@ -1156,8 +1219,12 @@ nCompiler:::inEigenizeEnv(
       }
       return(invisible(NULL))
     }
-    if (code$caller$name == "nFunction") {
-      return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
+    ## An indexed (non-scalar) argument to a blockRef or ref parameter becomes a StridedTensorMap.
+    if (!isAssign && !is.null(code$caller)) {
+      paramSym <- nFunctionCallParamSymbol(code$caller, code$callerArgID)
+      if (isTRUE(paramSym$isBlockRef) || isTRUE(paramSym$isRef)) {
+        return(Bracket_to_StridedTensorMap(code, symTab, auxEnv, workEnv, handlingInfo))
+      }
     }
     ## Work: new handling here
     indexVec_inds <- integer()
@@ -1170,7 +1237,7 @@ nCompiler:::inEigenizeEnv(
       warning("Problem determining whether to drop dimensions.")
     }
 
-    if (isTRUE(nOptions("nimble") || isTRUE(nOptions("dropSingleSizes")))) {
+    if (isTRUE(nOptions("nimble")) || isTRUE(nOptions("dropSingleSizes"))) {
       ## Here we imitate nimble's blockIndexInfo to determine
       ## scalar indices from ":" or c() (or possibly other?) cases
       ## but here what we do is replace the argument right now and
@@ -1200,7 +1267,7 @@ nCompiler:::inEigenizeEnv(
     # The clone() method calls in this block of code produce broken exprClass ASTs
     # because the caller and callerArgID fields are not set. We do have a copyExprClass
     # function that could be used (and we could consider making a proper clone method).
-    # But for not it works to allow broken ASTs here because the next step is generating C++.
+    # But for now it works to allow broken ASTs here because the next step is generating C++.
     for (argInd in iArgs) {
       ind <- argInd - 1
       isBlank <- code$args[[argInd]]$isName & code$args[[argInd]]$name == ""
