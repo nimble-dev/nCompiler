@@ -1938,6 +1938,11 @@ assignOperatorDef(
   )
 )
 
+assignOperatorDef(
+  "R_CheckUserInterrupt",
+  list()
+)
+
 ## assignOperatorDef(
 ##   c('list'),
 ##   list(
