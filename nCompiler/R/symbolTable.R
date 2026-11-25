@@ -120,12 +120,14 @@ symbolScalarOrTensor <-
               constructor = "(M_PI)"
             ))
           }
+          ## A scalar blockRef is a reference to the scalar, the same as a scalar ref.
+          isScalarRef <- isTRUE(self$isRef) || isTRUE(self$isBlockRef)
           if (isTRUE(self$isConst)) {
             return(cppVarFullClass$new(
               baseType = cType,
               name = self$name,
               ptr = FALSE,
-              ref = self$isRef,
+              ref = isScalarRef,
               const = self$isConst
             ))
           }
@@ -133,7 +135,7 @@ symbolScalarOrTensor <-
             baseType = cType,
             name = self$name,
             ptr = 0,
-            ref = self$isRef
+            ref = isScalarRef
           ))
         }
         if (self$isBlockRef) {

@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <nCompiler/ET_ext/StridedTensorMap.h>
+#include <nCompiler/ET_ext/flexDims.h>
 #include <nCompiler/ET_ext/RuntimeFlatView.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorUtils.h>
 #include <nCompiler/ET_ext/post_Rcpp/tensorFlex.h>
@@ -19,40 +20,15 @@ class ETaccessorTyped;
 template<typename ERROR, bool copy = false>
 class ETaccessor;
 
+// Set outDim (output_nDim elements) from inDim (a run-time number of dimensions)
+// by the flex rule (see flexDims.h): extents other than 1 are used in order,
+// spare dimensions keep the leftmost 1s, and trailing 1s are padded.
 template<typename inDimsT, typename outDimsT>
 void set_output_dims(const inDimsT &inDim, outDimsT &outDim,
                     size_t output_nDim) {
-  size_t in_nDim = inDim.size();
-  if(output_nDim >= in_nDim) {
-    for(size_t i = 0; i < in_nDim; ++i) 
-      outDim[i] = inDim[i];
-    for(size_t i = in_nDim; i < output_nDim; ++i)
-      outDim[i] = 1;
-  } else {
-    size_t i_out = 0;
-    for(size_t i_in = 0; i_in < in_nDim; ++i_in) {
-      if(inDim[i_in] > 1) {
-        if(i_out >= output_nDim)
-          Rcpp::stop("Too many non-singleton dimensions for requested morphing to lower dimensional object.");
-        outDim[i_out++] = inDim[i_in];
-      }
-    }
-    for(; i_out < output_nDim; ++i_out)
-      outDim[i_out] = 1;
-  }
+  if(!flexDimsSetup(inDim, static_cast<int>(inDim.size()), outDim, static_cast<int>(output_nDim)))
+    Rcpp::stop("Too many non-singleton dimensions for requested use as lower number of dimensions.");
 }
-
-enum class AsMode { TM, STM, LHS };
-
-// Forward declarations: proxy classes are defined in nC_as.h (included after
-// this file). ETaccessorTyped::asTyped() returns them; because asTyped() is a
-// template, instantiation is deferred to the call site where they are fully
-// defined.
-template<typename ViewType> class EmptyProxy;
-template<typename Scalar> class EmptyScalarProxy;
-template<typename TargetScalar, typename ViewType> class RHSCastProxy;
-template<typename TargetScalar, typename ViewType> class CastingProxy;
-template<typename TargetScalar, typename Scalar> class CastingScalarProxy;
 
 // Names of scalar types used to downcast an ETaccessorBase without relying on
 // RTTI matching across DLLs (see typed_cast below, and nc_cast in
@@ -91,7 +67,13 @@ class ETaccessorBase {
   template<int nDim, typename Scalar>
   ETaccessor<Eigen::Tensor<Scalar, nDim> >* ETaccessorTyped_tensorPtr();
 
-//  virtual void resize(Eigen::Tensor<double, 1> &t)=0;
+  // Resize the object to dims, a run-time number of dimensions, set to the object's own
+  // number of dimensions by the flex rule (see set_output_dims), as in whole-object flex_
+  // assignment. A scalar can only be "resized" to extents that are all 1. Values are not kept.
+  // Used, e.g., to write back a copy that was resized through a ref argument (see RefProxy in nC_as.h).
+  virtual void resize(const std::vector<int> &dims) {
+    Rcpp::stop("resize not supported for this ETaccessor type.");
+  }
   // To iron out: set, get, generic ref access.
   virtual void set(SEXP Sinput)=0;
   virtual SEXP get()=0;
@@ -213,55 +195,12 @@ class ETaccessorTyped : public ETaccessorBase {
     return Eigen::MakeStridedTensorMap<output_nDim>::make(mapTyped<output_nDim>());
   }
 
-  // Central dispatch for as() operations. Returns a proxy wrapping the
-  // appropriate view. All proxy types expose operator()() uniformly.
-  template<typename TargetType, AsMode mode = AsMode::TM, 
-           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, eigenTensor>, int> = 0>
-  auto asTyped() {
-    typedef typename Eigen::nDimTraits2<TargetType>::Scalar TargetScalar;
-    constexpr int nDim = Eigen::nDimTraits2<TargetType>::NumDimensions;
-    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
-      if constexpr (mode == AsMode::TM)
-        return EmptyProxy<ETM<nDim>>(mapTyped<nDim>());
-      else
-        return EmptyProxy<ESTM<nDim>>(STmapTyped<nDim>());
-    } else {
-      if constexpr (mode == AsMode::LHS) {
-        auto view = STmapTyped<nDim>();
-        return CastingProxy<TargetScalar, decltype(view)>(view);
-      } else if constexpr (mode == AsMode::STM) {
-        // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
-        // have correct strides in the lazy cast expression.
-        auto view = STmapTyped<nDim>();
-        return RHSCastProxy<TargetScalar, decltype(view)>(view);
-      } else {
-        auto view = mapTyped<nDim>();
-        return RHSCastProxy<TargetScalar, decltype(view)>(view);
-      }
-    }
-  }
-
-  template<typename TargetType, AsMode mode = AsMode::TM, 
-           std::enable_if_t<std::is_same_v<type_category_t<TargetType>, trueScalar>, int> = 0>
-  auto asTyped() {
-    typedef TargetType TargetScalar;
-    if constexpr (std::is_same_v<TargetScalar, Scalar>) {
-      return EmptyScalarProxy<TargetScalar>(scalarTyped());
-    } else {
-      return CastingScalarProxy<TargetScalar, Scalar>(scalarTyped());
-    }
-  }
-
   template<int output_nDim>
   ETM<output_nDim> mapTyped() {
-    //innate_nDim is the nDim of the object.
     //output_nDim is the requested nDim of the output map.
-    //If the output_nDim > innate_nDim, then set the output dims to innate dims padded with 1s.
-    //If the output_nDim < innate_nDim, then drop singleton dimensions in the innate dims.
-    //This is very similar to checkAndSetupDims in tensorFlex.h
-    //but there both the LHS and RHS nDims are known at compile time.
-    //Here only the output_nDim is known at compile time.
-    //Also it looks like in checkAndSetupDims, RHS singletons are always dropped
+    //The output dims are set from the object's dims by the flex rule (see set_output_dims),
+    //the same rule as checkAndSetupDims in tensorFlex.h, but here the object's nDim
+    //is only known at run time.
     // typedef typename Eigen::internal::traits<ETM<output_nDim> >::Index Index;
     typedef typename ETM<output_nDim>::Dimensions output_Dimensions;
     output_Dimensions outDim;
@@ -409,6 +348,11 @@ class ETaccessor<Eigen::Tensor<Scalar, nDim>, copy> : public ETaccessorTyped<Sca
   SEXP get() override {
     return wrap(obj);
   }
+  void resize(const std::vector<int> &dims) override {
+    Dimensions outDim;
+    set_output_dims(dims, outDim, nDim);
+    obj.resize(outDim);
+  }
   ET &innerRef() {return obj;}
   ET &obj;
   std::vector<int> intDims_;
@@ -446,6 +390,12 @@ class ETaccessorScalar : public ETaccessorTyped<Scalar> {
   std::vector<int> &intDims() override {return intDims_;}
   void set(SEXP Sinput) override { obj = as<Scalar>(Sinput);}
   SEXP get() override {return wrap(obj);}
+  void resize(const std::vector<int> &dims) override {
+    for(size_t i = 0; i < dims.size(); ++i) {
+      if(dims[i] != 1)
+        Rcpp::stop("Invalid resize of an ETaccessor to a scalar to dimensions not all equal to 1.");
+    }
+  }
   Eigen::Tensor<double, 0> &innerRef() {
     Rcpp::stop("Invalid call to ref() for ETaccessor to scalar.");
     return *new Eigen::Tensor<double, 0>(); // bad memory mgmt (would leak) but will never be called. only to show compiler valid return.

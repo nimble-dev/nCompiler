@@ -183,6 +183,9 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = "nFunction_or_method_call"
     ),
+    eigenImpl = list(
+      handler = "nFunction_call"
+    ),
     #   normalizeCalls = list(
     #      handler = 'nFunction_or_method_call'),
     cppOutput = list(

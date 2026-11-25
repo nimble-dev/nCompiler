@@ -37,6 +37,7 @@
 #include <string>
 #include <sstream>
 #include "tensorUtils.h"
+#include <nCompiler/ET_ext/flexDims.h> // flexDimsSetup
 #include <nCompiler/utils.h> // nStop_
 
 // These structs are used for tag dispatch.
@@ -149,7 +150,8 @@ bool checkDims(const LessDimsType &LessDims,
 
 // checkAndSetupDims is used for an assignment where the sizes of the LHS can change.
 // example: If we have A <- X %*% b, where A is a vector and X %*% b returns a 10x1 matrix at run-time.
-// This function checks that the number of non-1 dimensions on the RHS is <= nDim of A.
+// This function checks that the number of non-1 dimensions on the RHS is <= nDim of A,
+// and sets LhsDims from RhsDims by the flex rule (see flexDims.h):
 // If the RHS has *fewer* non-1 dimensions than nDim of A, the spare LHS dimensions keep
 // the leftmost 1s of the RHS that come before its last non-1 dimension (leading or interior 1s),
 // and any still remaining are padded on as trailing 1s.
@@ -158,30 +160,7 @@ bool checkDims(const LessDimsType &LessDims,
 template<int LhsNdim, int RhsNdim, typename LhsDimsType, typename RhsDimsType>
 bool checkAndSetupDims(LhsDimsType &LhsDims,
                        const RhsDimsType &RhsDims) {
-  // First pass: count the non-1 dimensions and find the last one.
-  int nNon1 = 0;
-  int iLastNon1 = -1;
-  for(int iRhs = 0; iRhs < RhsNdim; ++iRhs) {
-    if(RhsDims[iRhs] != 1) {
-      ++nNon1;
-      iLastNon1 = iRhs;
-    }
-  }
-  if(nNon1 > LhsNdim) return false; // Not enough LHS dimensions: fail
-  int nSpare = LhsNdim - nNon1; // number of 1s from the RHS that can be kept
-  // Second pass: copy the non-1 dimensions, and 1s while there are spare LHS dimensions.
-  int iLhs = 0;
-  for(int iRhs = 0; iRhs <= iLastNon1; ++iRhs) {
-    if(RhsDims[iRhs] != 1) {
-      LhsDims[iLhs++] = RhsDims[iRhs];
-    } else if(nSpare > 0) {
-      LhsDims[iLhs++] = 1;
-      --nSpare;
-    }
-  }
-  // fill any remaining LHS dimensions with ones
-  for( ; iLhs < LhsNdim; ++iLhs) LhsDims[iLhs] = 1;
-  return true;
+  return flexDimsSetup(RhsDims, RhsNdim, LhsDims, LhsNdim);
 }
 
 template<int Ndim, typename DimsType>

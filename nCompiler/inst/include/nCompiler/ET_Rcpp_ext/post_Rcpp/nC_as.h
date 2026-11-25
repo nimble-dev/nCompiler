@@ -1,9 +1,21 @@
 #ifndef NCOMPILER_NC_AS_H_
 #define NCOMPILER_NC_AS_H_
 
+#include <exception>
 #include <memory>
 #include <type_traits>
 #include "../../ET_ext/StridedTensorMap.h"
+
+// The kind of view an as_nC proxy provides:
+//   TM  -- read-only (RHS) use of a whole object, as a TensorMap.
+//   STM -- read-only (RHS) use that will be indexed, as a StridedTensorMap.
+//   LHS -- writable use (assignment), as a StridedTensorMap, with write-back if cast.
+//   CopyProxy -- a new object of the target type (e.g. for passing to a by-value (copy) argument),
+//           made by flex_ assignment from any source, including expressions and scalars.
+//   BlockRefProxy -- the same as LHS, named for passing to a blockRef (StridedTensorMap) argument.
+//   RefProxy -- a copy of the target type, as for CopyProxy, that is written back to the source
+//          (if it is not a temporary), for passing to a ref (Tensor&) argument.
+enum class AsMode { TM, STM, LHS, CopyProxy, RefProxy, BlockRefProxy = LHS };
 
 // ---------------------------------------------------------------------------
 // All as_nC<>() calls return a proxy. Every proxy exposes operator()() to
@@ -11,11 +23,14 @@
 // means callers always write as_nC<T,N,mode>(x)() regardless of mode or
 // scalar match.
 //
-// Four proxy types, selected at compile time by asTyped() / as_nC():
+// Proxy types selected by as_nC():
 //
 //   EmptyProxy<ViewType>               — same-scalar; wraps TM or STM view
 //   RHSCastProxy<Src,Tgt,N>            — cross-scalar RHS; lazy, no allocation
 //   CastingProxy<Tgt,ViewType>         — cross-scalar LHS; eager copy + write-back
+//   CopyProxy<TargetType>              — AsMode::CopyProxy; owns a new object made by flex_ assignment
+//   RefProxy<TargetType,Source>        — AsMode::RefProxy; as CopyProxy, plus flex_ write-back
+//                                        (specialized for a runtime source, ETaccessorBase)
 //   RuntimeCastingProxy<Tgt,N>         — runtime-source (ETaccessorBase)
 //
 // A fifth proxy, KnownProxy<TargetType>, is selected explicitly by
@@ -121,6 +136,92 @@ public:
   CopyTensor& operator()() { return copy_; }
 };
 
+// CopyProxy<TargetType>
+//
+// The proxy for AsMode::CopyProxy. Owns a new object of TargetType (an Eigen::Tensor or a true scalar),
+// assigned from the source by flex_, so the source can be any object or expression
+// (with a different scalar type or nDim) that flex_ assignment accepts, including a scalar
+// for a tensor TargetType. operator()() moves the object out, e.g. to construct a by-value
+// argument without a second copy:
+//   foo(as_nC<Eigen::Tensor<double, 1>, AsMode::CopyProxy>(x + 1)());
+template<typename TargetType>
+class CopyProxy {
+  TargetType copy_{};
+public:
+  template<typename T>
+  explicit CopyProxy(const T& x) { flex_(copy_) = x; }
+  CopyProxy(const CopyProxy&) = delete;
+  CopyProxy& operator=(const CopyProxy&) = delete;
+  TargetType&& operator()() { return std::move(copy_); }
+};
+
+// RefProxy<TargetType, Source>
+//
+// The proxy for AsMode::RefProxy, for passing a source that is not exactly TargetType (e.g. a different
+// scalar type or nDim, a block, or a scalar) to a ref (TargetType&) argument. Owns a copy
+// made by flex_ assignment, as in CopyProxy. operator()() returns a reference to the copy.
+// On destruction, the copy is written back by flex_ assignment, so a whole-object source
+// takes any resizing done through the ref, while a block (StridedTensorMap) must keep its
+// extents (apart from 1s) and a scalar must receive exactly one element; otherwise flex_ throws.
+// A StridedTensorMap source is stored by value (it is a view, and may be a temporary);
+// other sources are stored by reference. Source = void means a temporary that is not a view
+// (e.g. an expression): there is nothing to write back, so changes to the copy are lost.
+// Write-back is skipped if an exception is being thrown (e.g. from the called function).
+template<typename TargetType, typename Source>
+class RefProxy {
+  using SourceStore = std::conditional_t<Eigen::is_StridedTensorMap_v<Source>, Source, Source&>;
+  SourceStore source_;
+  TargetType copy_{};
+  int uncaught_;
+public:
+  explicit RefProxy(Source& x) : source_(x), uncaught_(std::uncaught_exceptions()) { flex_(copy_) = x; }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return copy_; }
+  ~RefProxy() noexcept(false) {
+    if(std::uncaught_exceptions() == uncaught_) flex_(source_) = copy_;
+  }
+};
+
+template<typename TargetType>
+class RefProxy<TargetType, void> {
+  TargetType copy_{};
+public:
+  template<typename T>
+  explicit RefProxy(const T& x) { flex_(copy_) = x; }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return copy_; }
+};
+
+// Element-wise cast copy from, and write-back to, a runtime source (ETaccessorBase)
+// via its virtual methods for the supported scalar types (double, int, bool).
+namespace as_nC_runtime {
+  template<typename TargetScalar>
+  void castCopyFrom(ETaccessorBase& source, TargetScalar* dest, size_t n) {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source.castCopyToDouble(dest, n);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source.castCopyToInt(dest, n);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source.castCopyToBool(dest, n);
+    else
+      Rcpp::stop("as_nC: unsupported scalar type for a runtime (ETaccessor) source.");
+  }
+
+  template<typename TargetScalar>
+  void writeBack(ETaccessorBase& source, const TargetScalar* src, size_t n) {
+    if constexpr (std::is_same_v<TargetScalar, double>)
+      source.writeBackFromDouble(src, n);
+    else if constexpr (std::is_same_v<TargetScalar, int>)
+      source.writeBackFromInt(src, n);
+    else if constexpr (std::is_same_v<TargetScalar, bool>)
+      source.writeBackFromBool(src, n);
+    else
+      Rcpp::stop("as_nC: unsupported scalar type for a runtime (ETaccessor) source.");
+  }
+}
+
 // RuntimeCastingProxy<TargetScalar, nDim>
 //
 // Runtime-source proxy (ETaccessorBase). At construction, ETaccessorTyped_ptr() tests
@@ -149,27 +250,19 @@ class RuntimeCastingProxy {
   TargetScalar* data_ptr_;
 
   void castCopyFrom() {
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.castCopyToDouble(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.castCopyToInt(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.castCopyToBool(&copy_, 1);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    // As in ETaccessorTyped::scalarTyped (used when the scalar type matches).
+    const auto& intDims = source_.intDims();
+    for(size_t i = 0; i < intDims.size(); ++i) {
+      if(intDims[i] != 1)
+        Rcpp::stop("Invalid use of an ETaccessor as a scalar for an object with dimensions not all equal to 1.");
+    }
+    as_nC_runtime::castCopyFrom(source_, &copy_, 1);
     data_ptr_ = &copy_;
     copy_made_ = true;
   }
 
   void writeBack() {
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.writeBackFromDouble(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.writeBackFromInt(&copy_, 1);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.writeBackFromBool(&copy_, 1);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::writeBack(source_, &copy_, 1);
   }
 
 public:
@@ -207,7 +300,7 @@ class RuntimeCastingProxy<Eigen::Tensor<TargetScalar, nDim> > {
   Eigen::array<Eigen::Index, nDim> dims_;
   bool is_lhs_;
 
-  // Mirrors mapTyped singleton-drop/pad logic from ETaccessorTyped.
+  // Same flex rule as mapTyped in ETaccessorTyped (see set_output_dims).
   Eigen::array<Eigen::Index, nDim> computeDims(const std::vector<int>& intDims) {
     Eigen::array<Eigen::Index, nDim> outDim;
     set_output_dims(intDims, outDim, nDim);
@@ -223,27 +316,12 @@ class RuntimeCastingProxy<Eigen::Tensor<TargetScalar, nDim> > {
   void castCopyFrom() {
     size_t n = totalElems();
     copy_ = std::make_unique<CopyTensor>(dims_);
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.castCopyToDouble(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.castCopyToInt(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.castCopyToBool(copy_->data(), n);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::castCopyFrom(source_, copy_->data(), n);
     data_ptr_ = copy_->data();
   }
 
   void writeBack() {
-    size_t n = totalElems();
-    if constexpr (std::is_same_v<TargetScalar, double>)
-      source_.writeBackFromDouble(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, int>)
-      source_.writeBackFromInt(copy_->data(), n);
-    else if constexpr (std::is_same_v<TargetScalar, bool>)
-      source_.writeBackFromBool(copy_->data(), n);
-    else
-      Rcpp::stop("RuntimeCastingProxy: unsupported TargetScalar type.");
+    as_nC_runtime::writeBack(source_, copy_->data(), totalElems());
   }
 
 public:
@@ -270,6 +348,48 @@ public:
   RuntimeCastingProxy& operator=(const RuntimeCastingProxy&) = delete;
 
   TM operator()() { return TM(data_ptr_, dims_); }
+};
+
+// RefProxy<Eigen::Tensor<TargetScalar, nDim>, ETaccessorBase>
+//
+// AsMode::RefProxy proxy for a runtime source (ETaccessorBase), for passing to a ref (Tensor&)
+// argument. If the source is exactly an Eigen::Tensor<TargetScalar, nDim>, operator()() returns
+// a reference to it (no copy), so changes, including resizing, are made directly.
+// Otherwise it owns a copy, with dimensions from the source's by the flex rule and values
+// cast element-wise. On destruction, the source is resized to the copy's dimensions
+// (by the flex rule; see ETaccessorBase::resize) and the copy is written back.
+// As in RefProxy above, write-back is skipped if an exception is being thrown.
+template<typename TargetScalar, int nDim>
+class RefProxy<Eigen::Tensor<TargetScalar, nDim>, ETaccessorBase> {
+  using TargetType = Eigen::Tensor<TargetScalar, nDim>;
+  ETaccessorBase& source_;
+  TargetType* direct_;
+  TargetType copy_;
+  int uncaught_;
+public:
+  explicit RefProxy(ETaccessorBase& acc)
+    : source_(acc), direct_(nullptr), uncaught_(std::uncaught_exceptions()) {
+    // Done via a virtual method so the check is made in the DLL that created acc.
+    auto* exact = acc.template ETaccessorTyped_tensorPtr<nDim, TargetScalar>();
+    if(exact) {
+      direct_ = &exact->innerRef();
+    } else {
+      typename TargetType::Dimensions dims;
+      set_output_dims(acc.intDims(), dims, nDim);
+      copy_.resize(dims);
+      as_nC_runtime::castCopyFrom(acc, copy_.data(), static_cast<size_t>(copy_.size()));
+    }
+  }
+  RefProxy(const RefProxy&) = delete;
+  RefProxy& operator=(const RefProxy&) = delete;
+  TargetType& operator()() { return direct_ ? *direct_ : copy_; }
+  ~RefProxy() noexcept(false) {
+    if(direct_ || std::uncaught_exceptions() != uncaught_) return;
+    const auto& d = copy_.dimensions();
+    std::vector<int> dims(d.begin(), d.end());
+    source_.resize(dims);
+    as_nC_runtime::writeBack(source_, copy_.data(), static_cast<size_t>(copy_.size()));
+  }
 };
 
 // KnownProxy was added using Claude as a potentially useful feature,
@@ -340,32 +460,158 @@ KnownProxy<TargetType> known_nC(std::unique_ptr<ETaccessorBase>&& acc) {
 // All overloads return a proxy; caller always writes as_nC<T,N,mode>(x)().
 // ---------------------------------------------------------------------------
 
-// Compile-time source: delegates to ETaccessorTyped<Scalar>::asTyped<>().
-// Returns EmptyProxy<TM>, EmptyProxy<STM>, RHSCastProxy, or CastingProxy.
-template<typename TargetType, AsMode mode = AsMode::TM, bool copy = false, typename T>
+// Helpers for the compile-time-source as_nC, which builds views directly from the source
+// (no ETaccessor). The source is an Eigen::Tensor or a true scalar.
+namespace as_nC_detail {
+  // TensorMap with nDim dimensions, set from the source's dimensions by the flex rule
+  // (see set_output_dims). A true scalar has no dimensions, so its map has extents of 1.
+  template<int nDim, typename T>
+  Eigen::TensorMap<Eigen::Tensor<flex_scalar_t<T>, nDim> > map(T &x) {
+    typedef Eigen::TensorMap<Eigen::Tensor<flex_scalar_t<T>, nDim> > TM;
+    typename TM::Dimensions outDim;
+    if constexpr (std::is_same_v<type_category_t<T>, trueScalar>) {
+      Eigen::array<Eigen::Index, 0> inDim;
+      set_output_dims(inDim, outDim, nDim);
+      return TM(&x, outDim);
+    } else {
+      set_output_dims(x.dimensions(), outDim, nDim);
+      return TM(x.data(), outDim);
+    }
+  }
+
+  // Reference to the single element of a true scalar, or of a tensor whose extents are all 1.
+  template<typename T>
+  flex_scalar_t<T> &scalar(T &x) {
+    if constexpr (std::is_same_v<type_category_t<T>, trueScalar>) {
+      return x;
+    } else {
+      const auto &dims = x.dimensions();
+      for(size_t i = 0; i < dims.size(); ++i) {
+        if(dims[i] != 1)
+          Rcpp::stop("Invalid use of as() to a scalar for an object with dimensions not all equal to 1.");
+      }
+      return *x.data();
+    }
+  }
+}
+
+// Compile-time source (an Eigen::Tensor, a StridedTensorMap, or a true scalar, or any source
+// for AsMode::CopyProxy). A StridedTensorMap source is viewed with its own offsets and strides.
+// Returns CopyProxy for AsMode::CopyProxy. Otherwise returns EmptyProxy<TM>, EmptyProxy<STM>,
+// RHSCastProxy, or CastingProxy for a tensor TargetType, or EmptyScalarProxy or
+// CastingScalarProxy for a scalar TargetType.
+template<typename TargetType, AsMode mode = AsMode::TM, typename T>
 auto as_nC(T& x) {
-  return ETaccess<copy>(x).template asTyped<TargetType, mode>();
+  if constexpr (mode == AsMode::CopyProxy) {
+    return CopyProxy<TargetType>(x);
+  } else if constexpr (mode == AsMode::RefProxy) {
+    return RefProxy<TargetType, T>(x);
+  } else {
+    static_assert(!std::is_same_v<type_category_t<T>, eigenOp> || Eigen::is_StridedTensorMap_v<T>,
+                  "C++ COMPILATION ERROR: as_nC requires an Eigen::Tensor, a StridedTensorMap, or a scalar as its argument.");
+    typedef flex_scalar_t<T> Scalar;
+    if constexpr (std::is_same_v<type_category_t<TargetType>, trueScalar>) {
+      static_assert(!Eigen::is_StridedTensorMap_v<T>,
+                    "C++ COMPILATION ERROR: as_nC to a scalar type from a StridedTensorMap is not supported.");
+      typedef TargetType TargetScalar;
+      if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+        return EmptyScalarProxy<TargetScalar>(as_nC_detail::scalar(x));
+      } else {
+        return CastingScalarProxy<TargetScalar, Scalar>(as_nC_detail::scalar(x));
+      }
+    } else {
+      typedef flex_scalar_t<TargetType> TargetScalar;
+      constexpr int nDim = flex_nDim_v<TargetType>;
+      if constexpr (Eigen::is_StridedTensorMap_v<T>) {
+        // A view of a view (by the flex rule for dimensions). There is no TensorMap of it,
+        // so the TM mode uses it as an STM.
+        Eigen::StridedTensorMap<Eigen::Tensor<Scalar, nDim> > stview(x);
+        if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+          return EmptyProxy<decltype(stview)>(stview);
+        } else if constexpr (mode == AsMode::LHS) {
+          return CastingProxy<TargetScalar, decltype(stview)>(stview);
+        } else {
+          return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
+        }
+      } else {
+        auto view = as_nC_detail::map<nDim>(x);
+        if constexpr (std::is_same_v<TargetScalar, Scalar>) {
+          if constexpr (mode == AsMode::TM)
+            return EmptyProxy<decltype(view)>(view);
+          else {
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return EmptyProxy<decltype(stview)>(stview);
+          }
+        } else {
+          if constexpr (mode == AsMode::LHS) {
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return CastingProxy<TargetScalar, decltype(stview)>(stview);
+          } else if constexpr (mode == AsMode::STM) {
+            // Indexed RHS: use STM so that non-contiguous sources (e.g. blockRef)
+            // have correct strides in the lazy cast expression.
+            auto stview = Eigen::MakeStridedTensorMap<nDim>::make(view);
+            return RHSCastProxy<TargetScalar, decltype(stview)>(stview);
+          } else {
+            return RHSCastProxy<TargetScalar, decltype(view)>(view);
+          }
+        }
+      }
+    }
+  }
+}
+
+// A temporary source (e.g. an expression such as x + 1) can only be copied
+// (for AsMode::RefProxy, a copy that is not written back),
+// except a temporary StridedTensorMap (e.g. from MakeStridedTensorMap for an indexed argument),
+// which is a view of data that outlives it.
+template<typename TargetType, AsMode mode = AsMode::TM, typename T>
+auto as_nC(const T& x) {
+  if constexpr (mode == AsMode::CopyProxy) {
+    return CopyProxy<TargetType>(x);
+  } else if constexpr (mode == AsMode::RefProxy && !Eigen::is_StridedTensorMap_v<T>) {
+    return RefProxy<TargetType, void>(x);
+  } else {
+    static_assert(Eigen::is_StridedTensorMap_v<T>,
+                  "C++ COMPILATION ERROR: as_nC can use a temporary (e.g. an expression) only with AsMode::CopyProxy or AsMode::RefProxy.");
+    T view(x); // a copy of the view; the proxies store their own views by value.
+    return as_nC<TargetType, mode>(view);
+  }
 }
 
 // Runtime source: scalar type of acc is unknown at compile time.
-// Returns RuntimeCastingProxy. Write-back occurs on destruction iff mode == LHS.
+// Returns CopyProxy for AsMode::CopyProxy (made from a RuntimeCastingProxy view),
+// RefProxy<TargetType, ETaccessorBase> for AsMode::RefProxy (RuntimeCastingProxy with write-back
+// for a scalar TargetType), or otherwise RuntimeCastingProxy,
+// with write-back on destruction iff mode == LHS (incl. BlockRefProxy).
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(ETaccessorBase& acc) {
-  return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
+auto as_nC(ETaccessorBase& acc) {
+  if constexpr (mode == AsMode::CopyProxy) {
+    RuntimeCastingProxy<TargetType> view(acc);
+    return CopyProxy<TargetType>(view());
+  } else if constexpr (mode == AsMode::RefProxy) {
+    if constexpr (std::is_same_v<type_category_t<TargetType>, trueScalar>) {
+      // A scalar is viewed directly, or cast-copied and written back.
+      return RuntimeCastingProxy<TargetType>(acc, true);
+    } else {
+      return RefProxy<TargetType, ETaccessorBase>(acc);
+    }
+  } else {
+    return RuntimeCastingProxy<TargetType>(acc, mode == AsMode::LHS);
+  }
 }
 
 // genericInterfaceBaseC::access() returns a unique_ptr<ETaccessorBase>,
 // so this overload allows direct passing of the unique_ptr, for simpler usage and code-generation.
 // This takes its argument by value, so that it can be an rvalue (returned from another call at the call site).
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>& acc) {
-    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
+auto as_nC(std::unique_ptr<ETaccessorBase>& acc) {
+  return as_nC<TargetType, mode>(*acc);
 }
 
 
 template<typename TargetType, AsMode mode = AsMode::TM>
-RuntimeCastingProxy<TargetType> as_nC(std::unique_ptr<ETaccessorBase>&& acc) {
-    return RuntimeCastingProxy<TargetType>(*acc, mode == AsMode::LHS);
+auto as_nC(std::unique_ptr<ETaccessorBase>&& acc) {
+  return as_nC<TargetType, mode>(*acc);
 }
 
 #endif // NCOMPILER_NC_AS_H_

@@ -3,6 +3,9 @@
 
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "index_block.h"
+#include "flexDims.h"
+#include <sstream>
+#include <stdexcept>
 
 // output_sizes gives output-dimensional sizes.
 // prod(output_sizes) will equal prod(input_sizes).
@@ -25,7 +28,14 @@
 //     startIndices[0] + i*output_strides[0] + output_sizes[0]*( (j*output_strides[1] + startIndices[1]) + output_sizes[1] * ( (k * output_strides[2] + startIndices[2]) )
 // Note also that quantities like output_sizes[1] * output_strides[2] could be cached.
 
-// backward compatibility with first version that used fixed input_nDim
+// The input dimensions in the view are those not indexed by a scalar (not ss[i].isSingle()).
+// Their extents (from ss, or the full input size for an empty block) are matched to
+// output_nDim by the flex rule (see flexDims.h): extents other than 1 are used in order,
+// spare output dimensions keep the leftmost 1s, and remaining output dimensions are padded
+// trailing 1s. Nothing is flattened: it is an error if more extents other than 1 are in the
+// view than output_nDim.
+// Input dimensions that are not used for an output dimension (scalar-indexed ones, and 1s that
+// are not kept) contribute only to the offset and to output_sizes.
 
 template<typename ss_type, typename input_sizes_type, size_t output_nDim, typename ScalarType=double>
 void createSubTensorInfoGeneral(const ss_type &ss,
@@ -35,59 +45,76 @@ void createSubTensorInfoGeneral(const ss_type &ss,
                                 Eigen::array<long, output_nDim> &output_startIndices,
                                 Eigen::array<long, output_nDim> &output_stopIndices) {
   typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
-  size_t currentOutputDim(output_nDim-1);
   if(output_nDim < 1) {
     std::cout<<"Shouldn't be calling createSubTensorInfo with output_nDim of 0.  That should be a scalar"<<std::endl;
+    return;
   }
-  
+  const int input_nDim = static_cast<int>(input_sizes.size());
+  // Extent of input dimension i in the view, or -1 if it is indexed by a scalar.
+  auto input_extents = [&ss, &input_sizes](int i) -> Index {
+    if(ss[i].isSingle()) return -1;
+    if(ss[i].isEmpty()) return input_sizes[i];
+    return ss[i].extent();
+  };
+  // outIndex_2_inIndex[j] is the input dimension used for output dimension j, or -1 for a padded trailing 1.
+  Eigen::array<int, output_nDim> outIndex_2_inIndex;
+  if(!flexDimsMap(input_extents, input_nDim, static_cast<int>(output_nDim), outIndex_2_inIndex)) {
+    std::ostringstream msg;
+    msg << "Cannot create requested variable block with " << output_nDim << " dimension(s) from extents (";
+    bool first = true;
+    for(int i = 0; i < input_nDim; ++i) {
+      if(input_extents(i) < 0) continue;
+      msg << (first ? "" : ", ") << input_extents(i);
+      first = false;
+    }
+    msg << ").";
+    throw std::runtime_error(msg.str());
+  }
+  int nUsed = 0;
+  while(nUsed < static_cast<int>(output_nDim) && outIndex_2_inIndex[nUsed] >= 0) ++nUsed;
+
+  // Walk the input dimensions from last to first. Each output dimension j > 0 accumulates the
+  // sizes and offset of the input dimensions from outIndex_2_inIndex[j] up to (but not including) outIndex_2_inIndex[j+1]
+  // (or up to the last input dimension for the last used output dimension).
+  // Output dimension 0 also accumulates the input dimensions below outIndex_2_inIndex[0], whose sizes
+  // multiply into its stride. It is finished after the loop.
+  // If no input dimension is used, output dimension 0 is a single element at the offset.
+  int currentOutputDim = nUsed - 1;
   Index currentOutputDimSize(1);
   Index currentOutputDimStart(0);
-  //  long currentOutputDimStop(0);
   Index currentOutputStride(1);
-  bool onLeadingSingletons(false);
-  Index currentExtent(0);
-  size_t i;
-  int input_nDim = input_sizes.size();
-  for(size_t ip1 = input_nDim; ip1 > 0; --ip1) {
-    i = ip1-1; // weirdness of decrement sequence with unsigned type
-    //   std::cout<<"i = "<<i<<" currentOutputDim = "<<currentOutputDim<<std::endl;
-    if(!ss[i].isSingle()) { // not single
-      currentOutputDimSize *= input_sizes[i];
-      currentOutputDimStart *= input_sizes[i];
-      currentOutputDimStart += ss[i].start();
-      if(ss[i].isEmpty())
-        currentExtent = input_sizes[i];
-      else
-        currentExtent = ss[i].extent();
-      // finish this outputDim:
-      if(currentOutputDim > 0 || i == 0) {
-        if(currentOutputDim < output_nDim) { // if it was decremented below 0 (which should never happen anyway), it will actually be MAX_INT or something like that, so this is really ">= 0"
-          output_sizes[currentOutputDim] = currentOutputDimSize;
-          output_startIndices[currentOutputDim] = currentOutputDimStart;
-          output_stopIndices[currentOutputDim] = currentOutputDimStart + currentExtent;
-          output_strides[currentOutputDim] = currentOutputStride;
-          --currentOutputDim;
-          currentOutputDimSize = 1;
-          currentOutputDimStart = 0;
-          currentOutputStride = 1;
-        }
+  Index dim0Extent(1);
+  bool belowDim0(false);
+  for(int i = input_nDim - 1; i >= 0; --i) {
+    currentOutputDimSize *= input_sizes[i];
+    currentOutputDimStart *= input_sizes[i];
+    currentOutputDimStart += ss[i].start(); // 0 for an empty block
+    if(belowDim0) currentOutputStride *= input_sizes[i];
+    if(currentOutputDim >= 0 && i == outIndex_2_inIndex[currentOutputDim]) {
+      if(currentOutputDim > 0) {
+        output_sizes[currentOutputDim] = currentOutputDimSize;
+        output_startIndices[currentOutputDim] = currentOutputDimStart;
+        output_stopIndices[currentOutputDim] = currentOutputDimStart + input_extents(i);
+        output_strides[currentOutputDim] = 1;
+        currentOutputDimSize = 1;
+        currentOutputDimStart = 0;
       } else {
-        onLeadingSingletons = true;
+        dim0Extent = input_extents(i);
+        belowDim0 = true;
       }
-    } else { // single
-      currentOutputDimSize *= input_sizes[i];
-      currentOutputDimStart *= input_sizes[i];
-      currentOutputDimStart += ss[i].start();
-      if(onLeadingSingletons) {
-        currentOutputStride *= input_sizes[i];
-      }
+      --currentOutputDim;
     }
   }
-  if(onLeadingSingletons) {
-    output_sizes[0] = currentOutputDimSize;
-    output_startIndices[0] = currentOutputDimStart;
-    output_stopIndices[0] = currentOutputDimStart + currentExtent * currentOutputStride;
-    output_strides[0] = currentOutputStride;
+  output_sizes[0] = currentOutputDimSize;
+  output_startIndices[0] = currentOutputDimStart;
+  output_stopIndices[0] = currentOutputDimStart + dim0Extent * currentOutputStride;
+  output_strides[0] = currentOutputStride;
+  // padded trailing 1s
+  for(int j = (nUsed > 0 ? nUsed : 1); j < static_cast<int>(output_nDim); ++j) {
+    output_sizes[j] = 1;
+    output_startIndices[j] = 0;
+    output_stopIndices[j] = 1;
+    output_strides[j] = 1;
   }
 }
     
@@ -109,6 +136,112 @@ void createSubTensorInfo(const Eigen::array<long, input_nDim> &input_sizes,
                          Eigen::array<long, output_nDim> &output_stopIndices) {
   Eigen::array<b__, input_nDim> ss {}; // all empty blocks, resulting in full tensor
   createSubTensorInfoGeneral< Eigen::array<b__, input_nDim>, Eigen::array<long, input_nDim>, output_nDim, ScalarType>(ss, input_sizes, output_sizes, output_strides, output_startIndices, output_stopIndices);
+}
+
+// Set up a view of a view: a new StridedTensorMap from an existing one (the source view),
+// given by its sizes, strides, start and stop indices (as set up by createSubTensorInfoGeneral),
+// and blocks ss in the source view's own indices (an empty b__ uses a whole dimension).
+// The source view's data and dimensions() alone are not enough, because they describe
+// its underlying (outer) sizes, not its offsets and strides.
+//
+// This computes the new setup directly from the source setup. It parallels
+// createSubTensorInfoGeneral, with each source view dimension d in place of an input dimension:
+// index i of source dimension d is at src_starts[d] + i * src_strides[d] within a dimension of size
+// src_sizes[d] (for a tensor input dimension, the start is 0 and the stride is 1).
+// So an index or block start i in source dimension d contributes src_starts[d] + i * src_strides[d]
+// to the offset, and an output dimension using source dimension d has stride src_strides[d]
+// (times, for output dimension 0, the sizes of the source dimensions below d).
+// Dimensions are matched by the flex rule (see flexDims.h).
+template<size_t source_nDim, typename src_info_type, size_t output_nDim, typename ScalarType=double>
+void createSubTensorInfoFromView(const src_info_type &src_sizes,
+                                 const src_info_type &src_strides,
+                                 const src_info_type &src_starts,
+                                 const src_info_type &src_stops,
+                                 const Eigen::array<b__, source_nDim> &ss,
+                                 Eigen::array<long, output_nDim> &output_sizes,
+                                 Eigen::array<long, output_nDim> &output_strides,
+                                 Eigen::array<long, output_nDim> &output_startIndices,
+                                 Eigen::array<long, output_nDim> &output_stopIndices) {
+  typedef typename Eigen::Tensor<ScalarType, output_nDim>::Index Index;
+  if(output_nDim < 1) {
+    std::cout<<"Shouldn't be calling createSubTensorInfo with output_nDim of 0.  That should be a scalar"<<std::endl;
+    return;
+  }
+  const int src_nDim = static_cast<int>(source_nDim);
+  // Extent of source view dimension d (as in its TensorEvaluator).
+  Eigen::array<Index, source_nDim> src_extents;
+  for(int d = 0; d < src_nDim; ++d) {
+    const Index stop = src_stops[d] < src_sizes[d] ? src_stops[d] : src_sizes[d];
+    const Index interval = stop - src_starts[d];
+    src_extents[d] = interval <= 0 ? 0 : interval / src_strides[d] + (interval % src_strides[d] != 0 ? 1 : 0);
+    if(!ss[d].isEmpty()) {
+      const Index last = ss[d].isSingle() ? ss[d].start() : ss[d].stop();
+      if(ss[d].start() < 0 || last >= src_extents[d])
+        throw std::runtime_error("Index out of range in a view of a view.");
+    }
+  }
+  // Extent of source dimension d in the new view, or -1 if it is indexed by a scalar.
+  auto input_extents = [&ss, &src_extents](int d) -> Index {
+    if(ss[d].isSingle()) return -1;
+    if(ss[d].isEmpty()) return src_extents[d];
+    return ss[d].extent();
+  };
+  // outIndex_2_inIndex[j] is the source dimension used for output dimension j, or -1 for a padded trailing 1.
+  Eigen::array<int, output_nDim> outIndex_2_inIndex;
+  if(!flexDimsMap(input_extents, src_nDim, static_cast<int>(output_nDim), outIndex_2_inIndex)) {
+    std::ostringstream msg;
+    msg << "Cannot create requested variable block with " << output_nDim << " dimension(s) from extents (";
+    bool first = true;
+    for(int d = 0; d < src_nDim; ++d) {
+      if(input_extents(d) < 0) continue;
+      msg << (first ? "" : ", ") << input_extents(d);
+      first = false;
+    }
+    msg << ").";
+    throw std::runtime_error(msg.str());
+  }
+  int nUsed = 0;
+  while(nUsed < static_cast<int>(output_nDim) && outIndex_2_inIndex[nUsed] >= 0) ++nUsed;
+
+  // The same walk as in createSubTensorInfoGeneral (see there), from the last source dimension to the first.
+  int currentOutputDim = nUsed - 1;
+  Index currentOutputDimSize(1);
+  Index currentOutputDimStart(0);
+  Index currentOutputStride(1);
+  Index dim0Extent(1);
+  bool belowDim0(false);
+  for(int d = src_nDim - 1; d >= 0; --d) {
+    currentOutputDimSize *= src_sizes[d];
+    currentOutputDimStart *= src_sizes[d];
+    currentOutputDimStart += src_starts[d] + ss[d].start() * src_strides[d]; // ss[d].start() is 0 for an empty block
+    if(belowDim0) currentOutputStride *= src_sizes[d];
+    if(currentOutputDim >= 0 && d == outIndex_2_inIndex[currentOutputDim]) {
+      if(currentOutputDim > 0) {
+        output_sizes[currentOutputDim] = currentOutputDimSize;
+        output_startIndices[currentOutputDim] = currentOutputDimStart;
+        output_stopIndices[currentOutputDim] = currentOutputDimStart + input_extents(d) * src_strides[d];
+        output_strides[currentOutputDim] = src_strides[d];
+        currentOutputDimSize = 1;
+        currentOutputDimStart = 0;
+      } else {
+        dim0Extent = input_extents(d);
+        currentOutputStride = src_strides[d];
+        belowDim0 = true;
+      }
+      --currentOutputDim;
+    }
+  }
+  output_sizes[0] = currentOutputDimSize;
+  output_startIndices[0] = currentOutputDimStart;
+  output_stopIndices[0] = currentOutputDimStart + dim0Extent * currentOutputStride;
+  output_strides[0] = currentOutputStride;
+  // padded trailing 1s
+  for(int j = (nUsed > 0 ? nUsed : 1); j < static_cast<int>(output_nDim); ++j) {
+    output_sizes[j] = 1;
+    output_startIndices[j] = 0;
+    output_stopIndices[j] = 1;
+    output_strides[j] = 1;
+  }
 }
 
 template<size_t input_nDim, size_t output_nDim, typename ScalarType=double>

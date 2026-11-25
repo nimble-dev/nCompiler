@@ -61,6 +61,10 @@ updateDefaults <- function(defaults, control) {
     ## If FALSE, such assignments use plain C++ `=` (Eigen checks sizes only in debug builds).
     ## Assignments with a scalar LHS or with different LHS and RHS nDim always use flex_.
     check_sizes_on_assignment = TRUE,
+    ## If TRUE, emit a warning at code-generation time when an argument passed to a
+    ## blockRef parameter must be copied: a cast copy that is written back (different
+    ## scalar type), or a temporary copy whose changes are lost (an expression).
+    warn_arg_passing_copies = FALSE,
     digits = NULL
   )
 )
