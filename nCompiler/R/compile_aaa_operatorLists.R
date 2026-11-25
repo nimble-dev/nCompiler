@@ -1268,11 +1268,11 @@ assignOperatorDef(
     labelAbstractTypes = list(
       handler = "Distribution",
       returnTypeCode = returnTypeCodes$double,
-      nFinalScalarArgs = 2 # lower.tail and log.p
+      scalarArgs = c("lower.tail", "log.p")
     ),
     eigenImpl = list(
       handler = "PromoteAllButLastArg",
-      nFinalScalarArgs = 2
+      scalarArgs = c("lower.tail", "log.p")
     ),
     cppOutput = list(
       handler = "RR_Distribution"
@@ -1364,6 +1364,8 @@ updateOperatorDef(
   "besselK", "matchDef",
   val = function(x, nu, expon.scaled = FALSE) {}
 )
+updateOperatorDef("besselK", "labelAbstractTypes", "scalarArgs", c("expon.scaled"))
+updateOperatorDef("besselK", "eigenImpl", "scalarArgs", c("expon.scaled"))
 
 assignOperatorDef(
   c(

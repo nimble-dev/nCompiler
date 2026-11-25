@@ -1651,18 +1651,25 @@ namespace nCompiler {
      * Macro to write methods that call the static recyclyingGenerator::run 
      * method for common distributions.  A limitation is that the function name
      * NAME must be a member in the nCompiler::scalarArgDist namespace.
+     *
+     * The result is materialized here, rather than returned as a lazy
+     * tensor expression, so that the full sequence of draws always occurs, in
+     * order, no matter how the result is then used (e.g. runif(10, 0, 1)[1:2]
+     * or runif(10, 0, 1)[1]). This keeps compiled and uncompiled random
+     * number sequences identical, as in nimble. In-order draws rely on
+     * TensorCwiseRecyclingFunctorOp having PacketAccess and BlockAccess false
+     * and on evaluation by the default (single-threaded) device.
      */
     #define RANDOM_GENERATOR(NAME, SIGNATURE)                                  \
     template<typename ShapeXprType, typename... XprTypes>                      \
-    auto NAME(const ShapeXprType & shapeArg, const XprTypes&... args) ->       \
-    decltype(                                                                  \
-      recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(           \
-        scalarArgDist::NAME, shapeArg, args...                                 \
-      )                                                                        \
+    Eigen::Tensor<double, 1> NAME(                                             \
+      const ShapeXprType & shapeArg, const XprTypes&... args                   \
     ) {                                                                        \
-      return recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(    \
-        scalarArgDist::NAME, shapeArg, args...                                 \
-      );                                                                       \
+      Eigen::Tensor<double, 1> ans =                                           \
+        recyclingGenerator<SIGNATURE, ShapeXprType, XprTypes...>::run(         \
+          scalarArgDist::NAME, shapeArg, args...                               \
+        );                                                                     \
+      return ans;                                                              \
     }
 
     RANDOM_GENERATOR(rbeta, double(double, double))

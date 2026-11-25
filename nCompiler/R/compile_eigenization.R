@@ -1034,10 +1034,10 @@ inEigenizeEnv(
         code, "In PromoteAllButLastArg: expected at least one arg, but code has none."
       ), call. = FALSE)
     }
-    # handlingInfo$nFinalScalarArgs allows more than one final arg to be left alone
-    nFinal <- handlingInfo$nFinalScalarArgs
-    if (is.null(nFinal)) nFinal <- 1
-    promoteTypes(code, 1:(length(code$args) - nFinal))
+    # handlingInfo$scalarArgs names the arg(s) to be left alone (default "log").
+    scalarArgs <- handlingInfo$scalarArgs
+    if (is.null(scalarArgs)) scalarArgs <- "log"
+    promoteTypes(code, which(!(names(code$args) %in% scalarArgs)))
     invisible(NULL)
   }
 )
@@ -1205,6 +1205,17 @@ nCompiler:::inEigenizeEnv(
         code$name <- "index["
       } else {
         code$name <- "index("
+      }
+      ## Eigen tensor expressions (e.g. (x + y) or dnorm(x, m, s)) do not
+      ## provide operator(). If the indexed object is a call, wrap it in
+      ## nEvalForIndex_, which materializes an expression but passes through
+      ## anything (e.g. a member variable) that provides operator().
+      ## This mirrors nimble, which lifts an expression before single-element
+      ## indexing. Range indexing such as (x + y)[1:2] remains lazy.
+      if (isTRUE(code$args[[1]]$isCall) && code$args[[1]]$type$nDim > 0) {
+        argType <- code$args[[1]]$type
+        insertExprClassLayer(code, 1, "nCompiler::nEvalForIndex_")
+        code$args[[1]]$type <- argType
       }
       ## Enforce C++ type long for all indices using static_cast<long>(index_expr)
       ## We see inconsistent C++ compiler behavior around casting a double index
