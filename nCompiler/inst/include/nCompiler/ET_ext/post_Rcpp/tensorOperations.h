@@ -62,6 +62,42 @@ namespace nCompiler {
   };
 
   /**
+   * nEvalForIndex_(x) supports single-element indexing, e.g. x(i) or x(i, j),
+   * of an object that might be an Eigen tensor expression.
+   *
+   * Tensor expressions (e.g. a + b, or a TensorCwiseRecyclingFunctorOp from
+   * dnorm(x, mu, sd)) do not provide operator(). Objects with storage (Tensor,
+   * TensorMap, StridedTensorMap, ...) do.
+   *
+   * If x provides operator()(Index), it is passed through (forwarded, so an
+   * lvalue stays an lvalue and can be assigned into). Otherwise x is
+   * materialized into a Tensor, which is then indexed by the caller. A
+   * temporary returned here lives until the end of the full C++ expression,
+   * so indexing it in the same line is safe.
+   */
+  template<typename T, typename = void>
+  struct has_index_call_ : std::false_type {};
+
+  template<typename T>
+  struct has_index_call_<T, std::void_t<decltype(std::declval<const T&>()(std::declval<long>()))> >
+    : std::true_type {};
+
+  template<typename T,
+           typename std::enable_if<has_index_call_<std::remove_cv_t<std::remove_reference_t<T> > >::value, bool>::type = true>
+  decltype(auto) nEvalForIndex_(T&& x) {
+    return std::forward<T>(x);
+  }
+
+  template<typename T,
+           typename std::enable_if<!has_index_call_<std::remove_cv_t<std::remove_reference_t<T> > >::value, bool>::type = true>
+  auto nEvalForIndex_(T&& x) {
+    typedef std::remove_cv_t<std::remove_reference_t<T> > XprType;
+    typedef typename Eigen::internal::traits<XprType>::Scalar Scalar;
+    Eigen::Tensor<Scalar, Eigen::internal::traits<XprType>::NumDimensions> ans = x;
+    return ans;
+  }
+
+  /**
    * Templated reshaping to use the Eigen library to lazily evaluate a `op` b 
    * when a and b are specializations of Eigen::TensorBase objects with
    * different dimensions

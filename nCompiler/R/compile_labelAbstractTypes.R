@@ -1700,16 +1700,21 @@ inLabelAbstractTypesEnv(
   Distribution <- function(code, symTab, auxEnv, handlingInfo) {
     # determine argument types and dimensions
     inserts <- recurse_labelAbstractTypes(code, symTab, auxEnv, handlingInfo)
-    # ensure last argument(s) are scalar, defining constants across recycling
-    # (e.g., log for d functions, or lower.tail and log.p for p and q functions)
-    nFinal <- handlingInfo$nFinalScalarArgs
-    if (is.null(nFinal)) nFinal <- 1
-    nArgs <- length(code$args)
-    for (lastArg in code$args[(nArgs - nFinal + 1):nArgs]) {
-      if (lastArg$type$nDim > 0) {
+    # ensure scalar argument(s) are scalar, defining constants across recycling
+    # (e.g., log for d functions, or lower.tail and log.p for p and q functions).
+    # Arguments are found by name, which normalizeCalls has ensured.
+    # This handler can be called more than once on the same code (e.g. when
+    # it is the first arg of a generic such as `[`), so an arg already wrapped
+    # below (marked by aux$distnScalarWrap) counts as scalar.
+    scalarArgs <- handlingInfo$scalarArgs
+    if (is.null(scalarArgs)) scalarArgs <- "log"
+    for (argName in scalarArgs) {
+      arg <- code$args[[argName]]
+      if (is.null(arg)) next
+      if (arg$type$nDim > 0 && !isTRUE(arg$aux$distnScalarWrap)) {
         stop(exprClassProcessingErrorMsg(
           code,
-          "final argument(s) to function must be scalar (e.g., log = TRUE)."
+          paste0("argument '", argName, "' must be scalar.")
         ), call. = FALSE)
       }
     }
@@ -1733,6 +1738,7 @@ inLabelAbstractTypesEnv(
           insertArg(expr = newExpr, ID = 2, value = literalIntegerExpr(1))
           # name arguments
           names(newExpr$args) <- c("value", "length")
+          newExpr$aux$distnScalarWrap <- TRUE
         }
       }
     }
