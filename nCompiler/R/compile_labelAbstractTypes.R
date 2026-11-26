@@ -1,6 +1,9 @@
 labelAbstractTypesEnv <- new.env()
 labelAbstractTypesEnv$.debug <- FALSE
 
+## Names of temporaries for default argument values (see setupCallDefaults)
+argDefaultLabelMaker <- labelFunctionCreator("argDefault")
+
 compile_labelAbstractTypes <- function(code,
                                        symTab,
                                        auxEnv) {
@@ -378,6 +381,19 @@ inLabelAbstractTypesEnv(
       methodCode$aux$myNCgen <- NCgen
       cachedOpInfo <- update_cachedOpInfo(methodCode, auxEnv$where)
       normalizeCallArgs(methodCode, cachedOpInfo)
+      ## Defaults inserted just now by normalizeCallArgs need normalizeCalls and
+      ## simpleTransformations stages, so we apply them now.
+      defaultNames <- intersect(
+        methodCode$aux$provided_as_missing,
+        names(cachedOpInfo$obj_internals$argDefaults)
+      )
+      for (nm in defaultNames) {
+        if (!inherits(methodCode$args[[nm]], "exprClass")) next
+        compile_normalizeCalls(methodCode$args[[nm]], symTab, auxEnv)
+        if (inherits(methodCode$args[[nm]], "exprClass")) {
+          compile_simpleTransformations(methodCode$args[[nm]], symTab, auxEnv)
+        }
+      }
       ## This will be NULL for an nClass-level opDef that has no corresponding method.
       methodCode$aux$cpp_method_name <-
         nClass_info$inheritInfo$all_methodName_to_cpp_code_name[[methodCode$name]]
@@ -613,11 +629,27 @@ nCompiler:::inLabelAbstractTypesEnv(
 inLabelAbstractTypesEnv(
   nFunction_or_method_call <-
     function(code, symTab, auxEnv, handlingInfo) {
+      obj_internals <- code$aux$cachedOpInfo$obj_internals
+      ## Defaults inserted by normalizeCallArgs are in the callee's scope.
+      ## They must be replaced (by temporaries or substitution) before
+      ## the arguments are labeled in the caller's scope.
+      ## If temporaries are needed, the call is wrapped in callWithDefaults,
+      ## which is then labeled. That labels the temporaries' lines and then
+      ## this call again, when aux$defaultsHandled skips this step.
+      ## (aux$defaultsHandled also guards against repeating this step
+      ## e.g. because `[` labels its first argument twice.)
+      if (!isTRUE(code$aux$defaultsHandled)) {
+        code$aux$defaultsHandled <- TRUE
+        defaultLines <- setupCallDefaults(code, obj_internals, symTab, auxEnv)
+        if (length(defaultLines) > 0) {
+          cwd <- wrapCallWithDefaults(code, defaultLines)
+          return(compile_labelAbstractTypes(cwd, symTab, auxEnv))
+        }
+      }
       inserts <- recurse_labelAbstractTypes(
         code, symTab, auxEnv,
         handlingInfo
       )
-      obj_internals <- code$aux$cachedOpInfo$obj_internals
       #      nFunctionName <- obj_internals$nFunctionName
       #      code$aux$symbolNF <- symbolNF$new(name = nFunctionName)
       returnSym <- obj_internals$returnSym
@@ -636,6 +668,192 @@ inLabelAbstractTypesEnv(
       code$type <- returnSym$clone() ## clone is needed because we might resolve a TBD symbol and we don't want to change the original returnSym
       inserts
     }
+)
+
+## Default argument values for a call to an nFunction or method.
+## normalizeCallArgs inserted each missing argument's default expression,
+## which is written in terms of the callee's argument names.
+## Here each default that is not a literal scalar becomes a temporary,
+## e.g. f(a) with f(a, b = double(1, default = 2 * a)) becomes
+##   callWithDefaults({argDefault_1 <- 2 * a; f(a, argDefault_1)})
+## (the wrapping is done later by wrapCallWithDefaults).
+## Callee argument names in defaults are replaced by what the call provides:
+##   a name or literal is substituted directly;
+##   another expression is first assigned to a temporary;
+##   a default is replaced by its temporary (or literal).
+## Temporaries are assigned in dependency order (argDefaultOrder from
+## the callee's NF_InternalsClass), so random draws happen in that order.
+## Each temporary has the declared type of its argument.
+## Function and nClass names in defaults are looked up from the caller.
+## Returns the list of assignment lines (unlabeled), possibly empty.
+inLabelAbstractTypesEnv(
+  setupCallDefaults <- function(code, obj_internals, symTab, auxEnv) {
+    argDefaults <- obj_internals$argDefaults
+    if (length(argDefaults) == 0) {
+      return(NULL)
+    }
+    defaulted <- intersect(code$aux$provided_as_missing, names(argDefaults))
+    if (length(defaulted) == 0) {
+      return(NULL)
+    }
+    argDefaultDeps <- obj_internals$argDefaultDeps
+    argSymTab <- obj_internals$argSymTab
+    lines <- list()
+    subs <- list()
+    newTemp <- function(argName, value) {
+      tempName <- argDefaultLabelMaker()
+      argSym <- argSymTab$getSymbol(argName)
+      if (is.null(argSym)) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste0("When setting up defaults, could not find the type of argument ", argName, " of ", code$name, ".")
+        ), call. = FALSE)
+      }
+      newSym <- resolveOneTBDsymbol(argSym$clone(), project_env = auxEnv$project_env)
+      newSym$name <- tempName
+      newSym$isArg <- FALSE
+      newSym$isRef <- FALSE
+      if (!is.null(newSym$isBlockRef)) newSym$isBlockRef <- FALSE
+      newSym$hasDefault <- FALSE
+      newSym$default <- NULL
+      symTab$addSymbol(newSym)
+      line <- nParse(substitute(TEMP <- 0, list(TEMP = as.name(tempName))))
+      setArg(line, 2, value)
+      lines[[length(lines) + 1]] <<- line
+      nParse(as.name(tempName))
+    }
+    ## Provided arguments used by the defaults
+    allDeps <- unique(unlist(argDefaultDeps[defaulted]))
+    providedDeps <- setdiff(allDeps, defaulted)
+    for (nm in providedDeps) {
+      ## A missing argument with no default cannot be used by a default.
+      if (nm %in% code$aux$provided_as_missing) {
+        stop(exprClassProcessingErrorMsg(
+          code,
+          paste0(
+            "The default for an argument of ", code$name, " uses argument ",
+            nm, ", which was not provided."
+          )
+        ), call. = FALSE)
+      }
+      arg <- code$args[[nm]]
+      if (isTRUE(arg$isName) || isTRUE(arg$isLiteral)) {
+        subs[[nm]] <- arg
+      } else {
+        tempExpr <- newTemp(nm, arg)
+        setArg(code, nm, tempExpr)
+        subs[[nm]] <- tempExpr
+      }
+    }
+    ## Defaults, in dependency order
+    for (nm in intersect(obj_internals$argDefaultOrder, defaulted)) {
+      defExpr <- code$args[[nm]]
+      if (!inherits(defExpr, "exprClass")) next
+      argSym <- argSymTab$getSymbol(nm)
+      if (isTRUE(defExpr$isLiteral) && length(defExpr$name) == 1 &&
+        identical(as.numeric(argSym$nDim), 0)) {
+        subs[[nm]] <- defExpr
+        next
+      }
+      defExpr <- substituteArgNames(defExpr, subs)
+      tempExpr <- newTemp(nm, defExpr)
+      setArg(code, nm, tempExpr)
+      subs[[nm]] <- tempExpr
+    }
+    lines
+  }
+)
+
+## Replace names in expr found in names(subs) by copies of subs entries.
+## The member name in A$b is not replaced.
+## Returns expr, or its replacement if expr itself is a replaced name.
+inLabelAbstractTypesEnv(
+  substituteArgNames <- function(expr, subs) {
+    if (!inherits(expr, "exprClass")) {
+      return(expr)
+    }
+    if (isTRUE(expr$isName)) {
+      if (expr$name %in% names(subs)) {
+        return(copyExprClass(subs[[expr$name]]))
+      }
+      return(expr)
+    }
+    if (isTRUE(expr$isCall)) {
+      iArgs <- seq_along(expr$args)
+      if (expr$name == "$") iArgs <- iArgs[iArgs != 2]
+      for (i in iArgs) {
+        newArg <- substituteArgNames(expr$args[[i]], subs)
+        if (!identical(newArg, expr$args[[i]])) setArg(expr, i, newArg)
+      }
+    }
+    expr
+  }
+)
+
+## Put callWithDefaults({lines; call}) in place of the call
+## (or of MethodCall(A, call) for A$call()) and return it, unlabeled.
+inLabelAbstractTypesEnv(
+  wrapCallWithDefaults <- function(code, lines) {
+    target <- code
+    if (inherits(code$caller, "exprClass") && isTRUE(code$caller$name == "MethodCall") &&
+      isTRUE(code$callerArgID == 2)) {
+      target <- code$caller
+    }
+    parent <- target$caller
+    parentArgID <- target$callerArgID
+    if (!inherits(parent, "exprClass")) {
+      stop(exprClassProcessingErrorMsg(
+        code,
+        "Internal error: a call with default arguments has no caller."
+      ), call. = FALSE)
+    }
+    cwd <- exprClass$new(
+      name = "callWithDefaults", isCall = TRUE, isName = FALSE,
+      isAssign = FALSE, args = list()
+    )
+    body <- newBracketExpr(args = c(lines, list(target)))
+    setArg(cwd, 1, body)
+    setArg(parent, parentArgID, cwd)
+    cwd
+  }
+)
+
+inLabelAbstractTypesEnv(
+  ## callWithDefaults({line1; ...; call})
+  ## This is used to implement default values for nFunction calls
+  ## where the default values must be implemented as lifted variables.
+  ## Each line would be a lifted default value assignment, and the call
+  ## would be the actual call to the nFunction.
+  ## This will end up implemented as a lambda function, so that it can go in
+  ## odd places like the conditional of a "while" or "if" statement.
+  ##
+  ## The type is that of the last entry, which gives the value.
+  CallWithDefaults <- function(code, symTab, auxEnv, handlingInfo) {
+    body <- code$args[[1]]
+    if (length(code$args) != 1 || !inherits(body, "exprClass") ||
+      !isTRUE(body$name == "{") || length(body$args) == 0) {
+      stop(
+        exprClassProcessingErrorMsg(
+          code,
+          "callWithDefaults must have one argument, a `{` with at least one line."
+        ),
+        call. = FALSE
+      )
+    }
+    ## Labeling assignments resets auxEnv$onLHS and auxEnv$.AllowUnknowns,
+    ## so we restore them in case this is inside an expression where they are set.
+    onLHS <- auxEnv$onLHS
+    allowUnknowns <- auxEnv$.AllowUnknowns
+    on.exit({
+      auxEnv$onLHS <- onLHS
+      auxEnv$.AllowUnknowns <- allowUnknowns
+    })
+    auxEnv$onLHS <- FALSE
+    auxEnv$.AllowUnknowns <- FALSE
+    compile_labelAbstractTypes(body, symTab, auxEnv)
+    code$type <- body$args[[length(body$args)]]$type
+    NULL
+  }
 )
 
 ## inLabelAbstractTypesEnv(

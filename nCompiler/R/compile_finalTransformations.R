@@ -101,6 +101,35 @@ inFinalTransformationsEnv(
 )
 
 inFinalTransformationsEnv(
+  ## callWithDefaults({line1; ...; call}) becomes
+  ## LambdaFun_([&]()->decltype(auto), {line1; ...; return(call)}, TRUE),
+  ## generated as [&]()->decltype(auto){line1; ...; return call;}().
+  ## Earlier stages may have put the value line in a nested `{`
+  ## after setup lines, so we find the last line recursively.
+  ## decltype(auto) keeps a reference if the call returns one.
+  CallWithDefaults <- function(code, symTab, auxEnv, info) {
+    body <- code$args[[1]]
+    parent <- body
+    repeat {
+      valueLine <- parent$args[[length(parent$args)]]
+      if (isTRUE(valueLine$isCall) && isTRUE(valueLine$name == "{")) {
+        parent <- valueLine
+      } else {
+        break
+      }
+    }
+    returnExpr <- insertExprClassLayer(parent, length(parent$args), "return")
+    returnExpr$type <- valueLine$type
+    lambdaExpr <- nParse(quote(LambdaFun_(decl, def, TRUE)))
+    setArg(lambdaExpr, 1, nParse(as.name("[&]()->decltype(auto)")))
+    setArg(lambdaExpr, 2, body)
+    lambdaExpr$type <- code$type
+    replaceArgInCaller(code, lambdaExpr)
+    invisible(NULL)
+  }
+)
+
+inFinalTransformationsEnv(
   ParallelFor <- function(code, symTab, auxEnv, info) {
     ParallelExpr(
       "parallel_for", "parallel_loop_body", "parallelContent", code,

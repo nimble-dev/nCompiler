@@ -5,7 +5,11 @@ NF_InternalsClass <- R6::R6Class(
   classname = "NF_InternalsClass",
   portable = FALSE,
   public = list(
-    arguments = NULL,
+    arguments = NULL, # formals as written, i.e. with type declarations
+    Rarguments = NULL, # formals with defaults (or nothing) in place of type declarations
+    argDefaults = NULL, # named list of default expressions, for args that have them
+    argDefaultDeps = NULL, # named list: for each arg with a default, the arg names it uses
+    argDefaultOrder = NULL, # names of args with defaults, in evaluation order
     refArgs = NULL,
     blockRefArgs = NULL,
     argSymTab = NULL,
@@ -126,6 +130,18 @@ NF_InternalsClass <- R6::R6Class(
         explicitTypeList = argTypes,
         where = where
       )
+      ## Defaults from type declarations, e.g. x = double(1, default = 1:5).
+      ## This uses only this nFunction's own declarations.
+      defaultsInfo <- NF_processArgDefaults(
+        arguments = arguments,
+        argSymTab = self$argSymTab,
+        explicitArgNames = names(argTypes),
+        fnName = name
+      )
+      self$Rarguments <- defaultsInfo$Rarguments
+      self$argDefaults <- defaultsInfo$argDefaults
+      self$argDefaultDeps <- defaultsInfo$argDefaultDeps
+      self$argDefaultOrder <- defaultsInfo$argDefaultOrder
       ## nf_changeKeywords changes all nCompiler keywords,
       ## e.g. 'print' to 'nPrint'; see 'nKeyWords' list in
       ## changeKeywords.R
@@ -138,23 +154,16 @@ NF_InternalsClass <- R6::R6Class(
           list(CODE = self$code)
         )
       }
-      ## check all code except.nCompiler package nFunctions
-      ##            if(check && "package.nCompiler" %in% search())
-      ##                nf_checkDSLcode(code, methodNames, setupVarNames)
-      ## Some of this should become unnecessary.
-      ## However, a problem is how regular R default values will be used
-      ##   in the "decoration" system.  They could be put in "value" argument.
-      ##  Either a named "value" or a ... is in all types.
-      self$default_matchDef <- Rarguments_2_function(arguments, body = quote({})) ## generateTemplate()
+      ## The matchDef uses Rarguments so that defaults (not type declarations)
+      ## are filled in for missing arguments by normalizeCalls.
+      self$default_matchDef <- Rarguments_2_function(Rarguments, body = quote({})) ## generateTemplate()
       returnTypeInfo <- nf_extractReturnType(code)
       returnTypeDecl <- returnTypeInfo$returnType
       returnArgNull <- is.null(rlang::quo_get_expr(TreturnType))
       if (is.null(returnTypeDecl)) {
         if (returnArgNull) {
           TreturnType <- nType(void())
-        } ## returnTypeDecl <- quote(void()) ## default behavior
-        # else
-        #  returnTypeDecl <- returnType
+        }
       } else {
         if (!returnArgNull) {
           stop(
@@ -274,7 +283,7 @@ NF_InternalsClass <- R6::R6Class(
       #      ans <- eval(
       #        parse(text=deparse(as.call(functionAsList)),
       #              keep.source = FALSE)[[1]])
-      ans <- Rarguments_2_function(arguments, callableCode)
+      ans <- Rarguments_2_function(Rarguments, callableCode)
       environment(ans) <- where
       ans
     }
@@ -328,4 +337,130 @@ nf_extractReturnType <- function(code) {
     code = code,
     returnType = returnTypeDeclaration
   )
+}
+
+# Process defaults from argument type declarations,
+# e.g. function(x = double(1, default = 1:5), y = double(1, default = 1 / x)).
+#
+# Returns:
+#   Rarguments: formals with the default (or nothing) in place of each type
+#     declaration. These are used for the uncompiled R function and for the
+#     default_matchDef, so normalizeCalls fills in defaults (not declarations).
+#     For an argument whose type is given in argTypes, the formal is kept as
+#     written (preserving prior behavior).
+#   argDefaults: named list of default expressions.
+#   argDefaultDeps: named list giving, for each argument with a default, the
+#     other arguments its default uses.
+#   argDefaultOrder: names of the arguments with defaults, in the order in which
+#     defaults should be evaluated: dependencies first, otherwise left to right.
+#
+# A default may use other arguments but no other variables, because in C++ it is
+# evaluated in the scope of the caller, not the callee (as in R). Function names and
+# the left-hand side of `$` (e.g. my_nClass$new()) are not variables.
+NF_processArgDefaults <- function(arguments, argSymTab, explicitArgNames = character(),
+                                  fnName = "") {
+  argNames <- names(arguments)
+  Rarguments <- as.list(arguments)
+  argDefaults <- list()
+  for (nm in argNames) {
+    sym <- argSymTab$getSymbol(nm)
+    if (!is.null(sym) && isTRUE(sym$hasDefault)) {
+      argDefaults[nm] <- list(sym$default)
+      Rarguments[nm] <- list(sym$default)
+    } else if (!(nm %in% explicitArgNames)) {
+      Rarguments[nm] <- list(quote(expr = ))
+    }
+  }
+  argDefaultDeps <- lapply(
+    names(argDefaults),
+    function(nm) {
+      NF_argDefaultDependencies(argDefaults[[nm]], argNames, nm, fnName)
+    }
+  ) |> structure(names = names(argDefaults))
+  argDefaultOrder <- NF_orderArgDefaults(argDefaultDeps, fnName)
+  list(
+    Rarguments = Rarguments,
+    argDefaults = argDefaults,
+    argDefaultDeps = argDefaultDeps,
+    argDefaultOrder = argDefaultOrder
+  )
+}
+
+# Find the arguments used in the default for argName, and check
+# that it uses no other variables.
+NF_argDefaultDependencies <- function(expr, argNames, argName, fnName = "") {
+  allowedNames <- c("pi", "Inf", "NaN")
+  isBlank <- function(e) identical(e, quote(expr = ))
+  findDeps <- function(e) {
+    if (is.name(e)) {
+      nm <- as.character(e)
+      if (nm %in% argNames) {
+        return(nm)
+      }
+      if (nm %in% allowedNames) {
+        return(character())
+      }
+      stop(
+        paste0(
+          "In nFunction '", fnName, "', the default for argument '", argName,
+          "' uses '", nm, "', which is not an argument. ",
+          "A default can use other arguments but no other variables."
+        ),
+        call. = FALSE
+      )
+    }
+    if (!is.call(e)) {
+      return(character())
+    }
+    fn <- e[[1]]
+    if (identical(fn, as.name("$"))) {
+      # A$b: b is a member name. A is an argument or a class (e.g. my_nClass$new()).
+      if (is.name(e[[2]])) {
+        lhs <- as.character(e[[2]])
+        return(if (lhs %in% argNames) lhs else character())
+      }
+      return(findDeps(e[[2]]))
+    }
+    deps <- if (is.name(fn)) character() else findDeps(fn)
+    for (i in seq_along(e)[-1]) {
+      if (!isBlank(e[[i]])) deps <- c(deps, findDeps(e[[i]]))
+    }
+    unique(deps)
+  }
+  if (is.null(expr)) {
+    return(character())
+  }
+  findDeps(expr)
+}
+
+# Order the arguments with defaults so that each default is evaluated after
+# the defaults of any arguments it uses. Among those ready to be evaluated,
+# the left-most comes first. Dependencies on arguments without defaults
+# need no ordering, since those arguments must be provided.
+NF_orderArgDefaults <- function(argDefaultDeps, fnName = "") {
+  remaining <- names(argDefaultDeps)
+  ordered <- character()
+  while (length(remaining) > 0) {
+    ready <- remaining[vapply(
+      remaining,
+      function(nm) {
+        deps <- intersect(argDefaultDeps[[nm]], names(argDefaultDeps))
+        all(deps %in% ordered)
+      },
+      logical(1)
+    )]
+    if (length(ready) == 0) {
+      stop(
+        paste0(
+          "In nFunction '", fnName, "', the defaults for argument(s) ",
+          paste0("'", remaining, "'", collapse = ", "),
+          " depend on each other in a cycle."
+        ),
+        call. = FALSE
+      )
+    }
+    ordered <- c(ordered, ready[1])
+    remaining <- setdiff(remaining, ready[1])
+  }
+  ordered
 }

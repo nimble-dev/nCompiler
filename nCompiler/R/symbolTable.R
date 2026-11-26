@@ -9,6 +9,8 @@ symbolBase <- R6::R6Class(
     interface = TRUE,
     overloadDefs = NULL,
     implementation = NULL,
+    hasDefault = FALSE,
+    default = NULL, # expression for default value, if hasDefault=TRUE.
     initialize = function(name = NULL,
                           type = character(),
                           isArg = FALSE,

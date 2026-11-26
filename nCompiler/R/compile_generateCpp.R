@@ -829,13 +829,25 @@ nCompiler:::inGenCppEnv(
   # character string gives
   # the '[](double x)' or variants of it.
   # The second is to be generated as the code, with
-  # extra {} for good measure.
+  # extra {} for good measure. It can be a single expression
+  # (e.g. return(cos(x__))) or a `{` whose lines make the body.
+  # An optional third argument, TRUE, means to invoke the lambda
+  # immediately by appending (), as for callWithDefaults.
   LambdaFun_ <- function(code, symTab) {
+    def <- code$args[[2]]
+    body <- if (isTRUE(def$isCall) && isTRUE(def$name == "{")) {
+      # Lines get their semicolons from the `{` handler.
+      paste0(unlist(compile_generateCpp(def, symTab, showBracket = FALSE)), collapse = "\n")
+    } else {
+      paste0(paste0(unlist(compile_generateCpp(def, symTab)), collapse = "\n"), ";")
+    }
+    invoke <- length(code$args) > 2 && isTRUE(code$args[[3]]$name)
     paste0(
       compile_generateCpp(code$args[[1]], symTab),
       "{",
-      paste0(unlist(compile_generateCpp(code$args[[2]], symTab)), collapse = "\n"),
-      ";}"
+      body,
+      "}",
+      if (invoke) "()" else ""
     )
   }
 )

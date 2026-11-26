@@ -1117,10 +1117,26 @@ updateOperatorDef("!=", "eigenImpl", "replacements", list(
 assignOperatorDef(
   # This is for C++ Lambda expressions,
   # which may be generated as part of implementation
-  # of some Eigen component-wise operations.
+  # of some Eigen component-wise operations
+  # or from callWithDefaults.
   "LambdaFun_",
   list(
     cppOutput = list(handler = "LambdaFun_")
+  )
+)
+
+assignOperatorDef(
+  # callWithDefaults({line1; ...; call}) runs lines (e.g. ones that set
+  # temporaries for default argument values) and then the call,
+  # whose value is the value of callWithDefaults. It can be used
+  # within an expression. Each compiler stage handles the lines
+  # as lines of a `{`. During finalTransformations it becomes an
+  # immediately invoked C++ lambda.
+  "callWithDefaults",
+  list(
+    matchDef = function(body) {},
+    labelAbstractTypes = list(handler = "CallWithDefaults"),
+    finalTransformations = list(handler = "CallWithDefaults")
   )
 )
 

@@ -592,6 +592,49 @@ quo_strip_quote <- \(qq) {
   rlang::quo_set_expr(qq, e)
 }
 
+# Separate a `default = ` argument from a type declaration,
+# e.g. double(1, default = 1:5) or my_nClass(default = my_nClass$new()).
+# `default` is valid in any type declaration. It is removed here so
+# that the type handlers never see it.
+# Returns list(ttype = quosure without the default, hasDefault, default),
+# where default is the unevaluated R expression.
+nTypeExtractDefault <- function(ttype) {
+  ans <- list(ttype = ttype, hasDefault = FALSE, default = NULL)
+  if (rlang::quo_is_missing(ttype) || rlang::quo_is_null(ttype)) {
+    return(ans)
+  }
+  texpr <- rlang::quo_get_expr(ttype)
+  if (inherits(texpr, "symbolBase")) {
+    return(ans)
+  }
+  isChar <- is.character(texpr)
+  if (isChar && length(texpr) != 1) {
+    return(ans)
+  }
+  lang <- if (isChar) str2lang(texpr) else texpr
+  if (!is.call(lang)) {
+    return(ans)
+  }
+  argNames <- names(lang)
+  if (is.null(argNames)) {
+    return(ans)
+  }
+  iDefault <- which(argNames == "default")
+  iDefault <- iDefault[iDefault > 1] # position 1 is the function name
+  if (length(iDefault) == 0) {
+    return(ans)
+  }
+  if (length(iDefault) > 1) {
+    stop("A type declaration can have at most one 'default' argument.", call. = FALSE)
+  }
+  ans$hasDefault <- TRUE
+  ans["default"] <- list(lang[[iDefault]]) # allows a NULL default
+  lang[[iDefault]] <- NULL
+  newExpr <- if (isChar) deparse1(lang) else lang
+  ans$ttype <- rlang::quo_set_expr(ttype, newExpr)
+  ans
+}
+
 #' @export
 type2symbol <- function(type,
                         name = character(),
@@ -613,6 +656,21 @@ type2symbol <- function(type,
     ttypeToUse <- texplicitType
   } else {
     ttypeToUse <- ttype
+  }
+  # Remove any `default = ` from the declaration. It is recorded in the
+  # symbol below.
+  defaultInfo <- nTypeExtractDefault(ttypeToUse)
+  ttypeToUse <- defaultInfo$ttype
+  if (defaultInfo$hasDefault && !is.null(explicitType) &&
+    !(rlang::quo_is_missing(ttype) || rlang::quo_is_null(ttype))) {
+    stop(
+      paste0(
+        "Invalid type declaration for ", origName, ". ",
+        "A default is declared in argTypes, so the function argument itself ",
+        "should not also have a value."
+      ),
+      call. = FALSE
+    )
   }
 
   # The idea here was to check if a symbol itself is provided,
@@ -808,6 +866,10 @@ type2symbol <- function(type,
     )
   }
   if (isTRUE(symbol$isRef)) {}
+  if (defaultInfo$hasDefault) {
+    ans$hasDefault <- TRUE
+    ans$default <- defaultInfo$default
+  }
   nErrorEnv$.isRef_has_been_set <- FALSE
   nErrorEnv$.isBlockRef_has_been_set <- FALSE
   nErrorEnv$stateInfo <- character()
