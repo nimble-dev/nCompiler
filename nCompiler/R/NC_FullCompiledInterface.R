@@ -411,7 +411,9 @@ make_method_code_for_compiled_nClass <- function(fun, name) {
     \() BODY,
     list(BODY = body_ans)
   ) |> removeSource()
-  if (!is.null(formals(fun))) ans[[2]] <- formals(fun)
+  ## Defaults for ref, blockRef and nClass-typed arguments are not used from R.
+  Rformals <- NF_compiledRformals(NFinternals(fun))
+  if (!is.null(Rformals)) ans[[2]] <- Rformals
   ans
 }
 
@@ -535,7 +537,8 @@ build_generic_fn_for_compiled_nClass_method <- function(fun, name) {
   # and put CppObj_ in it.
   # We used to instead have method return a function that call the generic
   # function, but this did not work for ref and blockRef argument passing.
-  formals(ans) <- formals(fun) # c(formals(function(CppObj_){}), formals(fun))
+  ## Defaults for ref, blockRef and nClass-typed arguments are not used from R.
+  formals(ans) <- NF_compiledRformals(NFinternals(fun)) # c(formals(function(CppObj_){}), formals(fun))
   refArgs <- NFinternals(fun)$refArgs
   blockRefArgs <- NFinternals(fun)$blockRefArgs
   body(ans) <- passByReferenceIntoC(body_ans, refArgs, blockRefArgs)

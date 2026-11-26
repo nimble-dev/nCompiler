@@ -1088,7 +1088,8 @@ update_compileAttributes_for_argPassing <- function(Rdir,
     if (unitTypes[iUnit] == "nF") {
       refArgs <- NFinternals(units[[iUnit]])$refArgs
       blockRefArgs <- NFinternals(units[[iUnit]])$blockRefArgs
-      if (any(unlist(refArgs)) || any(unlist(blockRefArgs))) {
+      hasDefaults <- length(NFinternals(units[[iUnit]])$argDefaults) > 0
+      if (any(unlist(refArgs)) || any(unlist(blockRefArgs)) || hasDefaults) {
         iExpr <- which(names_RcppExports == returnNames[iUnit])
         this_name <- returnNames[iUnit]
         if (length(iExpr) != 1) stop("Problem updating arg passing handling for ", this_name)
@@ -1098,6 +1099,7 @@ update_compileAttributes_for_argPassing <- function(Rdir,
           refArgs = refArgs,
           blockRefArgs = blockRefArgs
         )
+        updatedExpr <- NF_setCompiledRdefaults(updatedExpr, NFinternals(units[[iUnit]]))
         updatedText <- deparse(updatedExpr)
         updatedText[1] <- paste0(this_name, " <- ", updatedText[1])
         replace_begin_linenum <- grep(paste0("^", this_name, " <- function\\("), lines_RcppExports)
@@ -1123,7 +1125,7 @@ update_compileAttributes_for_argPassing <- function(Rdir,
     comment_linenums <- grep("^# Gen", lines_RcppExports)
     updated_lines <- c(
       lines_RcppExports[comment_linenums],
-      "# Modified by nCompiler to handle ref or blockRef argument passing",
+      "# Modified by nCompiler to handle ref or blockRef argument passing and argument defaults",
       lines_RcppExports[-comment_linenums]
     )
     writeLines(updated_lines, con = RcppExports_file)
@@ -1194,6 +1196,10 @@ nCompile_finish_nonpackage <- function(units,
         compiledFuns[[iRes]] <- passByReferenceIntoC(compiledFuns[[iRes]],
           refArgs = refArgs,
           blockRefArgs = blockRefArgs
+        )
+        compiledFuns[[iRes]] <- NF_setCompiledRdefaults(
+          compiledFuns[[iRes]],
+          cppDefs[[i]]$NF_Compiler$NFinternals
         )
       }
     }

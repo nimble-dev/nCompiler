@@ -339,6 +339,53 @@ nf_extractReturnType <- function(code) {
   )
 }
 
+# Set arguments (formals) for an R function that calls a compiled 
+# nFunction or method. (We call this R function an interface.)
+#
+# These are taken from the original nFunction definition,
+# except that ref, blockRef, and nClass arguments get no default.
+# 
+# For ref and blockRef, there would be no object to reference.
+#
+# For nClass, the default would be an uncompiled object.
+#
+# Both might be subject to future support.
+NF_compiledRformals <- function(NFinternals) {
+  Rarguments <- NFinternals$Rarguments
+  if (is.null(Rarguments)) {
+    return(NULL)
+  }
+  argSymTab <- NFinternals$argSymTab
+  # refArgs and blockRefArgs may be named logical lists or character vectors
+  isListed <- \(args, nm) if (is.list(args)) isTRUE(args[[nm]]) else nm %in% args
+  for (nm in names(Rarguments)) {
+    if (is.blank(Rarguments[[nm]])) next
+    sym <- argSymTab$getSymbol(nm)
+    noDefault <- isListed(NFinternals$refArgs, nm) ||
+      isListed(NFinternals$blockRefArgs, nm) ||
+      isTRUE(sym$isRef) || isTRUE(sym$isBlockRef) ||
+      inherits(sym, c("symbolTBD", "symbolNC"))
+    if (noDefault) Rarguments[nm] <- list(quote(expr = ))
+  }
+  as.pairlist(Rarguments)
+}
+
+# This takes the R function that calls a compiled nFunction and sets its argument defaults.
+# This wrapper function comes from Rcpp.
+# If argument names do not all match (potentially due to name mangling?),
+# fun is returned unchanged.
+NF_setCompiledRdefaults <- function(fun, NFinternals) {
+  newFormals <- NF_compiledRformals(NFinternals)
+  if (is.null(newFormals)) {
+    return(fun)
+  }
+  if (!identical(names(formals(fun)), names(newFormals))) {
+    return(fun)
+  }
+  formals(fun) <- newFormals
+  fun
+}
+
 # Process defaults from argument type declarations,
 # e.g. function(x = double(1, default = 1:5), y = double(1, default = 1 / x)).
 #
