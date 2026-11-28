@@ -220,6 +220,8 @@ NC_check_inheritance <- function(NCgenerator, inheritInfo, project_env) {
     for (mN in allMethodNames) {
       # if a method is not in the self method names, it was inherited, so there is nothing to check
       if (!(mN %in% NCint$methodNames)) next
+      # Every nClass has its own non-virtual initFields_ (see NC_makeInitFieldsMethod).
+      if (identical(mN, "initFields_")) next
       if (!(mN %in% parent_nClass_Info$inheritInfo$allMethodNames)) {
         # current level is the first one with this method name, so here we tag its virtual status
         new_virtualMethodNames <- c(new_virtualMethodNames, mN)

@@ -96,6 +96,9 @@ nFunction <- function(fun,
   # virtual (FALSE)
   # abstract (FALSE)
   # const (FALSE)
+  # initFieldsInNewCtors (TRUE) : for an nClass constructor (constructor = TRUE), whether it
+  #   first calls initFields_(), which sets fields from their declared defaults.
+  #   A constructor can instead call initFields_() itself.
   # depends (list()) : Package names for Rcpp::depends, to use another package's
   #   inst/include. Also added to LinkingTo when writing a package.
   # Hincludes, CPPincludes : character vectors of #include targets, with

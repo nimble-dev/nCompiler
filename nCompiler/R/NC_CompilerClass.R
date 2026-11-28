@@ -13,6 +13,7 @@ NC_CompilerClass <- R6::R6Class(
     name = character(),
     compileInfo = list(),
     neededTypes = list(),
+    hasInitFields = FALSE, # TRUE if any of this class's own fields has a default
     initialize = function(NC = NULL,
                           className = NULL,
                           compileInfo = NULL,
@@ -78,6 +79,10 @@ NC_CompilerClass <- R6::R6Class(
           name = thisName
         )
       }
+      # initFields_ (a Cpublic method added by nClass) is called first by
+      # constructors if this class has its own field defaults.
+      # See cpp_nClassClass$addInitFieldsToConstructors.
+      self$hasInitFields <- NC_hasFieldDefaults(myNCinternals)
     },
     setupMethodSymbolTables = function() {
       for (i in seq_along(NFcompilers)) {
@@ -200,6 +205,13 @@ NC_CompilerClass <- R6::R6Class(
     }
   )
 )
+
+# TRUE if any of this class's own fields has a default.
+NC_hasFieldDefaults <- function(NCinternals) {
+  any(vapply(NCinternals$fieldNames, \(nm) {
+    isTRUE(NCinternals$symbolTable$getSymbol(nm)$hasDefault)
+  }, logical(1)))
+}
 
 nCompile_process_manual_needed_units <- function(internals,
                                                  where = internals$where, # Ths default works when internals is an NFinternals

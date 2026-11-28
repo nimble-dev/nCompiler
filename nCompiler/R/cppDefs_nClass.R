@@ -355,9 +355,42 @@ cpp_nClassClass <- R6::R6Class(
         interface = interface_needed && interface
       )
     },
+    addInitFieldsToConstructors = function() {
+      # If any of this class's own fields has a default, its method initFields_
+      # (see NC_makeInitFieldsMethod) assigns them. A constructor calls it first, after any
+      # initializer list:
+      # - always for the generated default constructor;
+      # - for a user constructor unless its compileInfo has initFieldsInNewCtors = FALSE,
+      #   or it already calls initFields_() itself as one of its lines.
+      if (!isTRUE(self$Compiler$hasInitFields)) {
+        return(invisible(NULL))
+      }
+      for (nm in names(memberCppDefs)) {
+        def <- memberCppDefs[[nm]]
+        isUserCtor <- isTRUE(def$compileInfo$constructor)
+        isGeneratedCtor <- !isUserCtor && identical(nm, unname(self$name)) # self$name can carry a names attribute
+        if (!(isUserCtor || isGeneratedCtor)) next
+        if (isUserCtor && isFALSE(def$compileInfo$initFieldsInNewCtors)) next
+        body <- def$code$code
+        if (!inherits(body, "exprClass") || !identical(body$name, "{")) next
+        # Look for an initFields_() line, including inside nested `{` blocks
+        # (a compiled constructor's body can be wrapped in one).
+        callsInitFields <- function(block) {
+          any(vapply(block$args, \(line) {
+            inherits(line, "exprClass") &&
+              (identical(line$name, "initFields_") ||
+                (identical(line$name, "{") && callsInitFields(line)))
+          }, logical(1)))
+        }
+        if (callsInitFields(body)) next
+        insertArg(body, 1, nParse(quote(initFields_())))
+      }
+      invisible(NULL)
+    },
     buildAll = function(interfaceCalls = TRUE, where = where) {
       super$buildAll(where)
       buildDefaultConstructor()
+      addInitFieldsToConstructors()
       if (isTRUE(get_nOption("serialize"))) {
         addSerialization()
       }

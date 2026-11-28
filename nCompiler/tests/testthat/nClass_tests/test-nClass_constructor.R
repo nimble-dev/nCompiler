@@ -122,9 +122,6 @@ test_that("manual initialize works and Cpp ctor call is made", {
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
-  # obj$Ca
-  # obj$get_Ca()
-  # Need initialization of uncompiled Cpublic variables?
 
   Cnc <- nCompile(nc)
   out <- capture_output(Cobj <- Cnc$new())
@@ -178,7 +175,7 @@ test_that("manual initialize with hand-coded Cpublic initialization works", {
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
-  expect_equal(obj$Ca, "numericScalar")
+  expect_equal(obj$Ca, 0)
   expect_true(isFALSE(obj$isCompiled()))
   # obj$Ca
   # obj$get_Ca()
@@ -296,7 +293,7 @@ test_that("manual initialize OMITTED with hand-coded C++ initialization compiles
   obj <- nc$new()
   expect_equal(obj$Ra, 1)
   expect_equal(obj$get_Ra(), 1)
-  expect_equal(obj$Ca, "numericScalar")
+  expect_equal(obj$Ca, 0)
   expect_true(isFALSE(obj$isCompiled()))
   # obj$Ca
   # obj$get_Ca()

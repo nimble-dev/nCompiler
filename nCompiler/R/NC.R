@@ -220,6 +220,15 @@ nClass <- function(classname,
     }
   }
 
+  if ("initFields_" %in% names(Cpublic)) {
+    stop("The name 'initFields_' in Cpublic is reserved for nCompiler internal use.",
+      call. = FALSE
+    )
+  }
+  # Every nClass gets a method initFields_ that sets its own fields from their
+  # declared defaults. See NC_makeInitFieldsMethod.
+  Cpublic$initFields_ <- NC_makeInitFieldsMethod(Cpublic, env)
+
   inheritQ <- substitute(inherit)
   inherit_provided <- !is.null(inheritQ)
 
@@ -245,9 +254,7 @@ nClass <- function(classname,
   # Also note that the inherit arg is for nClass inheritance. The compileInfo$inherit element is for hard-coded C++ inheritance statements.
   # if(!is.null(inherit)) new_env$.inherit_obj <- inherit
 
-  # Uncompiled behavior for Cpublic fields needs to be handled.
-  # Right now a type string like 'numericScalar' just becomes a
-  # default value.
+  # Uncompiled Cpublic fields get their initial values as R6 field values. See below.
   if ("isCompiled" %in% names(Cpublic)) {
     stop("The name 'isCompiled' in Cpublic is reserved for nCompiler internal use.",
       call. = FALSE
@@ -274,6 +281,10 @@ nClass <- function(classname,
   # To store it, we would need to retain the Rpublic from this function's environment.
   # Currently the strategy is to rebuild it.
   # internals$main_class_code <- main_class_code
+
+  # Replace the type declarations of fields by their initial values, which
+  # become the R6 field values of the uncompiled Cpub class.
+  Cpublic[internals$fieldNames] <- NC_fieldInitValues(internals, env)
 
   ## Build the R6 class generator
   NCgenerator <- eval(main_class_code)
@@ -421,6 +432,109 @@ make_nClass_code <- function(internals,
         }
     ) # devtools::document() problem if we use :: instead of ::: for first run, then can change
   )
+}
+
+# Initial R value of an nClass field that has no default. It matches what
+# the default-constructed C++ member gives in R. A C++ scalar member
+# is not initialized, so for scalars this is simply the zero value.
+NC_fieldTypeInitValue <- function(sym) {
+  if (inherits(sym, "symbolBasicString")) {
+    return(if (sym$nDim == 0) "" else character(0))
+  }
+  if (inherits(sym, "symbolBasic") && !inherits(sym, "symbolSparse")) {
+    zero <- switch(sym$type,
+      double = 0,
+      integer = 0L,
+      logical = FALSE,
+      NULL
+    )
+    if (is.null(zero) || sym$nDim == 0) {
+      return(zero)
+    }
+    if (sym$nDim == 1) {
+      return(zero[0])
+    }
+    return(array(zero[0], dim = rep(0L, sym$nDim)))
+  }
+  NULL # nClass fields (a null pointer in C++) and other types
+}
+
+# Initial values of this class's own fields, as a named list, for use as
+# R6 field values. As for any R6 field value, each is evaluated once, when
+# the nClass is created, in the environment where it is defined. So an
+# nClass-typed default such as my_nClass$new() is one object shared by all
+# uncompiled instances (ordinary R6 behavior), whereas in C++ each object's
+# constructor evaluates the default. A default may not use other fields.
+# The method initFields_, which every nClass has. Its body has one line per
+# field with a declared default, in field order: e.g. for
+# x = double(1, default = nC(1, 2)), the line self$x <- nC(1, 2). With no
+# field defaults its body is empty.
+# - In C++, constructors call it first: always the generated default
+#   constructor, and a user constructor unless its compileInfo has
+#   initFieldsInNewCtors = FALSE (see cpp_nClassClass$addInitFieldsToConstructors).
+#   Each class's initFields_ sets only its own fields; base-class fields are set
+#   by the base constructor. It is not virtual, and it is exempt from the
+#   inheritance checks on methods of the same name (NC_check_inheritance).
+# - It can also be called from a method or from R, to reset the fields.
+# - In uncompiled execution, initial field values come from R6 field values
+#   (NC_fieldInitValues), so it is not needed at creation.
+# The C++ name is kept as initFields_ by the nFunction name argument.
+NC_makeInitFieldsMethod <- function(Cpublic, env) {
+  lines <- list()
+  for (nm in names(Cpublic)) {
+    x <- Cpublic[[nm]]
+    if (is.function(x) || identical(nm, "initialize")) next
+    defaultInfo <- nTypeExtractDefault(rlang::new_quosure(x, env))
+    if (defaultInfo$hasDefault) {
+      lines[[length(lines) + 1]] <- substitute(
+        self$NAME <- DEFAULT,
+        list(NAME = as.name(nm), DEFAULT = defaultInfo$default)
+      )
+    }
+  }
+  fun <- function() {}
+  body(fun) <- as.call(c(as.name("{"), lines))
+  environment(fun) <- env
+  nFunction(fun, name = "initFields_", where = env)
+}
+
+NC_fieldInitValues <- function(NCinternals, env) {
+  fieldNames <- NCinternals$fieldNames
+  values <- lapply(fieldNames, \(nm) {
+    sym <- NCinternals$symbolTable$getSymbol(nm)
+    if (!isTRUE(sym$hasDefault)) {
+      return(NC_fieldTypeInitValue(sym))
+    }
+    usedFields <- intersect(all.vars(sym$default), fieldNames)
+    if (length(usedFields)) {
+      stop("The default for field '", nm, "' uses field(s) ",
+        paste0("'", usedFields, "'", collapse = ", "),
+        ". Field defaults may not use other fields.",
+        call. = FALSE
+      )
+    }
+    if (isTRUE(get_nOption("NCwarn"))) {
+      if (inherits(sym, c("symbolTBD", "symbolNC"))) {
+        warning("Field '", nm, "' has an nClass-typed default. In uncompiled ",
+          "execution it is evaluated once, so all objects of the class share ",
+          "one object for it. In compiled execution, each object gets its own.",
+          call. = FALSE
+        )
+      }
+      rNames <- intersect(all.names(sym$default), rDistNames)
+      if (length(rNames)) {
+        warning("The default for field '", nm, "' uses random number generation (",
+          paste(rNames, collapse = ", "), "). In uncompiled execution it is ",
+          "evaluated once, so all objects of the class share one draw. In ",
+          "compiled execution, each object gets its own draw. (Only direct use ",
+          "of r functions is detected.)",
+          call. = FALSE
+        )
+      }
+    }
+    eval(sym$default, envir = env)
+  })
+  structure(values, names = fieldNames)
 }
 
 #' @export

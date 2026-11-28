@@ -42,7 +42,7 @@ test_that("nClass basics", {
   expect_true(isNCgenerator(nc1))
   expect_error(inherits(NCinternals(my_nc1), "NC_InternalsClass"))
   expect_true(inherits(NCinternals(nc1), "NC_InternalsClass"))
-  expect_equal(NCinternals(nc1)$methodNames, c("Cfoo", "Cbreak"))
+  expect_equal(NCinternals(nc1)$methodNames, c("Cfoo", "Cbreak", "initFields_"))
 })
 
 test_that("nClass inheritance basics", {

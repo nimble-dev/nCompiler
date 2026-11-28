@@ -2067,3 +2067,23 @@ operatorRank <- c(
     "||" = 14
   )
 )
+
+# rDistNames: every name that can be written to draw random numbers. These are
+# all "r" functions with an operator definition for random generation,
+# including ones normally created internally (e.g. rgamma_rate) since they
+# work if written directly, plus the names converted to those (e.g. rgamma,
+# rexp via nKeyWords). Used, for example, to warn about random draws in nClass
+# field defaults (which are drawn once per class and then re-used for each object, in uncompiled execution).
+rDistNames <- local({
+  isRandomOpDef <- function(nm) {
+    opDef <- operatorDefEnv[[nm]]
+    labelHandler <- getOperatorField(opDef, "labelAbstractTypes", "handler")
+    simpleHandler <- getOperatorField(opDef, "simpleTransformations", "handler")
+    identical(labelHandler, "RandomGeneration") ||
+      (identical(labelHandler, "MVDist") && startsWith(nm, "r")) ||
+      (identical(simpleHandler, "RateScaleDist") && startsWith(nm, "r"))
+  }
+  opNames <- Filter(isRandomOpDef, ls(operatorDefEnv))
+  keywordNames <- names(nKeyWords)[unlist(nKeyWords) %in% opNames]
+  sort(unique(c(opNames, keywordNames)))
+})
